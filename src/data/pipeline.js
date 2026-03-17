@@ -1,0 +1,197 @@
+// AUTO-GENERATED — do not edit manually.
+// Edit data/pipeline.csv and run: python convert-data.py
+
+export const FUNDS0 = [
+  {
+    "id": 1,
+    "name": "Main Foundation III",
+    "amount": 1.5,
+    "currency": "USD",
+    "geography": "EU",
+    "strategy": "Fons primari",
+    "sector": "Software",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 2,
+    "name": "Headway VI",
+    "amount": 1.5,
+    "currency": "EUR",
+    "geography": "EU/US",
+    "strategy": "Coinversions",
+    "sector": "Generalista",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 3,
+    "name": "Bid Equity IV",
+    "amount": 1.5,
+    "currency": "EUR",
+    "geography": "EU",
+    "strategy": "Fons primari",
+    "sector": "Software",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 4,
+    "name": "Qualitas Direct III",
+    "amount": 1.5,
+    "currency": "EUR",
+    "geography": "EU",
+    "strategy": "Coinversions",
+    "sector": "Generalista",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 5,
+    "name": "Bex Capital",
+    "amount": 2.0,
+    "currency": "EUR",
+    "geography": "EU",
+    "strategy": "Fons secundaris",
+    "sector": "Generalista",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 6,
+    "name": "MPEP VI Europe",
+    "amount": 2.5,
+    "currency": "EUR",
+    "geography": "EU",
+    "strategy": "Fons de fons",
+    "sector": "Generalista",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 7,
+    "name": "Norvestor X",
+    "amount": 2.5,
+    "currency": "EUR",
+    "geography": "EU",
+    "strategy": "Fons primari",
+    "sector": "Software",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 8,
+    "name": "RCP XXI",
+    "amount": 1.5,
+    "currency": "USD",
+    "geography": "US",
+    "strategy": "Fons de fons",
+    "sector": "Generalista",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 9,
+    "name": "Seidler IX",
+    "amount": 1.5,
+    "currency": "USD",
+    "geography": "US",
+    "strategy": "Fons primari",
+    "sector": "B2B Services",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 10,
+    "name": "Lee Equity V",
+    "amount": 1.5,
+    "currency": "USD",
+    "geography": "US",
+    "strategy": "Fons primari",
+    "sector": "Healthcare",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 11,
+    "name": "Alpine X",
+    "amount": 1.5,
+    "currency": "USD",
+    "geography": "US",
+    "strategy": "Fons primari",
+    "sector": "Software / B2B",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 12,
+    "name": "Ampersand 2026",
+    "amount": 1.5,
+    "currency": "USD",
+    "geography": "US",
+    "strategy": "Fons primari",
+    "sector": "Healthcare",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 13,
+    "name": "Waterland X",
+    "amount": 1.5,
+    "currency": "EUR",
+    "geography": "EU",
+    "strategy": "Fons primari",
+    "sector": "Generalista",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 14,
+    "name": "MED IV (Archimed)",
+    "amount": 1.5,
+    "currency": "EUR",
+    "geography": "EU",
+    "strategy": "Fons primari",
+    "sector": "Healthcare",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 15,
+    "name": "Gilde V",
+    "amount": 1.5,
+    "currency": "EUR",
+    "geography": "EU",
+    "strategy": "Fons primari",
+    "sector": "Healthcare",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  },
+  {
+    "id": 16,
+    "name": "Bregal V",
+    "amount": 1.5,
+    "currency": "EUR",
+    "geography": "EU",
+    "strategy": "Fons primari",
+    "sector": "Generalista",
+    "status": "En estudi",
+    "canal": "Arcano",
+    "active": true
+  }
+];

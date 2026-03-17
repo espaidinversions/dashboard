@@ -1,0 +1,10 @@
+services:
+  dashboard:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      # Persist data files so uploads survive container restarts
+      - ./raw-data:/app/raw-data
+      - ./src/data:/app/src/data
+    restart: unless-stopped

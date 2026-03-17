@@ -84,5 +84,17 @@ export const PL = ({cx,cy,midAngle,innerRadius,outerRadius,percent}) => {
   return <text x={cx+r*Math.cos(-midAngle*R)} y={cy+r*Math.sin(-midAngle*R)} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight="700">{`${(percent*100).toFixed(0)}%`}</text>;
 };
 
+export function EmptyState({ message = "Cap resultat amb els filtres actuals." }) {
+  const { tc } = useTheme();
+  return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
+      padding:"48px 24px", color:tc.textLight, gap:10 }}>
+      <span style={{ fontSize:32 }}>🔍</span>
+      <span style={{ fontSize:14, fontWeight:600, color:tc.textMid }}>{message}</span>
+      <span style={{ fontSize:12 }}>Prova a canviar o treure algun filtre.</span>
+    </div>
+  );
+}
+
 // ══════════════════════════════════════════════════════════
 // SELECTOR MULTI-FONS (panel lateral/dropdown)

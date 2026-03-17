@@ -89,7 +89,7 @@ export function PortfolioCompaniesTab() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:18 }}>
+      <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
         {[
           { label:"Empreses en Cartera",  value: PORTFOLIO_COMPANIES.length,
             sub:`${sfCompanies.length} SF · ${peCompanies.length} PE directes`,     accent:TC.navy },
@@ -152,7 +152,7 @@ export function PortfolioCompaniesTab() {
       </div>
 
       {/* Charts row 1: Geo + Origen */}
-      <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+      <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
         <div style={card}>
           <div style={sec}>Allocation Geogràfica</div>
           <ResponsiveContainer width="100%" height={230}>

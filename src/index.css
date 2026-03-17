@@ -28,6 +28,8 @@ body {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #C8D5DF; border-radius: 8px; }
 ::-webkit-scrollbar-thumb:hover { background: #9FB4C2; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2A3F52; }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #3A5468; }
 
 /* ── Table hover rows ───────────────────────────────────── */
 tr.hoverable { transition: background 0.12s ease; }
@@ -105,6 +107,36 @@ button {
 button:active {
   transform: scale(0.97);
   opacity: 0.88;
+}
+
+/* ── Responsive grids ───────────────────────────────────── */
+.grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); }
+.grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); }
+.grid-3w { display: grid; grid-template-columns: 2fr 1fr 1fr; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; }
+
+@media (max-width: 900px) {
+  .grid-5  { grid-template-columns: repeat(3, 1fr); }
+  .grid-4  { grid-template-columns: repeat(2, 1fr); }
+  .grid-3  { grid-template-columns: 1fr; }
+  .grid-3w { grid-template-columns: 1fr; }
+  .grid-2  { grid-template-columns: 1fr; }
+  .page-pad { padding-left: 16px !important; padding-right: 16px !important; }
+  .tab-bar  { padding-left: 8px !important; padding-right: 8px !important; }
+  .tab-bar button { padding: 11px 12px !important; }
+}
+
+@media (max-width: 600px) {
+  .grid-5 { grid-template-columns: repeat(2, 1fr); }
+  .grid-4 { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ── Print / PDF export ─────────────────────────────────── */
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff !important; color: #000 !important; }
+  .tab-panel { animation: none !important; }
 }
 
 /* ── Reduced motion: respect user preference ────────────── */

@@ -1,0 +1,66 @@
+// ── Helpers ───────────────────────────────────────────────
+export function fmtM(n) {
+  const a=Math.abs(n);
+  if(a>=1e6) return (n/1e6).toFixed(2)+"M€";
+  if(a>=1e3) return (n/1e3).toFixed(0)+"K€";
+  return n.toFixed(0)+"€";
+}
+export function fmtS(n) {
+  const a=Math.abs(n);
+  if(a>=1e6) return (n/1e6).toFixed(1)+"M€";
+  if(a>=1e3) return (n/1e3).toFixed(0)+"K€";
+  return n.toFixed(0)+"€";
+}
+
+// ── CSV Parsers ───────────────────────────────────────────
+function parseCSVRows(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const headers = lines[0].split(",").map(h => h.trim());
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    // Handle quoted fields
+    const fields = [];
+    let cur = "", inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQ = !inQ; }
+      else if (ch === ',' && !inQ) { fields.push(cur); cur = ""; }
+      else { cur += ch; }
+    }
+    fields.push(cur);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h] = (fields[i] ?? "").trim(); });
+    return obj;
+  });
+}
+
+export function parseCapitalCallsCSV(text) {
+  return parseCSVRows(text).map(r => ({
+    fons:   r.fons,
+    tipus:  r.tipus,
+    cat:    r.cat,
+    data:   r.data,
+    mes:    parseInt(r.mes, 10),
+    any:    parseInt(r.any, 10),
+    fy:     r.fy,
+    vcpe:   r.vcpe,
+    est:    r.est,
+    eur:    parseFloat(r.eur),
+    divisa: r.divisa,
+  }));
+}
+
+export function parsePipelineCSV(text) {
+  return parseCSVRows(text).map(r => ({
+    id:        parseInt(r.id, 10),
+    name:      r.name,
+    amount:    parseFloat(r.amount),
+    currency:  r.currency,
+    geography: r.geography,
+    strategy:  r.strategy,
+    sector:    r.sector,
+    status:    r.status,
+    canal:     r.canal,
+    active:    r.active === "true" || r.active === "1",
+  }));
+}
+

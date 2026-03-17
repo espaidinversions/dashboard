@@ -218,7 +218,7 @@ export function SearchersTab() {
     <div style={{ padding:"0 0 40px" }}>
 
       {/* ── KPIs ── */}
-      <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12, marginBottom:18 }}>
+      <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
         {[
           { label:"Searchers Actius",  value: ACTIVE_SEARCHERS.length,                       sub:`${soloCount} solo / ${duoCount} duo`,   accent:TC.navy },
           { label:"Capital Compromès", value: fmtM(totalSearchers),                          sub:"total search capital",                  accent:TC.green },
@@ -283,7 +283,7 @@ export function SearchersTab() {
       </div>
 
       {/* ── Sankey + Geography ── */}
-      <div style={{ display:"grid", gridTemplateColumns:"1.4fr 1fr", gap:14, marginBottom:14 }}>
+      <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
         <div style={card}>
           <div style={sec}>Portfolio per Forma d'Entrada i Resultat</div>
           <div style={{ overflowX:"auto" }}>

@@ -1,0 +1,13 @@
+node_modules
+dist
+.obsidian
+.claude
+.superpowers
+*.canvas
+canvas-tool.*
+canvas-watcher.*
+tasks/
+docs/
+*.jpeg
+*.jpg
+*.png

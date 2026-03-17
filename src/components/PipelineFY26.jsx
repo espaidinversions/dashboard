@@ -4,7 +4,8 @@ import {
   Cell, PieChart, Pie, Legend
 } from "recharts";
 import { useTheme } from "../theme.js";
-import { FUNDS0 as FUNDS0_DEFAULT, toEUR, toUSD, STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE } from "../config.js";
+import { FUNDS0 as FUNDS0_DEFAULT, EUR_USD as EUR_USD_DEFAULT, STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE } from "../config.js";
+import { EmptyState } from "./SharedComponents.jsx";
 
 const MONTHS_OPTS = ["","Jan 2026","Feb 2026","Mar 2026","Apr 2026","May 2026","Jun 2026","Jul 2026","Aug 2026","Sep 2026","Oct 2026","Nov 2026","Dec 2026","Jan 2027","Feb 2027","Mar 2027","Apr 2027","May 2027","Jun 2027","Jul 2027","Aug 2027","Sep 2027","Oct 2027","Nov 2027","Dec 2027","Jan 2028","Feb 2028","Mar 2028","Apr 2028","May 2028","Jun 2028"];
 
@@ -27,7 +28,9 @@ function EditableSelect({value,onChange}) {
 }
 
 // ══════════════════════════════════════════════════════════
-export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT }) {
+export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_DEFAULT }) {
+  const toEUR = (a, c) => c === "USD" ? a / eurUsd : a;
+  const toUSD = (a, c) => c === "EUR" ? a * eurUsd : a;
   const { tc: TC, dark } = useTheme();
   const [funds,setFunds]   = useState(initialFunds);
   useEffect(()=>{ setFunds(initialFunds); },[initialFunds]);
@@ -189,7 +192,7 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT }) {
 
   return (
     <div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:18}}>
+      <div className="grid-4" style={{gap:14,marginBottom:18}}>
         {kpis.map((k,i)=>(
           <div key={i} style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:10,padding:"16px 18px",borderTop:`4px solid ${k.accent}`,boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
             <div style={{fontSize:10,letterSpacing:"0.15em",color:TC.textLight,textTransform:"uppercase",marginBottom:6}}>{k.label}</div>
@@ -207,12 +210,12 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT }) {
         </div>
       )}
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:14}}>
+      <div className="grid-3" style={{gap:14,marginBottom:14}}>
         <CPie data={byGeo}  colors={GCOL}  type="geo"    title="Per Geografia"/>
         <CPie data={byStr}  colors={SCOL}  type="str"    title="Per Estratègia"/>
         <CPie data={byStat} colors={STCOL} type="status" title="Per Status"/>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
+      <div className="grid-2" style={{gap:14,marginBottom:18}}>
         <CPie data={byCanal} colors={CCOL} type="canal" title="Per Canal"/>
         <div style={{background:TC.card,border:`1.5px solid ${chartF?.type==="sec"?TC.green:TC.border}`,borderRadius:10,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
           <div style={{fontSize:10,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -299,6 +302,7 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT }) {
               </tr>
             </thead>
             <tbody>
+              {filtered.length===0 && <tr><td colSpan={10}><EmptyState/></td></tr>}
               {filtered.map((f,i)=>(
                 <tr key={f.id} style={{borderBottom:`1px solid ${TC.bgAlt}`,background:i%2===0?TC.card:TC.bgAlt,opacity:f.active?1:0.4}}>
                   <td style={{padding:"9px 10px"}}>

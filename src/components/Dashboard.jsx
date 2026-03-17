@@ -1,4 +1,5 @@
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import html2canvas from "html2canvas";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie, Legend
@@ -9,7 +10,7 @@ import {
 } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV } from "../utils.js";
-import { Logo, Badge, BarTip, PieTip, PL } from "./SharedComponents.jsx";
+import { Logo, Badge, BarTip, PieTip, PL, EmptyState } from "./SharedComponents.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
 import { MensualTab } from "./MensualTab.jsx";
@@ -136,6 +137,32 @@ function DashboardInner() {
   const [rawCC,   setRawCC]   = useState(()=>loadFromLS(LS_CC, RAW_CC_DEFAULT));
   const [funds0,  setFunds0]  = useState(()=>loadFromLS(LS_PL, FUNDS0_DEFAULT));
   const [loadedAt,setLoadedAt]= useState(()=>localStorage.getItem(LS_TS));
+  const [eurUsd,  setEurUsd]  = useState(null);
+
+  useEffect(() => {
+    fetch("/api/eur-usd").then(r => r.json()).then(({ rate }) => setEurUsd(rate)).catch(() => {});
+  }, []);
+
+  const [exporting, setExporting] = useState(false);
+
+  const exportPDF = useCallback(() => {
+    window.print();
+  }, []);
+
+  const exportPNG = useCallback(async () => {
+    const el = document.getElementById("dashboard-content");
+    if (!el) return;
+    setExporting(true);
+    try {
+      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: null });
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = `dashboard-${new Date().toISOString().slice(0,10)}.png`;
+      a.click();
+    } finally {
+      setExporting(false);
+    }
+  }, []);
 
   const handleLoad = (key, rows) => {
     const now = new Date().toLocaleDateString("ca-ES");
@@ -323,11 +350,33 @@ function DashboardInner() {
   const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":"fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Pipeline FY26"}, ...TABS_CC];
 
+  // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
+      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+      const dir = e.key === "ArrowRight" ? 1 : -1;
+      if (supra === "fons") {
+        const idx = TABS_FONS.findIndex(t => t.id === tab);
+        const next = TABS_FONS[(idx + dir + TABS_FONS.length) % TABS_FONS.length];
+        setTab(next.id);
+      } else {
+        const supraIds = ["fons", "searchers", "portfolio"];
+        const idx = supraIds.indexOf(supra);
+        const nextSupra = supraIds[(idx + dir + supraIds.length) % supraIds.length];
+        setTab(nextSupra === "fons" ? "pipeline" : nextSupra);
+      }
+      e.preventDefault();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [tab, supra, TABS_FONS]);
+
   return (
-    <div style={{minHeight:"100vh",background:tc.bg,color:tc.text,fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,letterSpacing:"0.005em"}}>
+    <div id="dashboard-content" style={{minHeight:"100vh",background:tc.bg,color:tc.text,fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,letterSpacing:"0.005em"}}>
 
       {/* ── Header ── */}
-      <div style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"12px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)"}}>
+      <div className="no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"12px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)"}}>
         <Logo/>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           {/* Per-supra upload button */}
@@ -344,6 +393,17 @@ function DashboardInner() {
               ↑ CSV Searchers
             </button>
           )}
+          {/* Export buttons */}
+          <button onClick={exportPDF} className="no-print"
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit"}}
+            title="Exportar com a PDF">
+            ↓ PDF
+          </button>
+          <button onClick={exportPNG} disabled={exporting} className="no-print"
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:exporting?"wait":"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit"}}
+            title="Exportar com a PNG">
+            {exporting ? "…" : "↓ PNG"}
+          </button>
           {/* Dark mode toggle */}
           <button onClick={toggleDark}
             style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:16,color:tc.textMid,fontFamily:"inherit"}}>
@@ -366,8 +426,8 @@ function DashboardInner() {
                 : supra==="portfolio"
                 ? "SF · PE Direct · 20 empreses en cartera"
                 : tab==="pipeline"
-                ? "Fons nous a comprometre · FY2026"
-                : `${baseTx.length} transaccions · ${FONS_MAP2.length} fons · FY2019–FY2026`
+                ? `Fons nous a comprometre · ${FY_LIST.at(-1)}`
+                : `${baseTx.length} transaccions · ${FONS_MAP2.length} fons · ${FY_LIST.at(0)}–${FY_LIST.at(-1)}`
               }
             </div>
           </div>
@@ -375,7 +435,7 @@ function DashboardInner() {
       </div>
 
       {/* ── Supra-category nav ── */}
-      <div style={{background:tc.navy,padding:"0 32px",display:"flex",gap:0}}>
+      <div className="tab-bar no-print" style={{background:tc.navy,padding:"0 32px",display:"flex",gap:0}}>
         {SUPRA.map(s=>(
           <button key={s.id}
             onClick={()=>setTab(s.id==="fons"?"pipeline":s.id==="searchers"?"searchers":"portfolio")}
@@ -387,7 +447,7 @@ function DashboardInner() {
 
       {/* ── Sub-tabs (Fons only) ── */}
       {supra==="fons"&&(
-      <div style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0,alignItems:"center"}}>
+      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0,alignItems:"center"}}>
         <div style={{display:"flex",flex:1}}>
           {TABS_FONS.map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)}
@@ -404,10 +464,10 @@ function DashboardInner() {
       </div>
       )}
 
-      <div style={{padding:"22px 32px 60px"}}>
+      <div className="page-pad" style={{padding:"22px 32px 60px"}}>
 
         {/* ── PIPELINE ── */}
-        {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0}/></div>}
+        {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd}/></div>}
 
         {/* ── SEARCHERS ── */}
         {tab==="searchers"&&<div className="tab-panel"><SearchersTab/></div>}
@@ -431,7 +491,7 @@ function DashboardInner() {
                 <button onClick={()=>setExcluded(new Set())} style={{background:"transparent",border:`1px solid ${tc.yellow}`,borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,color:tc.yellow,fontFamily:"inherit",whiteSpace:"nowrap"}}>Restaurar tots</button>
               </div>
             )}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:18}}>
+            <div className="grid-5" style={{gap:12,marginBottom:18}}>
               {[
                 {label:"Compromís Total",    value:fmtM(gCompr),  sub:`${FONS_MAP2.length} fons`,                 accent:tc.navyLight},
                 {label:"Capital Cridat",     value:fmtM(gCalls),  sub:`${(gCalls/gCompr*100).toFixed(1)}% cridat`, accent:tc.navy},
@@ -507,7 +567,7 @@ function DashboardInner() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:18}}>
+          <div className="grid-2" style={{gap:16,marginBottom:18}}>
             {[
               {title:"Capital Cridat per Tipus",     data:byVcpe, colorFn:n=>vcpeCfg[n]?.color||tc.navy},
               {title:"Capital Cridat per Estratègia",data:byEst,  colorFn:n=>estCfg[n]?.color||tc.navy},
@@ -583,7 +643,7 @@ function DashboardInner() {
               );
             })()}
             {/* Gràfics interactius */}
-            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:14,marginBottom:14}}>
+            <div className="grid-3w" style={{gap:14,marginBottom:14}}>
               {/* Barres per any */}
               <div style={{background:tc.card,border:`1.5px solid ${ccChartF?.type==="fy"?tc.green:tc.border}`,borderRadius:10,padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,.08)",transition:"border-color 0.2s"}}>
                 <div style={{fontSize:10,letterSpacing:"0.13em",color:tc.textLight,textTransform:"uppercase",marginBottom:12,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -667,6 +727,7 @@ function DashboardInner() {
                     </tr>
                   </thead>
                   <tbody>
+                    {fonsFiltered.length===0 && <tr><td colSpan={10}><EmptyState/></td></tr>}
                     {fonsFiltered.map((f,i)=>{
                       const pct=f.compr>0?(f.calls/f.compr*100):null;
                       const rebut=f.dist+f.retorn;
@@ -802,6 +863,7 @@ function DashboardInner() {
                   </tr>
                 </thead>
                 <tbody>
+                  {txSorted.length===0 && <tr><td colSpan={8}><EmptyState/></td></tr>}
                   {txSlice.map((r,i)=>{
                     const isIn=r.eur>0;
                     const cfg=catCfg[r.cat]||{};
@@ -845,7 +907,25 @@ function DashboardInner() {
   );
 }
 
+// In production, poll /api/data-version and reload if src/data files change.
+// In dev, Vite HMR handles this automatically.
+function useDataReload() {
+  useEffect(() => {
+    if (!import.meta.env.PROD) return;
+    let version = null;
+    const id = setInterval(async () => {
+      try {
+        const { version: v } = await fetch("/api/data-version").then(r => r.json());
+        if (version === null) { version = v; return; }
+        if (v !== version) window.location.reload();
+      } catch { /* server unreachable, ignore */ }
+    }, 10_000);
+    return () => clearInterval(id);
+  }, []);
+}
+
 export default function Dashboard() {
+  useDataReload();
   const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1");
   const tc = dark ? TC_DARK : TC_LIGHT;
   const toggleDark = () => {
@@ -855,6 +935,10 @@ export default function Dashboard() {
       return next;
     });
   };
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+  }, [dark]);
 
   return (
     <ThemeContext.Provider value={{ tc, dark, toggle: toggleDark }}>
