@@ -1,0 +1,353 @@
+import React, { useState, useMemo, useEffect, useRef } from "react";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  Cell, PieChart, Pie, Legend
+} from "recharts";
+import { useTheme } from "../theme.js";
+import { FUNDS0 as FUNDS0_DEFAULT, toEUR, toUSD, STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE } from "../config.js";
+
+const MONTHS_OPTS = ["","Jan 2026","Feb 2026","Mar 2026","Apr 2026","May 2026","Jun 2026","Jul 2026","Aug 2026","Sep 2026","Oct 2026","Nov 2026","Dec 2026","Jan 2027","Feb 2027","Mar 2027","Apr 2027","May 2027","Jun 2027","Jul 2027","Aug 2027","Sep 2027","Oct 2027","Nov 2027","Dec 2027","Jan 2028","Feb 2028","Mar 2028","Apr 2028","May 2028","Jun 2028"];
+
+function EditableSelect({value,onChange}) {
+  const { tc: TC } = useTheme();
+  const [editing,setEditing] = useState(false);
+  if(editing) return (
+    <select autoFocus value={value||""} onBlur={()=>setEditing(false)}
+      onChange={e=>{onChange(e.target.value);setEditing(false);}}
+      style={{fontSize:12,border:`1px solid ${TC.border}`,borderRadius:5,padding:"3px 6px",fontFamily:"inherit",background:TC.card,color:TC.text,cursor:"pointer",outline:"none"}}>
+      {MONTHS_OPTS.map(o=><option key={o} value={o}>{o||"— sense data"}</option>)}
+    </select>
+  );
+  return (
+    <span onClick={()=>setEditing(true)} style={{fontSize:12,color:value?TC.text:TC.textLight,cursor:"pointer",display:"inline-block",minWidth:70,padding:"2px 4px"}}>
+      {value||<span style={{fontSize:11,fontStyle:"italic"}}>— ✎</span>}
+      {value&&<span style={{fontSize:9,opacity:0.5,marginLeft:4}}>✎</span>}
+    </span>
+  );
+}
+
+// ══════════════════════════════════════════════════════════
+export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT }) {
+  const { tc: TC, dark } = useTheme();
+  const [funds,setFunds]   = useState(initialFunds);
+  useEffect(()=>{ setFunds(initialFunds); },[initialFunds]);
+
+  // Auto-save to server whenever funds change (skip initial mount)
+  const isMount = useRef(true);
+  const saveTimer = useRef(null);
+  useEffect(()=>{
+    if(isMount.current){ isMount.current=false; return; }
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(()=>{
+      fetch("/api/pipeline",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(funds)}).catch(()=>{});
+    }, 600);
+  },[funds]);
+  const [cur,setCur]       = useState("EUR");
+  const [nf,setNf]         = useState({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",estimatedClosing:""});
+  const [form,setForm]     = useState(false);
+  const [fGeo,setFGeo]     = useState("Tots");
+  const [fStr,setFStr]     = useState("Tots");
+  const [fStat,setFStat]   = useState("Tots");
+  const [fCanal,setFCanal] = useState("Tots");
+  const [fAct,setFAct]     = useState("Tots");
+  const [chartF,setChartF] = useState(null);
+  const [sk,setSk]         = useState("name");
+  const [sd,setSd]         = useState("asc");
+
+  const cv  = (a,c) => cur==="EUR"?toEUR(a,c):toUSD(a,c);
+  const sym = cur==="EUR"?"€":"$";
+  const active = useMemo(()=>funds.filter(f=>f.active),[funds]);
+  const total  = useMemo(()=>active.reduce((s,f)=>s+cv(f.amount,f.currency),0),[active,cur,funds]);
+
+  const agg = (fn,src) => {
+    const m={};
+    src.forEach(f=>{const k=fn(f);m[k]=(m[k]||0)+toEUR(f.amount,f.currency);});
+    return Object.entries(m).map(([name,value])=>({name,value:+value.toFixed(2)}));
+  };
+  const byGeo  = useMemo(()=>agg(f=>f.geography,              funds.filter(f=>f.active)),[funds]);
+  const byStr  = useMemo(()=>agg(f=>f.strategy,               funds.filter(f=>f.active)),[funds]);
+  const bySec  = useMemo(()=>agg(f=>f.sector.split(" / ")[0], funds.filter(f=>f.active)),[funds]);
+  const byStat = useMemo(()=>agg(f=>f.status,                 funds.filter(f=>f.active)),[funds]);
+  const byCanal= useMemo(()=>agg(f=>f.canal,                  funds.filter(f=>f.active)),[funds]);
+
+  const gOpts = ["Tots",...new Set(funds.map(f=>f.geography))];
+  const sOpts = ["Tots",...new Set(funds.map(f=>f.strategy))];
+
+  const filtered = useMemo(()=>{
+    let l=[...funds];
+    if(chartF){
+      if(chartF.type==="geo")    l=l.filter(f=>f.geography===chartF.value);
+      if(chartF.type==="str")    l=l.filter(f=>f.strategy===chartF.value);
+      if(chartF.type==="sec")    l=l.filter(f=>f.sector.split(" / ")[0]===chartF.value);
+      if(chartF.type==="status") l=l.filter(f=>f.status===chartF.value);
+      if(chartF.type==="canal")  l=l.filter(f=>f.canal===chartF.value);
+    }
+    if(fGeo!=="Tots")  l=l.filter(f=>f.geography===fGeo);
+    if(fStr!=="Tots")  l=l.filter(f=>f.strategy===fStr);
+    if(fStat!=="Tots") l=l.filter(f=>f.status===fStat);
+    if(fCanal!=="Tots")l=l.filter(f=>f.canal===fCanal);
+    if(fAct==="Actiu")   l=l.filter(f=>f.active);
+    if(fAct==="Inactiu") l=l.filter(f=>!f.active);
+    l.sort((a,b)=>{
+      let va=sk==="commitment"?toEUR(a.amount,a.currency):a[sk]??""
+      let vb=sk==="commitment"?toEUR(b.amount,b.currency):b[sk]??""
+      if(typeof va==="string")return sd==="asc"?String(va).localeCompare(String(vb)):String(vb).localeCompare(String(va));
+      return sd==="asc"?va-vb:vb-va;
+    });
+    return l;
+  },[funds,chartF,fGeo,fStr,fStat,fCanal,fAct,sk,sd]);
+
+  const clickChart = (type,name) => setChartF(prev=>prev&&prev.type===type&&prev.value===name?null:{type,value:name});
+  const isHl = (type,name) => !chartF||(chartF.type===type&&chartF.value===name);
+  const sort=(k)=>{if(sk===k)setSd(d=>d==="asc"?"desc":"asc");else{setSk(k);setSd("asc");}};
+  const Arr=({k})=><span style={{marginLeft:3,opacity:sk===k?1:0.2,fontSize:9}}>{sk===k&&sd==="desc"?"▼":"▲"}</span>;
+  const toggle=(id)=>setFunds(p=>p.map(f=>f.id===id?{...f,active:!f.active}:f));
+  const del=(id)=>setFunds(p=>p.filter(f=>f.id!==id));
+  const upd=(id,field,val)=>setFunds(p=>p.map(f=>f.id===id?{...f,[field]:val}:f));
+  const add=()=>{
+    if(!nf.name||!nf.amount)return;
+    setFunds(p=>[...p,{...nf,id:Date.now(),amount:parseFloat(nf.amount),active:true}]);
+    setNf({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",estimatedClosing:""});
+    setForm(false);
+  };
+
+  const inp2={border:`1px solid ${TC.border}`,borderRadius:5,padding:"7px 10px",fontSize:13,color:TC.text,background:TC.card,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"};
+  const th2={padding:"9px 10px",fontSize:10,letterSpacing:"0.1em",color:TC.textLight,textTransform:"uppercase",fontWeight:600,textAlign:"left",borderBottom:`2px solid ${TC.border}`,cursor:"pointer",userSelect:"none",whiteSpace:"nowrap"};
+
+  const kpis=[
+    {label:"Compromís Total",   value:`${sym}${total.toFixed(1)}M`, sub:`${active.length} fons actius`, accent:TC.navy},
+    {label:"Europa (EU)",       value:`${sym}${cv(byGeo.find(g=>g.name==="EU")?.value||0,"EUR").toFixed(1)}M`, sub:`${active.filter(f=>f.geography==="EU").length} fons`, accent:TC.green},
+    {label:"Estats Units (US)", value:`${sym}${cv(byGeo.find(g=>g.name==="US")?.value||0,"EUR").toFixed(1)}M`, sub:`${active.filter(f=>f.geography==="US").length} fons`, accent:TC.navy},
+    {label:"Global (EU/US)",    value:`${sym}${cv(byGeo.find(g=>g.name==="EU/US")?.value||0,"EUR").toFixed(1)}M`, sub:`${active.filter(f=>f.geography==="EU/US").length} fons`, accent:TC.navyLight},
+  ];
+
+  const PipTip = ({active:a,payload}) => {
+    if (!a || !payload?.length) return null;
+    return (
+      <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:6,padding:"8px 14px",boxShadow:"0 4px 12px rgba(0,0,0,.18)"}}>
+        <p style={{color:TC.navy,margin:0,fontWeight:600,fontSize:13}}>{payload[0].name}</p>
+        <p style={{color:TC.green,margin:"3px 0 0",fontSize:13}}>€{payload[0].value.toFixed(2)}M</p>
+      </div>
+    );
+  };
+
+  const PipPL = ({cx,cy,midAngle,innerRadius,outerRadius,percent}) => {
+    if(percent<0.06)return null;
+    const R=Math.PI/180, r=innerRadius+(outerRadius-innerRadius)*0.5;
+    return <text x={cx+r*Math.cos(-midAngle*R)} y={cy+r*Math.sin(-midAngle*R)} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight="700">{`${(percent*100).toFixed(0)}%`}</text>;
+  };
+
+  function EditCell({value,options,cfg,onChange}) {
+    const [editing,setEditing]=useState(false);
+    const s=cfg[value]||{bg:TC.bgAlt,color:TC.textMid,border:TC.border};
+    if(editing) return (
+      <select autoFocus value={value} onBlur={()=>setEditing(false)}
+        onChange={e=>{onChange(e.target.value);setEditing(false);}}
+        style={{fontSize:12,border:`1px solid ${TC.border}`,borderRadius:5,padding:"3px 6px",fontFamily:"inherit",background:TC.card,color:TC.text,cursor:"pointer",outline:"none"}}>
+        {options.map(o=><option key={o}>{o}</option>)}
+      </select>
+    );
+    return (
+      <span onClick={()=>setEditing(true)}
+        style={{fontSize:12,background:s.bg,color:s.color,borderRadius:5,padding:"3px 9px",fontWeight:600,cursor:"pointer",border:`1px solid ${s.border||s.bg}`,display:"inline-block",userSelect:"none"}}>
+        {value} <span style={{fontSize:9,opacity:0.6}}>✎</span>
+      </span>
+    );
+  }
+
+  const greenBadgeBg = dark ? "#0E2820" : "#E8F4EE";
+  const CPie = ({data,colors,type,title}) => (
+    <div style={{background:TC.card,border:`1.5px solid ${chartF?.type===type?TC.green:TC.border}`,borderRadius:10,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.08)",transition:"border-color 0.2s"}}>
+      <div style={{fontSize:10,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        {title}<span style={{fontSize:9,color:TC.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
+      </div>
+      <ResponsiveContainer width="100%" height={165}>
+        <PieChart>
+          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={62} labelLine={false} label={PipPL}>
+            {data.map((e,j)=>(
+              <Cell key={j} fill={colors[e.name]||TC.navyLight} opacity={isHl(type,e.name)?1:0.3}
+                stroke={chartF?.type===type&&chartF?.value===e.name?"#fff":"none"} strokeWidth={2}
+                style={{cursor:"pointer"}} onClick={()=>clickChart(type,e.name)}/>
+            ))}
+          </Pie>
+          <Tooltip content={<PipTip/>}/>
+          <Legend formatter={v=><span style={{color:TC.textMid,fontSize:10}}>{v}</span>}/>
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  const PipBarTip = ({active:a,payload,label}) => {
+    if (!a || !payload?.length) return null;
+    return (
+      <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:6,padding:"8px 14px",boxShadow:"0 4px 12px rgba(0,0,0,.18)"}}>
+        <p style={{color:TC.navy,margin:0,fontWeight:600,fontSize:13}}>{label}</p>
+        <p style={{color:TC.green,margin:"3px 0 0",fontSize:13}}>€{payload[0].value.toFixed(2)}M</p>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:14,marginBottom:18}}>
+        {kpis.map((k,i)=>(
+          <div key={i} style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:10,padding:"16px 18px",borderTop:`4px solid ${k.accent}`,boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+            <div style={{fontSize:10,letterSpacing:"0.15em",color:TC.textLight,textTransform:"uppercase",marginBottom:6}}>{k.label}</div>
+            <div style={{fontSize:25,fontWeight:700,color:k.accent,marginBottom:2}}>{k.value}</div>
+            <div style={{fontSize:12,color:TC.textLight}}>{k.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {chartF&&(
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:TC.card,border:`1.5px solid ${TC.green}`,borderRadius:8,padding:"9px 16px"}}>
+          <span style={{fontSize:13,color:TC.navy,fontWeight:600}}>🔍 Filtre actiu:</span>
+          <span style={{fontSize:13,color:TC.green,fontWeight:700,background:greenBadgeBg,padding:"2px 10px",borderRadius:5}}>{chartF.value}</span>
+          <button onClick={()=>setChartF(null)} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${TC.border}`,color:TC.textMid,borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>✕ Treure filtre</button>
+        </div>
+      )}
+
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:14,marginBottom:14}}>
+        <CPie data={byGeo}  colors={GCOL}  type="geo"    title="Per Geografia"/>
+        <CPie data={byStr}  colors={SCOL}  type="str"    title="Per Estratègia"/>
+        <CPie data={byStat} colors={STCOL} type="status" title="Per Status"/>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
+        <CPie data={byCanal} colors={CCOL} type="canal" title="Per Canal"/>
+        <div style={{background:TC.card,border:`1.5px solid ${chartF?.type==="sec"?TC.green:TC.border}`,borderRadius:10,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+          <div style={{fontSize:10,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            Per Sector<span style={{fontSize:9,color:TC.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
+          </div>
+          <ResponsiveContainer width="100%" height={165}>
+            <BarChart data={bySec} layout="vertical" margin={{left:0,right:14}} onClick={d=>d?.activeLabel&&clickChart("sec",d.activeLabel)}>
+              <XAxis type="number" tick={{fill:TC.textLight,fontSize:10}} axisLine={false} tickLine={false}/>
+              <YAxis type="category" dataKey="name" width={90} tick={{fill:TC.textMid,fontSize:10}} axisLine={false} tickLine={false}/>
+              <Tooltip content={<PipBarTip/>}/>
+              <Bar dataKey="value" radius={[0,4,4,0]} cursor="pointer">
+                {bySec.map((e,i)=><Cell key={i} fill={SECCOL[e.name]||TC.navy} opacity={isHl("sec",e.name)?1:0.3}/>)}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Taula pipeline */}
+      <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:10,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
+          <div style={{fontSize:10,letterSpacing:"0.15em",color:TC.textLight,textTransform:"uppercase",fontWeight:600}}>Pipeline de Fons</div>
+          <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap"}}>
+            {[
+              {label:"Geo",    val:fGeo,   set:setFGeo,   opts:gOpts},
+              {label:"Estrat.",val:fStr,   set:setFStr,   opts:sOpts},
+              {label:"Status", val:fStat,  set:setFStat,  opts:["Tots","En estudi","Aprovat","Descartat"]},
+              {label:"Canal",  val:fCanal, set:setFCanal, opts:["Tots","Arcano","Placement Agent","Propietari","Altres"]},
+              {label:"Actiu",  val:fAct,   set:setFAct,   opts:["Tots","Actiu","Inactiu"]},
+            ].map(f=>(
+              <div key={f.label} style={{display:"flex",alignItems:"center",gap:3}}>
+                <span style={{fontSize:11,color:TC.textLight}}>{f.label}:</span>
+                <select value={f.val} onChange={e=>f.set(e.target.value)} style={{...inp2,width:"auto",padding:"4px 7px",fontSize:12,background:TC.bgAlt,color:TC.navy,border:`1px solid ${TC.border}`}}>
+                  {f.opts.map(o=><option key={o}>{o}</option>)}
+                </select>
+              </div>
+            ))}
+            <button onClick={()=>setForm(!form)} style={{background:TC.green,border:"none",color:"#fff",borderRadius:5,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>+ Afegir Fons</button>
+          </div>
+        </div>
+        {form&&(
+          <div style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:8,padding:"12px",marginBottom:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto",gap:7,alignItems:"end"}}>
+              {[
+                {label:"Nom",key:"name",type:"input"},
+                {label:"M€/$",key:"amount",type:"input",it:"number"},
+                {label:"Moneda",key:"currency",type:"sel",opts:["EUR","USD"]},
+                {label:"Geo",key:"geography",type:"sel",opts:["EU","US","EU/US"]},
+                {label:"Estratègia",key:"strategy",type:"sel",opts:["Fons primari","Coinversions","Fons secundaris","Fons de fons"]},
+                {label:"Sector",key:"sector",type:"sel",opts:["Software","Generalista","B2B Services","Healthcare","Software / B2B"]},
+                {label:"Status",key:"status",type:"sel",opts:["En estudi","Aprovat","Descartat"]},
+                {label:"Canal",key:"canal",type:"sel",opts:["Arcano","Placement Agent","Propietari","Altres"]},
+                {label:"Tancament Est.",key:"estimatedClosing",type:"sel",opts:MONTHS_OPTS},
+              ].map(f=>(
+                <div key={f.key}>
+                  <div style={{fontSize:10,color:TC.textLight,marginBottom:3,fontWeight:600}}>{f.label}</div>
+                  {f.type==="input"
+                    ?<input type={f.it||"text"} value={nf[f.key]} onChange={e=>setNf(p=>({...p,[f.key]:e.target.value}))} style={inp2}/>
+                    :<select value={nf[f.key]} onChange={e=>setNf(p=>({...p,[f.key]:e.target.value}))} style={inp2}>{f.opts.map(o=><option key={o} value={o}>{o||"— sense data"}</option>)}</select>
+                  }
+                </div>
+              ))}
+              <div>
+                <div style={{fontSize:10,color:"transparent",marginBottom:3}}>·</div>
+                <button onClick={add} style={{background:TC.navy,border:"none",color:"#fff",borderRadius:5,padding:"8px 12px",cursor:"pointer",fontSize:14,fontWeight:700,width:"100%",fontFamily:"inherit"}}>✓</button>
+              </div>
+            </div>
+          </div>
+        )}
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead>
+              <tr style={{background:TC.bgAlt}}>
+                <th style={{...th2,width:34,cursor:"default"}}>✓</th>
+                <th style={th2} onClick={()=>sort("name")}>Fons <Arr k="name"/></th>
+                <th style={th2} onClick={()=>sort("commitment")}>Compromís <Arr k="commitment"/></th>
+                <th style={th2} onClick={()=>sort("geography")}>Geo <Arr k="geography"/></th>
+                <th style={th2} onClick={()=>sort("strategy")}>Estratègia <Arr k="strategy"/></th>
+                <th style={th2} onClick={()=>sort("sector")}>Sector <Arr k="sector"/></th>
+                <th style={th2} onClick={()=>sort("status")}>Status <Arr k="status"/></th>
+                <th style={th2} onClick={()=>sort("canal")}>Canal <Arr k="canal"/></th>
+                <th style={{...th2,cursor:"pointer"}} onClick={()=>sort("estimatedClosing")}>Tancament Est. <Arr k="estimatedClosing"/></th>
+                <th style={{...th2,width:26,cursor:"default"}}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((f,i)=>(
+                <tr key={f.id} style={{borderBottom:`1px solid ${TC.bgAlt}`,background:i%2===0?TC.card:TC.bgAlt,opacity:f.active?1:0.4}}>
+                  <td style={{padding:"9px 10px"}}>
+                    <div onClick={()=>toggle(f.id)} style={{width:16,height:16,border:`2px solid ${f.active?TC.green:TC.border}`,background:f.active?TC.green:"transparent",borderRadius:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {f.active&&<span style={{color:"#fff",fontSize:9,fontWeight:900}}>✓</span>}
+                    </div>
+                  </td>
+                  <td style={{padding:"9px 10px",fontWeight:600,color:TC.text,whiteSpace:"nowrap"}}>{f.name}</td>
+                  <td style={{padding:"9px 10px",fontFamily:"monospace",fontWeight:700,color:TC.navy,whiteSpace:"nowrap"}}>
+                    {cur==="EUR"?`€${toEUR(f.amount,f.currency).toFixed(2)}M`:`$${toUSD(f.amount,f.currency).toFixed(2)}M`}
+                    <span style={{fontSize:10,color:TC.textLight,marginLeft:4,fontFamily:"inherit",fontWeight:400}}>({f.currency==="EUR"?"€":"$"}{f.amount}M)</span>
+                  </td>
+                  <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
+                  <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>
+                  <td style={{padding:"9px 10px",fontSize:12,color:TC.textMid,whiteSpace:"nowrap"}}>{f.sector}</td>
+                  <td style={{padding:"9px 10px"}}><EditCell value={f.status} options={["En estudi","Aprovat","Descartat"]} cfg={STATUS_CFG} onChange={v=>upd(f.id,"status",v)}/></td>
+                  <td style={{padding:"9px 10px"}}><EditCell value={f.canal} options={["Arcano","Placement Agent","Propietari","Altres"]} cfg={CANAL_CFG} onChange={v=>upd(f.id,"canal",v)}/></td>
+                  <td style={{padding:"9px 10px"}}><EditableSelect value={f.estimatedClosing||""} onChange={v=>upd(f.id,"estimatedClosing",v)}/></td>
+                  <td style={{padding:"9px 10px"}}>
+                    <button onClick={()=>del(f.id)} style={{background:"transparent",border:"none",color:TC.border,cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}
+                      onMouseEnter={e=>e.target.style.color="#C0392B"} onMouseLeave={e=>e.target.style.color=TC.border}>×</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr style={{borderTop:`2px solid ${TC.border}`,background:TC.bgAlt}}>
+                <td colSpan={2} style={{padding:"8px 10px",fontSize:12,color:TC.textLight}}>{filtered.filter(f=>f.active).length} actius · {filtered.length} mostrats</td>
+                <td style={{padding:"8px 10px",fontSize:14,fontWeight:700,color:TC.navy}}>
+                  {sym}{filtered.filter(f=>f.active).reduce((s,f)=>s+cv(f.amount,f.currency),0).toFixed(2)}M
+                </td>
+                <td colSpan={7}></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+      {/* Switch moneda */}
+      <div style={{display:"flex",justifyContent:"flex-end",marginTop:10,gap:6}}>
+        <span style={{fontSize:11,color:TC.textLight,alignSelf:"center"}}>Moneda:</span>
+        {["EUR","USD"].map(c=>(
+          <button key={c} onClick={()=>setCur(c)} style={{background:cur===c?TC.navy:"transparent",border:`1.5px solid ${TC.navy}`,color:cur===c?"#fff":TC.navy,borderRadius:5,padding:"4px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>{c}</button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+// ══════════════════════════════════════════════════════════
+// SELECTOR MULTI-MES
+// ══════════════════════════════════════════════════════════
