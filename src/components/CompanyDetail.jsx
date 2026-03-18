@@ -125,9 +125,10 @@ function CompanyDetailInner() {
 }
 
 export default function CompanyDetail() {
-  const { dark } = useTheme();
+  const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1");
+  const tc = dark ? TC_DARK : TC_LIGHT;
   return (
-    <ThemeContext.Provider value={dark ? TC_DARK : TC_LIGHT}>
+    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
       <CompanyDetailInner />
     </ThemeContext.Provider>
   );

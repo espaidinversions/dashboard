@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
@@ -171,9 +171,10 @@ function FundDetailInner() {
 }
 
 export default function FundDetail() {
-  const { dark } = useTheme();
+  const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1");
+  const tc = dark ? TC_DARK : TC_LIGHT;
   return (
-    <ThemeContext.Provider value={dark ? TC_DARK : TC_LIGHT}>
+    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
       <FundDetailInner />
     </ThemeContext.Provider>
   );
