@@ -1,5 +1,8 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid
+} from "recharts";
 import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
@@ -18,7 +21,7 @@ function KpiCard({ label, value, sub, valueColor, tc }) {
 function CompanyDetailInner() {
   const { id } = useParams();
   const { tc, dark } = useTheme();
-  const [kpiTab, setKpiTab] = useState("tvpi");
+  const [kpiTab, setKpiTab] = useState("rev");
 
   const company = useMemo(
     () => PORTFOLIO_COMPANIES.find(c => slugify(c.nom) === id),
@@ -35,17 +38,29 @@ function CompanyDetailInner() {
   }
 
   const { nom, tipus, segment, entrepreneurs, origen, geo, ticket,
-          tvpi, rvpiEur, dpiEur, mesosOperant, rev, ebitda,
-          dataCompr, multEntry } = company;
+          tvpi, rvpiEur, dpiEur, mesosOperant,
+          dataCompr, multEntry, quarters = [] } = company;
 
   const tvpiColor = tvpi == null ? tc.textLight : tvpi < 1 ? "#E53E3E" : tvpi < 1.5 ? "#D69E2E" : tc.green;
-  const margin = rev && ebitda ? `${(ebitda / rev * 100).toFixed(1)}% marge` : null;
+
+  const KPI_CFG = {
+    rev:    { label: "Ingressos",  ltmLabel: "Ingressos LTM",  color: "#276749", actualKey: "rev",    budgetKey: "revBudget" },
+    ebitda: { label: "EBITDA",     ltmLabel: "EBITDA LTM",     color: "#2B4C7E", actualKey: "ebitda", budgetKey: "ebitdaBudget" },
+    dfn:    { label: "Deute Net",  ltmLabel: "Deute Net LTM",  color: "#6B2E7E", actualKey: "dfn",    budgetKey: "dfnBudget" },
+  };
 
   const KPI_TABS = [
-    { id: "tvpi", label: "TVPI" },
-    { id: "rev", label: "Ingressos" },
+    { id: "rev",    label: "Ingressos" },
     { id: "ebitda", label: "EBITDA" },
+    { id: "dfn",    label: "Deute Net" },
   ];
+
+  const ltm = useMemo(() => {
+    if (quarters.length === 0) return null;
+    const last4 = quarters.slice(-4);
+    const sum = key => last4.reduce((s, q) => s + (q[key] ?? 0), 0);
+    return { rev: sum("rev"), ebitda: sum("ebitda"), dfn: sum("dfn"), n: last4.length };
+  }, [quarters]);
 
   return (
     <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
@@ -73,22 +88,9 @@ function CompanyDetailInner() {
           <KpiCard label="Mesos operant" value={mesosOperant ?? "—"} tc={tc} />
         </div>
 
-        {/* Operative metrics */}
-        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", flex: 1 }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>Ingressos LTM</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: tc.navy, fontFamily: "'DM Mono',monospace" }}>{rev != null ? fmtM(rev) : "—"}</div>
-            {margin && <div style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{margin}</div>}
-          </div>
-          <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", flex: 1 }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>EBITDA LTM</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: tc.navy, fontFamily: "'DM Mono',monospace" }}>{ebitda != null ? fmtM(ebitda) : "—"}</div>
-          </div>
-        </div>
-
-        {/* KPI evolution (placeholder) */}
+        {/* Quarterly KPIs */}
         <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
-          <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 16 }}>Evolució KPIs</div>
+          <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 16 }}>Evolució Trimestral</div>
           <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
             {KPI_TABS.map(t => (
               <button key={t.id} onClick={() => setKpiTab(t.id)}
@@ -97,9 +99,47 @@ function CompanyDetailInner() {
               </button>
             ))}
           </div>
-          <div style={{ border: `2px dashed ${tc.border}`, borderRadius: 8, padding: "48px 24px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>
-            Afegeix dades històriques per veure l'evolució
-          </div>
+          {quarters.length === 0
+            ? (
+              <div style={{ border: `2px dashed ${tc.border}`, borderRadius: 8, padding: "48px 24px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>
+                Afegeix dades històriques per veure l'evolució
+              </div>
+            )
+            : (() => {
+                const cfg = KPI_CFG[kpiTab];
+                const hasBudget = quarters.some(q => q[cfg.budgetKey] != null);
+                const ltmVal = ltm?.[cfg.actualKey];
+                return (
+                  <>
+                    {ltm && (
+                      <div style={{ background: tc.bgAlt, borderRadius: 8, padding: "12px 16px", marginBottom: 16, display: "inline-block" }}>
+                        <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
+                          {cfg.ltmLabel}{ltm.n < 4 ? ` (${ltm.n} trim.)` : ""}
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: tc.navy, fontFamily: "'DM Mono',monospace", marginTop: 4 }}>
+                          {ltmVal != null ? fmtM(ltmVal) : "—"}
+                        </div>
+                      </div>
+                    )}
+                    <ResponsiveContainer width="100%" height={240}>
+                      <BarChart data={quarters} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="20%" barGap={2}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
+                        <XAxis dataKey="q" tick={{ fontSize: 10, fill: tc.textLight }} />
+                        <YAxis tickFormatter={v => fmtM(v)} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
+                        <Tooltip
+                          formatter={(v, name) => [fmtM(v), name === "actual" ? "Real" : "Pressupost"]}
+                          labelStyle={{ color: tc.text }}
+                          contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }}
+                        />
+                        {hasBudget && <Legend formatter={v => v === "actual" ? "Real" : "Pressupost"} />}
+                        <Bar dataKey={cfg.actualKey} name="actual" fill={cfg.color} />
+                        {hasBudget && <Bar dataKey={cfg.budgetKey} name="budget" fill={cfg.color} fillOpacity={0.35} />}
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </>
+                );
+              })()
+          }
         </div>
 
         {/* Entry info */}
