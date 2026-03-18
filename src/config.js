@@ -54,3 +54,6 @@ export const GBADGE= {EU:{bg:"#E8F4EE",color:TC.greenDark},US:{bg:"#E8EFF5",colo
 export const COMPROMISOS  = RAW_CC.filter(r=>r.cat==="Compromís");
 export const TRANSACTIONS = RAW_CC.filter(r=>r.cat!=="Compromís");
 export const ALL_FONS = [...new Set(RAW_CC.map(r=>r.fons))].sort();
+
+// Fund-level metadata — set tvpi manually from fund manager reports
+export const FUND_META = ALL_FONS.map(fons => ({ fons, tvpi: null }));
