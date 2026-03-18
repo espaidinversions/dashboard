@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
 } from "recharts";
-import { RAW_CC as RAW_CC_DEFAULT } from "../config.js";
+import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
 import { Badge } from "./SharedComponents.jsx";
@@ -16,11 +16,11 @@ const CAT_CFG = {
   "Altres":         { color: "#999",    bg: "#F0F0F0" },
 };
 
-function KpiCard({ label, value, sub, tc }) {
+function KpiCard({ label, value, sub, tc, valueColor }) {
   return (
     <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 160, flex: 1 }}>
       <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: tc.navy, fontFamily: "'DM Mono',monospace" }}>{value}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -35,6 +35,13 @@ function FundDetailInner() {
       const s = localStorage.getItem("tc_rawCC");
       return s ? JSON.parse(s) : RAW_CC_DEFAULT;
     } catch { return RAW_CC_DEFAULT; }
+  }, []);
+
+  const fundMeta = useMemo(() => {
+    try {
+      const s = localStorage.getItem("tc_fundMeta");
+      return s ? JSON.parse(s) : FUND_META_DEFAULT;
+    } catch { return FUND_META_DEFAULT; }
   }, []);
 
   // Find all transactions for this fund
@@ -62,6 +69,13 @@ function FundDetailInner() {
   const dist      = txs.filter(r => r.cat === "Distribució" || r.cat === "Retorn Capital").reduce((s, r) => s + Math.abs(r.eur), 0);
   const net       = dist - calls;
   const utilPct   = compromis > 0 ? (calls / compromis * 100).toFixed(1) + "%" : null;
+
+  const meta = fundMeta.find(m => m.fons === fundName);
+  const tvpiFund = meta?.tvpi ?? null;
+  const dpiFund = calls > 0 ? dist / calls : 0;
+  const rvpiFund = tvpiFund != null ? tvpiFund - dpiFund : null;
+  const multipleColor = v => v == null ? tc.textLight : v < 1 ? "#E53E3E" : v < 1.5 ? "#D69E2E" : tc.green;
+  const fmtX = v => v != null ? `${v.toFixed(2)}×` : "—";
 
   // J-curve data: sort by date, compute running sums
   const jCurveData = useMemo(() => {
@@ -109,6 +123,9 @@ function FundDetailInner() {
           <KpiCard label="Capital Cridat" value={fmtM(calls)} sub={utilPct ? `${utilPct} del compromís` : null} tc={tc} />
           <KpiCard label="Distribucions"  value={dist ? fmtM(dist) : "—"} tc={tc} />
           <KpiCard label="Net"            value={(net >= 0 ? "+" : "") + fmtM(net)} tc={tc} />
+          <KpiCard label="TVPI" value={fmtX(tvpiFund)} sub="Inputat manualment" valueColor={multipleColor(tvpiFund)} tc={tc} />
+          <KpiCard label="DPI"  value={fmtX(dpiFund)}  valueColor={multipleColor(dpiFund)}  tc={tc} />
+          <KpiCard label="RVPI" value={fmtX(rvpiFund)} valueColor={multipleColor(rvpiFund)} tc={tc} />
         </div>
 
         {/* J-curve */}
@@ -118,14 +135,18 @@ function FundDetailInner() {
             ? <div style={{ textAlign: "center", color: tc.textLight, padding: "32px 0" }}>Encara no hi ha aportacions registrades.</div>
             : (
               <ResponsiveContainer width="100%" height={240}>
-                <AreaChart data={jCurveData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <BarChart data={jCurveData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="20%" barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
                   <XAxis dataKey="data" tick={{ fontSize: 10, fill: tc.textLight }} />
                   <YAxis tickFormatter={v => fmtM(v)} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
-                  <Tooltip formatter={(v, name) => [fmtM(v), name === "cumCalls" ? "Capital Cridat" : "Distribucions"]} labelStyle={{ color: tc.text }} contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }} />
-                  <Area type="monotone" dataKey="cumCalls" name="cumCalls" stroke="#2B4C7E" fill={dark ? "#1A2F45" : "#E8EFF5"} strokeWidth={2} dot={false} />
-                  <Area type="monotone" dataKey="cumDist"  name="cumDist"  stroke="#276749" fill={dark ? "#0E2820" : "#E8F5E9"} strokeWidth={2} dot={false} />
-                </AreaChart>
+                  <Tooltip
+                    formatter={(v, name) => [fmtM(v), name === "cumCalls" ? "Capital Cridat" : "Distribucions"]}
+                    labelStyle={{ color: tc.text }}
+                    contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }}
+                  />
+                  <Bar dataKey="cumCalls" name="cumCalls" fill="#2B4C7E" />
+                  <Bar dataKey="cumDist"  name="cumDist"  fill="#276749" />
+                </BarChart>
               </ResponsiveContainer>
             )
           }
