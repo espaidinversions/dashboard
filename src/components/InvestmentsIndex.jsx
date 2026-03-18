@@ -137,7 +137,7 @@ function InvestmentsIndexInner() {
                   const href = r._isCompany ? `/company/${r.slug}` : `/fund/${r.slug}`;
                   const bg = i % 2 === 0 ? "transparent" : tc.bgAlt;
                   return (
-                    <tr key={r.slug} style={{ background: bg, borderBottom: `1px solid ${tc.border}` }}>
+                    <tr key={`${r._isCompany ? "c" : "f"}-${r.slug}`} style={{ background: bg, borderBottom: `1px solid ${tc.border}` }}>
                       <td style={{ padding: "10px 12px", fontWeight: 700 }}>
                         <Link to={href} style={{ color: tc.navy, textDecoration: "none" }}
                           onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}

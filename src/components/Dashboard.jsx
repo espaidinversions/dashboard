@@ -9,7 +9,7 @@ import {
   RAW_CC as RAW_CC_DEFAULT, FUNDS0 as FUNDS0_DEFAULT,
 } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState } from "../utils.js";
+import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify } from "../utils.js";
 import { Logo, Badge, BarTip, PieTip, PL, EmptyState } from "./SharedComponents.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
@@ -17,7 +17,6 @@ import { MensualTab } from "./MensualTab.jsx";
 import { SearchersTab } from "./SearchersTab.jsx";
 import { PortfolioCompaniesTab } from "./PortfolioCompaniesTab.jsx";
 import { Link } from "react-router-dom";
-import { slugify } from "../utils.js";
 
 // ── Data loader modal ─────────────────────────────────────
 function DataLoader({ onLoad, onClose, dataInfo }) {

@@ -64,18 +64,17 @@ function FundDetailInner() {
   const utilPct   = compromis > 0 ? (calls / compromis * 100).toFixed(1) + "%" : null;
 
   // J-curve data: sort by date, compute running sums
-  const jCurveRows = txs
-    .filter(r => r.cat === "Capital Call" || r.cat === "Distribució" || r.cat === "Retorn Capital")
-    .sort((a, b) => a.data.localeCompare(b.data));
-
   const jCurveData = useMemo(() => {
+    const rows = txs
+      .filter(r => r.cat === "Capital Call" || r.cat === "Distribució" || r.cat === "Retorn Capital")
+      .sort((a, b) => a.data.localeCompare(b.data));
     let cumCalls = 0, cumDist = 0;
-    return jCurveRows.map(r => {
+    return rows.map(r => {
       if (r.cat === "Capital Call") cumCalls += r.eur;
       else cumDist += Math.abs(r.eur);
       return { data: r.data, cumCalls, cumDist };
     });
-  }, [jCurveRows]);
+  }, [txs]);
 
   // Transaction log: sorted newest first
   const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
@@ -149,7 +148,7 @@ function FundDetailInner() {
               {txLog.map((r, i) => {
                 const cfg = CAT_CFG[r.cat] || {};
                 return (
-                  <tr key={i} style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
+                  <tr key={`${r.data}-${r.cat}-${r.eur}`} style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
                     <td style={{ padding: "8px 12px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
                     <td style={{ padding: "8px 12px", fontSize: 12, color: tc.textMid }}>{r.tipus}</td>
                     <td style={{ padding: "8px 12px" }}>
