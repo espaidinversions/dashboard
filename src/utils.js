@@ -64,3 +64,41 @@ export function parsePipelineCSV(text) {
   }));
 }
 
+
+
+// ── Persisted state hook ───────────────────────────────────
+import { useState, useEffect } from "react";
+
+/**
+ * Like useState but syncs with localStorage.
+ * Pass isSet:true for Set values (serialised as sorted array).
+ */
+export function usePersistedState(key, defaultValue, { isSet = false } = {}) {
+  const [value, setValue] = useState(() => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw === null) return defaultValue;
+      const parsed = JSON.parse(raw);
+      return isSet ? new Set(parsed) : parsed;
+    } catch {
+      return defaultValue;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      const toStore = isSet ? [...value].sort() : value;
+      localStorage.setItem(key, JSON.stringify(toStore));
+    } catch {}
+  }, [key, value, isSet]);
+
+  return [value, setValue];
+}
+
+// ── Slug utility ──────────────────────────────────────────
+export function slugify(str) {
+  return String(str).toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
