@@ -1,4 +1,181 @@
-import React from "react";
+import React, { useMemo } from "react";
+import { useParams, Link } from "react-router-dom";
+import {
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
+} from "recharts";
+import { RAW_CC as RAW_CC_DEFAULT } from "../config.js";
+import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
+import { fmtM, slugify } from "../utils.js";
+import { Badge } from "./SharedComponents.jsx";
+
+const CAT_CFG = {
+  "Capital Call":   { color: "#2B4C7E", bg: "#E8EFF5" },
+  "Distribució":    { color: "#276749", bg: "#E8F5E9" },
+  "Retorn Capital": { color: "#1E5738", bg: "#D6EAE0" },
+  "Compromís":      { color: "#6B8CAE", bg: "#EAF0F6" },
+  "Altres":         { color: "#999",    bg: "#F0F0F0" },
+};
+
+function KpiCard({ label, value, sub, tc }) {
+  return (
+    <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 160, flex: 1 }}>
+      <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: tc.navy, fontFamily: "'DM Mono',monospace" }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function FundDetailInner() {
+  const { id } = useParams();
+  const { tc, dark } = useTheme();
+
+  const rawCC = useMemo(() => {
+    try {
+      const s = localStorage.getItem("tc_rawCC");
+      return s ? JSON.parse(s) : RAW_CC_DEFAULT;
+    } catch { return RAW_CC_DEFAULT; }
+  }, []);
+
+  // Find all transactions for this fund
+  const txs = useMemo(
+    () => rawCC.filter(r => slugify(r.fons) === id),
+    [rawCC, id]
+  );
+
+  if (txs.length === 0) {
+    return (
+      <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", padding: 32 }}>
+        <Link to="/investments" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Inversions</Link>
+        <div style={{ marginTop: 48, textAlign: "center", color: tc.textLight }}>Fons no trobat.</div>
+      </div>
+    );
+  }
+
+  const fundName = txs[0].fons;
+  const vcpe = txs[0].vcpe;
+  const est = txs[0].est;
+
+  // KPI sums
+  const compromis = txs.filter(r => r.cat === "Compromís").reduce((s, r) => s + r.eur, 0);
+  const calls     = txs.filter(r => r.cat === "Capital Call").reduce((s, r) => s + r.eur, 0);
+  const dist      = txs.filter(r => r.cat === "Distribució" || r.cat === "Retorn Capital").reduce((s, r) => s + Math.abs(r.eur), 0);
+  const net       = dist - calls;
+  const utilPct   = compromis > 0 ? (calls / compromis * 100).toFixed(1) + "%" : null;
+
+  // J-curve data: sort by date, compute running sums
+  const jCurveRows = txs
+    .filter(r => r.cat === "Capital Call" || r.cat === "Distribució" || r.cat === "Retorn Capital")
+    .sort((a, b) => a.data.localeCompare(b.data));
+
+  const jCurveData = useMemo(() => {
+    let cumCalls = 0, cumDist = 0;
+    return jCurveRows.map(r => {
+      if (r.cat === "Capital Call") cumCalls += r.eur;
+      else cumDist += Math.abs(r.eur);
+      return { data: r.data, cumCalls, cumDist };
+    });
+  }, [jCurveRows]);
+
+  // Transaction log: sorted newest first
+  const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
+
+  const vcpeCfg = {
+    "PE": { color: "#2B4C7E", bg: "#E8EFF5" },
+    "VC": { color: "#276749", bg: "#E8F5E9" },
+    "RE": { color: "#6B2E7E", bg: "#F3EEF8" },
+  };
+  const estCfg = {
+    "Fons Primari": { color: "#2B4C7E", bg: "#E8EFF5" },
+    "Fons de Fons": { color: "#276749", bg: "#D6EAE0" },
+    "SOCIMI":       { color: "#6B2E7E", bg: "#F3EEF8" },
+  };
+
+  return (
+    <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
+      {/* Header */}
+      <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 16 }}>
+        <Link to="/investments" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Inversions</Link>
+        <span style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em", flex: 1 }}>{fundName}</span>
+        <div style={{ display: "flex", gap: 8 }}>
+          <Badge label={vcpe} cfg={vcpeCfg[vcpe] || {}} />
+          <Badge label={est}  cfg={estCfg[est]   || {}} />
+        </div>
+      </div>
+
+      <div style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: 24 }}>
+        {/* KPI cards */}
+        <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+          <KpiCard label="Compromís"      value={compromis ? fmtM(compromis) : "—"} tc={tc} />
+          <KpiCard label="Capital Cridat" value={fmtM(calls)} sub={utilPct ? `${utilPct} del compromís` : null} tc={tc} />
+          <KpiCard label="Distribucions"  value={dist ? fmtM(dist) : "—"} tc={tc} />
+          <KpiCard label="Net"            value={(net >= 0 ? "+" : "") + fmtM(net)} tc={tc} />
+        </div>
+
+        {/* J-curve */}
+        <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
+          <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 16 }}>Evolució acumulada (J-curve)</div>
+          {jCurveData.length === 0
+            ? <div style={{ textAlign: "center", color: tc.textLight, padding: "32px 0" }}>Encara no hi ha aportacions registrades.</div>
+            : (
+              <ResponsiveContainer width="100%" height={240}>
+                <AreaChart data={jCurveData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
+                  <XAxis dataKey="data" tick={{ fontSize: 10, fill: tc.textLight }} />
+                  <YAxis tickFormatter={v => fmtM(v)} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
+                  <Tooltip formatter={(v, name) => [fmtM(v), name === "cumCalls" ? "Capital Cridat" : "Distribucions"]} labelStyle={{ color: tc.text }} contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }} />
+                  <Area type="monotone" dataKey="cumCalls" name="cumCalls" stroke="#2B4C7E" fill={dark ? "#1A2F45" : "#E8EFF5"} strokeWidth={2} dot={false} />
+                  <Area type="monotone" dataKey="cumDist"  name="cumDist"  stroke="#276749" fill={dark ? "#0E2820" : "#E8F5E9"} strokeWidth={2} dot={false} />
+                </AreaChart>
+              </ResponsiveContainer>
+            )
+          }
+        </div>
+
+        {/* Transaction log */}
+        <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
+          <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 16 }}>
+            Transaccions · {txLog.length}
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: tc.bgAlt }}>
+                {["Data", "Tipus", "Categoria", "Import"].map(h => (
+                  <th key={h} style={{ padding: "8px 12px", textAlign: h === "Import" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {txLog.map((r, i) => {
+                const cfg = CAT_CFG[r.cat] || {};
+                return (
+                  <tr key={i} style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
+                    <td style={{ padding: "8px 12px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
+                    <td style={{ padding: "8px 12px", fontSize: 12, color: tc.textMid }}>{r.tipus}</td>
+                    <td style={{ padding: "8px 12px" }}>
+                      <span style={{ fontSize: 10, background: cfg.bg || tc.bgAlt, color: cfg.color || tc.textMid, borderRadius: 4, padding: "2px 8px", fontWeight: 600 }}>
+                        {r.cat}
+                      </span>
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: r.eur > 0 ? tc.navy : tc.green }}>
+                      {r.eur < 0 && "+ "}{fmtM(Math.abs(r.eur))}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function FundDetail() {
-  return <div style={{padding:32}}>FundDetail — coming soon</div>;
+  const { dark } = useTheme();
+  return (
+    <ThemeContext.Provider value={dark ? TC_DARK : TC_LIGHT}>
+      <FundDetailInner />
+    </ThemeContext.Provider>
+  );
 }
