@@ -9,13 +9,15 @@ import {
   RAW_CC as RAW_CC_DEFAULT, FUNDS0 as FUNDS0_DEFAULT,
 } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV } from "../utils.js";
+import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState } from "../utils.js";
 import { Logo, Badge, BarTip, PieTip, PL, EmptyState } from "./SharedComponents.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
 import { MensualTab } from "./MensualTab.jsx";
 import { SearchersTab } from "./SearchersTab.jsx";
 import { PortfolioCompaniesTab } from "./PortfolioCompaniesTab.jsx";
+import { Link } from "react-router-dom";
+import { slugify } from "../utils.js";
 
 // ── Data loader modal ─────────────────────────────────────
 function DataLoader({ onLoad, onClose, dataInfo }) {
@@ -25,6 +27,8 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
   const [ccStatus, setCcStatus] = useState(null);
   const [plStatus, setPlStatus] = useState(null);
   const [error,    setError]    = useState(null);
+  const [ccDrag,   setCcDrag]   = useState(false);
+  const [plDrag,   setPlDrag]   = useState(false);
 
   const readFile = (file, parser, setStatus, key) => {
     if (!file) return;
@@ -37,7 +41,6 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
         setStatus({ rows: rows.length, name: file.name });
         setError(null);
         onLoad(key, rows);
-        // Persist raw data to server
         if (key === "cc") {
           fetch("/api/capital-calls", {
             method: "POST",
@@ -53,6 +56,12 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
     reader.readAsText(file, "utf-8");
   };
 
+  const makeDrop = (parser, setStatus, key, setDrag) => ({
+    onDragOver:  e => { e.preventDefault(); setDrag(true); },
+    onDragLeave: e => { if (!e.currentTarget.contains(e.relatedTarget)) setDrag(false); },
+    onDrop:      e => { e.preventDefault(); setDrag(false); const f = e.dataTransfer.files[0]; if (f) readFile(f, parser, setStatus, key); },
+  });
+
   const sty = {
     overlay: { position:"fixed", inset:0, background:"rgba(15,25,35,.65)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center" },
     modal:   { background:TC.card, borderRadius:14, padding:"28px 32px", width:480, boxShadow:"0 8px 40px rgba(0,0,0,.35)", fontFamily:"'Outfit',system-ui,sans-serif" },
@@ -61,19 +70,49 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
     section: { marginBottom:18 },
     label:   { fontSize:11, fontWeight:600, color:TC.textMid, textTransform:"uppercase", letterSpacing:"0.1em", marginBottom:7, display:"block" },
     desc:    { fontSize:11, color:TC.textLight, marginBottom:8 },
-    row:     { display:"flex", alignItems:"center", gap:10 },
-    btn:     { background:TC.navy, color:"#fff", border:"none", borderRadius:6, padding:"7px 16px", cursor:"pointer", fontSize:12, fontFamily:"inherit", whiteSpace:"nowrap" },
+    btn:     { background:TC.navy, color:"#fff", border:"none", borderRadius:6, padding:"7px 16px", cursor:"pointer", fontSize:12, fontFamily:"inherit", whiteSpace:"nowrap", flexShrink:0 },
     status:  { fontSize:11, color:TC.green, fontWeight:600 },
     error:   { fontSize:11, color:TC.red, marginTop:10, background:TC.redLight, padding:"7px 10px", borderRadius:6 },
     close:   { background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"7px 18px", cursor:"pointer", fontSize:12, color:TC.textMid, fontFamily:"inherit" },
     info:    { fontSize:11, color:TC.textLight, background:TC.bgAlt, borderRadius:6, padding:"8px 12px", marginBottom:18 },
+    dropZone: (active) => ({
+      border: `2px dashed ${active ? TC.navy : TC.border}`,
+      borderRadius: 8,
+      padding: "12px 16px",
+      display: "flex", alignItems: "center", gap: 12,
+      background: active ? `${TC.navy}12` : "transparent",
+      transition: "background 0.15s ease, border-color 0.15s ease",
+      cursor: "pointer",
+    }),
+    hint: { fontSize:11, color:TC.textLight, marginTop:5 },
   };
+
+  const DropZone = ({ parser, setStatus, status, fileRef, inputProps, label, dragActive, setDrag }) => (
+    <div
+      style={sty.dropZone(dragActive)}
+      {...makeDrop(parser, setStatus, inputProps.key_, setDrag)}
+      onClick={() => fileRef.current.click()}
+    >
+      <input ref={fileRef} type="file" accept=".csv" style={{display:"none"}}
+        onChange={e=>readFile(e.target.files[0], parser, setStatus, inputProps.key_)}/>
+      <span style={{fontSize:20, lineHeight:1}}>📂</span>
+      <div style={{flex:1, minWidth:0}}>
+        {status
+          ? <span style={sty.status}>{status.name} ({status.rows} files)</span>
+          : <span style={{fontSize:12, color:TC.textMid}}>{dragActive ? "Deixa anar el fitxer…" : "Fes clic o arrossega un fitxer CSV aquí"}</span>
+        }
+      </div>
+      <button style={sty.btn} onClick={e=>{e.stopPropagation(); fileRef.current.click();}}>
+        Seleccionar
+      </button>
+    </div>
+  );
 
   return (
     <div className="modal-overlay" style={sty.overlay} onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
       <div className="modal-card" style={sty.modal}>
         <div style={sty.title}>Carregar dades</div>
-        <div style={sty.sub}>Selecciona els fitxers CSV per actualitzar el dashboard. Les dades es guarden al navegador.</div>
+        <div style={sty.sub}>Selecciona o arrossega els fitxers CSV per actualitzar el dashboard.</div>
 
         {dataInfo && (
           <div style={sty.info}>
@@ -84,24 +123,16 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
 
         <div style={sty.section}>
           <span style={sty.label}>Capital Calls</span>
-          <div style={sty.desc}>Fitxer: <code>capital-calls.csv</code> · Columnes: fons, tipus, cat, data, mes, any, fy, vcpe, est, eur, divisa</div>
-          <div style={sty.row}>
-            <input ref={ccRef} type="file" accept=".csv" style={{display:"none"}}
-              onChange={e=>readFile(e.target.files[0], parseCapitalCallsCSV, setCcStatus, "cc")}/>
-            <button style={sty.btn} onClick={()=>ccRef.current.click()}>Seleccionar fitxer</button>
-            {ccStatus && <span style={sty.status}>{ccStatus.name} ({ccStatus.rows} files)</span>}
-          </div>
+          <div style={sty.desc}>Fitxer: <code>capital-calls.csv</code></div>
+          <DropZone parser={parseCapitalCallsCSV} setStatus={setCcStatus} status={ccStatus}
+            fileRef={ccRef} inputProps={{key_:"cc"}} dragActive={ccDrag} setDrag={setCcDrag}/>
         </div>
 
         <div style={sty.section}>
-          <span style={sty.label}>Pipeline FY26</span>
-          <div style={sty.desc}>Fitxer: <code>pipeline.csv</code> · Columnes: id, name, amount, currency, geography, strategy, sector, status, canal, active</div>
-          <div style={sty.row}>
-            <input ref={plRef} type="file" accept=".csv" style={{display:"none"}}
-              onChange={e=>readFile(e.target.files[0], parsePipelineCSV, setPlStatus, "pl")}/>
-            <button style={sty.btn} onClick={()=>plRef.current.click()}>Seleccionar fitxer</button>
-            {plStatus && <span style={sty.status}>{plStatus.name} ({plStatus.rows} files)</span>}
-          </div>
+          <span style={sty.label}>Pipeline</span>
+          <div style={sty.desc}>Fitxer: <code>pipeline.csv</code></div>
+          <DropZone parser={parsePipelineCSV} setStatus={setPlStatus} status={plStatus}
+            fileRef={plRef} inputProps={{key_:"pl"}} dragActive={plDrag} setDrag={setPlDrag}/>
         </div>
 
         {error && <div style={sty.error}>{error}</div>}
@@ -129,8 +160,8 @@ function loadFromLS(key, fallback) {
 function DashboardInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
 
-  const [tab,      setTab]     = useState("resum");
-  const [excluded, setExcluded]= useState(new Set());
+  const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
+  const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
   const [showLoader, setShowLoader] = useState(false);
 
   // Dades dinàmiques (localStorage → static fallback)
@@ -183,14 +214,15 @@ function DashboardInner() {
   const COMPROMISOS  = useMemo(()=>rawCC.filter(r=>r.cat==="Compromís"),[rawCC]);
 
   // Filtres Capital Calls
-  const [fFy,   setFFy]   = useState("Tots");
-  const [fVcpe, setFVcpe] = useState(new Set()); // empty = all
-  const [fEst,  setFEst]  = useState("Tots");
-  const [fCat,  setFCat]  = useState("Tots");
-  const [txPage,setTxPage]= useState(0);
-  const [txSort,setTxSort]= useState({k:"data",d:"desc"});
-  const [sortFons, setSortFons] = useState("compr");
-  const [sortFonsDir, setSortFonsDir] = useState("desc");
+  const [fFy,     setFFy]     = usePersistedState("ui_fFy",  "Tots");
+  const [fVcpe,   setFVcpe]   = usePersistedState("ui_fVcpe", new Set(), { isSet: true });
+  const [fEst,    setFEst]    = usePersistedState("ui_fEst",  "Tots");
+  const [fCat,    setFCat]    = usePersistedState("ui_fCat",  "Tots");
+  const [txSearch,setTxSearch]= usePersistedState("ui_txSearch", "");
+  const [txPage,  setTxPage]  = useState(0);
+  const [txSort,setTxSort]= usePersistedState("ui_txSort", {k:"data",d:"desc"});
+  const [sortFons, setSortFons] = usePersistedState("ui_sortFons", "compr");
+  const [sortFonsDir, setSortFonsDir] = usePersistedState("ui_sortFonsDir", "desc");
   const [expandedFons, setExpandedFons] = useState(new Set());
   const [ccChartF, setCcChartF] = useState(null); // {type, value} per filtrar taula fons
   const TX_PP = 30;
@@ -206,8 +238,12 @@ function DashboardInner() {
     if(fVcpe.size>0) d=d.filter(r=>fVcpe.has(r.vcpe));
     if(fEst !=="Tots") d=d.filter(r=>r.est===fEst);
     if(fCat !=="Tots") d=d.filter(r=>r.cat===fCat);
+    if(txSearch.trim()) {
+      const q=txSearch.trim().toLowerCase();
+      d=d.filter(r=>(r.fons||"").toLowerCase().includes(q)||(r.tipus||"").toLowerCase().includes(q)||(r.cat||"").toLowerCase().includes(q));
+    }
     return d;
-  },[baseTx,fFy,fVcpe,fEst,fCat]);
+  },[baseTx,fFy,fVcpe,fEst,fCat,txSearch]);
 
   // KPIs
   const gCompr = useMemo(()=>baseCompr.reduce((s,r)=>s+r.eur,0),[baseCompr]);
@@ -304,8 +340,8 @@ function DashboardInner() {
   const sortTx = k=>{setTxSort(p=>({k,d:p.k===k&&p.d==="desc"?"asc":"desc"}));setTxPage(0);};
   const TArr = ({k})=><span style={{marginLeft:3,opacity:txSort.k===k?1:0.2,fontSize:9}}>{txSort.k===k&&txSort.d==="asc"?"▲":"▼"}</span>;
 
-  const clearFilters = ()=>{setFFy("Tots");setFVcpe(new Set());setFEst("Tots");setFCat("Tots");setTxPage(0);};
-  const anyFilter = fFy!=="Tots"||fVcpe.size>0||fEst!=="Tots"||fCat!=="Tots";
+  const clearFilters = ()=>{setFFy("Tots");setFVcpe(new Set());setFEst("Tots");setFCat("Tots");setTxSearch("");setTxPage(0);};
+  const anyFilter = fFy!=="Tots"||fVcpe.size>0||fEst!=="Tots"||fCat!=="Tots"||txSearch.trim()!="";
 
   // Theme-based style objects
   const inp = {border:`1px solid ${tc.border}`,borderRadius:5,padding:"5px 8px",fontSize:12,color:tc.text,background:tc.card,outline:"none",fontFamily:"inherit",cursor:"pointer"};
@@ -379,6 +415,10 @@ function DashboardInner() {
       <div className="no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"12px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)"}}>
         <Logo/>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <Link to="/investments"
+            style={{ background: "transparent", color: tc.textMid, border: `1.5px solid ${tc.border}`, borderRadius: 7, padding: "7px 14px", cursor: "pointer", fontSize: 12, fontFamily: "inherit", textDecoration: "none" }}>
+            Inversions
+          </Link>
           {/* Per-supra upload button */}
           {supra === "fons" && (
             <button onClick={()=>setShowLoader(true)}
@@ -540,6 +580,12 @@ function DashboardInner() {
                 </div>
                 );
               })}
+              <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:4}}>
+                <span style={{fontSize:11,color:tc.textLight}}>Cerca:</span>
+                <input value={txSearch} onChange={e=>{setTxSearch(e.target.value);setTxPage(0);}} placeholder="fons, tipus…"
+                  style={{...inp,width:160,paddingLeft:8}} />
+                {txSearch&&<button onClick={()=>{setTxSearch("");setTxPage(0);}} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:13,color:tc.textLight,padding:"0 2px",lineHeight:1}}>✕</button>}
+              </div>
               {anyFilter&&<button onClick={clearFilters} style={{background:"transparent",border:`1px solid ${tc.border}`,borderRadius:5,padding:"4px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>✕ Netejar</button>}
               <div style={{marginLeft:"auto",fontSize:12,color:tc.textLight}}>
                 <b style={{color:tc.navy}}>{filtered.length}</b> mov. ·
@@ -751,7 +797,17 @@ function DashboardInner() {
                               <span style={{fontSize:14,color:tc.green,fontWeight:700,lineHeight:1,display:"inline-block",transition:"transform 0.2s",transform:isExp?"rotate(90deg)":"rotate(0deg)"}}>▶</span>
                             </td>
                             <td style={{padding:"10px 10px",fontSize:11,color:tc.textLight,fontWeight:600}}>{i+1}</td>
-                            <td style={{padding:"10px 10px",fontWeight:700,color:isExp?tc.green:tc.text,fontSize:12,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.fons}</td>
+                            <td style={{padding:"10px 10px",fontWeight:700,color:isExp?tc.green:tc.text,fontSize:12,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                              <Link
+                                to={`/fund/${slugify(f.fons)}`}
+                                onClick={e => e.stopPropagation()}
+                                style={{ color: "inherit", textDecoration: "none" }}
+                                onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
+                                onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
+                              >
+                                {f.fons}
+                              </Link>
+                            </td>
                             <td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:tc.navyLight}}>{f.compr?fmtM(f.compr):"—"}</td>
                             <td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:tc.navy}}>{fmtM(f.calls)}</td>
                             <td style={{padding:"10px 10px",textAlign:"right"}}>

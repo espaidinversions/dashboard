@@ -7,6 +7,8 @@ import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
 import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { FlagImg, FlagSvgLabel } from "./SharedComponents.jsx";
+import { Link } from "react-router-dom";
+import { slugify } from "../utils.js";
 
 const GEO_NAME = { ES:"ESP", EN:"UK", IT:"ITA", DE:"DEU", FR:"FRA", PT:"POR", NL:"NED", US:"USA", CH:"CHE" };
 
@@ -230,7 +232,16 @@ function PortRow({ r, i, TC }) {
   const tdBase = { padding:"7px 10px" };
   return (
     <tr style={{ background: i%2===0 ? TC.card : TC.bgAlt }}>
-      <td style={{ ...tdBase, fontWeight:600, color:TC.navy, whiteSpace:"nowrap" }}>{r.nom}</td>
+      <td style={{ ...tdBase, fontWeight:600, color:TC.navy, whiteSpace:"nowrap" }}>
+        <Link
+          to={`/company/${slugify(r.nom)}`}
+          style={{ color: "inherit", textDecoration: "none" }}
+          onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
+          onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
+        >
+          {r.nom}
+        </Link>
+      </td>
       <td style={tdBase}>
         <span style={{ background:r.tipus==="SF"?"#E8EFF5":"#F3EEF8", color:r.tipus==="SF"?TC.navy:"#6A4C8A", borderRadius:20, padding:"1px 8px", fontSize:9, fontWeight:700, letterSpacing:"0.05em" }}>{r.tipus}</span>
       </td>
