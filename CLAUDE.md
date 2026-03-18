@@ -53,3 +53,15 @@
 ---
 
 → See PROJECT.md for project context, file map, and Kanvas commands.
+
+---
+
+## Context Preservation
+
+> When context is compressed, Claude must preserve these patterns exactly.
+
+- **ThemeContext pattern** — Outer wrapper: `const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1")`. Provider receives `{ tc, dark, toggle: () => setDark(d => !d) }` — never the raw color object (`TC_LIGHT`/`TC_DARK`). `useTheme()` returns `{ tc, dark, toggle }`.
+- **Data loading pattern** — `localStorage.getItem("tc_rawCC")` with `RAW_CC_DEFAULT` fallback (imported from `src/config.js`). `loadFromLS` is private to `Dashboard.jsx` — never import or call it elsewhere.
+- **Routing** — `BrowserRouter` + `AppRoutes` in `src/router.jsx`. Fund IDs: `slugify(r.fons)`. Company IDs: `slugify(c.nom)`. Routes: `/` (Dashboard), `/investments` (InvestmentsIndex), `/fund/:id` (FundDetail), `/company/:id` (CompanyDetail).
+- **Active task status** — current `[ ]` items in `tasks/todo.md`.
+- **Files modified this session** — list of files changed so Claude doesn't re-read everything next turn.
