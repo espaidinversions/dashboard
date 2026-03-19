@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine
 } from "recharts";
 import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
@@ -86,7 +86,7 @@ function FundDetailInner() {
     return rows.map(r => {
       if (r.cat === "Capital Call") cumCalls += r.eur;
       else cumDist += Math.abs(r.eur);
-      return { data: r.data, cumCalls, cumDist };
+      return { data: r.data, cumCalls: -cumCalls, cumDist };
     });
   }, [txs]);
 
@@ -137,10 +137,14 @@ function FundDetailInner() {
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={jCurveData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="20%" barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
+                  <ReferenceLine y={0} stroke={tc.border} strokeWidth={1.5} />
                   <XAxis dataKey="data" tick={{ fontSize: 10, fill: tc.textLight }} />
-                  <YAxis tickFormatter={v => fmtM(v)} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
+                  <YAxis tickFormatter={v => (v < 0 ? "−" : "") + fmtM(Math.abs(v))} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
                   <Tooltip
-                    formatter={(v, name) => [fmtM(v), name === "cumCalls" ? "Capital Cridat" : "Distribucions"]}
+                    formatter={(v, name) => [
+                      (v < 0 ? "−" : "+") + fmtM(Math.abs(v)),
+                      name === "cumCalls" ? "Capital Cridat (acum.)" : "Distribucions (acum.)"
+                    ]}
                     labelStyle={{ color: tc.text }}
                     contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }}
                   />
