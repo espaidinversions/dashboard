@@ -6,7 +6,7 @@ import {
 import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
-import { Badge } from "./SharedComponents.jsx";
+import { Badge, Logo } from "./SharedComponents.jsx";
 
 const CAT_CFG = {
   "Capital Call":   { color: "#2B4C7E", bg: "#E8EFF5" },
@@ -28,7 +28,7 @@ function KpiCard({ label, value, sub, tc, valueColor }) {
 
 function FundDetailInner() {
   const { id } = useParams();
-  const { tc, dark } = useTheme();
+  const { tc, dark, toggle } = useTheme();
 
   const rawCC = useMemo(() => {
     try {
@@ -119,11 +119,20 @@ function FundDetailInner() {
 
   return (
     <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
-      {/* Header */}
-      <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 16 }}>
-        <Link to="/investments" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Inversions</Link>
-        <span style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em", flex: 1 }}>{fundName}</span>
-        <div style={{ display: "flex", gap: 8 }}>
+      {/* Top bar */}
+      <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)" }}>
+        <Link to="/" style={{ display: "flex", alignItems: "center", flexShrink: 0 }}><Logo /></Link>
+        <div style={{ flex: 1 }} />
+        <button onClick={toggle} style={{ background: "transparent", border: `1.5px solid ${tc.border}`, borderRadius: 7, padding: "7px 12px", cursor: "pointer", fontSize: 16, color: tc.textMid, fontFamily: "inherit" }}>
+          {dark ? "☀️" : "🌙"}
+        </button>
+      </div>
+      {/* Entity bar */}
+      <div style={{ background: tc.navy, padding: "0 32px", display: "flex", alignItems: "center", gap: 12, minHeight: 48 }}>
+        <Link to="/investments/funds" style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0 }}>← Inversions</Link>
+        <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>/</span>
+        <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fundName}</span>
+        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <Badge label={vcpe} cfg={vcpeCfg[vcpe] || {}} />
           <Badge label={est}  cfg={estCfg[est]   || {}} />
         </div>
