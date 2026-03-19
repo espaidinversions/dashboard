@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid
+  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList
 } from "recharts";
 import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
@@ -122,8 +122,8 @@ function CompanyDetailInner() {
                         </div>
                       </div>
                     )}
-                    <ResponsiveContainer width="100%" height={240}>
-                      <BarChart data={quarters} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="20%" barGap={2}>
+                    <ResponsiveContainer width="100%" height={280}>
+                      <BarChart data={quarters} margin={{ top: 24, right: 8, bottom: 0, left: 0 }} barCategoryGap="20%" barGap={2}>
                         <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
                         <XAxis dataKey="q" tick={{ fontSize: 10, fill: tc.textLight }} />
                         <YAxis tickFormatter={v => fmtM(v)} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
@@ -132,9 +132,28 @@ function CompanyDetailInner() {
                           labelStyle={{ color: tc.text }}
                           contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }}
                         />
-                        {hasBudget && <Legend formatter={v => v === "actual" ? "Real" : "Pressupost"} />}
-                        <Bar dataKey={cfg.actualKey} name="actual" fill={cfg.color} />
-                        {hasBudget && <Bar dataKey={cfg.budgetKey} name="budget" fill={cfg.color} fillOpacity={0.35} />}
+                        {hasBudget && (
+                          <Legend content={() => (
+                            <div style={{ display: "flex", gap: 16, justifyContent: "center", fontSize: 11, color: tc.textMid, marginTop: 6 }}>
+                              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                <span style={{ width: 12, height: 12, borderRadius: 2, background: cfg.color, display: "inline-block" }} />
+                                Real
+                              </span>
+                              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                <span style={{ width: 12, height: 12, borderRadius: 2, background: cfg.color, opacity: 0.35, border: `1.5px dashed ${cfg.color}`, display: "inline-block" }} />
+                                Pressupost
+                              </span>
+                            </div>
+                          )} />
+                        )}
+                        <Bar dataKey={cfg.actualKey} name="actual" fill={cfg.color}>
+                          <LabelList dataKey={cfg.actualKey} position="top" formatter={v => v != null ? fmtM(v) : ""} style={{ fontSize: 9, fill: tc.textLight }} />
+                        </Bar>
+                        {hasBudget && (
+                          <Bar dataKey={cfg.budgetKey} name="budget" fill={cfg.color} fillOpacity={0.35}>
+                            <LabelList dataKey={cfg.budgetKey} position="top" formatter={v => v != null ? fmtM(v) : ""} style={{ fontSize: 9, fill: tc.textLight }} />
+                          </Bar>
+                        )}
                       </BarChart>
                     </ResponsiveContainer>
                   </>
