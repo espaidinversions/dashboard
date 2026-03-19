@@ -16,7 +16,7 @@ import { PipelineFY26 } from "./PipelineFY26.jsx";
 import { MensualTab } from "./MensualTab.jsx";
 import { SearchersTab } from "./SearchersTab.jsx";
 import { PortfolioCompaniesTab } from "./PortfolioCompaniesTab.jsx";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 // ── Data loader modal ─────────────────────────────────────
 function DataLoader({ onLoad, onClose, dataInfo }) {
@@ -158,6 +158,7 @@ function loadFromLS(key, fallback) {
 // ══════════════════════════════════════════════════════════
 function DashboardInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
+  const navigate = useNavigate();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
@@ -383,9 +384,10 @@ function DashboardInner() {
     {id:"txlog",   label:"📋 Transaccions"},
   ];
   const SUPRA = [
-    {id:"fons",      label:"Fons"},
-    {id:"searchers", label:"Searchers"},
-    {id:"portfolio", label:"Portfolio Companies"},
+    {id:"fons",       label:"Fons"},
+    {id:"searchers",  label:"Searchers"},
+    {id:"portfolio",  label:"Portfolio Companies"},
+    {id:"inversions", label:"Detall per Inversió"},
   ];
   const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":"fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Pipeline FY26"}, ...TABS_CC];
@@ -420,25 +422,6 @@ function DashboardInner() {
         <Link to="/" style={{display:"flex",alignItems:"center",flexShrink:0}}>
           <Logo/>
         </Link>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <Link to="/investments"
-            style={{background:"transparent",color:tc.textMid,border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",textDecoration:"none"}}>
-            Inversions
-          </Link>
-          {supra==="fons"&&(
-            <button onClick={()=>setShowLoader(true)}
-              style={{background:tc.navy,color:"#fff",border:"none",borderRadius:7,padding:"7px 16px",cursor:"pointer",fontSize:12,fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
-              ↑ Carregar dades
-            </button>
-          )}
-          {supra==="searchers"&&(
-            <button
-              style={{background:"transparent",color:tc.textMid,border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 14px",cursor:"default",fontSize:12,fontFamily:"inherit",opacity:0.6}}
-              title="Actualitza el CSV dins la secció Historial de Searchers">
-              ↑ CSV Searchers
-            </button>
-          )}
-        </div>
         <div style={{flex:1}}/>
         <input
           value={globalSearch}
@@ -462,12 +445,30 @@ function DashboardInner() {
       <div className="tab-bar no-print" style={{background:tc.navy,padding:"0 32px",display:"flex",gap:0}}>
         {SUPRA.map(s=>(
           <button key={s.id}
-            onClick={()=>setTab(s.id==="fons"?"pipeline":s.id==="searchers"?"searchers":"portfolio")}
+            onClick={()=>{ if(s.id==="inversions"){navigate("/investments/funds");return;} setTab(s.id==="fons"?"pipeline":s.id==="searchers"?"searchers":"portfolio"); }}
             style={{background:"none",border:"none",borderBottom:`2px solid ${supra===s.id?"rgba(255,255,255,0.9)":"transparent"}`,padding:"12px 24px",cursor:"pointer",fontSize:12,fontWeight:supra===s.id?600:400,color:supra===s.id?"#fff":"rgba(255,255,255,0.5)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
             {s.label}
           </button>
         ))}
       </div>
+
+      {/* ── Sub-toolbar (Searchers) ── */}
+      {supra==="searchers"&&(
+      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",justifyContent:"flex-end",alignItems:"center",minHeight:44}}>
+        <button
+          style={{background:"transparent",color:tc.textMid,border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"6px 14px",cursor:"default",fontSize:11,fontFamily:"inherit",opacity:0.6}}
+          title="Actualitza el CSV dins la secció Historial de Searchers">
+          ↑ CSV Searchers
+        </button>
+      </div>
+      )}
+
+      {/* ── Sub-toolbar (Portfolio) ── */}
+      {supra==="portfolio"&&(
+      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",justifyContent:"flex-end",alignItems:"center",minHeight:44}}>
+        <span style={{fontSize:11,color:tc.textLight}}>21 empreses en cartera</span>
+      </div>
+      )}
 
       {/* ── Sub-tabs (Fons only) ── */}
       {supra==="fons"&&(
@@ -480,11 +481,15 @@ function DashboardInner() {
             </button>
           ))}
         </div>
-        {tab!=="pipeline"&&(
-          <div style={{paddingLeft:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:8,paddingRight:4}}>
+          {tab!=="pipeline"&&(
             <FonsSelector excluded={excluded} setExcluded={setExcluded} rawCC={rawCC}/>
-          </div>
-        )}
+          )}
+          <button onClick={()=>setShowLoader(true)}
+            style={{background:tc.navy,color:"#fff",border:"none",borderRadius:7,padding:"6px 14px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
+            ↑ Carregar dades
+          </button>
+        </div>
       </div>
       )}
 
