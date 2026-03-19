@@ -16,9 +16,10 @@ const EST_CFG = {
   "SOCIMI":       { color: "#6B2E7E", bg: "#F3EEF8" },
 };
 
-function FundsIndexInner() {
+export function FundsIndexInner({ inline = false, searchOverride }) {
   const { tc } = useTheme();
-  const [search, setSearch] = useState("");
+  const [searchLocal, setSearchLocal] = useState("");
+  const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [sortKey, setSortKey] = useState("compromis");
   const [sortDir, setSortDir] = useState("desc");
 
@@ -35,7 +36,7 @@ function FundsIndexInner() {
   const rows = useMemo(() => {
     const map = new Map();
     for (const r of rawCC) {
-      if (!map.has(r.fons)) map.set(r.fons, { fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0 });
+      if (!map.has(r.fons)) map.set(r.fons, { fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, isMock: !!r.isMock });
       const f = map.get(r.fons);
       if (r.cat === "Compromís") f.compromis += r.eur;
       if (r.cat === "Capital Call") f.calls += r.eur;
@@ -64,6 +65,7 @@ function FundsIndexInner() {
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
+      if (a.isMock !== b.isMock) return a.isMock ? -1 : 1;
       let av, bv;
       if (sortKey === "compromis") { av = a.compromis ?? 0; bv = b.compromis ?? 0; }
       else if (sortKey === "cridat") { av = a.calls ?? 0; bv = b.calls ?? 0; }
@@ -117,17 +119,21 @@ function FundsIndexInner() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
-      <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 16 }}>
-        <Link to="/" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Dashboard</Link>
-        <div style={{ flex: 1 }} />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca per nom…"
-          style={{ padding: "6px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 200 }} />
-      </div>
-      <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
-        <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Fons</span>
-        <Link to="/investments/companies" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Empreses</Link>
-      </div>
+    <div style={{ minHeight: inline ? undefined : "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
+      {!inline && (
+        <>
+          <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 16 }}>
+            <Link to="/" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Dashboard</Link>
+            <div style={{ flex: 1 }} />
+            <input value={searchLocal} onChange={e => setSearchLocal(e.target.value)} placeholder="Cerca per nom…"
+              style={{ padding: "6px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 200 }} />
+          </div>
+          <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
+            <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Fons</span>
+            <Link to="/investments/companies" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Empreses</Link>
+          </div>
+        </>
+      )}
 
       <div style={{ padding: "24px 32px" }}>
         {sorted.length === 0
@@ -146,7 +152,7 @@ function FundsIndexInner() {
               </thead>
               <tbody>
                 {sorted.map((r, i) => (
-                  <tr key={r.slug} style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
+                  <tr key={r.slug} style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
                       <Link to={`/fund/${r.slug}`} style={{ color: tc.navy, textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}

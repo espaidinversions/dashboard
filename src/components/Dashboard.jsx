@@ -16,7 +16,9 @@ import { PipelineFY26 } from "./PipelineFY26.jsx";
 import { MensualTab } from "./MensualTab.jsx";
 import { SearchersTab } from "./SearchersTab.jsx";
 import { PortfolioCompaniesTab } from "./PortfolioCompaniesTab.jsx";
-import { Link, useNavigate } from "react-router-dom";
+import { FundsIndexInner } from "./FundsIndex.jsx";
+import { CompaniesIndexInner } from "./CompaniesIndex.jsx";
+import { Link } from "react-router-dom";
 
 // ── Data loader modal ─────────────────────────────────────
 function DataLoader({ onLoad, onClose, dataInfo }) {
@@ -158,12 +160,12 @@ function loadFromLS(key, fallback) {
 // ══════════════════════════════════════════════════════════
 function DashboardInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
-  const navigate = useNavigate();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
   const [showLoader, setShowLoader] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
+  const [inversionsSubTab, setInversionsSubTab] = useState("fons");
 
   // Dades dinàmiques (localStorage → static fallback)
   const [rawCC,   setRawCC]   = useState(()=>loadFromLS(LS_CC, RAW_CC_DEFAULT));
@@ -389,7 +391,7 @@ function DashboardInner() {
     {id:"portfolio",  label:"Portfolio Companies"},
     {id:"inversions", label:"Detall per Inversió"},
   ];
-  const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":"fons";
+  const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":"fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Pipeline FY26"}, ...TABS_CC];
 
   // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs
@@ -445,7 +447,7 @@ function DashboardInner() {
       <div className="tab-bar no-print" style={{background:tc.navy,padding:"0 32px",display:"flex",gap:0}}>
         {SUPRA.map(s=>(
           <button key={s.id}
-            onClick={()=>{ if(s.id==="inversions"){navigate("/investments/funds");return;} setTab(s.id==="fons"?"pipeline":s.id==="searchers"?"searchers":"portfolio"); }}
+            onClick={()=>{ setTab(s.id==="fons"?"pipeline":s.id==="searchers"?"searchers":s.id==="portfolio"?"portfolio":"inversions"); }}
             style={{background:"none",border:"none",borderBottom:`2px solid ${supra===s.id?"rgba(255,255,255,0.9)":"transparent"}`,padding:"12px 24px",cursor:"pointer",fontSize:12,fontWeight:supra===s.id?600:400,color:supra===s.id?"#fff":"rgba(255,255,255,0.5)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
             {s.label}
           </button>
@@ -467,6 +469,18 @@ function DashboardInner() {
       {supra==="portfolio"&&(
       <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",justifyContent:"flex-end",alignItems:"center",minHeight:44}}>
         <span style={{fontSize:11,color:tc.textLight}}>21 empreses en cartera</span>
+      </div>
+      )}
+
+      {/* ── Sub-tabs (Inversions) ── */}
+      {supra==="inversions"&&(
+      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex"}}>
+        {[{id:"fons",label:"Fons"},{id:"companies",label:"Empreses"}].map(s=>(
+          <button key={s.id} onClick={()=>setInversionsSubTab(s.id)}
+            style={{background:"none",border:"none",borderBottom:`2px solid ${inversionsSubTab===s.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:inversionsSubTab===s.id?600:400,color:inversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
+            {s.label}
+          </button>
+        ))}
       </div>
       )}
 
@@ -513,6 +527,14 @@ function DashboardInner() {
 
         {/* ── PORTFOLIO COMPANIES ── */}
         {tab==="portfolio"&&<div className="tab-panel"><PortfolioCompaniesTab search={globalSearch}/></div>}
+
+        {/* ── DETALL PER INVERSIÓ ── */}
+        {tab==="inversions"&&inversionsSubTab==="fons"&&(
+          <div className="tab-panel"><FundsIndexInner inline searchOverride={globalSearch}/></div>
+        )}
+        {tab==="inversions"&&inversionsSubTab==="companies"&&(
+          <div className="tab-panel"><CompaniesIndexInner inline searchOverride={globalSearch}/></div>
+        )}
 
         {/* ── CAPITAL CALLS: KPIs ── */}
         {supra==="fons"&&tab!=="pipeline"&&(

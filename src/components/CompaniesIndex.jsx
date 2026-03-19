@@ -10,9 +10,10 @@ const TIPUS_CFG = {
   "PE": { color: "#2B4C7E", bg: "#E8EFF5" },
 };
 
-function CompaniesIndexInner() {
+export function CompaniesIndexInner({ inline = false, searchOverride }) {
   const { tc } = useTheme();
-  const [search, setSearch] = useState("");
+  const [searchLocal, setSearchLocal] = useState("");
+  const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [sortKey, setSortKey] = useState("ticket");
   const [sortDir, setSortDir] = useState("desc");
 
@@ -32,6 +33,7 @@ function CompaniesIndexInner() {
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
+      if (a.isMock !== b.isMock) return a.isMock ? -1 : 1;
       let av, bv;
       if (sortKey === "ticket") { av = a.ticket ?? 0; bv = b.ticket ?? 0; }
       else if (sortKey === "tvpi") { av = a.tvpi ?? -1; bv = b.tvpi ?? -1; }
@@ -74,17 +76,21 @@ function CompaniesIndexInner() {
   ];
 
   return (
-    <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
-      <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 16 }}>
-        <Link to="/" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Dashboard</Link>
-        <div style={{ flex: 1 }} />
-        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca per nom…"
-          style={{ padding: "6px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 200 }} />
-      </div>
-      <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
-        <Link to="/investments/funds" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Fons</Link>
-        <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Empreses</span>
-      </div>
+    <div style={{ minHeight: inline ? undefined : "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
+      {!inline && (
+        <>
+          <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 16 }}>
+            <Link to="/" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Dashboard</Link>
+            <div style={{ flex: 1 }} />
+            <input value={searchLocal} onChange={e => setSearchLocal(e.target.value)} placeholder="Cerca per nom…"
+              style={{ padding: "6px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 200 }} />
+          </div>
+          <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
+            <Link to="/investments/funds" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Fons</Link>
+            <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Empreses</span>
+          </div>
+        </>
+      )}
 
       <div style={{ padding: "24px 32px" }}>
         {sorted.length === 0
@@ -103,7 +109,7 @@ function CompaniesIndexInner() {
               </thead>
               <tbody>
                 {sorted.map((r, i) => (
-                  <tr key={r.slug} style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
+                  <tr key={r.slug} style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
                       <Link to={`/company/${r.slug}`} style={{ color: tc.navy, textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
