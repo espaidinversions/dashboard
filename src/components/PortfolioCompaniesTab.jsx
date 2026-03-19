@@ -242,21 +242,7 @@ export function PortfolioCompaniesTab({ search = "" }) {
               </tr>
             </thead>
             <tbody>
-              {/* SF group */}
-              <tr>
-                <td colSpan={12} style={{ padding:"6px 10px", fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:TC.textLight, fontWeight:700, background:TC.bgAlt, borderTop:`1px solid ${TC.border}` }}>
-                  Search Fund — Empreses adquirides
-                </td>
-              </tr>
-              {sfCompanies.map((r,i) => <PortRow key={r.nom} r={r} i={i} TC={TC} />)}
-
-              {/* PE group */}
-              <tr>
-                <td colSpan={12} style={{ padding:"6px 10px", fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:TC.textLight, fontWeight:700, background:TC.bgAlt, borderTop:`1px solid ${TC.border}` }}>
-                  PE Direct — Inversions directes
-                </td>
-              </tr>
-              {peCompanies.map((r,i) => <PortRow key={r.nom} r={r} i={i} TC={TC} />)}
+              {[...sfCompanies, ...peCompanies].map((r,i) => <PortRow key={r.nom} r={r} i={i} TC={TC} />)}
             </tbody>
             <tfoot>
               <tr style={{ borderTop:`2px solid ${TC.border}` }}>
