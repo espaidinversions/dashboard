@@ -57,7 +57,8 @@ function CompanyDetailInner() {
 
   const ltm = useMemo(() => {
     if (quarters.length === 0) return null;
-    const last4 = quarters.slice(-4);
+    const withActuals = quarters.filter(q => q.rev != null || q.ebitda != null || q.dfn != null);
+    const last4 = withActuals.slice(-4);
     const sum = key => last4.reduce((s, q) => s + (q[key] ?? 0), 0);
     return { rev: sum("rev"), ebitda: sum("ebitda"), dfn: sum("dfn"), n: last4.length };
   }, [quarters]);
