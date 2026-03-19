@@ -41,7 +41,7 @@ function CompanyDetailInner() {
           tvpi, rvpiEur, dpiEur, mesosOperant,
           dataCompr, multEntry, quarters = [] } = company;
 
-  const tvpiColor = tvpi == null ? tc.textLight : tvpi < 1 ? "#E53E3E" : tvpi < 1.5 ? "#D69E2E" : tc.green;
+  const tvpiColor = tvpi == null ? tc.textLight : tvpi < 1 ? tc.red : tvpi < 1.5 ? tc.warning : tc.green;
 
   const KPI_CFG = {
     rev:    { label: "Ingressos",  ltmLabel: "Ingressos LTM",  color: "#276749", actualKey: "rev",    budgetKey: "revBudget" },

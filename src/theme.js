@@ -7,6 +7,7 @@ export const TC_LIGHT = {
   card:"#FFFFFF",
   text:"#1E2D3A", textMid:"#4A6070", textLight:"#7A94A4",
   red:"#C62828", redLight:"#FDECEA", orange:"#E67E22",
+  warning:"#D69E2E",
   yellow:"#B8860B", yellowLight:"#FFF8E1", purple:"#6A4C8A",
 };
 
@@ -17,6 +18,7 @@ export const TC_DARK = {
   card:"#16232F",
   text:"#D4E4F0", textMid:"#7A9EB8", textLight:"#4E6E88",
   red:"#EF5350", redLight:"#2A0F0F", orange:"#E8922A",
+  warning:"#F6AD55",
   yellow:"#E8C040", yellowLight:"#221900", purple:"#9B7CC8",
 };
 

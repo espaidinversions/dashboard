@@ -20,7 +20,7 @@ function KpiCard({ label, value, sub, tc, valueColor }) {
   return (
     <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 160, flex: 1 }}>
       <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 22, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }}>{value}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -74,7 +74,7 @@ function FundDetailInner() {
   const tvpiFund = meta?.tvpi ?? null;
   const dpiFund = calls > 0 ? dist / calls : 0;
   const rvpiFund = tvpiFund != null ? tvpiFund - dpiFund : null;
-  const multipleColor = v => v == null ? tc.textLight : v < 1 ? "#E53E3E" : v < 1.5 ? "#D69E2E" : tc.green;
+  const multipleColor = v => v == null ? tc.textLight : v < 1 ? tc.red : v < 1.5 ? tc.warning : tc.green;
   const fmtX = v => v != null ? `${v.toFixed(2)}×` : "—";
 
   // J-curve data: sort by date, compute running sums
@@ -161,7 +161,7 @@ function FundDetailInner() {
             <thead>
               <tr style={{ background: tc.bgAlt }}>
                 {["Data", "Tipus", "Categoria", "Import"].map(h => (
-                  <th key={h} style={{ padding: "8px 12px", textAlign: h === "Import" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
+                  <th key={h} style={{ padding: "10px 12px", textAlign: h === "Import" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -170,14 +170,14 @@ function FundDetailInner() {
                 const cfg = CAT_CFG[r.cat] || {};
                 return (
                   <tr key={`${r.data}-${r.cat}-${r.eur}`} style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
-                    <td style={{ padding: "8px 12px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
-                    <td style={{ padding: "8px 12px", fontSize: 12, color: tc.textMid }}>{r.tipus}</td>
-                    <td style={{ padding: "8px 12px" }}>
+                    <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
+                    <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.tipus}</td>
+                    <td style={{ padding: "10px 12px" }}>
                       <span style={{ fontSize: 10, background: cfg.bg || tc.bgAlt, color: cfg.color || tc.textMid, borderRadius: 4, padding: "2px 8px", fontWeight: 600 }}>
                         {r.cat}
                       </span>
                     </td>
-                    <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: r.eur > 0 ? tc.navy : tc.green }}>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: r.eur > 0 ? tc.navy : tc.green }}>
                       {r.eur < 0 && "+ "}{fmtM(Math.abs(r.eur))}
                     </td>
                   </tr>

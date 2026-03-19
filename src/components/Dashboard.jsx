@@ -418,7 +418,7 @@ function DashboardInner() {
     <div id="dashboard-content" style={{minHeight:"100vh",background:tc.bg,color:tc.text,fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,letterSpacing:"0.005em"}}>
 
       {/* ── Header ── */}
-      <div className="no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"10px 32px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)"}}>
+      <div className="no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"12px 32px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)"}}>
         <Link to="/" style={{display:"flex",alignItems:"center",flexShrink:0}}>
           <Logo/>
         </Link>

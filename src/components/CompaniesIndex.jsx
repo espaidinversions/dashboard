@@ -57,8 +57,8 @@ function CompaniesIndexInner() {
 
   const multipleColor = v => {
     if (v == null) return tc.textLight;
-    if (v < 1) return "#E53E3E";
-    if (v < 1.5) return "#D69E2E";
+    if (v < 1) return tc.red;
+    if (v < 1.5) return tc.warning;
     return tc.green;
   };
 
@@ -77,13 +77,13 @@ function CompaniesIndexInner() {
     <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
       <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 16 }}>
         <Link to="/" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Dashboard</Link>
-        <div style={{ display: "flex", gap: 4 }}>
-          <Link to="/investments/funds" style={{ padding: "4px 14px", color: tc.textLight, textDecoration: "none", fontSize: 13 }}>Fons</Link>
-          <span style={{ padding: "4px 14px", borderRadius: 6, borderBottom: `2px solid ${tc.green}`, color: tc.green, fontSize: 13, fontWeight: 700 }}>Empreses</span>
-        </div>
         <div style={{ flex: 1 }} />
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Cerca per nom…"
           style={{ padding: "6px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 200 }} />
+      </div>
+      <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
+        <Link to="/investments/funds" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Fons</Link>
+        <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Empreses</span>
       </div>
 
       <div style={{ padding: "24px 32px" }}>
