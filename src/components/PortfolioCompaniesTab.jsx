@@ -42,38 +42,46 @@ export function PortfolioCompaniesTab({ search = "" }) {
   const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap" };
   const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
 
-  const total    = PORTFOLIO_COMPANIES.reduce((s,r) => s + r.ticket, 0);
-  const sfCompanies = PORTFOLIO_COMPANIES.filter(r => r.tipus === "SF" && (!search.trim() || r.nom.toLowerCase().includes(search.toLowerCase()) || (r.segment||"").toLowerCase().includes(search.toLowerCase())));
-  const peCompanies = PORTFOLIO_COMPANIES.filter(r => r.tipus === "PE" && (!search.trim() || r.nom.toLowerCase().includes(search.toLowerCase()) || (r.segment||"").toLowerCase().includes(search.toLowerCase())));
+  const filtered = search.trim()
+    ? PORTFOLIO_COMPANIES.filter(r =>
+        r.nom.toLowerCase().includes(search.toLowerCase()) ||
+        (r.segment||"").toLowerCase().includes(search.toLowerCase())
+      )
+    : PORTFOLIO_COMPANIES;
 
-  const valuedAll = PORTFOLIO_COMPANIES.filter(r => r.tvpi != null);
+  const total    = filtered.reduce((s,r) => s + r.ticket, 0);
+  const totalAll = PORTFOLIO_COMPANIES.reduce((s,r) => s + r.ticket, 0);
+  const sfCompanies = filtered.filter(r => r.tipus === "SF");
+  const peCompanies = filtered.filter(r => r.tipus === "PE");
+
+  const valuedAll = filtered.filter(r => r.tvpi != null);
   const totalTicketValued = valuedAll.reduce((s,r) => s + r.ticket, 0);
-  const wtTvpi  = valuedAll.reduce((s,r) => s + r.tvpi * r.ticket, 0) / totalTicketValued;
+  const wtTvpi  = valuedAll.length > 0 ? valuedAll.reduce((s,r) => s + r.tvpi * r.ticket, 0) / totalTicketValued : 0;
   const totalNAV = valuedAll.reduce((s,r) => s + (r.rvpiEur || 0) + (r.dpiEur || 0), 0);
   const tvpiAccent = wtTvpi >= 1.5 ? TC.green : wtTvpi >= 1 ? TC.orange : TC.red;
 
   const byGeo = useMemo(() => {
     const m = {};
-    PORTFOLIO_COMPANIES.forEach(r => {
+    filtered.forEach(r => {
       if (!m[r.geo]) m[r.geo] = { geo:r.geo, name:GEO_NAME[r.geo]||r.geo, value:0, count:0 };
       m[r.geo].value += r.ticket;
       m[r.geo].count += 1;
     });
     return Object.values(m).sort((a,b) => b.value - a.value);
-  }, []);
+  }, [search]);
 
   const byOrigen = useMemo(() => {
     const m = {};
-    PORTFOLIO_COMPANIES.forEach(r => { m[r.origen] = (m[r.origen]||0) + r.ticket; });
+    filtered.forEach(r => { m[r.origen] = (m[r.origen]||0) + r.ticket; });
     return Object.entries(m).map(([name,value]) => ({ name, value }));
-  }, []);
+  }, [search]);
 
   const tvpiChartData = useMemo(() =>
-    PORTFOLIO_COMPANIES
+    filtered
       .filter(r => r.tvpi != null)
       .sort((a,b) => b.tvpi - a.tvpi)
       .map(r => ({ name:r.nom, tvpi:r.tvpi, tipus:r.tipus }))
-  , []);
+  , [search]);
 
   return (
     <div style={{ padding:"0 0 40px" }}>
@@ -93,7 +101,7 @@ export function PortfolioCompaniesTab({ search = "" }) {
       {/* KPIs */}
       <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
         {[
-          { label:"Empreses en Cartera",  value: PORTFOLIO_COMPANIES.length,
+          { label:"Empreses en Cartera",  value: filtered.length,
             sub:`${sfCompanies.length} SF · ${peCompanies.length} PE directes`,     accent:TC.navy },
           { label:"Capital Desplegat",    value: fmtM(total),
             sub:"total compromisos",                                                 accent:TC.green },
@@ -108,49 +116,6 @@ export function PortfolioCompaniesTab({ search = "" }) {
             <div style={{ fontSize:11, color:TC.textLight }}>{k.sub}</div>
           </div>
         ))}
-      </div>
-
-      {/* Table */}
-      <div style={{ ...card, marginBottom:14 }}>
-        <div style={sec}>Cartera d'Empreses</div>
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
-            <thead>
-              <tr>
-                {["Empresa","Tipus","Segment","Empresaris","Origen","País","Ticket","TVPI","Rev LTM","EBITDA LTM","Data","Mesos"].map(h=>(
-                  <th key={h} style={th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {/* SF group */}
-              <tr>
-                <td colSpan={12} style={{ padding:"6px 10px", fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:TC.textLight, fontWeight:700, background:TC.bgAlt, borderTop:`1px solid ${TC.border}` }}>
-                  Search Fund — Empreses adquirides
-                </td>
-              </tr>
-              {sfCompanies.map((r,i) => <PortRow key={r.nom} r={r} i={i} TC={TC} />)}
-
-              {/* PE group */}
-              <tr>
-                <td colSpan={12} style={{ padding:"6px 10px", fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:TC.textLight, fontWeight:700, background:TC.bgAlt, borderTop:`1px solid ${TC.border}` }}>
-                  PE Direct — Inversions directes
-                </td>
-              </tr>
-              {peCompanies.map((r,i) => <PortRow key={r.nom} r={r} i={i} TC={TC} />)}
-            </tbody>
-            <tfoot>
-              <tr style={{ borderTop:`2px solid ${TC.border}` }}>
-                <td colSpan={6} style={{ padding:"8px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>
-                  TOTAL ({PORTFOLIO_COMPANIES.length} empreses)
-                </td>
-                <td style={{ padding:"8px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.green }}>{fmtM(total)}</td>
-                <td style={{ padding:"8px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", fontWeight:700, color:wtTvpi >= 1 ? TC.green : "#C62828" }}>{wtTvpi.toFixed(2)}x</td>
-                <td colSpan={4}/>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
       </div>
 
       {/* Charts row 1: Geo + Origen */}
@@ -190,7 +155,7 @@ export function PortfolioCompaniesTab({ search = "" }) {
                 <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"10px 14px", fontSize:11 }}>
                   <b style={{color:TC.text}}>{payload[0].name}</b>
                   <div style={{ color:ORIG_COLORS[payload[0].name]||TC.navy, marginTop:4, fontWeight:700 }}>{fmtM(payload[0].value)}</div>
-                  <div style={{ color:TC.textLight, fontSize:10, marginTop:2 }}>{((payload[0].value/total)*100).toFixed(1)}%</div>
+                  <div style={{ color:TC.textLight, fontSize:10, marginTop:2 }}>{((payload[0].value/totalAll)*100).toFixed(1)}%</div>
                 </div>
               ) : null}/>
               <Legend formatter={v=><span style={{color:TC.text,fontSize:11}}>{v}</span>}/>
@@ -200,7 +165,7 @@ export function PortfolioCompaniesTab({ search = "" }) {
       </div>
 
       {/* Chart row 2: TVPI per empresa */}
-      <div style={card}>
+      <div style={{ ...card, marginBottom:14 }}>
         <div style={sec}>TVPI per Empresa <span style={{fontWeight:400, textTransform:"none", letterSpacing:0, color:TC.textMid, fontSize:10}}>— empreses valorades, ordenades per múltiple</span></div>
         <ResponsiveContainer width="100%" height={Math.max(260, tvpiChartData.length * 26)}>
           <BarChart data={tvpiChartData} layout="vertical" margin={{top:4, right:60, bottom:4, left:10}}>
@@ -223,6 +188,50 @@ export function PortfolioCompaniesTab({ search = "" }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+
+      {/* Table */}
+      <div style={{ ...card, marginBottom:14 }}>
+        <div style={sec}>Cartera d'Empreses</div>
+        <div style={{ overflowX:"auto" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
+            <thead>
+              <tr>
+                {["Empresa","Tipus","Segment","Empresaris","Origen","País","Ticket","TVPI","Rev LTM","EBITDA LTM","Data","Mesos"].map(h=>(
+                  <th key={h} style={th}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {/* SF group */}
+              <tr>
+                <td colSpan={12} style={{ padding:"6px 10px", fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:TC.textLight, fontWeight:700, background:TC.bgAlt, borderTop:`1px solid ${TC.border}` }}>
+                  Search Fund — Empreses adquirides
+                </td>
+              </tr>
+              {sfCompanies.map((r,i) => <PortRow key={r.nom} r={r} i={i} TC={TC} />)}
+
+              {/* PE group */}
+              <tr>
+                <td colSpan={12} style={{ padding:"6px 10px", fontSize:9, letterSpacing:"0.12em", textTransform:"uppercase", color:TC.textLight, fontWeight:700, background:TC.bgAlt, borderTop:`1px solid ${TC.border}` }}>
+                  PE Direct — Inversions directes
+                </td>
+              </tr>
+              {peCompanies.map((r,i) => <PortRow key={r.nom} r={r} i={i} TC={TC} />)}
+            </tbody>
+            <tfoot>
+              <tr style={{ borderTop:`2px solid ${TC.border}` }}>
+                <td colSpan={6} style={{ padding:"8px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>
+                  TOTAL ({filtered.length} empreses)
+                </td>
+                <td style={{ padding:"8px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.green }}>{fmtM(total)}</td>
+                <td style={{ padding:"8px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", fontWeight:700, color:wtTvpi >= 1 ? TC.green : "#C62828" }}>{wtTvpi.toFixed(2)}x</td>
+                <td colSpan={4}/>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
     </div>
   );
 }
