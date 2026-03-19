@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, Label,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
 } from "recharts";
 import { useTheme } from "../theme.js";
@@ -35,6 +35,22 @@ const tvpiBg = t => {
   if (t < 1.5)  return "#FFF8E1";
   return "#E8F4EE";
 };
+
+function CenterLabel({ viewBox, value, sub, tc }) {
+  const { cx, cy } = viewBox;
+  return (
+    <g>
+      <text x={cx} y={cy - 7} textAnchor="middle" dominantBaseline="middle"
+        style={{ fontSize: 13, fontWeight: 700, fill: tc.navy, fontFamily: "'DM Mono',monospace" }}>
+        {value}
+      </text>
+      <text x={cx} y={cy + 10} textAnchor="middle" dominantBaseline="middle"
+        style={{ fontSize: 9, fill: tc.textLight }}>
+        {sub}
+      </text>
+    </g>
+  );
+}
 
 export function PortfolioCompaniesTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
@@ -122,10 +138,26 @@ export function PortfolioCompaniesTab({ search = "" }) {
       <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
         <div style={card}>
           <div style={sec}>Allocation Geogràfica</div>
-          <ResponsiveContainer width="100%" height={230}>
+          <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={byGeo} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} labelLine={false} label={FlagSvgLabel}>
+              <Pie data={byGeo} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={82} labelLine={false}
+                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, geo, name }) => {
+                  if (percent < 0.04) return null;
+                  const R = Math.PI / 180;
+                  const r = outerRadius + 18;
+                  const x = cx + r * Math.cos(-midAngle * R);
+                  const y = cy + r * Math.sin(-midAngle * R);
+                  // flag emoji from name (geo code)
+                  const flagMap = { ES:"🇪🇸", EN:"🇬🇧", IT:"🇮🇹", DE:"🇩🇪", FR:"🇫🇷", PT:"🇵🇹", NL:"🇳🇱", US:"🇺🇸", CH:"🇨🇭" };
+                  return (
+                    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={11}>
+                      {flagMap[name] || name} {`${(percent * 100).toFixed(0)}%`}
+                    </text>
+                  );
+                }}
+              >
                 {byGeo.map((_, i) => <Cell key={i} fill={GEO_COLORS[i % GEO_COLORS.length]}/>)}
+                <Label content={(props) => <CenterLabel {...props} value={fmtM(total)} sub="Total" tc={TC} />} />
               </Pie>
               <Tooltip content={({active,payload}) => active&&payload?.length ? (
                 <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"10px 14px", fontSize:11 }}>
@@ -133,23 +165,32 @@ export function PortfolioCompaniesTab({ search = "" }) {
                   <div style={{ color:TC.green, marginTop:4 }}>{fmtM(payload[0].value)} · {payload[0].payload.count} empresa{payload[0].payload.count>1?"s":""}</div>
                 </div>
               ) : null}/>
-              <Legend formatter={v=><span style={{color:TC.text,fontSize:11}}>{v}</span>}/>
             </PieChart>
           </ResponsiveContainer>
         </div>
 
         <div style={card}>
           <div style={sec}>Per Origen d'Entrada</div>
-          <ResponsiveContainer width="100%" height={230}>
+          <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={byOrigen} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} labelLine={false}
-                label={({cx,cy,midAngle,innerRadius,outerRadius,percent}) => {
-                  if (percent < 0.06) return null;
-                  const R=Math.PI/180, r=innerRadius+(outerRadius-innerRadius)*0.58;
-                  return <text x={cx+r*Math.cos(-midAngle*R)} y={cy+r*Math.sin(-midAngle*R)} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight="700">{`${(percent*100).toFixed(0)}%`}</text>;
+              <Pie data={byOrigen} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={82} labelLine={false}
+                label={({ cx, cy, midAngle, outerRadius, percent, name }) => {
+                  if (percent < 0.04) return null;
+                  const R = Math.PI / 180;
+                  const r = outerRadius + 18;
+                  const x = cx + r * Math.cos(-midAngle * R);
+                  const y = cy + r * Math.sin(-midAngle * R);
+                  const short = name === "Search Capital" ? "Search Cap." : name;
+                  return (
+                    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={10}
+                      fill={ORIG_COLORS[name] || TC.navy} fontWeight="600">
+                      {short} {`${(percent * 100).toFixed(0)}%`}
+                    </text>
+                  );
                 }}
               >
                 {byOrigen.map((e,i) => <Cell key={i} fill={ORIG_COLORS[e.name]||TC.navy}/>)}
+                <Label content={(props) => <CenterLabel {...props} value={fmtM(total)} sub="Total" tc={TC} />} />
               </Pie>
               <Tooltip content={({active,payload}) => active&&payload?.length ? (
                 <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"10px 14px", fontSize:11 }}>
@@ -158,7 +199,6 @@ export function PortfolioCompaniesTab({ search = "" }) {
                   <div style={{ color:TC.textLight, fontSize:10, marginTop:2 }}>{((payload[0].value/totalAll)*100).toFixed(1)}%</div>
                 </div>
               ) : null}/>
-              <Legend formatter={v=><span style={{color:TC.text,fontSize:11}}>{v}</span>}/>
             </PieChart>
           </ResponsiveContainer>
         </div>
