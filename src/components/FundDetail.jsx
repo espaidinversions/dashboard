@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell
 } from "recharts";
@@ -29,6 +29,7 @@ function KpiCard({ label, value, sub, tc, valueColor }) {
 function FundDetailInner() {
   const { id } = useParams();
   const { tc, dark, toggle } = useTheme();
+  const navigate = useNavigate();
 
   const rawCC = useMemo(() => {
     try {
@@ -53,7 +54,7 @@ function FundDetailInner() {
   if (txs.length === 0) {
     return (
       <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", padding: 32 }}>
-        <Link to="/investments" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Inversions</Link>
+        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 13, fontFamily: "inherit", padding: 0 }}>← Inversions</button>
         <div style={{ marginTop: 48, textAlign: "center", color: tc.textLight }}>Fons no trobat.</div>
       </div>
     );
@@ -129,7 +130,7 @@ function FundDetailInner() {
       </div>
       {/* Entity bar */}
       <div style={{ background: tc.navy, padding: "0 32px", display: "flex", alignItems: "center", gap: 12, minHeight: 48 }}>
-        <Link to="/investments/funds" style={{ color: "rgba(255,255,255,0.5)", textDecoration: "none", fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0 }}>← Inversions</Link>
+        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "inherit", padding: 0 }}>← Inversions</button>
         <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>/</span>
         <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fundName}</span>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
