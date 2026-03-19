@@ -36,15 +36,15 @@ const tvpiBg = t => {
   return "#E8F4EE";
 };
 
-export function PortfolioCompaniesTab() {
+export function PortfolioCompaniesTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
   const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:12, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
   const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap" };
   const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
 
   const total    = PORTFOLIO_COMPANIES.reduce((s,r) => s + r.ticket, 0);
-  const sfCompanies = PORTFOLIO_COMPANIES.filter(r => r.tipus === "SF");
-  const peCompanies = PORTFOLIO_COMPANIES.filter(r => r.tipus === "PE");
+  const sfCompanies = PORTFOLIO_COMPANIES.filter(r => r.tipus === "SF" && (!search.trim() || r.nom.toLowerCase().includes(search.toLowerCase()) || (r.segment||"").toLowerCase().includes(search.toLowerCase())));
+  const peCompanies = PORTFOLIO_COMPANIES.filter(r => r.tipus === "PE" && (!search.trim() || r.nom.toLowerCase().includes(search.toLowerCase()) || (r.segment||"").toLowerCase().includes(search.toLowerCase())));
 
   const valuedAll = PORTFOLIO_COMPANIES.filter(r => r.tvpi != null);
   const totalTicketValued = valuedAll.reduce((s,r) => s + r.ticket, 0);

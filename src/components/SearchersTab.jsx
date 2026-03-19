@@ -103,7 +103,7 @@ function parseSearchersCSV(text) {
 }
 
 // ── main component ─────────────────────────────────────────
-export function SearchersTab() {
+export function SearchersTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
   const [historicData, setHistoricData] = useState(ALL_SEARCHERS);
   const [histFilter, setHistFilter]     = useState({ status:"Tots", geo:"Tots", entrada:"Tots" });
@@ -124,6 +124,15 @@ export function SearchersTab() {
   const activeWithMesos = useMemo(() =>
     ACTIVE_SEARCHERS.map(r => ({ ...r, mesosCercant: calcMesos(r.dataCompr) }))
   , []);
+
+  const displayedSearchers = useMemo(() => {
+    if (!search.trim()) return activeWithMesos;
+    const q = search.toLowerCase();
+    return activeWithMesos.filter(r =>
+      r.nom.toLowerCase().includes(q) ||
+      r.searchers.toLowerCase().includes(q)
+    );
+  }, [activeWithMesos, search]);
 
   // match status from ALL_SEARCHERS
   const statusMap = useMemo(() => {
@@ -246,7 +255,7 @@ export function SearchersTab() {
               </tr>
             </thead>
             <tbody>
-              {activeWithMesos.map((r, i) => {
+              {displayedSearchers.map((r, i) => {
                 const status = getStatus(r.nom);
                 return (
                   <tr key={r.nom} style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt }}>
@@ -273,7 +282,7 @@ export function SearchersTab() {
             </tbody>
             <tfoot>
               <tr style={{ borderTop:`2px solid ${TC.border}` }}>
-                <td colSpan={5} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({ACTIVE_SEARCHERS.length} searchers)</td>
+                <td colSpan={5} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({displayedSearchers.length}{search.trim() ? `/${ACTIVE_SEARCHERS.length}` : ""} searchers)</td>
                 <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.navy }}>{fmtM(totalSearchers)}</td>
                 <td colSpan={3} />
               </tr>

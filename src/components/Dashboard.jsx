@@ -162,6 +162,7 @@ function DashboardInner() {
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
   const [showLoader, setShowLoader] = useState(false);
+  const [globalSearch, setGlobalSearch] = useState("");
 
   // Dades dinàmiques (localStorage → static fallback)
   const [rawCC,   setRawCC]   = useState(()=>loadFromLS(LS_CC, RAW_CC_DEFAULT));
@@ -241,8 +242,12 @@ function DashboardInner() {
       const q=txSearch.trim().toLowerCase();
       d=d.filter(r=>(r.fons||"").toLowerCase().includes(q)||(r.tipus||"").toLowerCase().includes(q)||(r.cat||"").toLowerCase().includes(q));
     }
+    if(globalSearch.trim()) {
+      const q=globalSearch.trim().toLowerCase();
+      d=d.filter(r=>(r.fons||"").toLowerCase().includes(q));
+    }
     return d;
-  },[baseTx,fFy,fVcpe,fEst,fCat,txSearch]);
+  },[baseTx,fFy,fVcpe,fEst,fCat,txSearch,globalSearch]);
 
   // KPIs
   const gCompr = useMemo(()=>baseCompr.reduce((s,r)=>s+r.eur,0),[baseCompr]);
@@ -411,66 +416,46 @@ function DashboardInner() {
     <div id="dashboard-content" style={{minHeight:"100vh",background:tc.bg,color:tc.text,fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,letterSpacing:"0.005em"}}>
 
       {/* ── Header ── */}
-      <div className="no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"12px 32px",display:"flex",justifyContent:"space-between",alignItems:"center",boxShadow:"0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)"}}>
-        <Logo/>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
+      <div className="no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"10px 32px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)"}}>
+        <Link to="/" style={{display:"flex",alignItems:"center",flexShrink:0}}>
+          <Logo/>
+        </Link>
+        <div style={{display:"flex",alignItems:"center",gap:8}}>
           <Link to="/investments"
-            style={{ background: "transparent", color: tc.textMid, border: `1.5px solid ${tc.border}`, borderRadius: 7, padding: "7px 14px", cursor: "pointer", fontSize: 12, fontFamily: "inherit", textDecoration: "none" }}>
+            style={{background:"transparent",color:tc.textMid,border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 14px",cursor:"pointer",fontSize:12,fontFamily:"inherit",textDecoration:"none"}}>
             Inversions
           </Link>
-          {/* Per-supra upload button */}
-          {supra === "fons" && (
+          {supra==="fons"&&(
             <button onClick={()=>setShowLoader(true)}
               style={{background:tc.navy,color:"#fff",border:"none",borderRadius:7,padding:"7px 16px",cursor:"pointer",fontSize:12,fontFamily:"inherit",display:"flex",alignItems:"center",gap:6}}>
               ↑ Carregar dades
             </button>
           )}
-          {supra === "searchers" && (
+          {supra==="searchers"&&(
             <button
               style={{background:"transparent",color:tc.textMid,border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 14px",cursor:"default",fontSize:12,fontFamily:"inherit",opacity:0.6}}
               title="Actualitza el CSV dins la secció Historial de Searchers">
               ↑ CSV Searchers
             </button>
           )}
-          {/* Export buttons */}
-          <button onClick={exportPDF} className="no-print"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit"}}
-            title="Exportar com a PDF">
-            ↓ PDF
-          </button>
-          <button onClick={exportPNG} disabled={exporting} className="no-print"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:exporting?"wait":"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit"}}
-            title="Exportar com a PNG">
-            {exporting ? "…" : "↓ PNG"}
-          </button>
-          {/* Dark mode toggle */}
-          <button onClick={toggleDark}
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:16,color:tc.textMid,fontFamily:"inherit"}}>
-            {dark ? "☀️" : "🌙"}
-          </button>
-          <div style={{textAlign:"right"}}>
-            <div style={{fontSize:18,fontWeight:700,color:tc.navy,letterSpacing:"-0.02em"}}>
-              {supra==="searchers"
-                ? <>Search Fund <span style={{color:tc.green}}>Searchers</span></>
-                : supra==="portfolio"
-                ? <>Portfolio <span style={{color:tc.green}}>Companies</span></>
-                : tab==="pipeline"
-                ? <>Pipeline Fons <span style={{color:tc.green}}>FY26</span></>
-                : <>Capital Calls <span style={{color:tc.green}}>Log</span></>
-              }
-            </div>
-            <div style={{fontSize:11,color:tc.textLight,marginTop:3}}>
-              {supra==="searchers"
-                ? "Searchers actius · Search Fund TC"
-                : supra==="portfolio"
-                ? "SF · PE Direct · 20 empreses en cartera"
-                : tab==="pipeline"
-                ? `Fons nous a comprometre · ${FY_LIST.at(-1)}`
-                : `${baseTx.length} transaccions · ${FONS_MAP2.length} fons · ${FY_LIST.at(0)}–${FY_LIST.at(-1)}`
-              }
-            </div>
-          </div>
         </div>
+        <div style={{flex:1}}/>
+        <input
+          value={globalSearch}
+          onChange={e=>{setGlobalSearch(e.target.value);setTxPage(0);}}
+          placeholder="Cerca…"
+          style={{padding:"7px 14px",borderRadius:8,border:`1.5px solid ${tc.border}`,background:tc.bg,color:tc.text,fontSize:13,fontFamily:"inherit",width:220,outline:"none"}}
+        />
+        {globalSearch&&(
+          <button onClick={()=>{setGlobalSearch("");setTxPage(0);}}
+            style={{background:"transparent",border:"none",cursor:"pointer",fontSize:14,color:tc.textLight,padding:"0 2px",lineHeight:1,marginLeft:-4}}>
+            ✕
+          </button>
+        )}
+        <button onClick={toggleDark}
+          style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:16,color:tc.textMid,fontFamily:"inherit"}}>
+          {dark?"☀️":"🌙"}
+        </button>
       </div>
 
       {/* ── Supra-category nav ── */}
@@ -504,15 +489,25 @@ function DashboardInner() {
       )}
 
       <div className="page-pad" style={{padding:"22px 32px 60px"}}>
+        <div className="no-print" style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:16}}>
+          <button onClick={exportPDF}
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"6px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit"}}>
+            ↓ PDF
+          </button>
+          <button onClick={exportPNG} disabled={exporting}
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"6px 12px",cursor:exporting?"wait":"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit"}}>
+            {exporting?"…":"↓ PNG"}
+          </button>
+        </div>
 
         {/* ── PIPELINE ── */}
         {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd}/></div>}
 
         {/* ── SEARCHERS ── */}
-        {tab==="searchers"&&<div className="tab-panel"><SearchersTab/></div>}
+        {tab==="searchers"&&<div className="tab-panel"><SearchersTab search={globalSearch}/></div>}
 
         {/* ── PORTFOLIO COMPANIES ── */}
-        {tab==="portfolio"&&<div className="tab-panel"><PortfolioCompaniesTab/></div>}
+        {tab==="portfolio"&&<div className="tab-panel"><PortfolioCompaniesTab search={globalSearch}/></div>}
 
         {/* ── CAPITAL CALLS: KPIs ── */}
         {supra==="fons"&&tab!=="pipeline"&&(
