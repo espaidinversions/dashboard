@@ -930,4 +930,10 @@ export const RAW_CC = [
   {"fons":"Veritas IX","tipus":"Aportació","cat":"Capital Call","data":"2025-08-01","mes":8,"any":2025,"fy":"FY 2025","vcpe":"PE","est":"Fons Primari","eur":22424.59},
   {"fons":"Veritas IX","tipus":"Aportació","cat":"Capital Call","data":"2025-09-19","mes":9,"any":2025,"fy":"FY 2025","vcpe":"PE","est":"Fons Primari","eur":5999.49},
   {"fons":"Veritas IX","tipus":"Aportació","cat":"Capital Call","data":"2026-01-26","mes":1,"any":2026,"fy":"FY 2026","vcpe":"PE","est":"Fons Primari","eur":5290.64},
+  {"fons":"Novafort VC II","tipus":"Compromís","cat":"Compromís","data":"2023-09-15","mes":9,"any":2023,"fy":"FY 2023","vcpe":"VC","est":"Fons Primari","eur":1500000.0},
+  {"fons":"Novafort VC II","tipus":"Aportació","cat":"Capital Call","data":"2023-10-20","mes":10,"any":2023,"fy":"FY 2023","vcpe":"VC","est":"Fons Primari","eur":300000.0},
+  {"fons":"Novafort VC II","tipus":"Aportació","cat":"Capital Call","data":"2024-03-08","mes":3,"any":2024,"fy":"FY 2024","vcpe":"VC","est":"Fons Primari","eur":250000.0},
+  {"fons":"Novafort VC II","tipus":"Aportació","cat":"Capital Call","data":"2024-09-12","mes":9,"any":2024,"fy":"FY 2024","vcpe":"VC","est":"Fons Primari","eur":200000.0},
+  {"fons":"Novafort VC II","tipus":"Aportació","cat":"Capital Call","data":"2025-02-18","mes":2,"any":2025,"fy":"FY 2025","vcpe":"VC","est":"Fons Primari","eur":150000.0},
+  {"fons":"Novafort VC II","tipus":"Distribució","cat":"Distribució","data":"2025-11-05","mes":11,"any":2025,"fy":"FY 2025","vcpe":"VC","est":"Fons Primari","eur":-85000.0},
 ];
