@@ -16,6 +16,7 @@ export const ACTIVE_SEARCHERS = [
   {nom:"MMP Capital",                  searchers:"Miguel Marques Paulo",                         modalitat:"Solo", geo:"PT", ticket:40000,  dataCompr:"2025-11-28", mesosCercant:1,  equityStake:10.0},
   {nom:"Palette Capital",              searchers:"Ricardo Herradón / Álvaro Soufi",              modalitat:"Duo",  geo:"ES", ticket:32625,  dataCompr:"2026-01-13", mesosCercant:0,  equityStake:6.3},
   {nom:"Scrum Capital Partners",       searchers:"Aitor Grandes / Javier Sánchez",               modalitat:"Duo",  geo:"ES", ticket:47500,  dataCompr:"2026-01-13", mesosCercant:0,  equityStake:8.3},
+  {nom:"Novafort Capital",        searchers:"Marc Fontaine",                                    modalitat:"Solo", geo:"ES", ticket:42500,  dataCompr:"2025-10-01", mesosCercant:5,  equityStake:8.5},
 ];
 
 // valuation fields — source: Valoracions participades Turtle (1).xlsx (2025Q1/2024Q4 latest)
@@ -50,6 +51,12 @@ export const PORTFOLIO_COMPANIES = [
   {nom:"A Ponent",          tipus:"PE", segment:"B2B Services",       entrepreneurs:"—",                                         origen:"Direct PE",     geo:"ES", ticket:1750000, dataCompr:"2024-01-01", mesosOperant:26, tvpi:1.0,   rvpiEur:875000,  dpiEur:0,      rev:null,      ebitda:null,    dfn:null,     grossEV:null,     multEntry:null, quarters:[]},
   {nom:"Avatel",            tipus:"PE", segment:"Telecoms",           entrepreneurs:"—",                                         origen:"Direct PE",     geo:"ES", ticket:2050000, dataCompr:"2025-01-01", mesosOperant:14, tvpi:1.0,   rvpiEur:2050000, dpiEur:0,      rev:null,      ebitda:null,    dfn:null,     grossEV:null,     multEntry:null, quarters:[]},
   {nom:"Irmafer",           tipus:"PE", segment:"Industrial",         entrepreneurs:"—",                                         origen:"Direct PE",     geo:"ES", ticket:825000,  dataCompr:"2025-01-01", mesosOperant:14, tvpi:1.0,   rvpiEur:825000,  dpiEur:0,      rev:null,      ebitda:null,    dfn:null,     grossEV:null,     multEntry:null, quarters:[]},
+  {nom:"Nexobi",            tipus:"PE", segment:"SaaS",               entrepreneurs:"—",                                         origen:"Direct PE",     geo:"ES", ticket:800000,  dataCompr:"2024-06-01", mesosOperant:21, tvpi:1.85, rvpiEur:1350000, dpiEur:130000, rev:4200000,   ebitda:920000,  dfn:600000,   grossEV:8400000,  multEntry:null, quarters:[
+    { q:"Q3 2024", rev:920000,  ebitda:195000, dfn:680000, revBudget:900000,  ebitdaBudget:185000, dfnBudget:700000 },
+    { q:"Q4 2024", rev:1050000, ebitda:240000, dfn:640000, revBudget:1000000, ebitdaBudget:220000, dfnBudget:620000 },
+    { q:"Q1 2025", rev:1030000, ebitda:225000, dfn:620000, revBudget:1100000, ebitdaBudget:250000, dfnBudget:600000 },
+    { q:"Q2 2025", rev:1200000, ebitda:260000, dfn:600000, revBudget:1150000, ebitdaBudget:245000, dfnBudget:580000 },
+  ]},
 ];
 
 
