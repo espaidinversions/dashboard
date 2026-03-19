@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell
+  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell
 } from "recharts";
 import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
@@ -77,16 +77,16 @@ function FundDetailInner() {
   const multipleColor = v => v == null ? tc.textLight : v < 1 ? tc.red : v < 1.5 ? tc.warning : tc.green;
   const fmtX = v => v != null ? `${v.toFixed(2)}×` : "—";
 
-  // J-curve data: cumulative net cash flow (distributions − calls)
+  // J-curve data: calls negative, distributions positive, cumulative net line
   const jCurveData = useMemo(() => {
     const rows = txs
       .filter(r => r.cat === "Capital Call" || r.cat === "Distribució" || r.cat === "Retorn Capital")
       .sort((a, b) => a.data.localeCompare(b.data));
-    let cumNet = 0;
+    let cumCalls = 0, cumDist = 0;
     return rows.map(r => {
-      if (r.cat === "Capital Call") cumNet -= r.eur;
-      else cumNet += Math.abs(r.eur);
-      return { data: r.data, cumNet };
+      if (r.cat === "Capital Call") cumCalls += r.eur;
+      else cumDist += Math.abs(r.eur);
+      return { data: r.data, cumCalls: -cumCalls, cumDist, cumNet: cumDist - cumCalls };
     });
   }, [txs]);
 
@@ -134,23 +134,24 @@ function FundDetailInner() {
           {jCurveData.length === 0
             ? <div style={{ textAlign: "center", color: tc.textLight, padding: "32px 0" }}>Encara no hi ha aportacions registrades.</div>
             : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={jCurveData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="30%">
+              <ResponsiveContainer width="100%" height={260}>
+                <ComposedChart data={jCurveData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="30%" barGap={4}>
                   <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
                   <ReferenceLine y={0} stroke={tc.border} strokeWidth={1.5} />
                   <XAxis dataKey="data" tick={{ fontSize: 10, fill: tc.textLight }} />
                   <YAxis tickFormatter={v => (v < 0 ? "−" : "") + fmtM(Math.abs(v))} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
                   <Tooltip
-                    formatter={v => [(v < 0 ? "−" : "+") + fmtM(Math.abs(v)), "Flux Net Acumulat"]}
+                    formatter={(v, name) => {
+                      const label = name === "cumCalls" ? "Capital Cridat (acum.)" : name === "cumDist" ? "Distribucions (acum.)" : "Net Acumulat";
+                      return [(v < 0 ? "−" : "+") + fmtM(Math.abs(v)), label];
+                    }}
                     labelStyle={{ color: tc.text }}
                     contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }}
                   />
-                  <Bar dataKey="cumNet" name="cumNet">
-                    {jCurveData.map((d, i) => (
-                      <Cell key={i} fill={d.cumNet >= 0 ? "#276749" : "#2B4C7E"} />
-                    ))}
-                  </Bar>
-                </BarChart>
+                  <Bar dataKey="cumCalls" name="cumCalls" fill="#2B4C7E" fillOpacity={0.8} />
+                  <Bar dataKey="cumDist"  name="cumDist"  fill="#276749" fillOpacity={0.8} />
+                  <Line dataKey="cumNet" name="cumNet" type="monotone" stroke="#E8A020" strokeWidth={2} dot={{ r: 3, fill: "#E8A020" }} />
+                </ComposedChart>
               </ResponsiveContainer>
             )
           }
