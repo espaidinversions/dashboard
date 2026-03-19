@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useRef } from "react";
 import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Label,
   Sankey,
 } from "recharts";
 import { useTheme } from "../theme.js";
@@ -126,12 +126,15 @@ export function SearchersTab({ search = "" }) {
   , []);
 
   const displayedSearchers = useMemo(() => {
-    if (!search.trim()) return activeWithMesos;
-    const q = search.toLowerCase();
-    return activeWithMesos.filter(r =>
-      r.nom.toLowerCase().includes(q) ||
-      r.searchers.toLowerCase().includes(q)
-    );
+    let list = activeWithMesos;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(r =>
+        r.nom.toLowerCase().includes(q) ||
+        r.searchers.toLowerCase().includes(q)
+      );
+    }
+    return [...list].sort((a, b) => (a.isMock === b.isMock ? 0 : a.isMock ? -1 : 1));
   }, [activeWithMesos, search]);
 
   // match status from ALL_SEARCHERS
@@ -242,6 +245,78 @@ export function SearchersTab({ search = "" }) {
         ))}
       </div>
 
+      {/* ── Sankey + Geography ── */}
+      <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
+        <div style={card}>
+          <div style={sec}>Portfolio per Forma d'Entrada i Resultat</div>
+          <div style={{ overflowX:"auto" }}>
+            <Sankey width={520} height={320} data={sankeyData}
+              node={<SankeyNode />} link={<SankeyLink />}
+              nodePadding={18} nodeWidth={14} iterations={64}
+              margin={{ top:8, right:160, bottom:8, left:130 }}
+            >
+              <Tooltip content={({ active, payload }) =>
+                active && payload?.length ? (
+                  <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"8px 12px", fontSize:11 }}>
+                    <b>{payload[0].payload.name}</b>: {payload[0].payload.value} searchers
+                  </div>
+                ) : null
+              }/>
+            </Sankey>
+          </div>
+        </div>
+
+        <div style={card}>
+          <div style={sec}>Allocation Geogràfica — Searchers (€)</div>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie data={geoData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={92} labelLine={false}
+                label={({ cx, cy, midAngle, outerRadius, percent, name }) => {
+                  if (percent < 0.04) return null;
+                  const R = Math.PI / 180;
+                  const r = outerRadius + 18;
+                  const x = cx + r * Math.cos(-midAngle * R);
+                  const y = cy + r * Math.sin(-midAngle * R);
+                  const flagMap = { ES:"🇪🇸", EN:"🇬🇧", IT:"🇮🇹", DE:"🇩🇪", FR:"🇫🇷", PT:"🇵🇹", NL:"🇳🇱", US:"🇺🇸", CH:"🇨🇭" };
+                  return (
+                    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={11}>
+                      {flagMap[name] || name} {`${(percent * 100).toFixed(0)}%`}
+                    </text>
+                  );
+                }}
+              >
+                {geoData.map((_, i) => <Cell key={i} fill={GEO_COLORS[i % GEO_COLORS.length]}/>)}
+                <Label content={({ viewBox }) => {
+                  const { cx, cy } = viewBox;
+                  const geoTotal = geoData.reduce((s, r) => s + r.value, 0);
+                  return (
+                    <g>
+                      <text x={cx} y={cy - 7} textAnchor="middle" dominantBaseline="middle"
+                        style={{ fontSize: 12, fontWeight: 700, fill: TC.navy, fontFamily: "'DM Mono',monospace" }}>
+                        {fmtM(geoTotal)}
+                      </text>
+                      <text x={cx} y={cy + 9} textAnchor="middle" dominantBaseline="middle"
+                        style={{ fontSize: 9, fill: TC.textLight }}>
+                        Total
+                      </text>
+                    </g>
+                  );
+                }} />
+              </Pie>
+              <Tooltip content={({ active, payload }) =>
+                active && payload?.length ? (
+                  <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"10px 14px", fontSize:11 }}>
+                    <div style={{ fontWeight:700, marginBottom:4 }}>{payload[0].payload.name}</div>
+                    <div style={{ color:TC.navy, fontWeight:700 }}>{fmtM(payload[0].value)}</div>
+                    <div style={{ color:TC.textMid, marginTop:2, fontSize:10 }}>{payload[0].payload.count} searcher{payload[0].payload.count>1?"s":""}</div>
+                  </div>
+                ) : null
+              }/>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* ── Active Searchers table ── */}
       <div style={{ ...card, marginBottom:14 }}>
         <div style={sec}>Searchers Actius</div>
@@ -258,7 +333,7 @@ export function SearchersTab({ search = "" }) {
               {displayedSearchers.map((r, i) => {
                 const status = getStatus(r.nom);
                 return (
-                  <tr key={r.nom} style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt }}>
+                  <tr key={r.nom} style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding:"9px 10px", fontWeight:600, color:TC.navy }}>{r.nom}</td>
                     <td style={{ padding:"9px 10px", color:TC.text, fontSize:11 }}>{r.searchers}</td>
                     <td style={{ padding:"9px 10px" }}>
@@ -288,51 +363,6 @@ export function SearchersTab({ search = "" }) {
               </tr>
             </tfoot>
           </table>
-        </div>
-      </div>
-
-      {/* ── Sankey + Geography ── */}
-      <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
-        <div style={card}>
-          <div style={sec}>Portfolio per Forma d'Entrada i Resultat</div>
-          <div style={{ overflowX:"auto" }}>
-            <Sankey width={520} height={320} data={sankeyData}
-              node={<SankeyNode />} link={<SankeyLink />}
-              nodePadding={18} nodeWidth={14} iterations={64}
-              margin={{ top:8, right:160, bottom:8, left:130 }}
-            >
-              <Tooltip content={({ active, payload }) =>
-                active && payload?.length ? (
-                  <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"8px 12px", fontSize:11 }}>
-                    <b>{payload[0].payload.name}</b>: {payload[0].payload.value} searchers
-                  </div>
-                ) : null
-              }/>
-            </Sankey>
-          </div>
-        </div>
-
-        <div style={card}>
-          <div style={sec}>Allocation Geogràfica — Searchers (€)</div>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie data={geoData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={95} labelLine={false}
-                label={FlagSvgLabel}
-              >
-                {geoData.map((_, i) => <Cell key={i} fill={GEO_COLORS[i % GEO_COLORS.length]}/>)}
-              </Pie>
-              <Tooltip content={({ active, payload }) =>
-                active && payload?.length ? (
-                  <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"10px 14px", fontSize:11 }}>
-                    <div style={{ fontWeight:700, marginBottom:4 }}>{payload[0].payload.name}</div>
-                    <div style={{ color:TC.navy, fontWeight:700 }}>{fmtM(payload[0].value)}</div>
-                    <div style={{ color:TC.textMid, marginTop:2, fontSize:10 }}>{payload[0].payload.count} searcher{payload[0].payload.count>1?"s":""}</div>
-                  </div>
-                ) : null
-              }/>
-              <Legend formatter={v=><span style={{color:TC.text,fontSize:11}}>{v}</span>}/>
-            </PieChart>
-          </ResponsiveContainer>
         </div>
       </div>
 
