@@ -16,11 +16,12 @@ export function AuthProvider({ children }) {
   const signIn  = (email, password) => supabase.auth.signInWithPassword({ email, password });
   const signUp  = (email, password) => supabase.auth.signUp({ email, password });
   const signOut = () => supabase.auth.signOut();
+  const resendConfirmation = (email) => supabase.auth.resend({ type: "signup", email });
 
   const isSuperuser = session?.user?.user_metadata?.role === "superuser";
 
   return (
-    <AuthContext.Provider value={{ session, signIn, signUp, signOut, isSuperuser }}>
+    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, isSuperuser }}>
       {children}
     </AuthContext.Provider>
   );

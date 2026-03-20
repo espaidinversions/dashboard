@@ -4,16 +4,24 @@ import { useAuth } from "../auth.jsx";
 const ALLOWED_DOMAINS = ["solvicocean.com", "espaidinversions.com"];
 
 export default function LoginPage() {
-  const { signIn, signUp } = useAuth();
-  const [mode,     setMode]     = useState("login"); // "login" | "register"
-  const [email,    setEmail]    = useState("");
-  const [password, setPassword] = useState("");
-  const [confirm,  setConfirm]  = useState("");
-  const [error,    setError]    = useState(null);
-  const [info,     setInfo]     = useState(null);
-  const [loading,  setLoading]  = useState(false);
+  const { signIn, signUp, resendConfirmation } = useAuth();
+  const [mode,        setMode]        = useState("login"); // "login" | "register"
+  const [email,       setEmail]       = useState("");
+  const [password,    setPassword]    = useState("");
+  const [confirm,     setConfirm]     = useState("");
+  const [error,       setError]       = useState(null);
+  const [info,        setInfo]        = useState(null);
+  const [loading,     setLoading]     = useState(false);
+  const [canResend,   setCanResend]   = useState(false);
+  const [resendDone,  setResendDone]  = useState(false);
 
-  const switchMode = m => { setMode(m); setError(null); setInfo(null); setConfirm(""); };
+  const switchMode = m => { setMode(m); setError(null); setInfo(null); setConfirm(""); setCanResend(false); setResendDone(false); };
+
+  const handleResend = async () => {
+    const { error: err } = await resendConfirmation(email);
+    if (err) setError(err.message);
+    else { setResendDone(true); setInfo("Correu de confirmació reenviat. Comprova la teva safata d'entrada."); }
+  };
 
   const submit = async e => {
     e.preventDefault();
@@ -30,12 +38,20 @@ export default function LoginPage() {
     setError(null);
     if (mode === "login") {
       const { error: err } = await signIn(email, password);
-      if (err) { setError(err.message); setLoading(false); }
+      if (err) {
+        setLoading(false);
+        if (err.message?.toLowerCase().includes("email not confirmed")) {
+          setError("Encara no has confirmat el correu electrònic.");
+          setCanResend(true);
+        } else {
+          setError(err.message);
+        }
+      }
     } else {
       const { error: err } = await signUp(email, password);
       setLoading(false);
       if (err) { setError(err.message); }
-      else { setInfo("Comprova el teu correu per confirmar el compte."); }
+      else { setInfo("Comprova el teu correu per confirmar el compte."); setCanResend(true); }
     }
   };
 
@@ -116,6 +132,16 @@ export default function LoginPage() {
             <div style={{ fontSize: 12, color: "#1B5E20", background: "#E8F5E9", borderRadius: 7, padding: "9px 12px" }}>
               {info}
             </div>
+          )}
+
+          {canResend && !resendDone && (
+            <button type="button" onClick={handleResend} style={{
+              background: "none", border: "none", padding: 0, fontSize: 12,
+              color: "#2B5070", textDecoration: "underline", cursor: "pointer",
+              fontFamily: "inherit", textAlign: "left",
+            }}>
+              Reenviar correu de confirmació
+            </button>
           )}
 
           <button type="submit" disabled={loading} style={{
