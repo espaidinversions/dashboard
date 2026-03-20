@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 
 const ALLOWED_DOMAINS = ["solvicocean.com", "espaidinversions.com"];
 
 export default function LoginPage() {
   const { signIn, signUp, resendConfirmation } = useAuth();
+  const navigate = useNavigate();
   const [mode,        setMode]        = useState("login"); // "login" | "register"
   const [email,       setEmail]       = useState("");
   const [password,    setPassword]    = useState("");
@@ -46,6 +48,8 @@ export default function LoginPage() {
         } else {
           setError(err.message);
         }
+      } else {
+        navigate("/");
       }
     } else {
       const { error: err } = await signUp(email, password);
