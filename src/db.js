@@ -1,0 +1,243 @@
+import { supabase } from "./supabase.js";
+
+// ── Helpers ───────────────────────────────────────────────
+
+// Map camelCase app fields ↔ snake_case DB columns for portfolio_companies
+function companyToRow(c) {
+  return {
+    nom: c.nom, tipus: c.tipus, segment: c.segment || null,
+    entrepreneurs: c.entrepreneurs || null, origen: c.origen || null, geo: c.geo || null,
+    ticket: c.ticket ?? null, tvpi: c.tvpi ?? null,
+    rvpi_eur: c.rvpiEur ?? null, dpi_eur: c.dpiEur ?? null,
+    rev: c.rev ?? null, ebitda: c.ebitda ?? null, dfn: c.dfn ?? null,
+    gross_ev: c.grossEV ?? null, mult_entry: c.multEntry ?? null,
+    data_compr: c.dataCompr || null, mesos_operant: c.mesosOperant ?? null,
+    is_mock: c.isMock ?? false,
+    quarters: c.quarters ?? [],
+  };
+}
+
+function rowToCompany(r) {
+  return {
+    id: r.id, nom: r.nom, tipus: r.tipus, segment: r.segment,
+    entrepreneurs: r.entrepreneurs, origen: r.origen, geo: r.geo,
+    ticket: r.ticket, tvpi: r.tvpi,
+    rvpiEur: r.rvpi_eur, dpiEur: r.dpi_eur,
+    rev: r.rev, ebitda: r.ebitda, dfn: r.dfn,
+    grossEV: r.gross_ev, multEntry: r.mult_entry,
+    dataCompr: r.data_compr, mesosOperant: r.mesos_operant,
+    isMock: r.is_mock,
+    quarters: r.quarters ?? [],
+  };
+}
+
+function searcherToRow(s) {
+  return {
+    nom: s.nom, tipus: s.tipus, modalitat: s.modalitat, geo: s.geo,
+    status_screening: s.statusScreening, form_entrada: s.formEntrada,
+    intro_per: s.introPer, searcher1: s.searcher1 || null, searcher2: s.searcher2 || null,
+    escola1: s.escola1 || null, escola2: s.escola2 || null,
+    ticket: s.ticket ?? null, data_inici: s.dataInici || null,
+    data_compr: s.dataCompr || null, mesos_cercant: s.mesosCercant ?? null,
+    equity_stake: s.equityStake ?? null, is_mock: s.isMock ?? false,
+  };
+}
+
+function rowToSearcher(r) {
+  return {
+    id: r.id, nom: r.nom, tipus: r.tipus, modalitat: r.modalitat, geo: r.geo,
+    statusScreening: r.status_screening, formEntrada: r.form_entrada,
+    introPer: r.intro_per, searcher1: r.searcher1 || "", searcher2: r.searcher2 || "",
+    escola1: r.escola1 || "", escola2: r.escola2 || "",
+    ticket: r.ticket, dataInici: r.data_inici,
+    dataCompr: r.data_compr, mesosCercant: r.mesos_cercant,
+    equityStake: r.equity_stake, isMock: r.is_mock ?? false,
+  };
+}
+
+function dealToRow(d) {
+  return {
+    name: d.name, amount: d.amount, currency: d.currency,
+    geography: d.geography, strategy: d.strategy, sector: d.sector,
+    status: d.status, canal: d.canal, active: d.active ?? true,
+    estimated_closing: d.estimatedClosing ?? null,
+  };
+}
+
+function rowToDeal(r) {
+  return {
+    id: r.id, name: r.name, amount: r.amount, currency: r.currency,
+    geography: r.geography, strategy: r.strategy, sector: r.sector,
+    status: r.status, canal: r.canal, active: r.active,
+    estimatedClosing: r.estimated_closing ?? null,
+  };
+}
+
+// ── Load all ──────────────────────────────────────────────
+
+export async function loadAll() {
+  if (!supabase) return null;
+  const [cc, fm, pl, co, sr] = await Promise.all([
+    supabase.from("capital_calls").select("*").order("data"),
+    supabase.from("fund_meta").select("*"),
+    supabase.from("pipeline").select("*").order("id"),
+    supabase.from("portfolio_companies").select("*").order("nom"),
+    supabase.from("searchers").select("*").order("nom"),
+  ]);
+  if (cc.error || fm.error || pl.error || co.error || sr.error) return null;
+  return {
+    rawCC:      cc.data.map(r => ({ fons:r.fons, tipus:r.tipus, cat:r.cat, data:r.data, mes:r.mes, any:r.year, fy:r.fy, vcpe:r.vcpe, est:r.est, eur:r.eur, divisa:r.divisa })),
+    fundMeta:   fm.data.map(r => ({ fons:r.fons, tvpi:r.tvpi })),
+    funds0:     pl.data.map(r => ({ id:r.id, name:r.name, amount:r.amount, currency:r.currency, geography:r.geography, strategy:r.strategy, sector:r.sector, status:r.status, canal:r.canal, active:r.active, estimatedClosing: r.estimated_closing ?? null })),
+    companies:  co.data.map(rowToCompany),
+    searchers:  sr.data.map(rowToSearcher),
+  };
+}
+
+// ── Save individual tables ────────────────────────────────
+
+export async function saveCapitalCalls(rows) {
+  if (!supabase) return;
+  await supabase.from("capital_calls").delete().neq("id", 0);
+  if (rows.length) await supabase.from("capital_calls").insert(rows.map(r => ({
+    fons:r.fons, tipus:r.tipus, cat:r.cat, data:r.data, mes:r.mes, year:r.any,
+    fy:r.fy, vcpe:r.vcpe, est:r.est, eur:r.eur, divisa:r.divisa,
+  })));
+}
+
+export async function saveFundMeta(rows) {
+  if (!supabase) return;
+  await supabase.from("fund_meta").upsert(rows.map(r => ({ fons:r.fons, tvpi:r.tvpi ?? null })), { onConflict: "fons" });
+}
+
+export async function savePipeline(rows) {
+  if (!supabase) return;
+  await supabase.from("pipeline").delete().neq("id", -1);
+  if (rows.length) await supabase.from("pipeline").insert(rows.map(r => ({
+    id:r.id, name:r.name, amount:r.amount, currency:r.currency,
+    geography:r.geography, strategy:r.strategy, sector:r.sector,
+    status:r.status, canal:r.canal, active:r.active,
+  })));
+}
+
+export async function saveCompanies(rows) {
+  if (!supabase) return;
+  await supabase.from("portfolio_companies").delete().neq("id", 0);
+  if (rows.length) await supabase.from("portfolio_companies").insert(rows.map(companyToRow));
+}
+
+export async function saveSearchers(rows) {
+  if (!supabase) return;
+  await supabase.from("searchers").delete().neq("id", 0);
+  if (rows.length) await supabase.from("searchers").insert(rows.map(searcherToRow));
+}
+
+// ── Granular single-row upserts ───────────────────────────
+
+export async function upsertFundMeta(fons, tvpi) {
+  if (!supabase) return;
+  await supabase.from("fund_meta").upsert({ fons, tvpi: tvpi ?? null }, { onConflict: "fons" });
+}
+
+export async function upsertCompany(company) {
+  if (!supabase) return;
+  await supabase.from("portfolio_companies")
+    .upsert(companyToRow(company), { onConflict: "nom" });
+}
+
+export async function upsertSearcher(searcher) {
+  if (!supabase) return;
+  await supabase.from("searchers")
+    .update(searcherToRow(searcher))
+    .eq("id", searcher.id);
+}
+
+// ── Insert (single-row, returns row with DB-assigned id) ──
+
+export async function insertCompany(company) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("portfolio_companies")
+    .insert(companyToRow(company))
+    .select()
+    .single();
+  if (error) { console.error(error); return null; }
+  return rowToCompany(data);
+}
+
+export async function insertSearcher(searcher) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("searchers")
+    .insert(searcherToRow(searcher))
+    .select()
+    .single();
+  if (error) { console.error(error); return null; }
+  return rowToSearcher(data);
+}
+
+export async function insertPipelineDeal(deal) {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from("pipeline")
+    .insert(dealToRow(deal))
+    .select()
+    .single();
+  if (error) { console.error(error); return null; }
+  return rowToDeal(data);
+}
+
+export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
+  if (!supabase) return null;
+  const { MESOS } = await import("./config.js");
+  const now  = new Date();
+  const mes  = MESOS[now.getMonth() + 1]; // MESOS is 1-indexed; index 0 = ""
+  const year = now.getFullYear();
+  const fy   = "FY " + year;
+  const data_iso = now.toISOString().slice(0, 10);
+
+  const { error: ccErr } = await supabase.from("capital_calls").insert({
+    fons, vcpe, est, cat: "Compromís", eur: compromisEur, divisa,
+    mes, year, fy, tipus: vcpe, data: data_iso,
+  });
+  if (ccErr) { console.error(ccErr); return null; }
+
+  await supabase.from("fund_meta")
+    .upsert({ fons, tvpi: null }, { onConflict: "fons" });
+
+  // Return in rawCC shape (key `any`, not `year`)
+  return { fons, vcpe, est, cat: "Compromís", eur: compromisEur, divisa, mes, any: year, fy, tipus: vcpe, data: data_iso };
+}
+
+// ── Delete ────────────────────────────────────────────────
+
+export async function deleteCompany(id) {
+  if (!supabase) return;
+  await supabase.from("portfolio_companies").delete().eq("id", id);
+}
+
+export async function deleteSearcher(id) {
+  if (!supabase) return;
+  await supabase.from("searchers").delete().eq("id", id);
+}
+
+export async function deletePipelineDeal(id) {
+  if (!supabase) return;
+  await supabase.from("pipeline").delete().eq("id", id);
+}
+
+export async function deleteFund(fons) {
+  if (!supabase) return null;
+  const { error: e1 } = await supabase.from("capital_calls").delete().eq("fons", fons);
+  if (e1) return e1;
+  const { error: e2 } = await supabase.from("fund_meta").delete().eq("fons", fons);
+  return e2 ?? null;
+}
+
+// ── Upsert (pipeline) ─────────────────────────────────────
+
+export async function upsertPipelineDeal(deal) {
+  if (!supabase) return;
+  await supabase.from("pipeline")
+    .upsert({ id: deal.id, ...dealToRow(deal) }, { onConflict: "id" });
+}
