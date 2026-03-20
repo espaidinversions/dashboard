@@ -1,16 +1,18 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer, CartesianGrid, LabelList
+  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LabelList
 } from "recharts";
+import { useAuth } from "../auth.jsx";
 import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
+import { upsertCompany } from "../db.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
-import { FlagImg, Logo } from "./SharedComponents.jsx";
+import { EditableCell, FlagImg, Logo } from "./SharedComponents.jsx";
 
 function KpiCard({ label, value, sub, valueColor, tc }) {
   return (
-    <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 130, flex: 1 }}>
+    <div className="kpi-card card-hover" style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 130, flex: 1 }}>
       <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 700, color: valueColor || tc.navy, fontFamily: "'DM Mono',monospace" }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{sub}</div>}
@@ -18,21 +20,112 @@ function KpiCard({ label, value, sub, valueColor, tc }) {
   );
 }
 
+function MetricChart({ title, data, actualKey, budgetKey, ltmKey, color, view, tc, withMargin }) {
+  const isLTM = view === "ltm" && ltmKey != null;
+  const activeKey = isLTM ? ltmKey : actualKey;
+  const hasBudget = !isLTM && data.some(q => q[budgetKey] != null);
+  const marginKey = isLTM ? "ltmMarginPct" : "ebitdaMarginPct";
+  const hasMarginData = !!withMargin && data.some(q => q[marginKey] != null);
+  const hasData = data.some(q => q[activeKey] != null);
+
+  return (
+    <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px" }}>
+      <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span>{title}</span>
+        {hasMarginData && <span style={{ color: "#E8A020", fontSize: 10, fontWeight: 600, textTransform: "none", letterSpacing: 0 }}>— Marge %</span>}
+      </div>
+      {!hasData ? (
+        <div style={{ border: `2px dashed ${tc.border}`, borderRadius: 8, padding: "40px 0", textAlign: "center", color: tc.textLight, fontSize: 12 }}>
+          Sense dades
+        </div>
+      ) : (
+        <ResponsiveContainer width="100%" height={210}>
+          <ComposedChart data={data} margin={{ top: 18, right: hasMarginData ? 44 : 8, bottom: 0, left: 0 }} barCategoryGap="25%">
+            <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
+            <XAxis dataKey="q" tick={{ fontSize: 9, fill: tc.textLight }} />
+            <YAxis yAxisId="left" tickFormatter={v => fmtM(v)} tick={{ fontSize: 9, fill: tc.textLight }} width={60} />
+            {hasMarginData && (
+              <YAxis yAxisId="right" orientation="right" tickFormatter={v => `${v.toFixed(0)}%`} tick={{ fontSize: 9, fill: "#E8A020" }} width={32} />
+            )}
+            <Tooltip
+              formatter={(v, name) => {
+                if (name === "margin") return [v != null ? `${v.toFixed(1)}%` : "—", "Marge EBITDA"];
+                if (name === "ltm")    return [fmtM(v), "LTM"];
+                return [fmtM(v), name === "actual" ? "Real" : "Pressupost"];
+              }}
+              labelStyle={{ color: tc.text }}
+              contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }}
+            />
+            <Bar yAxisId="left" dataKey={activeKey} name={isLTM ? "ltm" : "actual"} fill={isLTM ? "#E8A020" : color}>
+              <LabelList dataKey={activeKey} position="top" formatter={v => v != null ? fmtM(v) : ""} style={{ fontSize: 8, fill: tc.textLight }} />
+            </Bar>
+            {hasBudget && (
+              <Bar yAxisId="left" dataKey={budgetKey} name="budget" fill={color} fillOpacity={0.3}>
+                <LabelList dataKey={budgetKey} position="top" formatter={v => v != null ? fmtM(v) : ""} style={{ fontSize: 8, fill: tc.textLight }} />
+              </Bar>
+            )}
+            {hasMarginData && (
+              <Line yAxisId="right" dataKey={marginKey} name="margin" type="monotone"
+                stroke="#E8A020" strokeWidth={2} dot={{ r: 2, fill: "#E8A020" }} connectNulls={false}>
+                <LabelList dataKey={marginKey} position="top" formatter={v => v != null ? `${v.toFixed(1)}%` : ""} style={{ fontSize: 8, fill: "#E8A020" }} />
+              </Line>
+            )}
+          </ComposedChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+}
+
 function CompanyDetailInner() {
   const { id } = useParams();
   const { tc, dark, toggle } = useTheme();
+  const { isSuperuser } = useAuth();
   const navigate = useNavigate();
-  const [kpiTab, setKpiTab] = useState("rev");
+  const [chartView, setChartView] = useState("quarterly");
 
-  const company = useMemo(
-    () => PORTFOLIO_COMPANIES.find(c => slugify(c.nom) === id),
-    [id]
-  );
+  const [companies, setCompanies] = useState(() => {
+    try {
+      const s = localStorage.getItem("tc_portfolioCompanies");
+      return s ? JSON.parse(s) : PORTFOLIO_COMPANIES;
+    } catch { return PORTFOLIO_COMPANIES; }
+  });
+
+  const company = companies.find(c => slugify(c.nom) === id);
+
+  const saveQuarterField = (qLabel, field, value) => {
+    if (!company) return;
+    const updatedQuarters = company.quarters.map(q =>
+      q.q === qLabel ? { ...q, [field]: value === null ? null : parseFloat(value) || null } : q
+    );
+    const updatedCompany = { ...company, quarters: updatedQuarters };
+    const updatedCompanies = companies.map(c => c.nom === company.nom ? updatedCompany : c);
+    setCompanies(updatedCompanies);
+    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updatedCompanies)); } catch {}
+    upsertCompany(updatedCompany);
+  };
+
+  const [addingQuarter, setAddingQuarter] = useState(false);
+  const [newQ, setNewQ] = useState({ q: "1", year: String(new Date().getFullYear()) });
+
+  const addQuarter = () => {
+    if (!company) return;
+    const label = `Q${newQ.q} ${newQ.year}`;
+    if (company.quarters.some(q => q.q === label)) return;
+    const blank = { q: label, rev: null, ebitda: null, dfn: null, revBudget: null, ebitdaBudget: null, dfnBudget: null };
+    const updatedCompany = { ...company, quarters: [...company.quarters, blank] };
+    const updatedCompanies = companies.map(c => c.nom === company.nom ? updatedCompany : c);
+    setCompanies(updatedCompanies);
+    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updatedCompanies)); } catch {}
+    upsertCompany(updatedCompany);
+    setAddingQuarter(false);
+    setNewQ({ q: "1", year: String(new Date().getFullYear()) });
+  };
 
   if (!company) {
     return (
       <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", padding: 32 }}>
-        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 13, fontFamily: "inherit", padding: 0 }}>← Inversions</button>
+        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 13, fontFamily: "inherit", padding: 0 }}>← Participades</button>
         <div style={{ marginTop: 48, textAlign: "center", color: tc.textLight }}>Empresa no trobada.</div>
       </div>
     );
@@ -44,18 +137,7 @@ function CompanyDetailInner() {
 
   const tvpiColor = tvpi == null ? tc.textLight : tvpi < 1 ? tc.red : tvpi < 1.5 ? tc.warning : tc.green;
 
-  const KPI_CFG = {
-    rev:    { label: "Ingressos",  ltmLabel: "Ingressos LTM",  color: "#276749", actualKey: "rev",    budgetKey: "revBudget" },
-    ebitda: { label: "EBITDA",     ltmLabel: "EBITDA LTM",     color: "#2B4C7E", actualKey: "ebitda", budgetKey: "ebitdaBudget" },
-    dfn:    { label: "Deute Net",  ltmLabel: "Deute Net LTM",  color: "#6B2E7E", actualKey: "dfn",    budgetKey: "dfnBudget" },
-  };
-
-  const KPI_TABS = [
-    { id: "rev",    label: "Ingressos" },
-    { id: "ebitda", label: "EBITDA" },
-    { id: "dfn",    label: "Deute Net" },
-  ];
-
+  // LTM: last 4 actual quarters
   const ltm = useMemo(() => {
     if (quarters.length === 0) return null;
     const withActuals = quarters.filter(q => q.rev != null || q.ebitda != null || q.dfn != null);
@@ -63,6 +145,79 @@ function CompanyDetailInner() {
     const sum = key => last4.reduce((s, q) => s + (q[key] ?? 0), 0);
     return { rev: sum("rev"), ebitda: sum("ebitda"), dfn: sum("dfn"), n: last4.length };
   }, [quarters]);
+
+  // Annual aggregation: flows summed, dfn takes last Q (stock)
+  const annualData = useMemo(() => {
+    if (quarters.length === 0) return [];
+    const map = new Map();
+    quarters.forEach(q => {
+      const year = q.q.split(" ")[1];
+      if (!map.has(year)) map.set(year, { q: year });
+      const e = map.get(year);
+      if (q.rev          != null) e.rev          = (e.rev          ?? 0) + q.rev;
+      if (q.ebitda       != null) e.ebitda        = (e.ebitda        ?? 0) + q.ebitda;
+      if (q.dfn          != null) e.dfn           = q.dfn;
+      if (q.revBudget    != null) e.revBudget     = (e.revBudget     ?? 0) + q.revBudget;
+      if (q.ebitdaBudget != null) e.ebitdaBudget  = (e.ebitdaBudget ?? 0) + q.ebitdaBudget;
+      if (q.dfnBudget    != null) e.dfnBudget     = q.dfnBudget;
+    });
+    return Array.from(map.values()).map(e => ({
+      ...e,
+      ebitdaMarginPct: (e.ebitda != null && e.rev != null && e.rev !== 0)
+        ? (e.ebitda / e.rev) * 100 : null,
+    }));
+  }, [quarters]);
+
+  // Quarterly + rolling LTM + per-period EBITDA margin
+  const quarterlyWithLTM = useMemo(() => {
+    const actuals = quarters.filter(q => q.rev != null || q.ebitda != null);
+    return quarters.map(q => {
+      const base = {
+        ...q,
+        ebitdaMarginPct: (q.ebitda != null && q.rev != null && q.rev !== 0)
+          ? (q.ebitda / q.rev) * 100 : null,
+      };
+      const ai = actuals.findIndex(a => a.q === q.q);
+      if (ai < 3) return base;
+      const last4 = actuals.slice(ai - 3, ai + 1);
+      const sum = key => last4.every(a => a[key] != null) ? last4.reduce((s, a) => s + a[key], 0) : null;
+      const ltmRev = sum("rev"), ltmEbitda = sum("ebitda");
+      return {
+        ...base, ltmRev, ltmEbitda,
+        ltmMarginPct: (ltmRev != null && ltmEbitda != null && ltmRev !== 0)
+          ? (ltmEbitda / ltmRev) * 100 : null,
+      };
+    });
+  }, [quarters]);
+
+  const chartData = chartView === "annual" ? annualData : quarterlyWithLTM;
+
+  // CAGR from annual data (requires positive first + last values)
+  const { revCAGR, ebitdaCAGR } = useMemo(() => {
+    const cagr = (rows, key) => {
+      if (rows.length < 2) return null;
+      const first = rows[0][key], last = rows[rows.length - 1][key];
+      if (!first || !last || first <= 0 || last <= 0) return null;
+      return (Math.pow(last / first, 1 / (rows.length - 1)) - 1) * 100;
+    };
+    return {
+      revCAGR:    cagr(annualData.filter(y => y.rev    > 0), "rev"),
+      ebitdaCAGR: cagr(annualData.filter(y => y.ebitda > 0), "ebitda"),
+    };
+  }, [annualData]);
+
+  // LTM-derived operating KPIs
+  const ltmMarginPct = (ltm?.ebitda != null && ltm?.rev != null && ltm.rev !== 0)
+    ? (ltm.ebitda / ltm.rev) * 100 : null;
+  const ltmLeverage  = (ltm?.dfn != null && ltm?.ebitda != null && ltm.ebitda > 0)
+    ? ltm.dfn / ltm.ebitda : null;
+
+  const marginColor   = ltmMarginPct == null ? tc.textLight : ltmMarginPct >= 15 ? tc.green : ltmMarginPct >= 0 ? tc.warning : tc.red;
+  const leverageColor = ltmLeverage  == null ? tc.textLight : ltmLeverage <= 2.5 ? tc.green : ltmLeverage <= 4  ? tc.warning : tc.red;
+  const cagrColor = v => v == null ? tc.textLight : v >= 0 ? tc.green : tc.red;
+  const fmtPct    = v  => v != null ? `${v >= 0 ? "+" : ""}${v.toFixed(1)}%` : "—";
+  const ltmSub    = ltm?.n != null && ltm.n < 4 ? `Últims ${ltm.n} trim.` : "Últims 12 mesos";
+  const cagrYears = annualData.length >= 2 ? `${annualData[0].q}–${annualData[annualData.length - 1].q}` : null;
 
   return (
     <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
@@ -76,7 +231,7 @@ function CompanyDetailInner() {
       </div>
       {/* Entity bar */}
       <div style={{ background: tc.navy, padding: "0 32px", display: "flex", alignItems: "center", gap: 12, minHeight: 48 }}>
-        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "inherit", padding: 0 }}>← Inversions</button>
+        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: "rgba(255,255,255,0.5)", fontSize: 12, letterSpacing: "0.04em", textTransform: "uppercase", whiteSpace: "nowrap", flexShrink: 0, fontFamily: "inherit", padding: 0 }}>← Participades</button>
         <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>/</span>
         <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{nom}</span>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
@@ -87,7 +242,8 @@ function CompanyDetailInner() {
       </div>
 
       <div style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: 24 }}>
-        {/* KPI cards */}
+
+        {/* Row 1 — Investment KPIs */}
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
           <KpiCard label="Ticket"        value={fmtM(ticket)} tc={tc} />
           <KpiCard label="TVPI"          value={tvpi != null ? `${tvpi.toFixed(2)}×` : "—"} valueColor={tvpiColor} tc={tc} />
@@ -96,88 +252,179 @@ function CompanyDetailInner() {
           <KpiCard label="Mesos operant" value={mesosOperant ?? "—"} tc={tc} />
         </div>
 
-        {/* Quarterly KPIs */}
-        <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
-          <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 16 }}>Evolució Trimestral</div>
-          <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-            {KPI_TABS.map(t => (
-              <button key={t.id} onClick={() => setKpiTab(t.id)}
-                style={{ padding: "6px 14px", borderRadius: 6, border: `1.5px solid ${kpiTab === t.id ? tc.green : tc.border}`, background: kpiTab === t.id ? (dark ? "#0E2820" : "#E8F5E9") : "transparent", color: kpiTab === t.id ? tc.green : tc.textLight, fontSize: 12, cursor: "pointer", fontFamily: "inherit", fontWeight: kpiTab === t.id ? 700 : 400 }}>
-                {t.label}
-              </button>
-            ))}
+        {/* Row 2 — Operating KPIs */}
+        {ltm && (
+          <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+            <KpiCard label="Ingressos LTM"  value={ltm.rev    != null ? fmtM(ltm.rev)    : "—"} sub={ltmSub} tc={tc} />
+            <KpiCard label="EBITDA LTM"     value={ltm.ebitda != null ? fmtM(ltm.ebitda) : "—"} sub={ltmSub} tc={tc} />
+            <KpiCard label="Marge EBITDA"   value={ltmMarginPct != null ? `${ltmMarginPct.toFixed(1)}%` : "—"} sub={ltmSub} valueColor={marginColor} tc={tc} />
+            <KpiCard label="Ràtio de Deute" value={ltmLeverage  != null ? `${ltmLeverage.toFixed(1)}×`  : "—"} sub="DFN / EBITDA LTM" valueColor={leverageColor} tc={tc} />
+            <KpiCard label="CAGR Ingressos" value={fmtPct(revCAGR)}    sub={cagrYears} valueColor={cagrColor(revCAGR)}    tc={tc} />
+            <KpiCard label="CAGR EBITDA"    value={fmtPct(ebitdaCAGR)} sub={cagrYears} valueColor={cagrColor(ebitdaCAGR)} tc={tc} />
           </div>
-          {quarters.length === 0
-            ? (
-              <div style={{ border: `2px dashed ${tc.border}`, borderRadius: 8, padding: "48px 24px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>
-                Afegeix dades històriques per veure l'evolució
+        )}
+
+        {/* Charts */}
+        {quarters.length === 0 ? (
+          <div style={{ background: tc.card, border: `2px dashed ${tc.border}`, borderRadius: 10, padding: "48px 24px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>
+            Afegeix dades històriques per veure l'evolució
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {/* Shared view toggle */}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
+              {[["quarterly", "Trimestral"], ["ltm", "LTM"], ["annual", "Anual"]].map(([v, label]) => (
+                <button key={v} onClick={() => setChartView(v)}
+                  style={{ padding: "4px 10px", borderRadius: 5, border: `1.5px solid ${chartView === v ? tc.green : tc.border}`, background: chartView === v ? (dark ? "#0A2010" : "#E8F8E8") : "transparent", color: chartView === v ? tc.green : tc.textLight, fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: chartView === v ? 700 : 400 }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {/* 3 charts stacked */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              <MetricChart
+                title="Ingressos" data={chartData}
+                actualKey="rev" budgetKey="revBudget" ltmKey="ltmRev"
+                color="#28A029" view={chartView} tc={tc}
+              />
+              <MetricChart
+                title="EBITDA" data={chartData}
+                actualKey="ebitda" budgetKey="ebitdaBudget" ltmKey="ltmEbitda"
+                color="#2B5070" view={chartView} tc={tc} withMargin
+              />
+              <MetricChart
+                title="Deute Net" data={chartData}
+                actualKey="dfn" budgetKey="dfnBudget" ltmKey={null}
+                color="#6B2E7E" view={chartView} tc={tc}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Quarter data table (editable) */}
+        {quarters.length > 0 && (
+          <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", overflowX: "auto" }}>
+            <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 }}>Dades trimestrals</div>
+            <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 600 }}>
+              <thead>
+                <tr>
+                  {["Trimestre", "Ingressos", "EBITDA", "DFN", "Ing. Pres.", "EBITDA Pres.", "DFN Pres."].map(h => (
+                    <th key={h} style={{ fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, padding: "4px 8px", textAlign: "right", whiteSpace: "nowrap" }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {quarters.map(q => (
+                  <tr key={q.q} style={{ borderTop: `1px solid ${tc.border}` }}>
+                    <td style={{ padding: "6px 8px", fontSize: 12, fontWeight: 600, color: tc.text, whiteSpace: "nowrap" }}>{q.q}</td>
+                    <td style={{ padding: "2px 4px" }}>
+                      <EditableCell value={q.rev} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "rev", v)} disabled={!isSuperuser} />
+                    </td>
+                    <td style={{ padding: "2px 4px" }}>
+                      <EditableCell value={q.ebitda} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "ebitda", v)} disabled={!isSuperuser} />
+                    </td>
+                    <td style={{ padding: "2px 4px" }}>
+                      <EditableCell value={q.dfn} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "dfn", v)} disabled={!isSuperuser} />
+                    </td>
+                    <td style={{ padding: "2px 4px" }}>
+                      <EditableCell value={q.revBudget} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "revBudget", v)} disabled={!isSuperuser} />
+                    </td>
+                    <td style={{ padding: "2px 4px" }}>
+                      <EditableCell value={q.ebitdaBudget} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "ebitdaBudget", v)} disabled={!isSuperuser} />
+                    </td>
+                    <td style={{ padding: "2px 4px" }}>
+                      <EditableCell value={q.dfnBudget} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "dfnBudget", v)} disabled={!isSuperuser} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {isSuperuser && (
+              <div style={{ marginTop: 12 }}>
+                {!addingQuarter ? (
+                  <button onClick={() => setAddingQuarter(true)}
+                    style={{ background: "transparent", border: `1.5px dashed ${tc.border}`, borderRadius: 7,
+                      padding: "6px 14px", cursor: "pointer", fontSize: 12, color: tc.textMid,
+                      fontFamily: "inherit", fontWeight: 600 }}>
+                    + Nou trimestre
+                  </button>
+                ) : (
+                  <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+                    <div>
+                      <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Trimestre</div>
+                      <select value={newQ.q} onChange={e => setNewQ(p => ({ ...p, q: e.target.value }))}
+                        style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit" }}>
+                        {["1","2","3","4"].map(v => <option key={v} value={v}>Q{v}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Any</div>
+                      <input type="number" value={newQ.year} onChange={e => setNewQ(p => ({ ...p, year: e.target.value }))}
+                        style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 80 }} />
+                    </div>
+                    <button onClick={addQuarter}
+                      style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
+                      Afegir
+                    </button>
+                    <button onClick={() => setAddingQuarter(false)}
+                      style={{ padding: "7px 14px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>
+                      Cancel·lar
+                    </button>
+                  </div>
+                )}
               </div>
-            )
-            : (() => {
-                const cfg = KPI_CFG[kpiTab];
-                const hasBudget = quarters.some(q => q[cfg.budgetKey] != null);
-                const ltmVal = ltm?.[cfg.actualKey];
-                return (
-                  <>
-                    {ltm && (
-                      <div style={{ background: tc.bgAlt, borderRadius: 8, padding: "12px 16px", marginBottom: 16, display: "inline-block" }}>
-                        <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>
-                          {cfg.ltmLabel}{ltm.n < 4 ? ` (${ltm.n} trim.)` : ""}
-                        </div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: tc.navy, fontFamily: "'DM Mono',monospace", marginTop: 4 }}>
-                          {ltmVal != null ? fmtM(ltmVal) : "—"}
-                        </div>
-                      </div>
-                    )}
-                    <ResponsiveContainer width="100%" height={280}>
-                      <BarChart data={quarters} margin={{ top: 24, right: 8, bottom: 0, left: 0 }} barCategoryGap="20%" barGap={2}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-                        <XAxis dataKey="q" tick={{ fontSize: 10, fill: tc.textLight }} />
-                        <YAxis tickFormatter={v => fmtM(v)} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
-                        <Tooltip
-                          formatter={(v, name) => [fmtM(v), name === "actual" ? "Real" : "Pressupost"]}
-                          labelStyle={{ color: tc.text }}
-                          contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }}
-                        />
-                        {hasBudget && (
-                          <Legend content={() => (
-                            <div style={{ display: "flex", gap: 16, justifyContent: "center", fontSize: 11, color: tc.textMid, marginTop: 6 }}>
-                              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                <span style={{ width: 12, height: 12, borderRadius: 2, background: cfg.color, display: "inline-block" }} />
-                                Real
-                              </span>
-                              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                <span style={{ width: 12, height: 12, borderRadius: 2, background: cfg.color, opacity: 0.35, border: `1.5px dashed ${cfg.color}`, display: "inline-block" }} />
-                                Pressupost
-                              </span>
-                            </div>
-                          )} />
-                        )}
-                        <Bar dataKey={cfg.actualKey} name="actual" fill={cfg.color}>
-                          <LabelList dataKey={cfg.actualKey} position="top" formatter={v => v != null ? fmtM(v) : ""} style={{ fontSize: 9, fill: tc.textLight }} />
-                        </Bar>
-                        {hasBudget && (
-                          <Bar dataKey={cfg.budgetKey} name="budget" fill={cfg.color} fillOpacity={0.35}>
-                            <LabelList dataKey={cfg.budgetKey} position="top" formatter={v => v != null ? fmtM(v) : ""} style={{ fontSize: 9, fill: tc.textLight }} />
-                          </Bar>
-                        )}
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </>
-                );
-              })()
-          }
-        </div>
+            )}
+          </div>
+        )}
+
+        {/* "Nou trimestre" button when no quarters exist yet */}
+        {quarters.length === 0 && isSuperuser && (
+          <div style={{ marginTop: 8 }}>
+            {!addingQuarter ? (
+              <button onClick={() => setAddingQuarter(true)}
+                style={{ background: "transparent", border: `1.5px dashed ${tc.border}`, borderRadius: 7,
+                  padding: "6px 14px", cursor: "pointer", fontSize: 12, color: tc.textMid,
+                  fontFamily: "inherit", fontWeight: 600 }}>
+                + Nou trimestre
+              </button>
+            ) : (
+              <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
+                  <div>
+                    <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Trimestre</div>
+                    <select value={newQ.q} onChange={e => setNewQ(p => ({ ...p, q: e.target.value }))}
+                      style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit" }}>
+                      {["1","2","3","4"].map(v => <option key={v} value={v}>Q{v}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Any</div>
+                    <input type="number" value={newQ.year} onChange={e => setNewQ(p => ({ ...p, year: e.target.value }))}
+                      style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 80 }} />
+                  </div>
+                  <button onClick={addQuarter}
+                    style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
+                    Afegir
+                  </button>
+                  <button onClick={() => setAddingQuarter(false)}
+                    style={{ padding: "7px 14px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>
+                    Cancel·lar
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Entry info */}
         <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
           <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 }}>Entrada</div>
           <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
             {[
-              ["Data d'entrada", dataCompr || "—"],
+              ["Data d'entrada",   dataCompr || "—"],
               ["Múltiple entrada", multEntry != null ? `${multEntry}×` : "—"],
-              ["Origen", origen || "—"],
-              ["Emprenedors", entrepreneurs || "—"],
+              ["Origen",           origen || "—"],
+              ["Emprenedors",      entrepreneurs || "—"],
             ].map(([label, val]) => (
               <div key={label}>
                 <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3 }}>{label}</div>
@@ -186,6 +433,7 @@ function CompanyDetailInner() {
             ))}
           </div>
         </div>
+
       </div>
     </div>
   );
