@@ -228,7 +228,7 @@ BEGIN
   END IF;
 
   -- Check domain against allowlist
-  IF NOT (allowed_domains ? domain) THEN
+  IF NOT (allowed_domains @> jsonb_build_array(domain)) THEN
     RAISE EXCEPTION 'Email domain not allowed';
   END IF;
 
