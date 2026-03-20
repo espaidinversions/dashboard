@@ -14,7 +14,7 @@
 `Dashboard.jsx` (1333 lines) mixes three distinct responsibilities: data import (`DataLoader` modal defined inline at line 27), application state, and layout/tab routing.
 
 ### Solution
-Move the `DataLoader` function component (currently lines 27–200 of Dashboard.jsx) into its own file `src/components/DataLoader.jsx`. Dashboard.jsx shrinks to state + layout only.
+Move the `DataLoader` function component (currently lines 27–314 of Dashboard.jsx) into its own file `src/components/DataLoader.jsx`. Dashboard.jsx shrinks to state + layout only.
 
 ### New file: `src/components/DataLoader.jsx`
 Exact lift of the `DataLoader` function from Dashboard.jsx. Owns:
