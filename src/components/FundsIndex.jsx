@@ -3,35 +3,90 @@ import { Link } from "react-router-dom";
 import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
-import { Badge } from "./SharedComponents.jsx";
+import { Badge, EditableCell, DeleteRowButton } from "./SharedComponents.jsx";
+import { upsertFundMeta, insertFund, deleteFund, loadAll } from "../db.js";
+import { useAuth } from "../auth.jsx";
 
 const VCPE_CFG = {
-  "PE": { color: "#2B4C7E", bg: "#E8EFF5" },
-  "VC": { color: "#276749", bg: "#E8F5E9" },
+  "PE": { color: "#2B5070", bg: "#E6EDF3" },
+  "VC": { color: "#28A029", bg: "#E8F8E8" },
   "RE": { color: "#6B2E7E", bg: "#F3EEF8" },
 };
 const EST_CFG = {
-  "Fons Primari": { color: "#2B4C7E", bg: "#E8EFF5" },
-  "Fons de Fons": { color: "#276749", bg: "#D6EAE0" },
+  "Fons Primari": { color: "#2B5070", bg: "#E6EDF3" },
+  "Fons de Fons": { color: "#28A029", bg: "#E8F8E8" },
   "SOCIMI":       { color: "#6B2E7E", bg: "#F3EEF8" },
 };
 
 export function FundsIndexInner({ inline = false, searchOverride }) {
+  const { isSuperuser } = useAuth();
   const { tc } = useTheme();
   const [searchLocal, setSearchLocal] = useState("");
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [sortKey, setSortKey] = useState("compromis");
   const [sortDir, setSortDir] = useState("desc");
 
-  const rawCC = useMemo(() => {
+  const [rawCC, setRawCC] = useState(() => {
     try { const s = localStorage.getItem("tc_rawCC"); return s ? JSON.parse(s) : RAW_CC_DEFAULT; }
     catch { return RAW_CC_DEFAULT; }
-  }, []);
+  });
 
-  const fundMeta = useMemo(() => {
+  const persistRawCC = (updated) => {
+    setRawCC(updated);
+    try { localStorage.setItem("tc_rawCC", JSON.stringify(updated)); } catch {}
+  };
+
+  const [fundMeta, setFundMeta] = useState(() => {
     try { const s = localStorage.getItem("tc_fundMeta"); return s ? JSON.parse(s) : FUND_META_DEFAULT; }
     catch { return FUND_META_DEFAULT; }
-  }, []);
+  });
+
+  const saveTvpi = (fons, tvpi) => {
+    const updated = fundMeta.some(m => m.fons === fons)
+      ? fundMeta.map(m => m.fons === fons ? { ...m, tvpi } : m)
+      : [...fundMeta, { fons, tvpi }];
+    setFundMeta(updated);
+    try { localStorage.setItem("tc_fundMeta", JSON.stringify(updated)); } catch {}
+    upsertFundMeta(fons, tvpi);
+  };
+
+  const handleDeleteFund = async (fons) => {
+    const err = await deleteFund(fons);
+    if (err) {
+      alert("Error en eliminar el fons: " + err.message);
+      const data = await loadAll();
+      if (data) {
+        persistRawCC(data.rawCC);
+        setFundMeta(data.fundMeta);
+        try { localStorage.setItem("tc_fundMeta", JSON.stringify(data.fundMeta)); } catch {}
+      }
+      return;
+    }
+    const updatedCC = rawCC.filter(r => r.fons !== fons);
+    persistRawCC(updatedCC);
+    const updatedMeta = fundMeta.filter(m => m.fons !== fons);
+    setFundMeta(updatedMeta);
+    try { localStorage.setItem("tc_fundMeta", JSON.stringify(updatedMeta)); } catch {}
+  };
+
+  const [addingFund, setAddingFund] = useState(false);
+  const [newFund, setNewFund] = useState({ fons: "", vcpe: "PE", est: "Fons Primari", compromis: "", divisa: "EUR" });
+
+  const handleAddFund = async (e) => {
+    e.preventDefault();
+    if (!newFund.fons.trim()) return;
+    const row = await insertFund(
+      newFund.fons.trim(),
+      newFund.vcpe,
+      newFund.est,
+      parseFloat(newFund.compromis) || 0,
+      newFund.divisa,
+    );
+    if (!row) { alert("Error en crear el fons"); return; }
+    persistRawCC([...rawCC, row]);
+    setAddingFund(false);
+    setNewFund({ fons: "", vcpe: "PE", est: "Fons Primari", compromis: "", divisa: "EUR" });
+  };
 
   const rows = useMemo(() => {
     const map = new Map();
@@ -130,7 +185,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
           </div>
           <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
             <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Fons</span>
-            <Link to="/investments/companies" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Empreses</Link>
+            <Link to="/investments/companies" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Participades</Link>
           </div>
         </>
       )}
@@ -148,11 +203,12 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                       {label}<SortArrow k={k} />
                     </th>
                   ))}
+                  {isSuperuser && <th style={{ width: 40 }} />}
                 </tr>
               </thead>
               <tbody>
                 {sorted.map((r, i) => (
-                  <tr key={r.slug} style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
+                  <tr key={r.slug} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
                       <Link to={`/fund/${r.slug}`} style={{ color: tc.navy, textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
@@ -176,7 +232,9 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                       {r.utilizat != null ? `${r.utilizat.toFixed(1)}%` : "—"}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.tvpi) }}>
-                      {fmtX(r.tvpi)}
+                      <EditableCell value={r.tvpi} type="number" align="right"
+                        fmt={fmtX} onSave={v => saveTvpi(r.fons, v)}
+                        disabled={!isSuperuser} />
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.dpi) }}>
                       {fmtX(r.dpi)}
@@ -184,12 +242,67 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.rvpi) }}>
                       {fmtX(r.rvpi)}
                     </td>
+                    {isSuperuser && (
+                      <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                        <DeleteRowButton onDelete={() => handleDeleteFund(r.fons)} />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
             </table>
           )
         }
+      {isSuperuser && (
+        <div style={{ marginTop: 16 }}>
+          {!addingFund ? (
+            <button onClick={() => setAddingFund(true)}
+              style={{ background: "transparent", border: `1.5px dashed ${tc.border}`, borderRadius: 8,
+                padding: "8px 16px", cursor: "pointer", fontSize: 12, color: tc.textMid,
+                fontFamily: "inherit", fontWeight: 600 }}>
+              + Nou fons
+            </button>
+          ) : (
+            <form onSubmit={handleAddFund}
+              style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end",
+                background: tc.bgAlt, padding: 12, borderRadius: 10 }}>
+              <div>
+                <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Nom</div>
+                <input value={newFund.fons} onChange={e => setNewFund(p => ({ ...p, fons: e.target.value }))}
+                  placeholder="Nom del fons" style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
+              </div>
+              {[
+                { label: "Tipus", key: "vcpe", options: ["PE", "VC", "RE"] },
+                { label: "Estructura", key: "est", options: ["Fons Primari", "Fons de Fons", "SOCIMI"] },
+                { label: "Divisa", key: "divisa", options: ["EUR", "USD"] },
+              ].map(f => (
+                <div key={f.key}>
+                  <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{f.label}</div>
+                  <select value={newFund[f.key]} onChange={e => setNewFund(p => ({ ...p, [f.key]: e.target.value }))}
+                    style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none" }}>
+                    {f.options.map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </div>
+              ))}
+              <div>
+                <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Compromís (€)</div>
+                <input type="number" value={newFund.compromis} onChange={e => setNewFund(p => ({ ...p, compromis: e.target.value }))}
+                  placeholder="0" style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none", width: 100 }} />
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <button type="submit"
+                  style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
+                  Afegir
+                </button>
+                <button type="button" onClick={() => setAddingFund(false)}
+                  style={{ padding: "7px 14px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit", fontSize: 12 }}>
+                  Cancel·lar
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
       </div>
     </div>
   );
