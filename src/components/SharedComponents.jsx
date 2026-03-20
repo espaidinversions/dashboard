@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
 
@@ -83,6 +83,200 @@ export const PL = ({cx,cy,midAngle,innerRadius,outerRadius,percent}) => {
   const R=Math.PI/180, r=innerRadius+(outerRadius-innerRadius)*0.58;
   return <text x={cx+r*Math.cos(-midAngle*R)} y={cy+r*Math.sin(-midAngle*R)} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight="700">{`${(percent*100).toFixed(0)}%`}</text>;
 };
+
+// ── EditableCell ──────────────────────────────────────────
+// Click-to-edit cell. type: "text" | "number" | "select"
+// options: string[] for select. fmt: v => display string.
+// onSave(newValue) called only when value actually changes.
+export function EditableCell({ value, onSave, type = "text", options, fmt, style = {}, align = "left", disabled = false }) {
+  const { tc } = useTheme();
+  const [editing, setEditing] = useState(false);
+  const [draft,   setDraft]   = useState("");
+  const ref = useRef(null);
+
+  useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+
+  const start = () => {
+    setDraft(value != null && value !== "" ? String(value) : "");
+    setEditing(true);
+  };
+
+  const commit = () => {
+    setEditing(false);
+    const trimmed = draft.trim();
+    let next;
+    if (type === "number") {
+      next = trimmed === "" ? null : parseFloat(trimmed);
+      if (isNaN(next)) return;
+    } else {
+      next = trimmed === "" ? null : trimmed;
+    }
+    if (next !== value) onSave(next);
+  };
+
+  const inputStyle = {
+    background: tc.bg, color: tc.text,
+    border: `1.5px solid ${tc.green}`, borderRadius: 4,
+    padding: "2px 5px", fontSize: "inherit", fontFamily: "inherit",
+    width: "100%", outline: "none", textAlign: align,
+    ...style,
+  };
+
+  if (editing && options) {
+    return (
+      <select ref={ref} value={draft} onChange={e => setDraft(e.target.value)}
+        onBlur={commit}
+        onKeyDown={e => { if (e.key === "Escape") setEditing(false); }}
+        style={inputStyle}>
+        {options.map(o => <option key={o} value={o}>{o}</option>)}
+      </select>
+    );
+  }
+
+  if (editing) {
+    return (
+      <input ref={ref} value={draft} type={type === "number" ? "number" : "text"}
+        onChange={e => setDraft(e.target.value)} onBlur={commit}
+        onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
+        style={inputStyle} />
+    );
+  }
+
+  const display = fmt ? fmt(value) : (value ?? "—");
+
+  if (disabled) {
+    return (
+      <span style={{ display: "block", textAlign: align, padding: "1px 2px", ...style }}>
+        {display}
+      </span>
+    );
+  }
+
+  return (
+    <span onClick={start} title="Fes clic per editar"
+      style={{ cursor: "text", display: "block", textAlign: align,
+        borderRadius: 3, padding: "1px 2px",
+        transition: "background 0.1s",
+        ...style,
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = tc.bgAlt}
+      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
+      {display}
+    </span>
+  );
+}
+
+export function DeleteRowButton({ onDelete }) {
+  const { tc } = useTheme();
+  const [confirming, setConfirming] = useState(false);
+  const containerRef = useRef(null);
+
+  const handleBlur = (e) => {
+    if (!containerRef.current?.contains(e.relatedTarget)) {
+      setConfirming(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Escape") setConfirming(false);
+  };
+
+  if (confirming) {
+    return (
+      <div ref={containerRef} tabIndex={-1} onBlur={handleBlur} onKeyDown={handleKeyDown}
+        style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 11, color: tc.textMid }}>Eliminar?</span>
+        <button onClick={onDelete}
+          style={{ fontSize: 11, padding: "2px 8px", borderRadius: 5, border: "none",
+            background: tc.red ?? "#C62828", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
+          Confirmar
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <button onClick={() => setConfirming(true)}
+      style={{ background: "transparent", border: "none", cursor: "pointer",
+        color: tc.textLight, fontSize: 14, padding: "2px 4px", lineHeight: 1 }}
+      title="Eliminar fila">
+      🗑
+    </button>
+  );
+}
+
+export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" }) {
+  const { tc } = useTheme();
+  const [values, setValues] = useState(() =>
+    Object.fromEntries(fields.map(f => [f.key, f.defaultValue ?? ""]))
+  );
+  const [error, setError] = useState(null);
+
+  const set = (key, val) => setValues(v => ({ ...v, [key]: val }));
+
+  const inp = {
+    width: "100%", padding: "7px 10px", fontSize: 13,
+    border: `1.5px solid ${tc.border}`, borderRadius: 7,
+    background: tc.bg, color: tc.text, fontFamily: "inherit",
+    outline: "none", boxSizing: "border-box",
+  };
+
+  const submit = (e) => {
+    e.preventDefault();
+    setError(null);
+    onSave(values, setError);
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex",
+      alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: tc.card, borderRadius: 14, padding: "28px 28px 24px",
+        width: 420, maxWidth: "90vw", boxShadow: "0 8px 40px rgba(0,0,0,.25)",
+        fontFamily: "'Outfit',system-ui,sans-serif" }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: tc.navy, marginBottom: 20 }}>{title}</div>
+        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {fields.map(f => (
+            <div key={f.key}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight,
+                letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
+                {f.label}
+              </label>
+              {f.type === "select" ? (
+                <select value={values[f.key]} onChange={e => set(f.key, e.target.value)} style={inp}>
+                  {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              ) : (
+                <input type={f.type ?? "text"} value={values[f.key]}
+                  onChange={e => set(f.key, e.target.value)}
+                  placeholder={f.placeholder ?? ""}
+                  style={inp} />
+              )}
+            </div>
+          ))}
+          {error && (
+            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA",
+              borderRadius: 7, padding: "8px 12px" }}>{error}</div>
+          )}
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+            <button type="button" onClick={onClose}
+              style={{ padding: "8px 16px", borderRadius: 7, border: `1.5px solid ${tc.border}`,
+                background: "transparent", color: tc.textMid, cursor: "pointer",
+                fontFamily: "inherit", fontSize: 13 }}>
+              Cancel·lar
+            </button>
+            <button type="submit"
+              style={{ padding: "8px 16px", borderRadius: 7, border: "none",
+                background: tc.navy, color: "#fff", cursor: "pointer",
+                fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}>
+              Afegir
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
 
 export function EmptyState({ message = "Cap resultat amb els filtres actuals." }) {
   const { tc } = useTheme();
