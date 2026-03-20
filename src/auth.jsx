@@ -24,8 +24,8 @@ export function AuthProvider({ children }) {
     redirectTo: window.location.origin + "/reset-password",
   });
 
-  const isSuperuser = session?.user?.user_metadata?.role === "superuser";
   const isAdmin = session?.user?.user_metadata?.role === "admin";
+  const isSuperuser = isAdmin || session?.user?.user_metadata?.role === "superuser";
 
   return (
     <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, isSuperuser, isAdmin }}>
