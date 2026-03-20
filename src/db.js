@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import { MESOS } from "./config.js";
 
 // ── Helpers ───────────────────────────────────────────────
 
@@ -189,7 +190,6 @@ export async function insertPipelineDeal(deal) {
 
 export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
   if (!supabase) return null;
-  const { MESOS } = await import("./config.js");
   const now  = new Date();
   const mes  = MESOS[now.getMonth() + 1]; // MESOS is 1-indexed; index 0 = ""
   const year = now.getFullYear();
