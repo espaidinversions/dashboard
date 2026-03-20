@@ -25,9 +25,10 @@ export function AuthProvider({ children }) {
   });
 
   const isSuperuser = session?.user?.user_metadata?.role === "superuser";
+  const isAdmin = session?.user?.user_metadata?.role === "admin";
 
   return (
-    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, isSuperuser }}>
+    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, isSuperuser, isAdmin }}>
       {children}
     </AuthContext.Provider>
   );

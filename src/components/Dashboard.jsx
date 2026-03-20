@@ -327,7 +327,7 @@ function loadFromLS(key, fallback) {
 // ══════════════════════════════════════════════════════════
 function DashboardInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
-  const { signOut } = useAuth();
+  const { signOut, isAdmin } = useAuth();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
@@ -730,6 +730,12 @@ function DashboardInner() {
             style={{background:"transparent",border:"none",cursor:"pointer",fontSize:14,color:tc.textLight,padding:"0 2px",lineHeight:1,marginLeft:-4}}>
             ✕
           </button>
+        )}
+        {isAdmin && (
+          <Link to="/admin"
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,textDecoration:"none"}}>
+            Admin
+          </Link>
         )}
         <button onClick={exportAll} disabled={exporting}
           style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:exporting?"not-allowed":"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,opacity:exporting?0.6:1}}>
