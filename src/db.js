@@ -136,21 +136,24 @@ export async function saveSearchers(rows) {
 // ── Granular single-row upserts ───────────────────────────
 
 export async function upsertFundMeta(fons, tvpi) {
-  if (!supabase) return;
-  await supabase.from("fund_meta").upsert({ fons, tvpi: tvpi ?? null }, { onConflict: "fons" });
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("fund_meta").upsert({ fons, tvpi: tvpi ?? null }, { onConflict: "fons" });
+  return { error };
 }
 
 export async function upsertCompany(company) {
-  if (!supabase) return;
-  await supabase.from("portfolio_companies")
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("portfolio_companies")
     .upsert(companyToRow(company), { onConflict: "nom" });
+  return { error };
 }
 
 export async function upsertSearcher(searcher) {
-  if (!supabase) return;
-  await supabase.from("searchers")
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("searchers")
     .update(searcherToRow(searcher))
     .eq("id", searcher.id);
+  return { error };
 }
 
 // ── Insert (single-row, returns row with DB-assigned id) ──
@@ -212,18 +215,21 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
 // ── Delete ────────────────────────────────────────────────
 
 export async function deleteCompany(id) {
-  if (!supabase) return;
-  await supabase.from("portfolio_companies").delete().eq("id", id);
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("portfolio_companies").delete().eq("id", id);
+  return { error };
 }
 
 export async function deleteSearcher(id) {
-  if (!supabase) return;
-  await supabase.from("searchers").delete().eq("id", id);
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("searchers").delete().eq("id", id);
+  return { error };
 }
 
 export async function deletePipelineDeal(id) {
-  if (!supabase) return;
-  await supabase.from("pipeline").delete().eq("id", id);
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("pipeline").delete().eq("id", id);
+  return { error };
 }
 
 export async function deleteFund(fons) {
@@ -237,7 +243,8 @@ export async function deleteFund(fons) {
 // ── Upsert (pipeline) ─────────────────────────────────────
 
 export async function upsertPipelineDeal(deal) {
-  if (!supabase) return;
-  await supabase.from("pipeline")
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("pipeline")
     .upsert({ id: deal.id, ...dealToRow(deal) }, { onConflict: "id" });
+  return { error };
 }

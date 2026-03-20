@@ -5,17 +5,17 @@ import { useAuth } from "../auth.jsx";
 const ALLOWED_DOMAINS = ["solvicocean.com", "espaidinversions.com"];
 
 export default function LoginPage() {
-  const { signIn, signUp, resendConfirmation } = useAuth();
+  const { signIn, signUp, resendConfirmation, resetPassword } = useAuth();
   const navigate = useNavigate();
-  const [mode,        setMode]        = useState("login"); // "login" | "register"
-  const [email,       setEmail]       = useState("");
-  const [password,    setPassword]    = useState("");
-  const [confirm,     setConfirm]     = useState("");
-  const [error,       setError]       = useState(null);
-  const [info,        setInfo]        = useState(null);
-  const [loading,     setLoading]     = useState(false);
-  const [canResend,   setCanResend]   = useState(false);
-  const [resendDone,  setResendDone]  = useState(false);
+  const [mode,       setMode]       = useState("login"); // "login" | "register" | "forgot"
+  const [email,      setEmail]      = useState("");
+  const [password,   setPassword]   = useState("");
+  const [confirm,    setConfirm]    = useState("");
+  const [error,      setError]      = useState(null);
+  const [info,       setInfo]       = useState(null);
+  const [loading,    setLoading]    = useState(false);
+  const [canResend,  setCanResend]  = useState(false);
+  const [resendDone, setResendDone] = useState(false);
 
   const switchMode = m => { setMode(m); setError(null); setInfo(null); setConfirm(""); setCanResend(false); setResendDone(false); };
 
@@ -27,6 +27,17 @@ export default function LoginPage() {
 
   const submit = async e => {
     e.preventDefault();
+    setError(null);
+
+    if (mode === "forgot") {
+      setLoading(true);
+      const { error: err } = await resetPassword(email);
+      setLoading(false);
+      if (err) setError(err.message);
+      else setInfo("Si existeix un compte amb aquest correu, rebràs un enllaç per restablir la contrasenya.");
+      return;
+    }
+
     const domain = email.split("@")[1]?.toLowerCase();
     if (!ALLOWED_DOMAINS.includes(domain)) {
       setError("Aquest domini no té accés al dashboard.");
@@ -37,7 +48,6 @@ export default function LoginPage() {
       return;
     }
     setLoading(true);
-    setError(null);
     if (mode === "login") {
       const { error: err } = await signIn(email, password);
       if (err) {
@@ -54,7 +64,7 @@ export default function LoginPage() {
     } else {
       const { error: err } = await signUp(email, password);
       setLoading(false);
-      if (err) { setError(err.message); }
+      if (err) setError(err.message);
       else { setInfo("Comprova el teu correu per confirmar el compte."); setCanResend(true); }
     }
   };
@@ -82,19 +92,29 @@ export default function LoginPage() {
           <img src="/logo.jpg" alt="Turtle Capital" style={{ height: 64, objectFit: "contain" }} />
         </div>
 
-        {/* Mode tabs */}
-        <div style={{ display: "flex", gap: 0, marginBottom: 24, border: "1.5px solid #D0D8E4", borderRadius: 8, overflow: "hidden" }}>
-          {["login", "register"].map(m => (
-            <button key={m} type="button" onClick={() => switchMode(m)} style={{
-              flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 600, border: "none",
-              fontFamily: "inherit", cursor: "pointer", transition: "background 0.15s, color 0.15s",
-              background: mode === m ? "#2B5070" : "#F8FAFB",
-              color: mode === m ? "#fff" : "#4A5A6A",
-            }}>
-              {m === "login" ? "Entrar" : "Registrar-se"}
-            </button>
-          ))}
-        </div>
+        {/* Mode tabs — hidden in forgot mode */}
+        {mode !== "forgot" && (
+          <div style={{ display: "flex", gap: 0, marginBottom: 24, border: "1.5px solid #D0D8E4", borderRadius: 8, overflow: "hidden" }}>
+            {["login", "register"].map(m => (
+              <button key={m} type="button" onClick={() => switchMode(m)} style={{
+                flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 600, border: "none",
+                fontFamily: "inherit", cursor: "pointer", transition: "background 0.15s, color 0.15s",
+                background: mode === m ? "#2B5070" : "#F8FAFB",
+                color: mode === m ? "#fff" : "#4A5A6A",
+              }}>
+                {m === "login" ? "Entrar" : "Registrar-se"}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Forgot password header */}
+        {mode === "forgot" && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: "#1A2B3C", marginBottom: 4 }}>Restablir contrasenya</div>
+            <div style={{ fontSize: 13, color: "#7A8A9A" }}>Introdueix el teu correu i t'enviarem un enllaç.</div>
+          </div>
+        )}
 
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
@@ -106,15 +126,19 @@ export default function LoginPage() {
               onFocus={e => e.target.style.borderColor = "#2B5070"}
               onBlur={e => e.target.style.borderColor = "#D0D8E4"} />
           </div>
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: "#4A5A6A", letterSpacing: "0.08em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-              Contrasenya
-            </label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-              required placeholder="••••••••" style={inp}
-              onFocus={e => e.target.style.borderColor = "#2B5070"}
-              onBlur={e => e.target.style.borderColor = "#D0D8E4"} />
-          </div>
+
+          {mode !== "forgot" && (
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: "#4A5A6A", letterSpacing: "0.08em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
+                Contrasenya
+              </label>
+              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                required placeholder="••••••••" style={inp}
+                onFocus={e => e.target.style.borderColor = "#2B5070"}
+                onBlur={e => e.target.style.borderColor = "#D0D8E4"} />
+            </div>
+          )}
+
           {mode === "register" && (
             <div>
               <label style={{ fontSize: 11, fontWeight: 600, color: "#4A5A6A", letterSpacing: "0.08em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
@@ -154,8 +178,30 @@ export default function LoginPage() {
             fontFamily: "inherit", cursor: loading ? "not-allowed" : "pointer",
             opacity: loading ? 0.7 : 1, transition: "opacity 0.15s",
           }}>
-            {loading ? (mode === "login" ? "Entrant…" : "Registrant…") : (mode === "login" ? "Entrar" : "Crear compte")}
+            {loading
+              ? (mode === "login" ? "Entrant…" : mode === "register" ? "Registrant…" : "Enviant…")
+              : (mode === "login" ? "Entrar" : mode === "register" ? "Crear compte" : "Enviar enllaç")}
           </button>
+
+          {mode === "login" && (
+            <button type="button" onClick={() => switchMode("forgot")} style={{
+              background: "none", border: "none", padding: 0, fontSize: 12,
+              color: "#7A8A9A", textDecoration: "underline", cursor: "pointer",
+              fontFamily: "inherit", textAlign: "center",
+            }}>
+              Heu oblidat la contrasenya?
+            </button>
+          )}
+
+          {mode === "forgot" && (
+            <button type="button" onClick={() => switchMode("login")} style={{
+              background: "none", border: "none", padding: 0, fontSize: 12,
+              color: "#7A8A9A", textDecoration: "underline", cursor: "pointer",
+              fontFamily: "inherit", textAlign: "center",
+            }}>
+              Tornar a l'inici de sessió
+            </button>
+          )}
         </form>
       </div>
     </div>

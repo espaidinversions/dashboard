@@ -15,13 +15,19 @@ export function AuthProvider({ children }) {
 
   const signIn  = (email, password) => supabase.auth.signInWithPassword({ email, password });
   const signUp  = (email, password) => supabase.auth.signUp({ email, password });
-  const signOut = () => supabase.auth.signOut();
+  const signOut = () => {
+    ["tc_rawCC","tc_fundMeta","tc_portfolioCompanies","tc_allSearchers"].forEach(k => localStorage.removeItem(k));
+    return supabase.auth.signOut();
+  };
   const resendConfirmation = (email) => supabase.auth.resend({ type: "signup", email });
+  const resetPassword = (email) => supabase.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + "/reset-password",
+  });
 
   const isSuperuser = session?.user?.user_metadata?.role === "superuser";
 
   return (
-    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, isSuperuser }}>
+    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, isSuperuser }}>
       {children}
     </AuthContext.Provider>
   );
