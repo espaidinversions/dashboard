@@ -10,6 +10,7 @@ import { FlagImg, FlagSvgLabel, EditableCell, AddRowModal, DeleteRowButton } fro
 import { Link } from "react-router-dom";
 import { upsertCompany, insertCompany, deleteCompany } from "../db.js";
 import { useAuth } from "../auth.jsx";
+import { useToast } from "../toast.jsx";
 
 const GEO_NAME = { ES:"ESP", EN:"UK", IT:"ITA", DE:"DEU", FR:"FRA", PT:"POR", NL:"NED", US:"USA", CH:"CHE" };
 
@@ -56,6 +57,7 @@ function CenterLabel({ viewBox, value, sub, tc }) {
 export function PortfolioCompaniesTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
   const { isSuperuser } = useAuth();
+  const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
 
   const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:12, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
@@ -92,12 +94,15 @@ export function PortfolioCompaniesTab({ search = "" }) {
 
   const hasCustomData = companies !== PORTFOLIO_COMPANIES && companies.length !== PORTFOLIO_COMPANIES.length;
 
-  const saveField = (nom, field, value) => {
+  const saveField = async (nom, field, value) => {
     const updated = companies.map(c => c.nom === nom ? { ...c, [field]: value } : c);
     setCompanies(updated);
     try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated)); } catch {}
     const company = updated.find(c => c.nom === nom);
-    if (company) upsertCompany(company);
+    if (company) {
+      const { error } = await upsertCompany(company);
+      if (error) toast({ message: "Error desant canvis: " + error.message, type: "error" });
+    }
   };
 
   const handleAdd = async (values, setError) => {
@@ -124,10 +129,12 @@ export function PortfolioCompaniesTab({ search = "" }) {
   };
 
   const handleDelete = async (id, nom) => {
-    await deleteCompany(id);
+    const { error } = await deleteCompany(id);
+    if (error) { toast({ message: "Error eliminant empresa: " + error.message, type: "error" }); return; }
     const updated = companies.filter(c => c.nom !== nom);
     setCompanies(updated);
     try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated)); } catch {}
+    toast({ message: `"${nom}" eliminada.` });
   };
 
   const filtered = search.trim()

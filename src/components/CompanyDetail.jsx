@@ -6,6 +6,7 @@ import {
 import { useAuth } from "../auth.jsx";
 import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { upsertCompany } from "../db.js";
+import { useToast } from "../toast.jsx";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
 import { EditableCell, FlagImg, Logo } from "./SharedComponents.jsx";
@@ -81,6 +82,7 @@ function CompanyDetailInner() {
   const { id } = useParams();
   const { tc, dark, toggle } = useTheme();
   const { isSuperuser } = useAuth();
+  const { toast } = useToast();
   const navigate = useNavigate();
   const [chartView, setChartView] = useState("quarterly");
 
@@ -93,7 +95,7 @@ function CompanyDetailInner() {
 
   const company = companies.find(c => slugify(c.nom) === id);
 
-  const saveQuarterField = (qLabel, field, value) => {
+  const saveQuarterField = async (qLabel, field, value) => {
     if (!company) return;
     const updatedQuarters = company.quarters.map(q =>
       q.q === qLabel ? { ...q, [field]: value === null ? null : parseFloat(value) || null } : q
@@ -102,13 +104,14 @@ function CompanyDetailInner() {
     const updatedCompanies = companies.map(c => c.nom === company.nom ? updatedCompany : c);
     setCompanies(updatedCompanies);
     try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updatedCompanies)); } catch {}
-    upsertCompany(updatedCompany);
+    const { error } = await upsertCompany(updatedCompany);
+    if (error) toast({ message: "Error desant KPI: " + error.message, type: "error" });
   };
 
   const [addingQuarter, setAddingQuarter] = useState(false);
   const [newQ, setNewQ] = useState({ q: "1", year: String(new Date().getFullYear()) });
 
-  const addQuarter = () => {
+  const addQuarter = async () => {
     if (!company) return;
     const label = `Q${newQ.q} ${newQ.year}`;
     if (company.quarters.some(q => q.q === label)) return;
@@ -117,7 +120,8 @@ function CompanyDetailInner() {
     const updatedCompanies = companies.map(c => c.nom === company.nom ? updatedCompany : c);
     setCompanies(updatedCompanies);
     try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updatedCompanies)); } catch {}
-    upsertCompany(updatedCompany);
+    const { error } = await upsertCompany(updatedCompany);
+    if (error) toast({ message: "Error desant trimestre: " + error.message, type: "error" });
     setAddingQuarter(false);
     setNewQ({ q: "1", year: String(new Date().getFullYear()) });
   };

@@ -6,6 +6,7 @@ import { fmtM, slugify } from "../utils.js";
 import { Badge, EditableCell, DeleteRowButton } from "./SharedComponents.jsx";
 import { upsertFundMeta, insertFund, deleteFund, loadAll } from "../db.js";
 import { useAuth } from "../auth.jsx";
+import { useToast } from "../toast.jsx";
 
 const VCPE_CFG = {
   "PE": { color: "#2B5070", bg: "#E6EDF3" },
@@ -20,6 +21,7 @@ const EST_CFG = {
 
 export function FundsIndexInner({ inline = false, searchOverride }) {
   const { isSuperuser } = useAuth();
+  const { toast } = useToast();
   const { tc } = useTheme();
   const [searchLocal, setSearchLocal] = useState("");
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
@@ -41,19 +43,20 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
     catch { return FUND_META_DEFAULT; }
   });
 
-  const saveTvpi = (fons, tvpi) => {
+  const saveTvpi = async (fons, tvpi) => {
     const updated = fundMeta.some(m => m.fons === fons)
       ? fundMeta.map(m => m.fons === fons ? { ...m, tvpi } : m)
       : [...fundMeta, { fons, tvpi }];
     setFundMeta(updated);
     try { localStorage.setItem("tc_fundMeta", JSON.stringify(updated)); } catch {}
-    upsertFundMeta(fons, tvpi);
+    const { error } = await upsertFundMeta(fons, tvpi);
+    if (error) toast({ message: "Error desant TVPI: " + error.message, type: "error" });
   };
 
   const handleDeleteFund = async (fons) => {
     const err = await deleteFund(fons);
     if (err) {
-      alert("Error en eliminar el fons: " + err.message);
+      toast({ message: "Error eliminant fons: " + err.message, type: "error" });
       const data = await loadAll();
       if (data) {
         persistRawCC(data.rawCC);
@@ -67,6 +70,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
     const updatedMeta = fundMeta.filter(m => m.fons !== fons);
     setFundMeta(updatedMeta);
     try { localStorage.setItem("tc_fundMeta", JSON.stringify(updatedMeta)); } catch {}
+    toast({ message: `Fons "${fons}" eliminat.` });
   };
 
   const [addingFund, setAddingFund] = useState(false);
@@ -82,10 +86,11 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
       parseFloat(newFund.compromis) || 0,
       newFund.divisa,
     );
-    if (!row) { alert("Error en crear el fons"); return; }
+    if (!row) { toast({ message: "Error en crear el fons", type: "error" }); return; }
     persistRawCC([...rawCC, row]);
     setAddingFund(false);
     setNewFund({ fons: "", vcpe: "PE", est: "Fons Primari", compromis: "", divisa: "EUR" });
+    toast({ message: `Fons "${newFund.fons.trim()}" afegit.` });
   };
 
   const rows = useMemo(() => {
@@ -194,6 +199,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
         {sorted.length === 0
           ? <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
           : (
+          <div style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: tc.bgAlt }}>
@@ -251,6 +257,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                 ))}
               </tbody>
             </table>
+          </div>
           )
         }
       {isSuperuser && (

@@ -9,6 +9,7 @@ import { ACTIVE_SEARCHERS, ALL_SEARCHERS, PORTFOLIO_COMPANIES } from "../data/se
 import { FlagImg, FlagSvgLabel, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { upsertSearcher, insertSearcher, deleteSearcher } from "../db.js";
+import { useToast } from "../toast.jsx";
 
 // ── constants ──────────────────────────────────────────────
 const GEO_NAME = {
@@ -90,6 +91,7 @@ function parseSearchersCSV(text) {
 export function SearchersTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
   const { isSuperuser } = useAuth();
+  const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
 
   const [historicData, setHistoricData] = useState(() => {
@@ -244,12 +246,15 @@ export function SearchersTab({ search = "" }) {
   const inp = { border:`1px solid ${TC.border}`, borderRadius:5, padding:"4px 8px", fontSize:11, color:TC.text, background:TC.card, outline:"none", fontFamily:"inherit", cursor:"pointer" };
 
   // ── Handlers for historic table ───────────────────────────
-  const saveSearcherField = (id, field, value) => {
+  const saveSearcherField = async (id, field, value) => {
     const updated = historicData.map(s => s.id === id ? { ...s, [field]: value } : s);
     setHistoricData(updated);
     try { localStorage.setItem("tc_allSearchers", JSON.stringify(updated)); } catch {}
     const searcher = updated.find(s => s.id === id);
-    if (searcher) upsertSearcher(searcher);
+    if (searcher) {
+      const { error } = await upsertSearcher(searcher);
+      if (error) toast({ message: "Error desant canvis: " + error.message, type: "error" });
+    }
   };
 
   const handleAddSearcher = async (values, setError) => {
@@ -277,10 +282,12 @@ export function SearchersTab({ search = "" }) {
   };
 
   const handleDeleteSearcher = async (id) => {
-    await deleteSearcher(id);
+    const { error } = await deleteSearcher(id);
+    if (error) { toast({ message: "Error eliminant searcher: " + error.message, type: "error" }); return; }
     const updated = historicData.filter(s => s.id !== id);
     setHistoricData(updated);
     try { localStorage.setItem("tc_allSearchers", JSON.stringify(updated)); } catch {}
+    toast({ message: "Searcher eliminat." });
   };
 
   return (

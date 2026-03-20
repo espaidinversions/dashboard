@@ -10,6 +10,7 @@ import { FUNDS0 as FUNDS0_DEFAULT, EUR_USD as EUR_USD_DEFAULT, STATUS_CFG, CANAL
 import { EmptyState } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { insertPipelineDeal, deletePipelineDeal, upsertPipelineDeal } from "../db.js";
+import { useToast } from "../toast.jsx";
 
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function genMonthOpts(months = 36) {
@@ -48,6 +49,7 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
   const toUSD = (a, c) => c === "EUR" ? a * rate : a;
   const { tc: TC, dark } = useTheme();
   const { isSuperuser } = useAuth();
+  const { toast } = useToast();
   const [funds,setFunds]   = useState(initialFunds);
   useEffect(()=>{ setFunds(initialFunds); },[initialFunds]);
 
@@ -113,8 +115,10 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
   const Arr=({k})=><span style={{marginLeft:3,opacity:sk===k?1:0.2,fontSize:9}}>{sk===k&&sd==="desc"?"▼":"▲"}</span>;
   const toggle=(id)=>setFunds(p=>p.map(f=>f.id===id?{...f,active:!f.active}:f));
   const del = async (id) => {
-    await deletePipelineDeal(id);
+    const { error } = await deletePipelineDeal(id);
+    if (error) { toast({ message: "Error eliminant deal: " + error.message, type: "error" }); return; }
     setFunds(p => p.filter(f => f.id !== id));
+    toast({ message: "Deal eliminat." });
   };
 
   const upd = async (id, field, val) => {
@@ -127,7 +131,10 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
       });
       return next;
     });
-    if (updatedDeal) await upsertPipelineDeal(updatedDeal);
+    if (updatedDeal) {
+      const { error } = await upsertPipelineDeal(updatedDeal);
+      if (error) toast({ message: "Error desant deal: " + error.message, type: "error" });
+    }
   };
 
   const add = async (nf) => {
@@ -139,7 +146,8 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
       active: true, estimatedClosing: nf.estimatedClosing ?? null,
     };
     const inserted = await insertPipelineDeal(deal);
-    if (inserted) setFunds(p => [inserted, ...p]);
+    if (!inserted) { toast({ message: "Error en crear el deal", type: "error" }); return; }
+    setFunds(p => [inserted, ...p]);
   };
 
   const inp2={border:`1px solid ${TC.border}`,borderRadius:5,padding:"7px 10px",fontSize:13,color:TC.text,background:TC.card,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"};
