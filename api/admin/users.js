@@ -1,5 +1,26 @@
 import { createClient } from "@supabase/supabase-js";
 
+function serverError(res, error, context) {
+  console.error(`[admin/users] ${context}:`, error);
+  return res.status(500).json({ error: "Internal server error" });
+}
+
+// Simple in-memory rate limiter: max 30 requests per IP per minute
+const rateLimitMap = new Map();
+function isRateLimited(ip) {
+  const now = Date.now();
+  const window = 60_000;
+  const max = 30;
+  const entry = rateLimitMap.get(ip) ?? { count: 0, start: now };
+  if (now - entry.start > window) {
+    rateLimitMap.set(ip, { count: 1, start: now });
+    return false;
+  }
+  if (entry.count >= max) return true;
+  rateLimitMap.set(ip, { ...entry, count: entry.count + 1 });
+  return false;
+}
+
 function makeServiceClient() {
   return createClient(
     process.env.VITE_SUPABASE_URL,
@@ -16,13 +37,16 @@ async function verifyAdmin(req, serviceClient) {
 }
 
 export default async function handler(req, res) {
+  const ip = req.headers["x-forwarded-for"]?.split(",")[0] ?? req.socket?.remoteAddress ?? "unknown";
+  if (isRateLimited(ip)) return res.status(429).json({ error: "Too many requests" });
+
   const supabase = makeServiceClient();
   const admin = await verifyAdmin(req, supabase);
   if (!admin) return res.status(403).json({ error: "Forbidden" });
 
   if (req.method === "GET") {
     const { data, error } = await supabase.auth.admin.listUsers();
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return serverError(res, error, "listUsers");
     return res.json({ users: data.users });
   }
 
@@ -40,14 +64,14 @@ export default async function handler(req, res) {
     if (domains.length > 0) {
       const domain = email.split("@")[1];
       if (!domains.includes(domain)) {
-        return res.status(400).json({ error: `Domain @${domain} not allowed` });
+        return res.status(400).json({ error: "Email domain not allowed" });
       }
     }
 
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
       data: { role: role || "user" },
     });
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) return serverError(res, error, "inviteUserByEmail");
     return res.json({ user: data.user });
   }
 

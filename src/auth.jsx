@@ -1,10 +1,14 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase.js";
 
 const AuthContext = createContext(null);
 
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const ACTIVITY_EVENTS = ["mousemove", "keydown", "mousedown", "touchstart", "scroll"];
+
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
+  const idleTimerRef = useRef(null);
 
   useEffect(() => {
     if (!supabase) { setSession(null); return; }
@@ -12,6 +16,26 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
     return () => subscription.unsubscribe();
   }, []);
+
+  // Session inactivity timeout — sign out after 30 min of no activity
+  useEffect(() => {
+    if (!session) return;
+
+    const resetTimer = () => {
+      clearTimeout(idleTimerRef.current);
+      idleTimerRef.current = setTimeout(() => {
+        ["tc_rawCC","tc_fundMeta","tc_portfolioCompanies","tc_allSearchers"].forEach(k => localStorage.removeItem(k));
+        supabase.auth.signOut();
+      }, IDLE_TIMEOUT_MS);
+    };
+
+    resetTimer();
+    ACTIVITY_EVENTS.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
+    return () => {
+      clearTimeout(idleTimerRef.current);
+      ACTIVITY_EVENTS.forEach(e => window.removeEventListener(e, resetTimer));
+    };
+  }, [session]);
 
   const signIn  = (email, password) => supabase.auth.signInWithPassword({ email, password });
   const signUp  = (email, password) => supabase.auth.signUp({ email, password });
