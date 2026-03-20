@@ -74,6 +74,25 @@ function rowToDeal(r) {
   };
 }
 
+// ── Audit log ─────────────────────────────────────────────
+
+async function logAudit(action, tableName, recordId, changes) {
+  if (!supabase) return;
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    await supabase.from("audit_log").insert({
+      user_id: user?.id ?? null,
+      user_email: user?.email ?? null,
+      action,
+      table_name: tableName,
+      record_id: String(recordId ?? ""),
+      changes,
+    });
+  } catch (e) {
+    console.error("logAudit failed:", e);
+  }
+}
+
 // ── Load all ──────────────────────────────────────────────
 
 export async function loadAll() {
@@ -138,6 +157,7 @@ export async function saveSearchers(rows) {
 export async function upsertFundMeta(fons, tvpi) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("fund_meta").upsert({ fons, tvpi: tvpi ?? null }, { onConflict: "fons" });
+  if (!error) logAudit("update", "fund_meta", fons, { fons, tvpi });
   return { error };
 }
 
@@ -145,6 +165,7 @@ export async function upsertCompany(company) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("portfolio_companies")
     .upsert(companyToRow(company), { onConflict: "nom" });
+  if (!error) logAudit("update", "portfolio_companies", company.nom, { nom: company.nom });
   return { error };
 }
 
@@ -153,6 +174,7 @@ export async function upsertSearcher(searcher) {
   const { error } = await supabase.from("searchers")
     .update(searcherToRow(searcher))
     .eq("id", searcher.id);
+  if (!error) logAudit("update", "searchers", searcher.id, { nom: searcher.nom });
   return { error };
 }
 
@@ -208,6 +230,7 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
   await supabase.from("fund_meta")
     .upsert({ fons, tvpi: null }, { onConflict: "fons" });
 
+  logAudit("insert", "capital_calls", fons, { fons, vcpe, est });
   // Return in rawCC shape (key `any`, not `year`)
   return { fons, vcpe, est, cat: "Compromís", eur: compromisEur, divisa, mes, any: year, fy, tipus: vcpe, data: data_iso };
 }
@@ -217,18 +240,21 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
 export async function deleteCompany(id) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("portfolio_companies").delete().eq("id", id);
+  if (!error) logAudit("delete", "portfolio_companies", id, null);
   return { error };
 }
 
 export async function deleteSearcher(id) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("searchers").delete().eq("id", id);
+  if (!error) logAudit("delete", "searchers", id, null);
   return { error };
 }
 
 export async function deletePipelineDeal(id) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("pipeline").delete().eq("id", id);
+  if (!error) logAudit("delete", "pipeline", id, null);
   return { error };
 }
 
@@ -237,6 +263,7 @@ export async function deleteFund(fons) {
   const { error: e1 } = await supabase.from("capital_calls").delete().eq("fons", fons);
   if (e1) return e1;
   const { error: e2 } = await supabase.from("fund_meta").delete().eq("fons", fons);
+  if (!e2) logAudit("delete", "capital_calls", fons, { fons });
   return e2 ?? null;
 }
 
@@ -246,5 +273,19 @@ export async function upsertPipelineDeal(deal) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("pipeline")
     .upsert({ id: deal.id, ...dealToRow(deal) }, { onConflict: "id" });
+  if (!error) logAudit("update", "pipeline", deal.id, { name: deal.name });
+  return { error };
+}
+
+// ── Admin: bulk clear ─────────────────────────────────────
+
+const CLEARABLE_TABLES = ["capital_calls", "portfolio_companies", "searchers", "pipeline"];
+
+export async function clearTable(tableName) {
+  if (!supabase) return { error: null };
+  if (!CLEARABLE_TABLES.includes(tableName)) {
+    return { error: new Error(`Table "${tableName}" is not clearable`) };
+  }
+  const { error } = await supabase.from(tableName).delete().neq("id", -1);
   return { error };
 }
