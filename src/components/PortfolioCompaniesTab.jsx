@@ -1,14 +1,15 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useRef } from "react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, Label,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
 } from "recharts";
 import { useTheme } from "../theme.js";
-import { fmtM } from "../utils.js";
+import { fmtM, slugify } from "../utils.js";
 import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
-import { FlagImg, FlagSvgLabel } from "./SharedComponents.jsx";
+import { FlagImg, FlagSvgLabel, EditableCell, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
 import { Link } from "react-router-dom";
-import { slugify } from "../utils.js";
+import { upsertCompany, insertCompany, deleteCompany } from "../db.js";
+import { useAuth } from "../auth.jsx";
 
 const GEO_NAME = { ES:"ESP", EN:"UK", IT:"ITA", DE:"DEU", FR:"FRA", PT:"POR", NL:"NED", US:"USA", CH:"CHE" };
 
@@ -16,24 +17,24 @@ const fmtDate = iso => { if (!iso) return "—"; const [y,m,d]=iso.split("-"); r
 const fmtM2 = v => v == null ? "—" : fmtM(v);
 
 const ORIG_COLORS = {
-  "Equity Gap":    "#5A966E",
-  "Search Capital":"#3C5064",
+  "Equity Gap":    "#3DC83E",
+  "Search Capital":"#2B5070",
   "Direct PE":     "#6A4C8A",
 };
-const GEO_COLORS = ["#3C5064","#5A966E","#6A4C8A","#B8860B","#C62828","#1D6840","#2563A8","#8A6400","#007A8A"];
+const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D","#2563A8","#8A6400","#007A8A"];
 
 // TVPI colour helpers
 const tvpiColor = t => {
   if (t == null) return "#999";
   if (t < 1.0)  return "#C62828";
   if (t < 1.5)  return "#7A6000";
-  return "#1D6840";
+  return "#1C6B1D";
 };
 const tvpiBg = t => {
   if (t == null) return "#F5F5F5";
   if (t < 1.0)  return "#FDECEA";
   if (t < 1.5)  return "#FFF8E1";
-  return "#E8F4EE";
+  return "#E8F8E8";
 };
 
 function CenterLabel({ viewBox, value, sub, tc }) {
@@ -54,19 +55,90 @@ function CenterLabel({ viewBox, value, sub, tc }) {
 
 export function PortfolioCompaniesTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
+  const { isSuperuser } = useAuth();
+  const [showAddModal, setShowAddModal] = useState(false);
+
   const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:12, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
   const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap" };
   const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
 
+  const [companies, setCompanies] = useState(() => {
+    try { const s = localStorage.getItem("tc_portfolioCompanies"); return s ? JSON.parse(s) : PORTFOLIO_COMPANIES; }
+    catch { return PORTFOLIO_COMPANIES; }
+  });
+  const fileRef = useRef(null);
+
+  const handleFile = e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        if (Array.isArray(data) && data.length) {
+          setCompanies(data);
+          try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(data)); } catch {}
+        }
+      } catch {}
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const resetCompanies = () => {
+    setCompanies(PORTFOLIO_COMPANIES);
+    localStorage.removeItem("tc_portfolioCompanies");
+  };
+
+  const hasCustomData = companies !== PORTFOLIO_COMPANIES && companies.length !== PORTFOLIO_COMPANIES.length;
+
+  const saveField = (nom, field, value) => {
+    const updated = companies.map(c => c.nom === nom ? { ...c, [field]: value } : c);
+    setCompanies(updated);
+    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated)); } catch {}
+    const company = updated.find(c => c.nom === nom);
+    if (company) upsertCompany(company);
+  };
+
+  const handleAdd = async (values, setError) => {
+    const nom = values.nom?.trim();
+    if (!nom) { setError("El nom és obligatori"); return; }
+    if (companies.some(c => c.nom === nom)) {
+      setError("Ja existeix una empresa amb aquest nom");
+      return;
+    }
+    const company = {
+      nom, tipus: values.tipus || null, segment: values.segment || null,
+      entrepreneurs: values.entrepreneurs || null, origen: values.origen || null,
+      geo: values.geo || null, ticket: parseFloat(values.ticket) || null,
+      tvpi: null, rvpiEur: null, dpiEur: null, rev: null, ebitda: null,
+      dfn: null, grossEV: null, multEntry: null, dataCompr: null,
+      mesosOperant: null, isMock: false, quarters: [],
+    };
+    const inserted = await insertCompany(company);
+    if (!inserted) { setError("Error en crear l'empresa"); return; }
+    const updated = [inserted, ...companies];
+    setCompanies(updated);
+    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated)); } catch {}
+    setShowAddModal(false);
+  };
+
+  const handleDelete = async (id, nom) => {
+    await deleteCompany(id);
+    const updated = companies.filter(c => c.nom !== nom);
+    setCompanies(updated);
+    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated)); } catch {}
+  };
+
   const filtered = search.trim()
-    ? PORTFOLIO_COMPANIES.filter(r =>
+    ? companies.filter(r =>
         r.nom.toLowerCase().includes(search.toLowerCase()) ||
         (r.segment||"").toLowerCase().includes(search.toLowerCase())
       )
-    : PORTFOLIO_COMPANIES;
+    : companies;
 
   const total    = filtered.reduce((s,r) => s + r.ticket, 0);
-  const totalAll = PORTFOLIO_COMPANIES.reduce((s,r) => s + r.ticket, 0);
+  const totalAll = companies.reduce((s,r) => s + r.ticket, 0);
   const sfCompanies = filtered.filter(r => r.tipus === "SF");
   const peCompanies = filtered.filter(r => r.tipus === "PE");
 
@@ -102,6 +174,34 @@ export function PortfolioCompaniesTab({ search = "" }) {
   return (
     <div style={{ padding:"0 0 40px" }}>
 
+      {/* ── Data load bar ── */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:8, marginBottom:14 }}>
+        {isSuperuser && (
+          <button onClick={() => setShowAddModal(true)}
+            style={{ padding: "7px 14px", borderRadius: 7, border: `1.5px solid ${TC.border}`,
+              background: "transparent", color: TC.navy, cursor: "pointer",
+              fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
+            + Nova participada
+          </button>
+        )}
+        {hasCustomData && (
+          <span style={{ fontSize:11, color:TC.textLight }}>
+            {companies.length} participades carregades
+          </span>
+        )}
+        {hasCustomData && (
+          <button onClick={resetCompanies}
+            style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
+            Restaurar per defecte
+          </button>
+        )}
+        <input ref={fileRef} type="file" accept=".json" style={{ display:"none" }} onChange={handleFile} />
+        <button onClick={() => fileRef.current?.click()}
+          style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:7, padding:"6px 14px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
+          ↑ Carregar dades
+        </button>
+      </div>
+
       {/* Info note */}
       <div style={{
         background: TC.bgAlt,
@@ -111,13 +211,13 @@ export function PortfolioCompaniesTab({ search = "" }) {
         fontSize:11, color:TC.textMid,
       }}>
         <span style={{fontSize:14, flexShrink:0}}>ℹ</span>
-        <span>Valoració basada en última disponible (2025Q1 / 2024Q4). Dates d'entrada PE directes aproximades. <b style={{color:TC.text}}>{valuedAll.length}/{PORTFOLIO_COMPANIES.length}</b> empreses valorades.</span>
+        <span>Valoració basada en última disponible (2025Q1 / 2024Q4). Dates d'entrada PE directes aproximades. <b style={{color:TC.text}}>{valuedAll.length}/{companies.length}</b> participades valorades.</span>
       </div>
 
       {/* KPIs */}
       <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
         {[
-          { label:"Empreses en Cartera",  value: filtered.length,
+          { label:"Participades",  value: filtered.length,
             sub:`${sfCompanies.length} SF · ${peCompanies.length} PE directes`,     accent:TC.navy },
           { label:"Capital Desplegat",    value: fmtM(total),
             sub:"total compromisos",                                                 accent:TC.green },
@@ -231,7 +331,7 @@ export function PortfolioCompaniesTab({ search = "" }) {
 
       {/* Table */}
       <div style={{ ...card, marginBottom:14 }}>
-        <div style={sec}>Cartera d'Empreses</div>
+        <div style={sec}>Participades</div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
             <thead>
@@ -239,10 +339,17 @@ export function PortfolioCompaniesTab({ search = "" }) {
                 {["Empresa","Tipus","Segment","Empresaris","Origen","País","Ticket","TVPI","Rev LTM","EBITDA LTM","Data","Mesos"].map(h=>(
                   <th key={h} style={th}>{h}</th>
                 ))}
+                {isSuperuser && <th style={{ ...th, width: 40 }} />}
               </tr>
             </thead>
             <tbody>
-              {[...sfCompanies, ...peCompanies].map((r,i) => <PortRow key={r.nom} r={r} i={i} TC={TC} />)}
+              {[...sfCompanies, ...peCompanies].map((r,i) => (
+                <PortRow key={r.nom} r={r} i={i} TC={TC}
+                  isSuperuser={isSuperuser}
+                  saveField={saveField}
+                  handleDelete={handleDelete}
+                />
+              ))}
             </tbody>
             <tfoot>
               <tr style={{ borderTop:`2px solid ${TC.border}` }}>
@@ -251,22 +358,37 @@ export function PortfolioCompaniesTab({ search = "" }) {
                 </td>
                 <td style={{ padding:"8px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.green }}>{fmtM(total)}</td>
                 <td style={{ padding:"8px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", fontWeight:700, color:wtTvpi >= 1 ? TC.green : "#C62828" }}>{wtTvpi.toFixed(2)}x</td>
-                <td colSpan={4}/>
+                <td colSpan={isSuperuser ? 5 : 4}/>
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
 
+      {showAddModal && (
+        <AddRowModal
+          title="Nova participada"
+          fields={[
+            { key: "nom", label: "Nom", type: "text", placeholder: "Nom de l'empresa" },
+            { key: "tipus", label: "Tipus", type: "select", options: ["", "Searcher", "Direct", "Co-inversió"], defaultValue: "" },
+            { key: "segment", label: "Segment", type: "text" },
+            { key: "geo", label: "Geografia", type: "text", placeholder: "ES, FR, ..." },
+            { key: "ticket", label: "Ticket (€M)", type: "number" },
+          ]}
+          onSave={handleAdd}
+          onClose={() => setShowAddModal(false)}
+        />
+      )}
+
     </div>
   );
 }
 
 // ── Row component ─────────────────────────────────────────────────────────────
-function PortRow({ r, i, TC }) {
+function PortRow({ r, i, TC, isSuperuser, saveField, handleDelete }) {
   const tdBase = { padding:"7px 10px" };
   return (
-    <tr style={{ background: i%2===0 ? TC.card : TC.bgAlt }}>
+    <tr className="hoverable" style={{ background: i%2===0 ? TC.card : TC.bgAlt }}>
       <td style={{ ...tdBase, fontWeight:600, color:TC.navy, whiteSpace:"nowrap" }}>
         <Link
           to={`/company/${slugify(r.nom)}`}
@@ -274,38 +396,81 @@ function PortRow({ r, i, TC }) {
           onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
           onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
         >
-          {r.nom}
+          <EditableCell value={r.nom} type="text"
+            onSave={v => saveField(r.nom, "nom", v)}
+            disabled={!isSuperuser} />
         </Link>
       </td>
       <td style={tdBase}>
-        <span style={{ background:r.tipus==="SF"?"#E8EFF5":"#F3EEF8", color:r.tipus==="SF"?TC.navy:"#6A4C8A", borderRadius:20, padding:"1px 8px", fontSize:9, fontWeight:700, letterSpacing:"0.05em" }}>{r.tipus}</span>
+        <EditableCell value={r.tipus} type="text"
+          onSave={v => saveField(r.nom, "tipus", v)}
+          disabled={!isSuperuser}
+          fmt={v => (
+            <span style={{ background:v==="SF"?"#E6EDF3":"#F3EEF8", color:v==="SF"?TC.navy:"#6A4C8A", borderRadius:20, padding:"1px 8px", fontSize:9, fontWeight:700, letterSpacing:"0.05em" }}>{v}</span>
+          )} />
       </td>
       <td style={{ ...tdBase, fontSize:10 }}>
-        {r.segment ? <span style={{ background:TC.bg, border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 7px", fontSize:9 }}>{r.segment}</span> : "—"}
+        <EditableCell value={r.segment} type="text"
+          onSave={v => saveField(r.nom, "segment", v)}
+          disabled={!isSuperuser}
+          fmt={v => v ? <span style={{ background:TC.bg, border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 7px", fontSize:9 }}>{v}</span> : "—"} />
       </td>
       <td style={{ ...tdBase, color:TC.textMid, fontSize:10, maxWidth:140, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
-        {r.entrepreneurs && r.entrepreneurs !== "—" ? r.entrepreneurs : <span style={{color:TC.textLight}}>—</span>}
+        <EditableCell value={r.entrepreneurs} type="text"
+          onSave={v => saveField(r.nom, "entrepreneurs", v)}
+          disabled={!isSuperuser}
+          fmt={v => v && v !== "—" ? v : <span style={{color:TC.textLight}}>—</span>} />
       </td>
       <td style={tdBase}>
-        <span style={{ background:r.origen==="Equity Gap"?"#E8F4EE":r.origen==="Search Capital"?"#E8EFF5":"#F3EEF8", color:r.origen==="Equity Gap"?TC.green:r.origen==="Search Capital"?TC.navy:"#6A4C8A", borderRadius:20, padding:"2px 8px", fontSize:9, fontWeight:600, whiteSpace:"nowrap" }}>{r.origen}</span>
+        <EditableCell value={r.origen} type="text"
+          onSave={v => saveField(r.nom, "origen", v)}
+          disabled={!isSuperuser}
+          fmt={v => (
+            <span style={{ background:v==="Equity Gap"?"#E8F8E8":v==="Search Capital"?"#E6EDF3":"#F3EEF8", color:v==="Equity Gap"?TC.green:v==="Search Capital"?TC.navy:"#6A4C8A", borderRadius:20, padding:"2px 8px", fontSize:9, fontWeight:600, whiteSpace:"nowrap" }}>{v}</span>
+          )} />
       </td>
       <td style={{ ...tdBase, textAlign:"center" }}><FlagImg geo={r.geo} size={18}/></td>
-      <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.green }}>{fmtM(r.ticket)}</td>
+      <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.green }}>
+        <EditableCell value={r.ticket} type="number" align="right"
+          fmt={v => v != null ? fmtM(v) : "—"}
+          onSave={v => saveField(r.nom, "ticket", v)}
+          disabled={!isSuperuser} />
+      </td>
       <td style={{ ...tdBase, textAlign:"center" }}>
         {r.tvpi != null
           ? <span style={{ background:tvpiBg(r.tvpi), color:tvpiColor(r.tvpi), borderRadius:20, padding:"2px 8px", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:11, whiteSpace:"nowrap" }}>{r.tvpi.toFixed(2)}×</span>
           : <span style={{ color:TC.textLight, fontSize:10, fontStyle:"italic" }}>Pendent</span>
         }
       </td>
-      <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:10, color:TC.textMid }}>{r.rev ? fmtM(r.rev) : "—"}</td>
-      <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:10, color:r.ebitda != null && r.ebitda < 0 ? "#C62828" : TC.textMid }}>{r.ebitda != null ? fmtM(r.ebitda) : "—"}</td>
-      <td style={{ ...tdBase, color:TC.textMid, fontSize:10, whiteSpace:"nowrap" }}>{fmtDate(r.dataCompr)}</td>
+      <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:10, color:TC.textMid }}>
+        <EditableCell value={r.rev} type="number" align="right"
+          fmt={v => v ? fmtM(v) : "—"}
+          onSave={v => saveField(r.nom, "rev", v)}
+          disabled={!isSuperuser} />
+      </td>
+      <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:10, color:r.ebitda != null && r.ebitda < 0 ? "#C62828" : TC.textMid }}>
+        <EditableCell value={r.ebitda} type="number" align="right"
+          fmt={v => v != null ? fmtM(v) : "—"}
+          onSave={v => saveField(r.nom, "ebitda", v)}
+          disabled={!isSuperuser} />
+      </td>
+      <td style={{ ...tdBase, color:TC.textMid, fontSize:10, whiteSpace:"nowrap" }}>
+        <EditableCell value={r.dataCompr} type="text"
+          onSave={v => saveField(r.nom, "dataCompr", v)}
+          disabled={!isSuperuser}
+          fmt={v => fmtDate(v)} />
+      </td>
       <td style={{ ...tdBase, textAlign:"center" }}>
         {r.mesosOperant != null
-          ? <span style={{ background:"#E8F4EE", color:TC.green, borderRadius:20, padding:"1px 7px", fontWeight:700, fontSize:10 }}>{r.mesosOperant}</span>
+          ? <span style={{ background:"#E8F8E8", color:TC.green, borderRadius:20, padding:"1px 7px", fontWeight:700, fontSize:10 }}>{r.mesosOperant}</span>
           : <span style={{color:TC.textLight}}>—</span>
         }
       </td>
+      {isSuperuser && (
+        <td style={{ padding: "4px 8px", textAlign: "center" }}>
+          <DeleteRowButton onDelete={() => handleDelete(r.id, r.nom)} />
+        </td>
+      )}
     </tr>
   );
 }
