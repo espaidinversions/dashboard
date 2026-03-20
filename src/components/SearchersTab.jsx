@@ -1,12 +1,14 @@
 import React, { useMemo, useState, useRef } from "react";
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Label,
-  Sankey,
 } from "recharts";
+import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
-import { ACTIVE_SEARCHERS, ALL_SEARCHERS } from "../data/searchers.js";
-import { FlagImg, FlagSvgLabel } from "./SharedComponents.jsx";
+import { ACTIVE_SEARCHERS, ALL_SEARCHERS, PORTFOLIO_COMPANIES } from "../data/searchers.js";
+import { FlagImg, FlagSvgLabel, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
+import { useAuth } from "../auth.jsx";
+import { upsertSearcher, insertSearcher, deleteSearcher } from "../db.js";
 
 // ── constants ──────────────────────────────────────────────
 const GEO_NAME = {
@@ -16,12 +18,12 @@ const GEO_NAME = {
 };
 
 const STATUS_CFG = {
-  "Invertit en fase de cerca":     { bg:"#E8F4EE", color:"#1D6840" },
-  "Invertit en fase d'adquisició": { bg:"#D0EAD8", color:"#145230" },
+  "Invertit en fase de cerca":     { bg:"#E8F8E8", color:"#1C6B1D" },
+  "Invertit en fase d'adquisició": { bg:"#D6EAD6", color:"#1C5220" },
   "Descartat":                      { bg:"#FDECEA", color:"#B01F17" },
   "En anàlisi":                     { bg:"#FFF8E1", color:"#8A6400" },
   "Sobresuscrit":                   { bg:"#F0EEFA", color:"#5A3E9A" },
-  "Pendent de formalitzar":         { bg:"#E8F0FA", color:"#2A5B9A" },
+  "Pendent de formalitzar":         { bg:"#E6EDF3", color:"#2B5070" },
   "No tancat":                      { bg:"#F5F5F5", color:"#777"    },
 };
 
@@ -62,33 +64,15 @@ const fmtDate = iso => {
   return `${d}/${m}/${y}`;
 };
 
-// ── Sankey custom node/link ────────────────────────────────
-const SANKEY_COLORS = ["#2563A8","#27A55A","#27A55A","#145230","#B01F17","#8A6400","#5A3E9A"];
-
-const SankeyNode = ({ x, y, width, height, index, payload }) => {
-  const { tc: TC } = useTheme();
-  return (
-    <g>
-      <rect x={x} y={y} width={width} height={Math.max(height, 1)}
-        fill={SANKEY_COLORS[index] || TC.navy} rx={2} opacity={0.85} />
-      <text
-        x={index < 2 ? x - 6 : x + width + 6}
-        y={y + height / 2}
-        textAnchor={index < 2 ? "end" : "start"}
-        fill={TC.text} fontSize={11} fontFamily="inherit" dominantBaseline="middle"
-      >
-        {payload.name} ({payload.value})
-      </text>
-    </g>
-  );
+// ── Sankey node colours ────────────────────────────────────
+const SANKEY_NODE_COLORS = {
+  "Searchers":    "#2563A8",
+  "Equity Gap":   "#6B2E7E",
+  "Cercant":      "#27A55A",
+  "Acabat Cerca": "#145230",
+  "Portafoli":    "#5A3E9A",
+  "Operant":      "#2B5070",
 };
-
-const SankeyLink = ({ sourceX, targetX, sourceY, targetY, sourceControlX, targetControlX, linkWidth, index }) => (
-  <path
-    d={`M${sourceX},${sourceY + linkWidth / 2} C${sourceControlX},${sourceY + linkWidth / 2} ${targetControlX},${targetY + linkWidth / 2} ${targetX},${targetY + linkWidth / 2}`}
-    fill="none" stroke={SANKEY_COLORS[index % 2]} strokeWidth={linkWidth} strokeOpacity={0.18}
-  />
-);
 
 // ── CSV parser ─────────────────────────────────────────────
 function parseSearchersCSV(text) {
@@ -105,7 +89,13 @@ function parseSearchersCSV(text) {
 // ── main component ─────────────────────────────────────────
 export function SearchersTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
-  const [historicData, setHistoricData] = useState(ALL_SEARCHERS);
+  const { isSuperuser } = useAuth();
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const [historicData, setHistoricData] = useState(() => {
+    try { const s = localStorage.getItem("tc_allSearchers"); return s ? JSON.parse(s) : ALL_SEARCHERS; }
+    catch { return ALL_SEARCHERS; }
+  });
   const [histFilter, setHistFilter]     = useState({ status:"Tots", geo:"Tots", entrada:"Tots" });
   const [histSort, setHistSort]         = useState({ k:"nom", d:"asc" });
   const csvRef = useRef(null);
@@ -153,31 +143,47 @@ export function SearchersTab({ search = "" }) {
 
   // ── Sankey data ───────────────────────────────────────────
   const sankeyData = useMemo(() => {
-    const nodes = [
-      { name:"Search Capital" }, { name:"Equity Gap" },
-      { name:"Invertit cerca" }, { name:"Invertit adquisició" },
-      { name:"Descartat" }, { name:"En anàlisi" }, { name:"Sobresuscrit" },
-    ];
-    const norm = s =>
-      s.includes("adquisici") ? "Invertit adquisició" :
-      s.includes("cerca")     ? "Invertit cerca" :
-      s.includes("Sobre")     ? "Sobresuscrit" :
-      (s.includes("anàlisi") || s.includes("Pendent")) ? "En anàlisi" : "Descartat";
-    const counts = {};
-    ALL_SEARCHERS.forEach(r => {
-      const src = r.formEntrada.toLowerCase().includes("search") ? "Search Capital" : "Equity Gap";
-      const key = `${src}|||${norm(r.statusScreening)}`;
-      counts[key] = (counts[key] || 0) + 1;
-    });
-    const links = Object.entries(counts).map(([key, value]) => {
-      const [sn, tn] = key.split("|||");
-      return { source: nodes.findIndex(n => n.name === sn), target: nodes.findIndex(n => n.name === tn), value };
-    }).filter(l => l.source >= 0 && l.target >= 0);
+    const real = ALL_SEARCHERS.filter(r => !r.isMock);
+    const sc   = real.filter(r => r.formEntrada === "Search Capital");
+    const eg   = real.filter(r => r.formEntrada === "Equity Gap");
+
+    const scBacked   = sc.filter(r => r.statusScreening === "Invertit en fase de cerca").length;
+    const scAcq      = PORTFOLIO_COMPANIES.filter(c => c.tipus === "SF" && c.origen === "Search Capital").length;
+    const scCercant  = Math.max(scBacked - scAcq, 0);
+    const egInvertit = eg.filter(r =>
+      r.statusScreening === "Invertit en fase d'adquisició" ||
+      r.statusScreening === "Invertit en fase de cerca"
+    ).length;
+    const portfolio  = scAcq + egInvertit;
+
+    const links = [
+      { source: "Searchers",    target: "Cercant",      value: scCercant  },
+      { source: "Searchers",    target: "Acabat Cerca", value: scAcq      },
+      { source: "Equity Gap",   target: "Portafoli",    value: egInvertit },
+      { source: "Acabat Cerca", target: "Portafoli",    value: scAcq      },
+      { source: "Portafoli",    target: "Operant",      value: portfolio  },
+    ].filter(l => l.value > 0);
+
+    const usedIds = new Set(links.flatMap(l => [l.source, l.target]));
+    const nodes = [...usedIds].map(id => ({ id }));
+
     return { nodes, links };
   }, []);
 
+  // ── Conversations stats ────────────────────────────────────
+  const convStats = useMemo(() => {
+    const real        = ALL_SEARCHERS.filter(r => !r.isMock);
+    const sc          = real.filter(r => r.formEntrada === "Search Capital");
+    const eg          = real.filter(r => r.formEntrada === "Equity Gap");
+    const scBacked    = sc.filter(r => r.statusScreening === "Invertit en fase de cerca").length;
+    const egInvertit  = eg.filter(r => r.statusScreening === "Invertit en fase d'adquisició" || r.statusScreening === "Invertit en fase de cerca").length;
+    const allDescartat = real.filter(r => ["Descartat","Sobresuscrit","No tancat"].includes(r.statusScreening)).length;
+    const allRevisio  = real.filter(r => ["En anàlisi","Pendent de formalitzar"].includes(r.statusScreening)).length;
+    return { total: real.length, scBacked, egInvertit, allDescartat, allRevisio };
+  }, []);
+
   // ── Geography data (searchers only) ──────────────────────
-  const GEO_COLORS = ["#3C5064","#5A966E","#6A4C8A","#B8860B","#C62828","#1D6840","#2563A8","#8A6400","#007A8A"];
+  const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D","#2563A8","#8A6400","#007A8A"];
   const geoData = useMemo(() => {
     const m = {};
     ACTIVE_SEARCHERS.forEach(s => {
@@ -212,22 +218,93 @@ export function SearchersTab({ search = "" }) {
     reader.onload = ev => {
       try {
         const rows = parseSearchersCSV(ev.target.result);
-        if (rows.length) setHistoricData(rows.map(r => ({
-          nom: r.nom, tipus: r.tipus, modalitat: r.modalitat, geo: r.geo,
-          statusScreening: r.statusScreening, formEntrada: r.formEntrada,
-          introPer: r.introPer, searcher1: r.searcher1||"", searcher2: r.searcher2||"",
-          escola1: r.escola1||"", escola2: r.escola2||"",
-        })));
+        if (rows.length) {
+          const mapped = rows.map(r => ({
+            nom: r.nom, tipus: r.tipus, modalitat: r.modalitat, geo: r.geo,
+            statusScreening: r.statusScreening, formEntrada: r.formEntrada,
+            introPer: r.introPer, searcher1: r.searcher1||"", searcher2: r.searcher2||"",
+            escola1: r.escola1||"", escola2: r.escola2||"",
+          }));
+          setHistoricData(mapped);
+          try { localStorage.setItem("tc_allSearchers", JSON.stringify(mapped)); } catch {}
+        }
       } catch {}
     };
     reader.readAsText(file);
     e.target.value = "";
   };
 
+  const resetSearchers = () => {
+    setHistoricData(ALL_SEARCHERS);
+    localStorage.removeItem("tc_allSearchers");
+  };
+
+  const hasCustomSearchers = historicData !== ALL_SEARCHERS && historicData.length !== ALL_SEARCHERS.length;
+
   const inp = { border:`1px solid ${TC.border}`, borderRadius:5, padding:"4px 8px", fontSize:11, color:TC.text, background:TC.card, outline:"none", fontFamily:"inherit", cursor:"pointer" };
+
+  // ── Handlers for historic table ───────────────────────────
+  const saveSearcherField = (id, field, value) => {
+    const updated = historicData.map(s => s.id === id ? { ...s, [field]: value } : s);
+    setHistoricData(updated);
+    try { localStorage.setItem("tc_allSearchers", JSON.stringify(updated)); } catch {}
+    const searcher = updated.find(s => s.id === id);
+    if (searcher) upsertSearcher(searcher);
+  };
+
+  const handleAddSearcher = async (values, setError) => {
+    const nom = values.nom?.trim();
+    if (!nom) { setError("El nom és obligatori"); return; }
+    if (historicData.some(s => s.nom === nom)) {
+      setError("Ja existeix un searcher amb aquest nom");
+      return;
+    }
+    const searcher = {
+      nom, tipus: values.tipus || null, modalitat: values.modalitat || null,
+      geo: values.geo || null, statusScreening: values.statusScreening || null,
+      formEntrada: values.formEntrada || null, introPer: null,
+      searcher1: null, searcher2: null, escola1: null, escola2: null,
+      ticket: parseFloat(values.ticket) || null,
+      dataInici: null, dataCompr: null, mesosCercant: null,
+      equityStake: null, isMock: false,
+    };
+    const inserted = await insertSearcher(searcher);
+    if (!inserted) { setError("Error en crear el searcher"); return; }
+    const updated = [inserted, ...historicData];
+    setHistoricData(updated);
+    try { localStorage.setItem("tc_allSearchers", JSON.stringify(updated)); } catch {}
+    setShowAddModal(false);
+  };
+
+  const handleDeleteSearcher = async (id) => {
+    await deleteSearcher(id);
+    const updated = historicData.filter(s => s.id !== id);
+    setHistoricData(updated);
+    try { localStorage.setItem("tc_allSearchers", JSON.stringify(updated)); } catch {}
+  };
 
   return (
     <div style={{ padding:"0 0 40px" }}>
+
+      {/* ── Data load bar ── */}
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:8, marginBottom:14 }}>
+        {hasCustomSearchers && (
+          <span style={{ fontSize:11, color:TC.textLight }}>
+            {historicData.length} searchers carregats
+          </span>
+        )}
+        {hasCustomSearchers && (
+          <button onClick={resetSearchers}
+            style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
+            Restaurar per defecte
+          </button>
+        )}
+        <input ref={csvRef} type="file" accept=".csv" style={{ display:"none" }} onChange={handleCSV} />
+        <button onClick={() => csvRef.current?.click()}
+          style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:7, padding:"6px 14px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
+          ↑ Carregar dades
+        </button>
+      </div>
 
       {/* ── KPIs ── */}
       <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
@@ -248,21 +325,63 @@ export function SearchersTab({ search = "" }) {
       {/* ── Sankey + Geography ── */}
       <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
         <div style={card}>
-          <div style={sec}>Portfolio per Forma d'Entrada i Resultat</div>
-          <div style={{ overflowX:"auto" }}>
-            <Sankey width={520} height={320} data={sankeyData}
-              node={<SankeyNode />} link={<SankeyLink />}
-              nodePadding={18} nodeWidth={14} iterations={64}
-              margin={{ top:8, right:160, bottom:8, left:130 }}
-            >
-              <Tooltip content={({ active, payload }) =>
-                active && payload?.length ? (
-                  <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"8px 12px", fontSize:11 }}>
-                    <b>{payload[0].payload.name}</b>: {payload[0].payload.value} searchers
-                  </div>
-                ) : null
-              }/>
-            </Sankey>
+          <div style={sec}>Participades per Forma d'Entrada i Resultat</div>
+
+          {/* Conversations funnel strip */}
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16, padding:"10px 14px", background:TC.bgAlt, borderRadius:8 }}>
+            {[
+              { label:"Total converses", value: convStats.total,       color: TC.navy },
+              { label:"SC backed",       value: convStats.scBacked,    color: "#2563A8" },
+              { label:"Equity Gap",      value: convStats.egInvertit,  color: "#6B2E7E" },
+              { label:"Descartats",      value: convStats.allDescartat,color: "#B01F17" },
+              { label:"En Revisió",      value: convStats.allRevisio,  color: "#8A6400" },
+            ].map((s, i) => (
+              <React.Fragment key={s.label}>
+                {i > 0 && <span style={{ color:TC.border, alignSelf:"center" }}>·</span>}
+                <span style={{ fontSize:11, color:TC.textMid }}>
+                  <b style={{ color:s.color, fontFamily:"'DM Mono',monospace" }}>{s.value}</b>
+                  {" "}{s.label}
+                </span>
+              </React.Fragment>
+            ))}
+          </div>
+
+          <div style={{ height: 340 }}>
+            {sankeyData.links.length === 0 ? (
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", color:TC.textLight, fontSize:12 }}>Sense dades</div>
+            ) : (
+            <ResponsiveSankey
+              data={sankeyData}
+              margin={{ top: 16, right: 180, bottom: 16, left: 180 }}
+              align="start"
+              colors={node => SANKEY_NODE_COLORS[node.id] || TC.navy}
+              nodeOpacity={0.92}
+              nodeThickness={20}
+              nodeInnerPadding={4}
+              nodeBorderWidth={0}
+              nodeBorderRadius={3}
+              nodePadding={28}
+              linkOpacity={0.22}
+              enableLinkGradient={true}
+              labelPosition="outside"
+              labelOrientation="horizontal"
+              label={node => `${node.id} (${node.value})`}
+              labelTextColor={node => SANKEY_NODE_COLORS[node.id] || TC.textMid}
+              theme={{
+                text: { fontSize: 11, fontFamily: "'Outfit',system-ui,sans-serif", fill: TC.text },
+                tooltip: {
+                  container: {
+                    background: TC.card,
+                    border: `1px solid ${TC.border}`,
+                    borderRadius: 7,
+                    fontSize: 11,
+                    fontFamily: "'Outfit',system-ui,sans-serif",
+                    color: TC.text,
+                  },
+                },
+              }}
+            />
+            )}
           </div>
         </div>
 
@@ -333,11 +452,11 @@ export function SearchersTab({ search = "" }) {
               {displayedSearchers.map((r, i) => {
                 const status = getStatus(r.nom);
                 return (
-                  <tr key={r.nom} style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt, opacity: r.isMock ? 0.45 : 1 }}>
+                  <tr key={r.nom} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding:"9px 10px", fontWeight:600, color:TC.navy }}>{r.nom}</td>
                     <td style={{ padding:"9px 10px", color:TC.text, fontSize:11 }}>{r.searchers}</td>
                     <td style={{ padding:"9px 10px" }}>
-                      <span style={{ background:r.modalitat==="Solo"?"#E8F4EE":"#EAF0FA", color:r.modalitat==="Solo"?TC.green:TC.navy, borderRadius:20, padding:"2px 10px", fontSize:10, fontWeight:600 }}>{r.modalitat}</span>
+                      <span style={{ background:r.modalitat==="Solo"?"#E8F8E8":"#E6EDF3", color:r.modalitat==="Solo"?TC.green:TC.navy, borderRadius:20, padding:"2px 10px", fontSize:10, fontWeight:600 }}>{r.modalitat}</span>
                     </td>
                     <td style={{ padding:"9px 10px", textAlign:"center" }}><FlagImg geo={r.geo} /></td>
                     <td style={{ padding:"9px 10px" }}><StatusBadge s={status} /></td>
@@ -369,7 +488,17 @@ export function SearchersTab({ search = "" }) {
       {/* ── Historic table ── */}
       <div style={card}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-          <div style={sec}>Historial de Searchers</div>
+          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+            <div style={sec}>Historial de Searchers</div>
+            {isSuperuser && (
+              <button onClick={() => setShowAddModal(true)}
+                style={{ padding: "7px 14px", borderRadius: 7, border: `1.5px solid ${TC.border}`,
+                  background: "transparent", color: TC.navy, cursor: "pointer",
+                  fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
+                + Nou searcher
+              </button>
+            )}
+          </div>
           <div style={{ display:"flex", gap:8, alignItems:"center" }}>
             {/* Filters */}
             {[
@@ -387,12 +516,6 @@ export function SearchersTab({ search = "" }) {
                 </select>
               </div>
             ))}
-            {/* CSV upload */}
-            <input ref={csvRef} type="file" accept=".csv" style={{ display:"none" }} onChange={handleCSV} />
-            <button onClick={() => csvRef.current?.click()}
-              style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:6, padding:"5px 12px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
-              ↑ CSV
-            </button>
           </div>
         </div>
         <div style={{ fontSize:11, color:TC.textMid, marginBottom:10 }}>
@@ -423,23 +546,44 @@ export function SearchersTab({ search = "" }) {
                     {h.label}<HArr k={h.k} />
                   </th>
                 ))}
+                {isSuperuser && <th style={{ ...th, width: 40 }} />}
               </tr>
             </thead>
             <tbody>
               {filteredHistoric.map((r, i) => (
-                <tr key={`${r.nom}-${i}`} style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt }}>
-                  <td style={{ padding:"7px 10px", fontWeight:500, color:TC.navy }}>{r.nom}</td>
-                  <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>{r.tipus}</td>
+                <tr key={`${r.nom}-${i}`} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt }}>
+                  <td style={{ padding:"7px 10px", fontWeight:500, color:TC.navy }}>
+                    <EditableCell value={r.nom} type="text"
+                      onSave={v => saveSearcherField(r.id, "nom", v)}
+                      disabled={!isSuperuser} />
+                  </td>
+                  <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>
+                    <EditableCell value={r.tipus} type="text"
+                      onSave={v => saveSearcherField(r.id, "tipus", v)}
+                      disabled={!isSuperuser} />
+                  </td>
                   <td style={{ padding:"7px 10px" }}>
-                    <span style={{ background:r.modalitat==="Solo"?"#E8F4EE":r.modalitat==="Duo"?"#EAF0FA":"#F5F0FA", color:r.modalitat==="Solo"?TC.green:r.modalitat==="Duo"?TC.navy:"#5A3E9A", borderRadius:20, padding:"1px 8px", fontSize:10, fontWeight:600 }}>{r.modalitat}</span>
+                    <EditableCell value={r.modalitat} type="text"
+                      onSave={v => saveSearcherField(r.id, "modalitat", v)}
+                      disabled={!isSuperuser}
+                      fmt={v => (
+                        <span style={{ background:v==="Solo"?"#E8F8E8":v==="Duo"?"#E6EDF3":"#F5F0FA", color:v==="Solo"?TC.green:v==="Duo"?TC.navy:"#5A3E9A", borderRadius:20, padding:"1px 8px", fontSize:10, fontWeight:600 }}>{v}</span>
+                      )} />
                   </td>
                   <td style={{ padding:"7px 10px", textAlign:"center" }}><FlagImg geo={r.geo} /></td>
                   <td style={{ padding:"7px 10px" }}><StatusBadge s={r.statusScreening} /></td>
                   <td style={{ padding:"7px 10px" }}>
-                    <span style={{ background:r.formEntrada==="Equity Gap"?"#E8F4EE":"#EAF0FA", color:r.formEntrada==="Equity Gap"?TC.green:TC.navy, borderRadius:20, padding:"1px 8px", fontSize:10, fontWeight:600 }}>{r.formEntrada}</span>
+                    <EditableCell value={r.formEntrada} type="text"
+                      onSave={v => saveSearcherField(r.id, "formEntrada", v)}
+                      disabled={!isSuperuser}
+                      fmt={v => (
+                        <span style={{ background:v==="Equity Gap"?"#E8F8E8":"#E6EDF3", color:v==="Equity Gap"?TC.green:TC.navy, borderRadius:20, padding:"1px 8px", fontSize:10, fontWeight:600 }}>{v}</span>
+                      )} />
                   </td>
                   <td style={{ padding:"7px 10px", fontSize:11, color:TC.text }}>
-                    {[r.searcher1, r.searcher2].filter(Boolean).join(" / ") || "—"}
+                    <EditableCell value={[r.searcher1, r.searcher2].filter(Boolean).join(" / ") || "—"} type="text"
+                      onSave={v => saveSearcherField(r.id, "searcher1", v)}
+                      disabled={!isSuperuser} />
                   </td>
                   <td style={{ padding:"7px 10px", fontSize:11 }}>
                     {[r.escola1, r.escola2].filter(Boolean).map((e,i) => (
@@ -447,13 +591,38 @@ export function SearchersTab({ search = "" }) {
                     ))}
                     {!r.escola1 && !r.escola2 && <span style={{color:TC.textLight}}>—</span>}
                   </td>
-                  <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>{r.introPer}</td>
+                  <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>
+                    <EditableCell value={r.introPer} type="text"
+                      onSave={v => saveSearcherField(r.id, "introPer", v)}
+                      disabled={!isSuperuser} />
+                  </td>
+                  {isSuperuser && (
+                    <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                      <DeleteRowButton onDelete={() => handleDeleteSearcher(r.id)} />
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {showAddModal && (
+        <AddRowModal
+          title="Nou searcher"
+          fields={[
+            { key: "nom", label: "Nom", type: "text", placeholder: "Nom del searcher" },
+            { key: "tipus", label: "Tipus", type: "select", options: ["", "Solo", "Duo"] },
+            { key: "modalitat", label: "Modalitat", type: "select", options: ["", "Solo", "Partnership"] },
+            { key: "geo", label: "Geografia", type: "text", placeholder: "ES, FR, ..." },
+            { key: "ticket", label: "Ticket (€M)", type: "number" },
+          ]}
+          onSave={handleAddSearcher}
+          onClose={() => setShowAddModal(false)}
+        />
+      )}
+
     </div>
   );
 }
