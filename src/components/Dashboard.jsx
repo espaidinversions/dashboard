@@ -6,10 +6,12 @@ import {
 } from "recharts";
 import {
   FY_LIST, MESOS,
-  RAW_CC as RAW_CC_DEFAULT, FUNDS0 as FUNDS0_DEFAULT,
+  RAW_CC as RAW_CC_DEFAULT, FUNDS0 as FUNDS0_DEFAULT, FUND_META as FUND_META_DEFAULT,
 } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify } from "../utils.js";
+import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify, exportMultiXLSX } from "../utils.js";
+import { PORTFOLIO_COMPANIES, ALL_SEARCHERS } from "../data/searchers.js";
+import { loadAll, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta } from "../db.js";
 import { Logo, Badge, BarTip, PieTip, PL, EmptyState } from "./SharedComponents.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
@@ -19,20 +21,158 @@ import { PortfolioCompaniesTab } from "./PortfolioCompaniesTab.jsx";
 import { FundsIndexInner } from "./FundsIndex.jsx";
 import { CompaniesIndexInner } from "./CompaniesIndex.jsx";
 import { Link } from "react-router-dom";
+import { useAuth } from "../auth.jsx";
 
 // ── Data loader modal ─────────────────────────────────────
 function DataLoader({ onLoad, onClose, dataInfo }) {
   const { tc: TC } = useTheme();
-  const ccRef  = useRef(null);
-  const plRef  = useRef(null);
-  const [ccStatus, setCcStatus] = useState(null);
-  const [plStatus, setPlStatus] = useState(null);
-  const [error,    setError]    = useState(null);
-  const [ccDrag,   setCcDrag]   = useState(false);
-  const [plDrag,   setPlDrag]   = useState(false);
+  const ccRef    = useRef(null);
+  const plRef    = useRef(null);
+  const xlsxRef  = useRef(null);
+  const [ccStatus,   setCcStatus]   = useState(null);
+  const [plStatus,   setPlStatus]   = useState(null);
+  const [xlsxStatus, setXlsxStatus] = useState(null);
+  const [error,      setError]      = useState(null);
+  const [ccDrag,     setCcDrag]     = useState(false);
+  const [plDrag,     setPlDrag]     = useState(false);
+  const [xlsxDrag,   setXlsxDrag]  = useState(false);
+
+  const readXLSX = async (file) => {
+    if (file.size > 10 * 1024 * 1024) { setError("El fitxer és massa gran (màxim 10 MB)."); return; }
+    try {
+      const XLSX = await import("xlsx");
+      const buf  = await file.arrayBuffer();
+      const wb   = XLSX.read(buf, { type: "array" });
+      const sheet = name => {
+        const ws = wb.Sheets[name];
+        return ws ? XLSX.utils.sheet_to_json(ws) : null;
+      };
+
+      let loaded = 0;
+      const ccRows = sheet("Capital Calls");
+      if (ccRows?.length) {
+        const mapped = ccRows.map(r => ({
+          fons:  String(r["Fons"] ?? ""),
+          tipus: String(r["Tipus"] ?? ""),
+          cat:   String(r["Categoria"] ?? ""),
+          data:  String(r["Data"] ?? ""),
+          mes:   Number(r["Mes"]),
+          any:   Number(r["Any"]),
+          fy:    String(r["FY"] ?? ""),
+          vcpe:  String(r["VCPE"] ?? ""),
+          est:   String(r["Estructura"] ?? ""),
+          eur:   Number(r["Import (€)"]),
+          divisa:String(r["Divisa"] ?? ""),
+        }));
+        onLoad("cc", mapped);
+        loaded++;
+      }
+      const plRows = sheet("Pipeline");
+      if (plRows?.length) {
+        const mapped = plRows.map(r => ({
+          id:        Number(r["ID"]),
+          name:      String(r["Nom"] ?? ""),
+          amount:    Number(r["Import"]) || 0,
+          currency:  String(r["Divisa"] ?? "EUR"),
+          geography: String(r["Geo"] ?? ""),
+          strategy:  String(r["Estratègia"] ?? ""),
+          sector:    String(r["Sector"] ?? ""),
+          status:    String(r["Status"] ?? ""),
+          canal:     String(r["Canal"] ?? ""),
+          active:    String(r["Actiu"]) === "1",
+        }));
+        onLoad("pl", mapped);
+        loaded++;
+      }
+      const coRows = sheet("Participades");
+      if (coRows?.length) {
+        const mapped = coRows.map(r => ({
+          nom:           String(r["Nom"] ?? ""),
+          tipus:         String(r["Tipus"] ?? ""),
+          segment:       String(r["Segment"] ?? ""),
+          entrepreneurs: String(r["Entrepreneurs"] ?? ""),
+          origen:        String(r["Origen"] ?? ""),
+          geo:           String(r["Geo"] ?? ""),
+          ticket:        r["Ticket (€M)"] ? Number(r["Ticket (€M)"]) * 1e6 : 0,
+          tvpi:          r["TVPI"] !== "" && r["TVPI"] != null ? Number(r["TVPI"]) : null,
+          rev:           r["Ingressos (€M)"] ? Number(r["Ingressos (€M)"]) * 1e6 : null,
+          ebitda:        r["EBITDA (€M)"] ? Number(r["EBITDA (€M)"]) * 1e6 : null,
+          dataCompr:     String(r["Data Compromís"] ?? ""),
+          mesosOperant:  r["Mesos Operant"] != null && r["Mesos Operant"] !== "" ? Number(r["Mesos Operant"]) : null,
+        }));
+        onLoad("companies", mapped);
+        loaded++;
+      }
+      const srRows = sheet("Searchers");
+      if (srRows?.length) {
+        const mapped = srRows.map(r => ({
+          nom:             String(r["Nom"] ?? ""),
+          statusScreening: String(r["Status"] ?? ""),
+          formEntrada:     String(r["Forma Entrada"] ?? ""),
+          geo:             String(r["Geo"] ?? ""),
+          ticket:          r["Ticket (€M)"] ? Number(r["Ticket (€M)"]) * 1e6 : null,
+          dataInici:       String(r["Data Inici"] ?? ""),
+          modalitat:       String(r["Modalitat"] ?? ""),
+        }));
+        onLoad("searchers", mapped);
+        loaded++;
+      }
+      const fmRows = sheet("Fund Meta");
+      if (fmRows?.length) {
+        const mapped = fmRows.map(r => ({
+          fons: String(r["Fons"] ?? ""),
+          tvpi: r["TVPI"] !== "" && r["TVPI"] != null ? Number(r["TVPI"]) : null,
+        }));
+        onLoad("fundMeta", mapped);
+        loaded++;
+      }
+      const kpiRows = sheet("KPIs Trimestral");
+      if (kpiRows?.length) {
+        // Pivoted format: one row per company, columns like "Q1 2023 | Ingressos (€M)"
+        const KPI_MAP = {
+          "Ingressos (€M)":       "rev",
+          "Ing. Pressupost (€M)": "revBudget",
+          "EBITDA (€M)":          "ebitda",
+          "EBITDA Pres. (€M)":    "ebitdaBudget",
+          "Deute Net (€M)":       "dfn",
+          "DFN Pres. (€M)":       "dfnBudget",
+        };
+        const byNom = new Map();
+        kpiRows.forEach(r => {
+          const nom = String(r["Nom"] ?? "");
+          const qMap = new Map();
+          Object.entries(r).forEach(([col, val]) => {
+            const sep = col.indexOf(" | ");
+            if (sep === -1) return;
+            const q = col.slice(0, sep);
+            const metric = col.slice(sep + 3);
+            const key = KPI_MAP[metric];
+            if (!key) return;
+            if (!qMap.has(q)) qMap.set(q, { q });
+            const v = val !== "" && val != null ? Number(val) * 1e6 : null;
+            qMap.get(q)[key] = v;
+          });
+          byNom.set(nom, [...qMap.values()].sort((a, b) => {
+            const [, qa, ya] = a.q.match(/Q(\d) (\d+)/) || [, "0", "0"];
+            const [, qb, yb] = b.q.match(/Q(\d) (\d+)/) || [, "0", "0"];
+            return (+ya * 4 + +qa) - (+yb * 4 + +qb);
+          }));
+        });
+        onLoad("kpiTrimestral", byNom);
+        loaded++;
+      }
+      if (!loaded) throw new Error("No s'ha trobat cap full reconegut (Capital Calls, Pipeline, Participades, Searchers, Fund Meta, KPIs Trimestral).");
+      setXlsxStatus({ name: file.name, sheets: loaded });
+      setError(null);
+    } catch (err) {
+      setError(`Error a ${file.name}: ${err.message}`);
+      setXlsxStatus(null);
+    }
+  };
 
   const readFile = (file, parser, setStatus, key) => {
     if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError("El fitxer és massa gran (màxim 10 MB)."); return; }
     const reader = new FileReader();
     reader.onload = e => {
       try {
@@ -123,6 +263,33 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
         )}
 
         <div style={sty.section}>
+          <span style={sty.label}>Excel (tots els fulls)</span>
+          <div style={sty.desc}>Fitxer exportat: <code>TurtleCapital_Data_*.xlsx</code></div>
+          <div
+            style={sty.dropZone(xlsxDrag)}
+            onDragOver={e=>{e.preventDefault();setXlsxDrag(true);}}
+            onDragLeave={e=>{if(!e.currentTarget.contains(e.relatedTarget))setXlsxDrag(false);}}
+            onDrop={e=>{e.preventDefault();setXlsxDrag(false);const f=e.dataTransfer.files[0];if(f)readXLSX(f);}}
+            onClick={()=>xlsxRef.current.click()}
+          >
+            <input ref={xlsxRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={e=>{if(e.target.files[0])readXLSX(e.target.files[0]);}}/>
+            <span style={{fontSize:20, lineHeight:1}}>📊</span>
+            <div style={{flex:1, minWidth:0}}>
+              {xlsxStatus
+                ? <span style={sty.status}>{xlsxStatus.name} ({xlsxStatus.sheets} fulls carregats)</span>
+                : <span style={{fontSize:12, color:TC.textMid}}>{xlsxDrag ? "Deixa anar el fitxer…" : "Fes clic o arrossega el fitxer Excel aquí"}</span>
+              }
+            </div>
+            <button style={sty.btn} onClick={e=>{e.stopPropagation();xlsxRef.current.click();}}>
+              Seleccionar
+            </button>
+          </div>
+        </div>
+
+        <div style={{ borderTop: `1px solid ${TC.border}`, margin: "4px 0 18px", opacity: 0.5 }}/>
+        <div style={{ ...sty.sub, marginBottom: 14 }}>O carrega cada fitxer CSV individualment:</div>
+
+        <div style={sty.section}>
           <span style={sty.label}>Capital Calls</span>
           <div style={sty.desc}>Fitxer: <code>capital-calls.csv</code></div>
           <DropZone parser={parseCapitalCallsCSV} setStatus={setCcStatus} status={ccStatus}
@@ -160,6 +327,7 @@ function loadFromLS(key, fallback) {
 // ══════════════════════════════════════════════════════════
 function DashboardInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
+  const { signOut } = useAuth();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
@@ -175,6 +343,21 @@ function DashboardInner() {
 
   useEffect(() => {
     fetch("/api/eur-usd").then(r => r.json()).then(({ rate }) => setEurUsd(rate)).catch(() => {});
+  }, []);
+
+  // Load from Supabase on mount (overrides localStorage if data exists)
+  useEffect(() => {
+    loadAll().then(data => {
+      if (!data) return;
+      const now = new Date().toLocaleDateString("ca-ES");
+      if (data.rawCC?.length)    { setRawCC(data.rawCC);   try { localStorage.setItem(LS_CC, JSON.stringify(data.rawCC)); } catch {} }
+      if (data.funds0?.length)   { setFunds0(data.funds0); try { localStorage.setItem(LS_PL, JSON.stringify(data.funds0)); } catch {} }
+      if (data.companies?.length) try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(data.companies)); } catch {}
+      if (data.searchers?.length) try { localStorage.setItem("tc_allSearchers",        JSON.stringify(data.searchers)); } catch {}
+      if (data.fundMeta?.length)  try { localStorage.setItem("tc_fundMeta",            JSON.stringify(data.fundMeta)); } catch {}
+      setLoadedAt(now);
+      try { localStorage.setItem(LS_TS, now); } catch {}
+    });
   }, []);
 
   const [exporting, setExporting] = useState(false);
@@ -198,15 +381,126 @@ function DashboardInner() {
     }
   }, []);
 
+  const exportAll = useCallback(async () => {
+    setExporting(true);
+    try {
+    const ls = (key, fallback) => { try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
+    const companies = ls("tc_portfolioCompanies", PORTFOLIO_COMPANIES);
+    const searchers = ls("tc_allSearchers", ALL_SEARCHERS);
+    const pipeline  = ls("tc_funds0", FUNDS0_DEFAULT);
+    const cc        = ls("tc_rawCC",  RAW_CC_DEFAULT);
+
+    const fundMeta = ls("tc_fundMeta", FUND_META_DEFAULT);
+    const fmtN = v => v != null ? +(v / 1e6).toFixed(3) : "";
+
+    await exportMultiXLSX([
+      {
+        name: "Capital Calls",
+        rows: cc.map(r => ({
+          "Fons": r.fons, "Tipus": r.tipus, "Categoria": r.cat,
+          "Data": r.data, "Mes": r.mes, "Any": r.any, "FY": r.fy,
+          "VCPE": r.vcpe, "Estructura": r.est, "Import (€)": r.eur, "Divisa": r.divisa,
+        })),
+      },
+      {
+        name: "Fund Meta",
+        rows: fundMeta.map(r => ({
+          "Fons": r.fons,
+          "TVPI": r.tvpi ?? "",
+        })),
+      },
+      {
+        name: "Pipeline",
+        rows: pipeline.map(r => ({
+          "ID": r.id, "Nom": r.name, "Import": r.amount, "Divisa": r.currency,
+          "Geo": r.geography, "Estratègia": r.strategy, "Sector": r.sector,
+          "Status": r.status, "Canal": r.canal, "Actiu": r.active ? "1" : "0",
+        })),
+      },
+      {
+        name: "Participades",
+        rows: companies.map(c => ({
+          "Nom": c.nom, "Tipus": c.tipus, "Segment": c.segment || "",
+          "Entrepreneurs": c.entrepreneurs || "", "Origen": c.origen || "", "Geo": c.geo || "",
+          "Ticket (€M)": c.ticket ? +(c.ticket / 1e6).toFixed(3) : "",
+          "TVPI": c.tvpi ?? "", "Ingressos (€M)": c.rev ? +(c.rev / 1e6).toFixed(3) : "",
+          "EBITDA (€M)": c.ebitda ? +(c.ebitda / 1e6).toFixed(3) : "",
+          "Data Compromís": c.dataCompr || "", "Mesos Operant": c.mesosOperant ?? "",
+        })),
+      },
+      (() => {
+        const KPI_FIELDS = [
+          ["Ingressos (€M)",       "rev"],
+          ["Ing. Pressupost (€M)", "revBudget"],
+          ["EBITDA (€M)",          "ebitda"],
+          ["EBITDA Pres. (€M)",    "ebitdaBudget"],
+          ["Deute Net (€M)",       "dfn"],
+          ["DFN Pres. (€M)",       "dfnBudget"],
+        ];
+        // Collect all quarters across all companies, sorted chronologically
+        const allQs = [...new Set(companies.flatMap(c => (c.quarters || []).map(q => q.q)))]
+          .sort((a, b) => {
+            const [, qa, ya] = a.match(/Q(\d) (\d+)/) || [, "0", "0"];
+            const [, qb, yb] = b.match(/Q(\d) (\d+)/) || [, "0", "0"];
+            return (+ya * 4 + +qa) - (+yb * 4 + +qb);
+          });
+        const rows = companies.map(c => {
+          const byQ = Object.fromEntries((c.quarters || []).map(q => [q.q, q]));
+          const row = { "Nom": c.nom };
+          allQs.forEach(q => {
+            const data = byQ[q] || {};
+            KPI_FIELDS.forEach(([label, key]) => {
+              row[`${q} | ${label}`] = fmtN(data[key] ?? null);
+            });
+          });
+          return row;
+        });
+        return { name: "KPIs Trimestral", rows };
+      })(),
+      {
+        name: "Searchers",
+        rows: searchers.map(r => ({
+          "Nom": r.nom || "", "Status": r.statusScreening || "",
+          "Forma Entrada": r.formEntrada || "", "Geo": r.geo || "",
+          "Ticket (€M)": r.ticket ? +(r.ticket / 1e6).toFixed(3) : "",
+          "Data Inici": r.dataInici || "", "Modalitat": r.modalitat || "",
+        })),
+      },
+    ], "TurtleCapital_Data");
+    } finally { setExporting(false); }
+  }, []);
+
   const handleLoad = (key, rows) => {
     const now = new Date().toLocaleDateString("ca-ES");
     if (key === "cc") {
       setRawCC(rows);
       setExcluded(new Set());
       try { localStorage.setItem(LS_CC, JSON.stringify(rows)); } catch {}
-    } else {
+      saveCapitalCalls(rows);
+    } else if (key === "pl") {
       setFunds0(rows);
       try { localStorage.setItem(LS_PL, JSON.stringify(rows)); } catch {}
+      savePipeline(rows);
+    } else if (key === "companies") {
+      try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(rows)); } catch {}
+      saveCompanies(rows);
+    } else if (key === "searchers") {
+      try { localStorage.setItem("tc_allSearchers", JSON.stringify(rows)); } catch {}
+      saveSearchers(rows);
+    } else if (key === "fundMeta") {
+      try { localStorage.setItem("tc_fundMeta", JSON.stringify(rows)); } catch {}
+      saveFundMeta(rows);
+    } else if (key === "kpiTrimestral") {
+      try {
+        const byNom = rows;
+        const existing = JSON.parse(localStorage.getItem("tc_portfolioCompanies") || "null") || PORTFOLIO_COMPANIES;
+        const updated = existing.map(c => {
+          const qs = byNom.get(c.nom);
+          return qs ? { ...c, quarters: qs } : c;
+        });
+        localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated));
+        saveCompanies(updated);
+      } catch {}
     }
     setLoadedAt(now);
     try { localStorage.setItem(LS_TS, now); } catch {}
@@ -356,28 +650,28 @@ function DashboardInner() {
 
   // Dark-aware badge configs
   const vcpeCfg = {
-    "PE": { color:tc.navy,  bg: dark ? "#1A2F45" : "#E8EFF5" },
-    "VC": { color:tc.green, bg: dark ? "#0E2820" : "#E8F4EE" },
+    "PE": { color:tc.navy,  bg: dark ? "#112030" : "#E6EDF3" },
+    "VC": { color:tc.green, bg: dark ? "#0A2010" : "#E8F8E8" },
     "RE": { color:tc.purple||"#9B7CC8", bg: dark ? "#20163A" : "#F3EEF8" },
   };
   const estCfg = {
-    "Fons Primari": { color:tc.navy,      bg: dark ? "#1A2F45" : "#E8EFF5" },
-    "Fons de Fons": { color:tc.greenDark, bg: dark ? "#0A2018" : "#D6EAE0" },
+    "Fons Primari": { color:tc.navy,      bg: dark ? "#112030" : "#E6EDF3" },
+    "Fons de Fons": { color:tc.greenDark, bg: dark ? "#0A2010" : "#E8F8E8" },
     "SOCIMI":       { color:tc.purple||"#9B7CC8", bg: dark ? "#20163A" : "#F3EEF8" },
   };
   const catCfg = {
-    "Capital Call":   { color:tc.navy,      bg: dark ? "#1A2F45" : "#E8EFF5" },
-    "Distribució":    { color:tc.green,     bg: dark ? "#0E2820" : "#E8F5E9" },
-    "Retorn Capital": { color:tc.greenDark, bg: dark ? "#0A2018" : "#D6EAE0" },
-    "Compromís":      { color:tc.navyLight, bg: dark ? "#162535" : "#EAF0F6" },
+    "Capital Call":   { color:tc.navy,      bg: dark ? "#112030" : "#E6EDF3" },
+    "Distribució":    { color:tc.green,     bg: dark ? "#0A2010" : "#E8F8E8" },
+    "Retorn Capital": { color:tc.greenDark, bg: dark ? "#0A2010" : "#D6EAD6" },
+    "Compromís":      { color:tc.navyLight, bg: dark ? "#112030" : "#E6EDF3" },
     "Altres":         { color:tc.textLight, bg: tc.bgAlt },
   };
 
   // Expanded fons row colors
-  const rowExpandBg     = dark ? "#132A1C" : "#F7FBF9";
-  const rowExpandHeader = dark ? "#102018" : "#E8F4EE";
-  const rowExpandAlt    = dark ? "#0E1E16" : "#EFF8F2";
-  const rowExpandBorder = dark ? "#1E4028" : "#E2F0E6";
+  const rowExpandBg     = dark ? "#0E2412" : "#F4FBF4";
+  const rowExpandHeader = dark ? "#0A1E0C" : "#E8F8E8";
+  const rowExpandAlt    = dark ? "#091C0B" : "#F0FBF0";
+  const rowExpandBorder = dark ? "#183820" : "#E0F0E0";
 
   const TABS_CC = [
     {id:"resum",   label:"📊 Resum Anual"},
@@ -388,7 +682,7 @@ function DashboardInner() {
   const SUPRA = [
     {id:"fons",       label:"Fons"},
     {id:"searchers",  label:"Searchers"},
-    {id:"portfolio",  label:"Portfolio Companies"},
+    {id:"portfolio",  label:"Participades"},
     {id:"inversions", label:"Detall per Inversió"},
   ];
   const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":"fons";
@@ -437,9 +731,17 @@ function DashboardInner() {
             ✕
           </button>
         )}
+        <button onClick={exportAll} disabled={exporting}
+          style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:exporting?"not-allowed":"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,opacity:exporting?0.6:1}}>
+          {exporting ? "Exportant…" : "↓ Excel"}
+        </button>
         <button onClick={toggleDark}
           style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:16,color:tc.textMid,fontFamily:"inherit"}}>
           {dark?"☀️":"🌙"}
+        </button>
+        <button onClick={signOut}
+          style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600}}>
+          Sortir
         </button>
       </div>
 
@@ -448,7 +750,7 @@ function DashboardInner() {
         {SUPRA.map(s=>(
           <button key={s.id}
             onClick={()=>{ setTab(s.id==="fons"?"pipeline":s.id==="searchers"?"searchers":s.id==="portfolio"?"portfolio":"inversions"); }}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${supra===s.id?"rgba(255,255,255,0.9)":"transparent"}`,padding:"12px 24px",cursor:"pointer",fontSize:12,fontWeight:supra===s.id?600:400,color:supra===s.id?"#fff":"rgba(255,255,255,0.5)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
+            style={{background:"none",border:"none",borderBottom:`2px solid ${supra===s.id?"rgba(255,255,255,0.9)":"transparent"}`,padding:"12px 24px",cursor:"pointer",fontSize:12,fontWeight:supra===s.id?600:400,color:supra===s.id?"#fff":"rgba(255,255,255,0.5)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s, transform 0.1s cubic-bezier(0.23,1,0.32,1), opacity 0.1s ease",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
             {s.label}
           </button>
         ))}
@@ -475,7 +777,7 @@ function DashboardInner() {
       {/* ── Sub-tabs (Inversions) ── */}
       {supra==="inversions"&&(
       <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex"}}>
-        {[{id:"fons",label:"Fons"},{id:"companies",label:"Empreses"}].map(s=>(
+        {[{id:"fons",label:"Fons"},{id:"companies",label:"Participades"}].map(s=>(
           <button key={s.id} onClick={()=>setInversionsSubTab(s.id)}
             style={{background:"none",border:"none",borderBottom:`2px solid ${inversionsSubTab===s.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:inversionsSubTab===s.id?600:400,color:inversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
             {s.label}
@@ -490,7 +792,7 @@ function DashboardInner() {
         <div style={{display:"flex",flex:1}}>
           {TABS_FONS.map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)}
-              style={{background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
+              style={{background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s, transform 0.1s cubic-bezier(0.23,1,0.32,1), opacity 0.1s ease",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
               {t.label}
             </button>
           ))}
@@ -612,7 +914,7 @@ function DashboardInner() {
                 <b style={{color:tc.navy}}>{filtered.length}</b> mov. ·
                 Cridat <b style={{color:tc.navy}}>{fmtS(fCalls)}</b> ·
                 Rebut <b style={{color:tc.green}}>{fmtS(fDist)}</b>
-                {anyFilter&&<span style={{marginLeft:6,fontSize:10,color:tc.green,background:dark?"#0E2820":"#E8F4EE",padding:"1px 7px",borderRadius:4,fontWeight:600}}>FILTRE ACTIU</span>}
+                {anyFilter&&<span style={{marginLeft:6,fontSize:10,color:tc.green,background:dark?"#0A2010":"#E8F8E8",padding:"1px 7px",borderRadius:4,fontWeight:600}}>FILTRE ACTIU</span>}
               </div>
             </div>
           </>
@@ -689,7 +991,7 @@ function DashboardInner() {
             return Object.entries(m).map(([name,value])=>({name,value:+value.toFixed(0),pct:((value/tot)*100).toFixed(1)}));
           })();
 
-          const greenBadgeBg = dark ? "#0E2820" : "#E8F4EE";
+          const greenBadgeBg = dark ? "#0A2010" : "#E8F8E8";
 
           return (
           <div className="tab-panel">
@@ -789,8 +1091,8 @@ function DashboardInner() {
                       <th style={{...th,textAlign:"right",cursor:"pointer"}} onClick={()=>sortFonsBy("retorn")}>Retorn Capital<FAr k="retorn"/></th>
                       <th style={{...th,textAlign:"right",cursor:"pointer"}} onClick={()=>sortFonsBy("rebut")}>Total Rebut<FAr k="rebut"/></th>
                       <th style={{...th,textAlign:"right",cursor:"pointer"}} onClick={()=>sortFonsBy("net")}>Flux Net<FAr k="net"/></th>
-                      <th style={{...th,cursor:"pointer"}} onClick={()=>sortFonsBy("vcpe")}>Tipus<FAr k="vcpe"/></th>
-                      <th style={{...th,cursor:"pointer"}} onClick={()=>sortFonsBy("est")}>Estratègia<FAr k="est"/></th>
+                      <th style={{...th,cursor:"pointer"}} onClick={()=>sortFonsBy("vcpe")} title="Venture Capital / Private Equity">Tipus<FAr k="vcpe"/></th>
+                      <th style={{...th,cursor:"pointer"}} onClick={()=>sortFonsBy("est")} title="Estructura del fons">Estratègia<FAr k="est"/></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -932,8 +1234,8 @@ function DashboardInner() {
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead>
                   <tr style={{background:tc.bgAlt}}>
-                    {[{k:"data",l:"Data"},{k:"fons",l:"Fons"},{k:"tipus",l:"Tipus"},{k:"cat",l:"Categoria"},{k:"eur",l:"Import EUR",right:true},{k:"fy",l:"FY"},{k:"vcpe",l:"VC/PE"},{k:"est",l:"Estratègia"}].map(h=>(
-                      <th key={h.k} onClick={()=>sortTx(h.k)} style={{...th,textAlign:h.right?"right":"left",cursor:"pointer"}}>
+                    {[{k:"data",l:"Data"},{k:"fons",l:"Fons"},{k:"tipus",l:"Tipus"},{k:"cat",l:"Categoria"},{k:"eur",l:"Import EUR",right:true},{k:"fy",l:"FY"},{k:"vcpe",l:"VC/PE",title:"Venture Capital / Private Equity"},{k:"est",l:"Estratègia",title:"Estructura del fons"}].map(h=>(
+                      <th key={h.k} onClick={()=>sortTx(h.k)} title={h.title} style={{...th,textAlign:h.right?"right":"left",cursor:"pointer"}}>
                         {h.l}<TArr k={h.k}/>
                       </th>
                     ))}

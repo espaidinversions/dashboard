@@ -173,9 +173,9 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
     { k: "compromis", label: "Compromís",align: "right" },
     { k: "cridat",    label: "Cridat",   align: "right" },
     { k: "utilizat",  label: "Utilizat", align: "right" },
-    { k: "tvpi",      label: "TVPI",     align: "right" },
-    { k: "dpi",       label: "DPI",      align: "right" },
-    { k: "rvpi",      label: "RVPI",     align: "right" },
+    { k: "tvpi",      label: "TVPI",     align: "right", title: "Total Value to Paid-In" },
+    { k: "dpi",       label: "DPI",      align: "right", title: "Distributions to Paid-In" },
+    { k: "rvpi",      label: "RVPI",     align: "right", title: "Residual Value to Paid-In" },
   ];
 
   return (
@@ -203,8 +203,8 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: tc.bgAlt }}>
-                  {COLS.map(({ k, label, align }) => (
-                    <th key={k} onClick={() => toggleSort(k)}
+                  {COLS.map(({ k, label, align, title }) => (
+                    <th key={k} onClick={() => toggleSort(k)} title={title}
                       style={{ padding: "10px 12px", textAlign: align, fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                       {label}<SortArrow k={k} />
                     </th>
