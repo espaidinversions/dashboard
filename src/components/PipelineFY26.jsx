@@ -1,4 +1,6 @@
-import React, { useState, useMemo, useEffect, useRef } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import * as XLSX from "xlsx";
+import { usePersistedState } from "../utils.js";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   Cell, PieChart, Pie, Legend
@@ -6,8 +8,20 @@ import {
 import { useTheme } from "../theme.js";
 import { FUNDS0 as FUNDS0_DEFAULT, EUR_USD as EUR_USD_DEFAULT, STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE } from "../config.js";
 import { EmptyState } from "./SharedComponents.jsx";
+import { useAuth } from "../auth.jsx";
+import { insertPipelineDeal, deletePipelineDeal, upsertPipelineDeal } from "../db.js";
 
-const MONTHS_OPTS = ["","Jan 2026","Feb 2026","Mar 2026","Apr 2026","May 2026","Jun 2026","Jul 2026","Aug 2026","Sep 2026","Oct 2026","Nov 2026","Dec 2026","Jan 2027","Feb 2027","Mar 2027","Apr 2027","May 2027","Jun 2027","Jul 2027","Aug 2027","Sep 2027","Oct 2027","Nov 2027","Dec 2027","Jan 2028","Feb 2028","Mar 2028","Apr 2028","May 2028","Jun 2028"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function genMonthOpts(months = 36) {
+  const now = new Date();
+  const opts = [""];
+  for (let i = 0; i < months; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    opts.push(`${MON[d.getMonth()]} ${d.getFullYear()}`);
+  }
+  return opts;
+}
+const MONTHS_OPTS = genMonthOpts(36);
 
 function EditableSelect({value,onChange}) {
   const { tc: TC } = useTheme();
@@ -29,42 +43,35 @@ function EditableSelect({value,onChange}) {
 
 // ══════════════════════════════════════════════════════════
 export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_DEFAULT }) {
-  const toEUR = (a, c) => c === "USD" ? a / eurUsd : a;
-  const toUSD = (a, c) => c === "EUR" ? a * eurUsd : a;
+  const rate  = eurUsd || EUR_USD_DEFAULT;
+  const toEUR = (a, c) => c === "USD" ? a / rate : a;
+  const toUSD = (a, c) => c === "EUR" ? a * rate : a;
   const { tc: TC, dark } = useTheme();
+  const { isSuperuser } = useAuth();
   const [funds,setFunds]   = useState(initialFunds);
   useEffect(()=>{ setFunds(initialFunds); },[initialFunds]);
 
-  // Auto-save to server whenever funds change (skip initial mount)
-  const isMount = useRef(true);
-  const saveTimer = useRef(null);
-  useEffect(()=>{
-    if(isMount.current){ isMount.current=false; return; }
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(()=>{
-      fetch("/api/pipeline",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(funds)}).catch(()=>{});
-    }, 600);
-  },[funds]);
-  const [cur,setCur]       = useState("EUR");
+  const [cur,setCur]       = usePersistedState("pl_cur", "EUR");
   const [nf,setNf]         = useState({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",estimatedClosing:""});
   const [form,setForm]     = useState(false);
-  const [fGeo,setFGeo]     = useState("Tots");
-  const [fStr,setFStr]     = useState("Tots");
-  const [fStat,setFStat]   = useState("Tots");
-  const [fCanal,setFCanal] = useState("Tots");
-  const [fAct,setFAct]     = useState("Tots");
+  const [fGeo,setFGeo]     = usePersistedState("pl_fGeo",  "Tots");
+  const [fStr,setFStr]     = usePersistedState("pl_fStr",  "Tots");
+  const [fStat,setFStat]   = usePersistedState("pl_fStat", "Tots");
+  const [fCanal,setFCanal] = usePersistedState("pl_fCanal","Tots");
+  const [fAct,setFAct]     = usePersistedState("pl_fAct",  "Tots");
   const [chartF,setChartF] = useState(null);
-  const [sk,setSk]         = useState("name");
-  const [sd,setSd]         = useState("asc");
+  const [sk,setSk]         = usePersistedState("pl_sk", "name");
+  const [sd,setSd]         = usePersistedState("pl_sd", "asc");
 
   const cv  = (a,c) => cur==="EUR"?toEUR(a,c):toUSD(a,c);
   const sym = cur==="EUR"?"€":"$";
   const active = useMemo(()=>funds.filter(f=>f.active),[funds]);
-  const total  = useMemo(()=>active.reduce((s,f)=>s+cv(f.amount,f.currency),0),[active,cur,funds]);
+  const amt = f => f.amount || 0.33;
+  const total  = useMemo(()=>active.reduce((s,f)=>s+cv(amt(f),f.currency),0),[active,cur,funds]);
 
   const agg = (fn,src) => {
     const m={};
-    src.forEach(f=>{const k=fn(f);m[k]=(m[k]||0)+toEUR(f.amount,f.currency);});
+    src.forEach(f=>{const k=fn(f);m[k]=(m[k]||0)+toEUR(amt(f),f.currency);});
     return Object.entries(m).map(([name,value])=>({name,value:+value.toFixed(2)}));
   };
   const byGeo  = useMemo(()=>agg(f=>f.geography,              funds.filter(f=>f.active)),[funds]);
@@ -105,13 +112,34 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
   const sort=(k)=>{if(sk===k)setSd(d=>d==="asc"?"desc":"asc");else{setSk(k);setSd("asc");}};
   const Arr=({k})=><span style={{marginLeft:3,opacity:sk===k?1:0.2,fontSize:9}}>{sk===k&&sd==="desc"?"▼":"▲"}</span>;
   const toggle=(id)=>setFunds(p=>p.map(f=>f.id===id?{...f,active:!f.active}:f));
-  const del=(id)=>setFunds(p=>p.filter(f=>f.id!==id));
-  const upd=(id,field,val)=>setFunds(p=>p.map(f=>f.id===id?{...f,[field]:val}:f));
-  const add=()=>{
-    if(!nf.name||!nf.amount)return;
-    setFunds(p=>[...p,{...nf,id:Date.now(),amount:parseFloat(nf.amount),active:true}]);
-    setNf({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",estimatedClosing:""});
-    setForm(false);
+  const del = async (id) => {
+    await deletePipelineDeal(id);
+    setFunds(p => p.filter(f => f.id !== id));
+  };
+
+  const upd = async (id, field, val) => {
+    let updatedDeal = null;
+    setFunds(p => {
+      const next = p.map(f => {
+        if (f.id !== id) return f;
+        updatedDeal = { ...f, [field]: val };
+        return updatedDeal;
+      });
+      return next;
+    });
+    if (updatedDeal) await upsertPipelineDeal(updatedDeal);
+  };
+
+  const add = async (nf) => {
+    const deal = {
+      name: nf.name, amount: parseFloat(nf.amount) || 0,
+      currency: nf.currency, geography: nf.geography,
+      strategy: nf.strategy, sector: nf.sector,
+      status: nf.status, canal: nf.canal,
+      active: true, estimatedClosing: nf.estimatedClosing ?? null,
+    };
+    const inserted = await insertPipelineDeal(deal);
+    if (inserted) setFunds(p => [inserted, ...p]);
   };
 
   const inp2={border:`1px solid ${TC.border}`,borderRadius:5,padding:"7px 10px",fontSize:13,color:TC.text,background:TC.card,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"};
@@ -158,7 +186,7 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
     );
   }
 
-  const greenBadgeBg = dark ? "#0E2820" : "#E8F4EE";
+  const greenBadgeBg = dark ? "#0A2010" : "#E8F8E8";
   const CPie = ({data,colors,type,title}) => (
     <div style={{background:TC.card,border:`1.5px solid ${chartF?.type===type?TC.green:TC.border}`,borderRadius:10,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.08)",transition:"border-color 0.2s"}}>
       <div style={{fontSize:10,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -166,7 +194,7 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
       </div>
       <ResponsiveContainer width="100%" height={165}>
         <PieChart>
-          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={62} labelLine={false} label={PipPL}>
+          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={62} labelLine={false} label={PipPL} isAnimationActive={false}>
             {data.map((e,j)=>(
               <Cell key={j} fill={colors[e.name]||TC.navyLight} opacity={isHl(type,e.name)?1:0.3}
                 stroke={chartF?.type===type&&chartF?.value===e.name?"#fff":"none"} strokeWidth={2}
@@ -188,6 +216,32 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
         <p style={{color:TC.green,margin:"3px 0 0",fontSize:13}}>€{payload[0].value.toFixed(2)}M</p>
       </div>
     );
+  };
+
+  const exportExcel = () => {
+    const rows = funds.map(f => ({
+      "Nom":              f.name,
+      "Compromís (orig)": f.amount,
+      "Moneda":           f.currency,
+      "Compromís (€M)":   +toEUR(amt(f), f.currency).toFixed(3),
+      "Compromís ($M)":   +toUSD(amt(f), f.currency).toFixed(3),
+      "Geografia":        f.geography,
+      "Estratègia":       f.strategy,
+      "Sector":           f.sector,
+      "Status":           f.status,
+      "Canal":            f.canal,
+      "Tancament Est.":   f.estimatedClosing || "",
+      "Actiu":            f.active ? "Sí" : "No",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    // Column widths
+    ws["!cols"] = [
+      {wch:28},{wch:14},{wch:9},{wch:15},{wch:15},
+      {wch:10},{wch:18},{wch:18},{wch:14},{wch:18},{wch:16},{wch:8},
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Pipeline FY26");
+    XLSX.writeFile(wb, `Pipeline_FY26_${new Date().toISOString().slice(0,10)}.xlsx`);
   };
 
   return (
@@ -226,7 +280,7 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
               <XAxis type="number" tick={{fill:TC.textLight,fontSize:10}} axisLine={false} tickLine={false}/>
               <YAxis type="category" dataKey="name" width={90} tick={{fill:TC.textMid,fontSize:10}} axisLine={false} tickLine={false}/>
               <Tooltip content={<PipBarTip/>}/>
-              <Bar dataKey="value" radius={[0,4,4,0]} cursor="pointer">
+              <Bar dataKey="value" radius={[0,4,4,0]} cursor="pointer" isAnimationActive={false}>
                 {bySec.map((e,i)=><Cell key={i} fill={SECCOL[e.name]||TC.navy} opacity={isHl("sec",e.name)?1:0.3}/>)}
               </Bar>
             </BarChart>
@@ -253,7 +307,8 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
                 </select>
               </div>
             ))}
-            <button onClick={()=>setForm(!form)} style={{background:TC.green,border:"none",color:"#fff",borderRadius:5,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>+ Afegir Fons</button>
+            <button onClick={exportExcel} style={{background:"transparent",border:`1.5px solid ${TC.border}`,color:TC.textMid,borderRadius:5,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit"}}>↓ Excel</button>
+            {isSuperuser && <button onClick={()=>setForm(!form)} style={{background:TC.green,border:"none",color:"#fff",borderRadius:5,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>+ Afegir Fons</button>}
           </div>
         </div>
         {form&&(
@@ -280,7 +335,12 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
               ))}
               <div>
                 <div style={{fontSize:10,color:"transparent",marginBottom:3}}>·</div>
-                <button onClick={add} style={{background:TC.navy,border:"none",color:"#fff",borderRadius:5,padding:"8px 12px",cursor:"pointer",fontSize:14,fontWeight:700,width:"100%",fontFamily:"inherit"}}>✓</button>
+                <button onClick={async ()=>{
+                  if(!nf.name||!nf.amount)return;
+                  await add(nf);
+                  setNf({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",estimatedClosing:""});
+                  setForm(false);
+                }} style={{background:TC.navy,border:"none",color:"#fff",borderRadius:5,padding:"8px 12px",cursor:"pointer",fontSize:14,fontWeight:700,width:"100%",fontFamily:"inherit"}}>✓</button>
               </div>
             </div>
           </div>
@@ -318,12 +378,12 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>
                   <td style={{padding:"9px 10px",fontSize:12,color:TC.textMid,whiteSpace:"nowrap"}}>{f.sector}</td>
-                  <td style={{padding:"9px 10px"}}><EditCell value={f.status} options={["En estudi","Aprovat","Descartat"]} cfg={STATUS_CFG} onChange={v=>upd(f.id,"status",v)}/></td>
-                  <td style={{padding:"9px 10px"}}><EditCell value={f.canal} options={["Arcano","Placement Agent","Propietari","Altres"]} cfg={CANAL_CFG} onChange={v=>upd(f.id,"canal",v)}/></td>
-                  <td style={{padding:"9px 10px"}}><EditableSelect value={f.estimatedClosing||""} onChange={v=>upd(f.id,"estimatedClosing",v)}/></td>
+                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditCell value={f.status} options={["En estudi","Aprovat","Descartat"]} cfg={STATUS_CFG} onChange={v=>upd(f.id,"status",v)}/> : <span style={{display:"block"}}>{f.status}</span>}</td>
+                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditCell value={f.canal} options={["Arcano","Placement Agent","Propietari","Altres"]} cfg={CANAL_CFG} onChange={v=>upd(f.id,"canal",v)}/> : <span style={{display:"block"}}>{f.canal}</span>}</td>
+                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditableSelect value={f.estimatedClosing||""} onChange={v=>upd(f.id,"estimatedClosing",v)}/> : <span>{f.estimatedClosing||""}</span>}</td>
                   <td style={{padding:"9px 10px"}}>
-                    <button onClick={()=>del(f.id)} style={{background:"transparent",border:"none",color:TC.border,cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}
-                      onMouseEnter={e=>e.target.style.color="#C0392B"} onMouseLeave={e=>e.target.style.color=TC.border}>×</button>
+                    {isSuperuser && <button onClick={()=>del(f.id)} style={{background:"transparent",border:"none",color:TC.border,cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}
+                      onMouseEnter={e=>e.target.style.color="#C0392B"} onMouseLeave={e=>e.target.style.color=TC.border}>×</button>}
                   </td>
                 </tr>
               ))}
