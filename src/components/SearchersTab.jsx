@@ -4,7 +4,7 @@ import {
 } from "recharts";
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
-import { fmtM } from "../utils.js";
+import { fmtM, calcMesos, mesosColor, mesosBg } from "../utils.js";
 import { GEO_NAME, SEARCHER_STATUS_CFG } from "../config.js";
 import { ACTIVE_SEARCHERS, ALL_SEARCHERS, PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { FlagImg, FlagSvgLabel, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
@@ -24,25 +24,6 @@ const StatusBadge = ({ s }) => {
       fontSize:10, fontWeight:600, whiteSpace:"nowrap",
     }}>{s || "—"}</span>
   );
-};
-
-// ── Mesos cercant helpers ──────────────────────────────────
-const today = new Date();
-const calcMesos = iso => {
-  if (!iso) return 0;
-  const d = new Date(iso);
-  return Math.max(0, (today.getFullYear() - d.getFullYear()) * 12 + (today.getMonth() - d.getMonth()));
-};
-// green (0 months) → red (24 months)
-const mesosColor = m => {
-  const pct = Math.min(m / 24, 1); // 0→green, 1→red
-  const hue = Math.round((1 - pct) * 130);  // 130=green, 0=red
-  return `hsl(${hue},60%,38%)`;
-};
-const mesosBg = m => {
-  const pct = Math.min(m / 24, 1);
-  const hue = Math.round((1 - pct) * 130);
-  return `hsl(${hue},60%,94%)`;
 };
 
 const fmtDate = iso => {

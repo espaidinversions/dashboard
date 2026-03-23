@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
 } from "recharts";
 import { useTheme } from "../theme.js";
-import { fmtM, slugify } from "../utils.js";
+import { fmtM, slugify, tvpiColor, tvpiBg } from "../utils.js";
 import { GEO_NAME } from "../config.js";
 import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { FlagImg, FlagSvgLabel, EditableCell, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
@@ -22,20 +22,6 @@ const ORIG_COLORS = {
   "Direct PE":     "#6A4C8A",
 };
 const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D","#2563A8","#8A6400","#007A8A"];
-
-// TVPI colour helpers
-const tvpiColor = t => {
-  if (t == null) return "#999";
-  if (t < 1.0)  return "#C62828";
-  if (t < 1.5)  return "#7A6000";
-  return "#1C6B1D";
-};
-const tvpiBg = t => {
-  if (t == null) return "#F5F5F5";
-  if (t < 1.0)  return "#FDECEA";
-  if (t < 1.5)  return "#FFF8E1";
-  return "#E8F8E8";
-};
 
 function CenterLabel({ viewBox, value, sub, tc }) {
   const { cx, cy } = viewBox;

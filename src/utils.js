@@ -95,10 +95,62 @@ export function usePersistedState(key, defaultValue, { isSet = false } = {}) {
   return [value, setValue];
 }
 
+// ── Excel export ──────────────────────────────────────────
+export async function exportXLSX(rows, sheetName, filename) {
+  const XLSX = await import("xlsx");
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
+// sheets: [{ name, rows }]
+export async function exportMultiXLSX(sheets, filename) {
+  const XLSX = await import("xlsx");
+  const wb = XLSX.utils.book_new();
+  for (const { name, rows } of sheets) {
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  }
+  XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+}
+
 // ── Slug utility ──────────────────────────────────────────
 export function slugify(str) {
   return String(str).toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/(^-|-$)/g, '');
+}
+
+// ── TVPI colour helpers ────────────────────────────────────
+export function tvpiColor(t) {
+  if (t == null) return "#999";
+  if (t < 1.0)  return "#C62828";
+  if (t < 1.5)  return "#7A6000";
+  return "#1C6B1D";
+}
+export function tvpiBg(t) {
+  if (t == null) return "#F5F5F5";
+  if (t < 1.0)  return "#FDECEA";
+  if (t < 1.5)  return "#FFF8E1";
+  return "#E8F8E8";
+}
+
+// ── Mesos cercant helpers ──────────────────────────────────
+export function calcMesos(iso) {
+  if (!iso) return 0;
+  const today = new Date();
+  const d = new Date(iso);
+  return Math.max(0, (today.getFullYear() - d.getFullYear()) * 12 + (today.getMonth() - d.getMonth()));
+}
+export function mesosColor(m) {
+  const pct = Math.min(m / 24, 1);
+  const hue = Math.round((1 - pct) * 130);
+  return `hsl(${hue},60%,38%)`;
+}
+export function mesosBg(m) {
+  const pct = Math.min(m / 24, 1);
+  const hue = Math.round((1 - pct) * 130);
+  return `hsl(${hue},60%,94%)`;
 }
