@@ -47,6 +47,7 @@ function DashboardInner() {
   const [showLoader, setShowLoader] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
   const [inversionsSubTab, setInversionsSubTab] = useState("fons");
+  const [realEstateTab, setRealEstateTab] = useState("directe");
 
   // Dades dinàmiques (localStorage → static fallback)
   const [rawCC,   setRawCC]   = useState(()=>loadFromLS(LS_CC, RAW_CC_DEFAULT));
@@ -500,7 +501,7 @@ function DashboardInner() {
       )}
 
       {/* ── Sub-toolbar (Searchers) ── */}
-      {supra==="searchers"&&(
+      {section==="alternatives"&&supra==="searchers"&&(
       <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",justifyContent:"flex-end",alignItems:"center",minHeight:44}}>
         <button
           style={{background:"transparent",color:tc.textMid,border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"6px 14px",cursor:"default",fontSize:11,fontFamily:"inherit",opacity:0.6}}
@@ -511,14 +512,14 @@ function DashboardInner() {
       )}
 
       {/* ── Sub-toolbar (Portfolio) ── */}
-      {supra==="portfolio"&&(
+      {section==="alternatives"&&supra==="portfolio"&&(
       <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",justifyContent:"flex-end",alignItems:"center",minHeight:44}}>
         <span style={{fontSize:11,color:tc.textLight}}>21 empreses en cartera</span>
       </div>
       )}
 
       {/* ── Sub-tabs (Inversions) ── */}
-      {supra==="inversions"&&(
+      {section==="alternatives"&&supra==="inversions"&&(
       <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex"}}>
         {[{id:"fons",label:"Fons"},{id:"companies",label:"Participades"}].map(s=>(
           <button key={s.id} onClick={()=>setInversionsSubTab(s.id)}
@@ -529,8 +530,20 @@ function DashboardInner() {
       </div>
       )}
 
+      {/* ── Sub-tabs (Real Estate) ── */}
+      {section==="real-estate"&&(
+      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0}}>
+        {[{id:"directe",label:"Directe"},{id:"altres-vehicles",label:"Altres Vehicles"}].map(t=>(
+          <button key={t.id} onClick={()=>setRealEstateTab(t.id)}
+            style={{background:"none",border:"none",borderBottom:`2px solid ${realEstateTab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:realEstateTab===t.id?600:400,color:realEstateTab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      )}
+
       {/* ── Sub-tabs (Fons only) ── */}
-      {supra==="fons"&&(
+      {section==="alternatives"&&supra==="fons"&&(
       <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0,alignItems:"center"}}>
         <div style={{display:"flex",flex:1}}>
           {TABS_FONS.map(t=>(
@@ -575,10 +588,17 @@ function DashboardInner() {
 
         {/* ── ALTERNATIVES ── */}
         {tab==="mercats-publics"&&<div className="tab-panel"><PublicMarketsTab/></div>}
-        {tab==="real-estate"&&(
+        {tab==="real-estate"&&realEstateTab==="directe"&&(
           <div className="tab-panel" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 0",gap:12}}>
             <div style={{fontSize:32}}>🏗️</div>
-            <div style={{fontSize:16,fontWeight:700,color:tc.navy}}>Real Estate</div>
+            <div style={{fontSize:16,fontWeight:700,color:tc.navy}}>Real Estate · Directe</div>
+            <div style={{fontSize:13,color:tc.textLight}}>Pròximament</div>
+          </div>
+        )}
+        {tab==="real-estate"&&realEstateTab==="altres-vehicles"&&(
+          <div className="tab-panel" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 0",gap:12}}>
+            <div style={{fontSize:32}}>🏗️</div>
+            <div style={{fontSize:16,fontWeight:700,color:tc.navy}}>Real Estate · Altres Vehicles</div>
             <div style={{fontSize:13,color:tc.textLight}}>Pròximament</div>
           </div>
         )}
