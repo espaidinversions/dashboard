@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
 } from "recharts";
 import { useTheme } from "../theme.js";
-import { fmtM, slugify, tvpiColor, tvpiBg } from "../utils.js";
+import { fmtM, slugify, tvpiColor, tvpiBg, usePersistedState } from "../utils.js";
 import { GEO_NAME } from "../config.js";
 import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { FlagImg, FlagSvgLabel, EditableCell, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
@@ -49,10 +49,7 @@ export function PortfolioCompaniesTab({ search = "" }) {
   const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap" };
   const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
 
-  const [companies, setCompanies] = useState(() => {
-    try { const s = localStorage.getItem("tc_portfolioCompanies"); return s ? JSON.parse(s) : PORTFOLIO_COMPANIES; }
-    catch { return PORTFOLIO_COMPANIES; }
-  });
+  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", PORTFOLIO_COMPANIES);
   const fileRef = useRef(null);
 
   const handleFile = e => {
@@ -64,7 +61,6 @@ export function PortfolioCompaniesTab({ search = "" }) {
         const data = JSON.parse(ev.target.result);
         if (Array.isArray(data) && data.length) {
           setCompanies(data);
-          try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(data)); } catch {}
         }
       } catch {}
     };
@@ -72,17 +68,13 @@ export function PortfolioCompaniesTab({ search = "" }) {
     e.target.value = "";
   };
 
-  const resetCompanies = () => {
-    setCompanies(PORTFOLIO_COMPANIES);
-    localStorage.removeItem("tc_portfolioCompanies");
-  };
+  const resetCompanies = () => { setCompanies(PORTFOLIO_COMPANIES); };
 
   const hasCustomData = companies !== PORTFOLIO_COMPANIES && companies.length !== PORTFOLIO_COMPANIES.length;
 
   const saveField = async (nom, field, value) => {
     const updated = companies.map(c => c.nom === nom ? { ...c, [field]: value } : c);
     setCompanies(updated);
-    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated)); } catch {}
     const company = updated.find(c => c.nom === nom);
     if (company) {
       const { error } = await upsertCompany(company);
@@ -107,18 +99,14 @@ export function PortfolioCompaniesTab({ search = "" }) {
     };
     const inserted = await insertCompany(company);
     if (!inserted) { setError("Error en crear l'empresa"); return; }
-    const updated = [inserted, ...companies];
-    setCompanies(updated);
-    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated)); } catch {}
+    setCompanies([inserted, ...companies]);
     setShowAddModal(false);
   };
 
   const handleDelete = async (id, nom) => {
     const { error } = await deleteCompany(id);
     if (error) { toast({ message: "Error eliminant empresa: " + error.message, type: "error" }); return; }
-    const updated = companies.filter(c => c.nom !== nom);
-    setCompanies(updated);
-    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated)); } catch {}
+    setCompanies(companies.filter(c => c.nom !== nom));
     toast({ message: `"${nom}" eliminada.` });
   };
 

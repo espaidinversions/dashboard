@@ -4,7 +4,7 @@ import {
 } from "recharts";
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
-import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV } from "../utils.js";
+import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState } from "../utils.js";
 import { GEO_NAME, SEARCHER_STATUS_CFG } from "../config.js";
 import { ACTIVE_SEARCHERS, ALL_SEARCHERS, PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { FlagImg, FlagSvgLabel, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
@@ -49,10 +49,7 @@ export function SearchersTab({ search = "" }) {
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const [historicData, setHistoricData] = useState(() => {
-    try { const s = localStorage.getItem("tc_allSearchers"); return s ? JSON.parse(s) : ALL_SEARCHERS; }
-    catch { return ALL_SEARCHERS; }
-  });
+  const [historicData, setHistoricData] = usePersistedState("tc_allSearchers", ALL_SEARCHERS);
   const [histFilter, setHistFilter]     = useState({ status:"Tots", geo:"Tots", entrada:"Tots" });
   const [histSort, setHistSort]         = useState({ k:"nom", d:"asc" });
   const csvRef = useRef(null);
@@ -183,7 +180,6 @@ export function SearchersTab({ search = "" }) {
             escola1: r.escola1||"", escola2: r.escola2||"",
           }));
           setHistoricData(mapped);
-          try { localStorage.setItem("tc_allSearchers", JSON.stringify(mapped)); } catch {}
         }
       } catch {}
     };
@@ -191,10 +187,7 @@ export function SearchersTab({ search = "" }) {
     e.target.value = "";
   };
 
-  const resetSearchers = () => {
-    setHistoricData(ALL_SEARCHERS);
-    localStorage.removeItem("tc_allSearchers");
-  };
+  const resetSearchers = () => { setHistoricData(ALL_SEARCHERS); };
 
   const hasCustomSearchers = historicData !== ALL_SEARCHERS && historicData.length !== ALL_SEARCHERS.length;
 
@@ -204,7 +197,6 @@ export function SearchersTab({ search = "" }) {
   const saveSearcherField = async (id, field, value) => {
     const updated = historicData.map(s => s.id === id ? { ...s, [field]: value } : s);
     setHistoricData(updated);
-    try { localStorage.setItem("tc_allSearchers", JSON.stringify(updated)); } catch {}
     const searcher = updated.find(s => s.id === id);
     if (searcher) {
       const { error } = await upsertSearcher(searcher);
@@ -230,18 +222,14 @@ export function SearchersTab({ search = "" }) {
     };
     const inserted = await insertSearcher(searcher);
     if (!inserted) { setError("Error en crear el searcher"); return; }
-    const updated = [inserted, ...historicData];
-    setHistoricData(updated);
-    try { localStorage.setItem("tc_allSearchers", JSON.stringify(updated)); } catch {}
+    setHistoricData([inserted, ...historicData]);
     setShowAddModal(false);
   };
 
   const handleDeleteSearcher = async (id) => {
     const { error } = await deleteSearcher(id);
     if (error) { toast({ message: "Error eliminant searcher: " + error.message, type: "error" }); return; }
-    const updated = historicData.filter(s => s.id !== id);
-    setHistoricData(updated);
-    try { localStorage.setItem("tc_allSearchers", JSON.stringify(updated)); } catch {}
+    setHistoricData(historicData.filter(s => s.id !== id));
     toast({ message: "Searcher eliminat." });
   };
 
