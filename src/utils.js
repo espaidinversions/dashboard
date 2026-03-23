@@ -256,6 +256,12 @@ export function mapKpiRows(rows) {
   return byNom;
 }
 
+/** Returns the number of years between an ISO date string and now. */
+export function yearsHeld(dataCompra) {
+  if (!dataCompra) return 0;
+  return (Date.now() - new Date(dataCompra).getTime()) / (365.25 * 24 * 3600 * 1000);
+}
+
 export function parseSearchersCSV(text) {
   const lines = text.trim().split("\n");
   const header = lines[0].split(",");
