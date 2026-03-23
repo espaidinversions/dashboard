@@ -631,7 +631,7 @@ function DashboardInner() {
         )}
 
         {/* ── CAPITAL CALLS: KPIs ── */}
-        {supra==="fons"&&tab!=="pipeline"&&(
+        {section==="alternatives"&&supra==="fons"&&tab!=="pipeline"&&(
           <>
             {excluded.size>0&&(
               <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:tc.yellowLight,border:`1.5px solid ${tc.yellow}`,borderRadius:8,padding:"9px 16px"}}>
