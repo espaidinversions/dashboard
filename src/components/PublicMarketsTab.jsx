@@ -29,6 +29,10 @@ const AREA_COLORS = {
   andbank: "#7A6000",
 };
 
+// ── Module-level manager values (static, never change) ──────
+const wamVal     = PM_MANAGERS.find(m => m.id === "wam").valorActual;
+const andbankVal = PM_MANAGERS.find(m => m.id === "andbank").valorActual;
+
 // ── Local helpers ──────────────────────────────────────────
 function KpiCard({ label, value, sub, tc, valueColor }) {
   return (
@@ -93,9 +97,6 @@ export function PublicMarketsTab() {
   , []);
 
   // ── Chart data ─────────────────────────────────────────
-  const wamVal     = PM_MANAGERS.find(m => m.id === "wam").valorActual;
-  const andbankVal = PM_MANAGERS.find(m => m.id === "andbank").valorActual;
-
   const chartData = useMemo(() => PM_MONTHLY.map(d => {
     if (chartView === "total") return {
       label: d.label,
@@ -115,7 +116,7 @@ export function PublicMarketsTab() {
       wam:     wamVal,
       andbank: andbankVal,
     };
-  }), [chartView, wamVal, andbankVal]);
+  }), [chartView]);
 
   // ── Performance bar data — null → undefined so Recharts skips bar ──
   const perfData = useMemo(() =>
@@ -213,11 +214,11 @@ export function PublicMarketsTab() {
           </AreaChart>
         </ResponsiveContainer>
 
-        {chartView !== "gestor" && (
-          <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-            WAM (€6.1M) i Andbank (€6.1M) no inclosos a la sèrie temporal per manca de dades mensuals.
-          </div>
-        )}
+        <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+          {chartView === "gestor"
+            ? "WAM i Andbank mostrats com a valor actual (sense sèrie mensual disponible)."
+            : "WAM (€6.1M) i Andbank (€6.1M) no inclosos a la sèrie temporal per manca de dades mensuals."}
+        </div>
       </div>
 
       {/* ── ③ Manager cards ── */}
