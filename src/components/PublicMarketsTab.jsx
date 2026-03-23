@@ -49,8 +49,8 @@ function KpiCard({ label, value, sub, tc, valueColor }) {
 
 function PctChip({ v, tc }) {
   if (v == null) return <span style={{ fontSize: 11, color: tc.textLight }}>—</span>;
-  const pos   = v > 0;
-  const neg   = v < 0;
+  const pos   = v > 0.005;
+  const neg   = v < -0.005;
   const color = pos ? tc.green : neg ? tc.red : tc.textLight;
   const bg    = pos ? "#E8F8E8" : neg ? "#FDECEA" : tc.bgAlt;
   return (
@@ -123,7 +123,7 @@ export function PublicMarketsTab() {
     PM_MANAGERS
       .filter(m => m.ytd != null || m.r2025 != null || m.r2024 != null)
       .map(m => ({
-        nom:   m.nom.replace("(BK+IB)", "").replace("Bons", "").trim(),
+        nom:   m.nom.replace("(BK+IB)", "").replace("(Goyo)", "").replace("Bons", "").trim(),
         ytd:   m.ytd   ?? undefined,
         r2025: m.r2025 ?? undefined,
         r2024: m.r2024 ?? undefined,
@@ -153,7 +153,7 @@ export function PublicMarketsTab() {
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <KpiCard label="Total Patrimoni"   value={fmtM(total)}   sub="Mercats Públics" tc={tc} />
         <KpiCard label="Renda Variable"    value={fmtM(totalRV)} sub={`${(totalRV / total * 100).toFixed(1)}% del total`} tc={tc} />
-        <KpiCard label="Renda Fixa"        value={fmtM(totalRF)} sub={`${(totalRF / total * 100).toFixed(1)}% del total`} tc={tc} />
+        <KpiCard label="Renda Fixa"        value={fmtM(totalRF)} sub={`${(totalRF / total * 100).toFixed(1)}% del total · excl. liquiditat`} tc={tc} />
         <KpiCard label="YTD Global"
           value={`${ytdWeighted >= 0 ? "+" : ""}${ytdWeighted.toFixed(2)}%`}
           sub="Ponderat per valor" tc={tc}
