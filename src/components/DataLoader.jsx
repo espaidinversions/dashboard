@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useTheme } from "../theme.js";
-import { parseCapitalCallsCSV, parsePipelineCSV } from "../utils.js";
+import { parseCapitalCallsCSV, parsePipelineCSV, mapCapitalCallsRows, mapPipelineRows, mapCompanyRows, mapSearcherRows, mapFundMetaRows, mapKpiRows } from "../utils.js";
 
 function DataLoader({ onLoad, onClose, dataInfo }) {
   const { tc: TC } = useTheme();
@@ -28,117 +28,17 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
 
       let loaded = 0;
       const ccRows = sheet("Capital Calls");
-      if (ccRows?.length) {
-        const mapped = ccRows.map(r => ({
-          fons:  String(r["Fons"] ?? ""),
-          tipus: String(r["Tipus"] ?? ""),
-          cat:   String(r["Categoria"] ?? ""),
-          data:  String(r["Data"] ?? ""),
-          mes:   Number(r["Mes"]),
-          any:   Number(r["Any"]),
-          fy:    String(r["FY"] ?? ""),
-          vcpe:  String(r["VCPE"] ?? ""),
-          est:   String(r["Estructura"] ?? ""),
-          eur:   Number(r["Import (€)"]),
-          divisa:String(r["Divisa"] ?? ""),
-        }));
-        onLoad("cc", mapped);
-        loaded++;
-      }
+      if (ccRows?.length) { onLoad("cc", mapCapitalCallsRows(ccRows)); loaded++; }
       const plRows = sheet("Pipeline");
-      if (plRows?.length) {
-        const mapped = plRows.map(r => ({
-          id:        Number(r["ID"]),
-          name:      String(r["Nom"] ?? ""),
-          amount:    Number(r["Import"]) || 0,
-          currency:  String(r["Divisa"] ?? "EUR"),
-          geography: String(r["Geo"] ?? ""),
-          strategy:  String(r["Estratègia"] ?? ""),
-          sector:    String(r["Sector"] ?? ""),
-          status:    String(r["Status"] ?? ""),
-          canal:     String(r["Canal"] ?? ""),
-          active:    String(r["Actiu"]) === "1",
-        }));
-        onLoad("pl", mapped);
-        loaded++;
-      }
+      if (plRows?.length) { onLoad("pl", mapPipelineRows(plRows)); loaded++; }
       const coRows = sheet("Participades");
-      if (coRows?.length) {
-        const mapped = coRows.map(r => ({
-          nom:           String(r["Nom"] ?? ""),
-          tipus:         String(r["Tipus"] ?? ""),
-          segment:       String(r["Segment"] ?? ""),
-          entrepreneurs: String(r["Entrepreneurs"] ?? ""),
-          origen:        String(r["Origen"] ?? ""),
-          geo:           String(r["Geo"] ?? ""),
-          ticket:        r["Ticket (€M)"] ? Number(r["Ticket (€M)"]) * 1e6 : 0,
-          tvpi:          r["TVPI"] !== "" && r["TVPI"] != null ? Number(r["TVPI"]) : null,
-          rev:           r["Ingressos (€M)"] ? Number(r["Ingressos (€M)"]) * 1e6 : null,
-          ebitda:        r["EBITDA (€M)"] ? Number(r["EBITDA (€M)"]) * 1e6 : null,
-          dataCompr:     String(r["Data Compromís"] ?? ""),
-          mesosOperant:  r["Mesos Operant"] != null && r["Mesos Operant"] !== "" ? Number(r["Mesos Operant"]) : null,
-        }));
-        onLoad("companies", mapped);
-        loaded++;
-      }
+      if (coRows?.length) { onLoad("companies", mapCompanyRows(coRows)); loaded++; }
       const srRows = sheet("Searchers");
-      if (srRows?.length) {
-        const mapped = srRows.map(r => ({
-          nom:             String(r["Nom"] ?? ""),
-          statusScreening: String(r["Status"] ?? ""),
-          formEntrada:     String(r["Forma Entrada"] ?? ""),
-          geo:             String(r["Geo"] ?? ""),
-          ticket:          r["Ticket (€M)"] ? Number(r["Ticket (€M)"]) * 1e6 : null,
-          dataInici:       String(r["Data Inici"] ?? ""),
-          modalitat:       String(r["Modalitat"] ?? ""),
-        }));
-        onLoad("searchers", mapped);
-        loaded++;
-      }
+      if (srRows?.length) { onLoad("searchers", mapSearcherRows(srRows)); loaded++; }
       const fmRows = sheet("Fund Meta");
-      if (fmRows?.length) {
-        const mapped = fmRows.map(r => ({
-          fons: String(r["Fons"] ?? ""),
-          tvpi: r["TVPI"] !== "" && r["TVPI"] != null ? Number(r["TVPI"]) : null,
-        }));
-        onLoad("fundMeta", mapped);
-        loaded++;
-      }
+      if (fmRows?.length) { onLoad("fundMeta", mapFundMetaRows(fmRows)); loaded++; }
       const kpiRows = sheet("KPIs Trimestral");
-      if (kpiRows?.length) {
-        // Pivoted format: one row per company, columns like "Q1 2023 | Ingressos (€M)"
-        const KPI_MAP = {
-          "Ingressos (€M)":       "rev",
-          "Ing. Pressupost (€M)": "revBudget",
-          "EBITDA (€M)":          "ebitda",
-          "EBITDA Pres. (€M)":    "ebitdaBudget",
-          "Deute Net (€M)":       "dfn",
-          "DFN Pres. (€M)":       "dfnBudget",
-        };
-        const byNom = new Map();
-        kpiRows.forEach(r => {
-          const nom = String(r["Nom"] ?? "");
-          const qMap = new Map();
-          Object.entries(r).forEach(([col, val]) => {
-            const sep = col.indexOf(" | ");
-            if (sep === -1) return;
-            const q = col.slice(0, sep);
-            const metric = col.slice(sep + 3);
-            const key = KPI_MAP[metric];
-            if (!key) return;
-            if (!qMap.has(q)) qMap.set(q, { q });
-            const v = val !== "" && val != null ? Number(val) * 1e6 : null;
-            qMap.get(q)[key] = v;
-          });
-          byNom.set(nom, [...qMap.values()].sort((a, b) => {
-            const [, qa, ya] = a.q.match(/Q(\d) (\d+)/) || [, "0", "0"];
-            const [, qb, yb] = b.q.match(/Q(\d) (\d+)/) || [, "0", "0"];
-            return (+ya * 4 + +qa) - (+yb * 4 + +qb);
-          }));
-        });
-        onLoad("kpiTrimestral", byNom);
-        loaded++;
-      }
+      if (kpiRows?.length) { onLoad("kpiTrimestral", mapKpiRows(kpiRows)); loaded++; }
       if (!loaded) throw new Error("No s'ha trobat cap full reconegut (Capital Calls, Pipeline, Participades, Searchers, Fund Meta, KPIs Trimestral).");
       setXlsxStatus({ name: file.name, sheets: loaded });
       setError(null);

@@ -4,7 +4,7 @@ import {
 } from "recharts";
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
-import { fmtM, calcMesos, mesosColor, mesosBg } from "../utils.js";
+import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV } from "../utils.js";
 import { GEO_NAME, SEARCHER_STATUS_CFG } from "../config.js";
 import { ACTIVE_SEARCHERS, ALL_SEARCHERS, PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { FlagImg, FlagSvgLabel, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
@@ -41,18 +41,6 @@ const SANKEY_NODE_COLORS = {
   "Portafoli":    "#5A3E9A",
   "Operant":      "#2B5070",
 };
-
-// ── CSV parser ─────────────────────────────────────────────
-function parseSearchersCSV(text) {
-  const lines = text.trim().split("\n");
-  const header = lines[0].split(",");
-  return lines.slice(1).map(line => {
-    const cols = line.split(",");
-    const obj = {};
-    header.forEach((h, i) => { obj[h.trim()] = (cols[i] || "").trim().replace(/^"|"$/g, ""); });
-    return obj;
-  });
-}
 
 // ── main component ─────────────────────────────────────────
 export function SearchersTab({ search = "" }) {
