@@ -23,6 +23,7 @@ import { CompaniesIndexInner } from "./CompaniesIndex.jsx";
 import { Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { DataLoader } from "./DataLoader.jsx";
+import { PublicMarketsTab } from "./PublicMarketsTab.jsx";
 
 // ── Helpers localStorage ──────────────────────────────────
 const LS_CC = "tc_rawCC";
@@ -392,12 +393,17 @@ function DashboardInner() {
     {id:"txlog",   label:"📋 Transaccions"},
   ];
   const SUPRA = [
-    {id:"fons",       label:"Fons"},
-    {id:"searchers",  label:"Searchers"},
-    {id:"portfolio",  label:"Participades"},
-    {id:"inversions", label:"Detall per Inversió"},
+    {id:"fons",         label:"Fons"},
+    {id:"searchers",    label:"Searchers"},
+    {id:"portfolio",    label:"Participades"},
+    {id:"inversions",   label:"Detall per Inversió"},
+    {id:"alternatives", label:"Alternatives"},
   ];
-  const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":"fons";
+  const ALTERNATIVES_TABS = [
+    { id:"mercats-publics", label:"Mercats Públics" },
+    { id:"real-estate",     label:"Real Estate" },
+  ];
+  const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":(tab==="mercats-publics"||tab==="real-estate")?"alternatives":"fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Pipeline FY26"}, ...TABS_CC];
 
   // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs
@@ -411,10 +417,10 @@ function DashboardInner() {
         const next = TABS_FONS[(idx + dir + TABS_FONS.length) % TABS_FONS.length];
         setTab(next.id);
       } else {
-        const supraIds = ["fons", "searchers", "portfolio"];
+        const supraIds = ["fons", "searchers", "portfolio", "inversions", "alternatives"];
         const idx = supraIds.indexOf(supra);
         const nextSupra = supraIds[(idx + dir + supraIds.length) % supraIds.length];
-        setTab(nextSupra === "fons" ? "pipeline" : nextSupra);
+        setTab(nextSupra === "fons" ? "pipeline" : nextSupra === "alternatives" ? "mercats-publics" : nextSupra);
       }
       e.preventDefault();
     };
@@ -467,7 +473,7 @@ function DashboardInner() {
       <div className="tab-bar no-print" style={{background:tc.navy,padding:"0 32px",display:"flex",gap:0}}>
         {SUPRA.map(s=>(
           <button key={s.id}
-            onClick={()=>{ setTab(s.id==="fons"?"pipeline":s.id==="searchers"?"searchers":s.id==="portfolio"?"portfolio":"inversions"); }}
+            onClick={()=>{ setTab(s.id==="fons"?"pipeline":s.id==="searchers"?"searchers":s.id==="portfolio"?"portfolio":s.id==="inversions"?"inversions":"mercats-publics"); }}
             style={{background:"none",border:"none",borderBottom:`2px solid ${supra===s.id?"rgba(255,255,255,0.9)":"transparent"}`,padding:"12px 24px",cursor:"pointer",fontSize:12,fontWeight:supra===s.id?600:400,color:supra===s.id?"#fff":"rgba(255,255,255,0.5)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s, transform 0.1s cubic-bezier(0.23,1,0.32,1), opacity 0.1s ease",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
             {s.label}
           </button>
@@ -499,6 +505,18 @@ function DashboardInner() {
           <button key={s.id} onClick={()=>setInversionsSubTab(s.id)}
             style={{background:"none",border:"none",borderBottom:`2px solid ${inversionsSubTab===s.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:inversionsSubTab===s.id?600:400,color:inversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
             {s.label}
+          </button>
+        ))}
+      </div>
+      )}
+
+      {/* ── Sub-tabs (Alternatives) ── */}
+      {supra==="alternatives"&&(
+      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0}}>
+        {ALTERNATIVES_TABS.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)}
+            style={{background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
+            {t.label}
           </button>
         ))}
       </div>
@@ -547,6 +565,16 @@ function DashboardInner() {
 
         {/* ── PORTFOLIO COMPANIES ── */}
         {tab==="portfolio"&&<div className="tab-panel"><PortfolioCompaniesTab search={globalSearch}/></div>}
+
+        {/* ── ALTERNATIVES ── */}
+        {tab==="mercats-publics"&&<div className="tab-panel"><PublicMarketsTab/></div>}
+        {tab==="real-estate"&&(
+          <div className="tab-panel" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 0",gap:12}}>
+            <div style={{fontSize:32}}>🏗️</div>
+            <div style={{fontSize:16,fontWeight:700,color:tc.navy}}>Real Estate</div>
+            <div style={{fontSize:13,color:tc.textLight}}>Pròximament</div>
+          </div>
+        )}
 
         {/* ── DETALL PER INVERSIÓ ── */}
         {tab==="inversions"&&inversionsSubTab==="fons"&&(
