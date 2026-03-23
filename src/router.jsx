@@ -8,6 +8,7 @@ import CompanyDetail from "./components/CompanyDetail.jsx";
 import LoginPage from "./components/LoginPage.jsx";
 import AdminPanel from "./components/AdminPanel.jsx";
 import { useAuth } from "./auth.jsx";
+import { PMPositionDetail } from "./components/PMPositionDetail.jsx";
 
 function RequireAuth({ children }) {
   const { session } = useAuth();
@@ -42,6 +43,7 @@ export default function AppRoutes() {
       <Route path="/investments/companies" element={<RequireAuth><CompaniesIndex /></RequireAuth>} />
       <Route path="/fund/:id" element={<RequireAuth><FundDetail /></RequireAuth>} />
       <Route path="/company/:id" element={<RequireAuth><CompanyDetail /></RequireAuth>} />
+      <Route path="/mercats-publics/:id" element={<RequireAuth><PMPositionDetail /></RequireAuth>} />
       <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
     </Routes>
   );
