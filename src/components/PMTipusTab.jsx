@@ -23,9 +23,26 @@ function netRendInici(p) {
     : p.rendInici;
 }
 
+function PctChip({ v, tc }) {
+  if (v == null) return <span style={{ fontSize: 11, color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
+  const pos   = v > 0.005;
+  const neg   = v < -0.005;
+  const color = pos ? tc.green : neg ? tc.red : tc.textLight;
+  const bg    = pos ? (tc.green + "20") : neg ? (tc.red + "18") : "transparent";
+  return (
+    <span style={{ fontSize: 11, fontWeight: 700, color, background: bg, borderRadius: 4, padding: "1px 6px", fontFamily: "'DM Mono',monospace" }}>
+      {pos ? "+" : ""}{v.toFixed(2)}%
+    </span>
+  );
+}
+
 export function PMTipusTab({ tipus }) {
-  const { tc } = useTheme();
+  const { tc, dark } = useTheme();
   const [toggle, setToggle] = usePersistedState(`pm_toggle_${tipus}`, "all");
+
+  const secLabel = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
+  const card     = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
+  const th       = { padding: "8px 10px", fontSize: 10, letterSpacing: "0.09em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
 
   const positions = useMemo(
     () => PM_POSITIONS.filter(p => p.tipus === tipus),
@@ -56,52 +73,41 @@ export function PMTipusTab({ tipus }) {
     return weight > 0 ? sum / weight : null;
   }, [visible, totalMV]);
 
-  const returnColor = totalReturn == null ? tc.textLight
-    : totalReturn > 0 ? "#22a050" : "#c0392b";
-
   return (
-    <div>
-      {/* ── Header row: toggle + total return ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-        <div style={{ display: "flex", gap: 6 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+
+      {/* ── Header: toggle + total return ── */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ display: "flex", gap: 5 }}>
           {TOGGLES.map(t => (
             <button key={t.id} onClick={() => setToggle(t.id)}
               style={{
-                background: toggle === t.id ? tc.navy : "transparent",
-                color: toggle === t.id ? "#fff" : tc.textMid,
-                border: `1.5px solid ${toggle === t.id ? tc.navy : tc.border}`,
-                borderRadius: 20, padding: "5px 14px", fontSize: 11,
-                cursor: "pointer", fontFamily: "inherit",
+                padding: "4px 10px", borderRadius: 5,
+                border: `1.5px solid ${toggle === t.id ? tc.green : tc.border}`,
+                background: toggle === t.id ? (dark ? "#0A2010" : "#E8F8E8") : "transparent",
+                color: toggle === t.id ? tc.green : tc.textLight,
+                fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+                fontWeight: toggle === t.id ? 700 : 400,
               }}>
               {t.label}
             </button>
           ))}
         </div>
-        {totalReturn != null && (
-          <div style={{ fontSize: 12, color: tc.textLight }}>
-            Rend. Inici:&nbsp;
-            <span style={{ fontWeight: 700, color: returnColor }}>
-              {(totalReturn >= 0 ? "+" : "") + totalReturn.toFixed(2) + "%"}
-            </span>
-            <span style={{ fontSize: 10, marginLeft: 4 }}>(ponderat, net TER Abel Font)</span>
-          </div>
-        )}
+        <div style={{ fontSize: 11, color: tc.textLight }}>
+          Rend. Inici:&nbsp;<PctChip v={totalReturn} tc={tc} />
+          <span style={{ fontSize: 10, marginLeft: 6, color: tc.textLight }}>(ponderat, net TER Abel Font)</span>
+        </div>
       </div>
 
       {/* ── Two-column: weight chart + IRR list ── */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 16 }}>
 
         {/* LEFT: Portfolio weight composition */}
-        <div style={{
-          flex: "1 1 55%", background: tc.card, borderRadius: 12,
-          border: `1px solid ${tc.border}`, padding: "20px 24px",
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: tc.navy, marginBottom: 16 }}>
-            Pesos cartera · {fmtM(totalMV)} total
-          </div>
+        <div style={{ ...card, flex: "1 1 55%" }}>
+          <div style={secLabel}>Pesos cartera · <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmtM(totalMV)}</span></div>
 
           {/* Stacked composition bar */}
-          <div style={{ display: "flex", height: 28, borderRadius: 6, overflow: "hidden", marginBottom: 20 }}>
+          <div style={{ display: "flex", height: 24, borderRadius: 5, overflow: "hidden", marginBottom: 18 }}>
             {visible.map((p, i) => (
               <div key={p.id}
                 style={{
@@ -115,22 +121,19 @@ export function PMTipusTab({ tipus }) {
           </div>
 
           {/* Legend rows */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {visible.map((p, i) => {
               const w = p.valorMercat / totalMV * 100;
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{
-                    display: "inline-block", width: 10, height: 10, borderRadius: 2, flexShrink: 0,
-                    background: PM_COLORS[i % PM_COLORS.length],
-                  }} />
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: PM_COLORS[i % PM_COLORS.length] }} />
                   <span style={{ flex: 1, fontSize: 11, color: tc.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {p.nom}
                   </span>
-                  <span style={{ fontSize: 11, fontWeight: 600, color: tc.navy, flexShrink: 0 }}>
+                  <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: tc.textMid, flexShrink: 0 }}>
                     {w.toFixed(1)}%
                   </span>
-                  <span style={{ fontSize: 11, color: tc.textLight, flexShrink: 0, minWidth: 52, textAlign: "right" }}>
+                  <span style={{ fontSize: 11, fontFamily: "'DM Mono',monospace", color: tc.textLight, flexShrink: 0, minWidth: 52, textAlign: "right" }}>
                     {fmtM(p.valorMercat)}
                   </span>
                 </div>
@@ -140,29 +143,18 @@ export function PMTipusTab({ tipus }) {
         </div>
 
         {/* RIGHT: IRR per position */}
-        <div style={{
-          flex: "0 0 280px", background: tc.card, borderRadius: 12,
-          border: `1px solid ${tc.border}`, padding: "20px 24px",
-        }}>
-          <div style={{ fontSize: 12, fontWeight: 600, color: tc.navy, marginBottom: 16 }}>
-            Rendiments des d'inici
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ ...card, flex: "0 0 260px" }}>
+          <div style={secLabel}>Rendiment des d'inici</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             {visible.map((p, i) => {
               const net = netRendInici(p);
-              const color = net == null ? tc.textLight : net > 0 ? "#22a050" : "#c0392b";
               return (
                 <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{
-                    display: "inline-block", width: 10, height: 10, borderRadius: 2, flexShrink: 0,
-                    background: PM_COLORS[i % PM_COLORS.length],
-                  }} />
+                  <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: PM_COLORS[i % PM_COLORS.length] }} />
                   <span style={{ flex: 1, fontSize: 11, color: tc.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                     {p.nom}
                   </span>
-                  <span style={{ fontSize: 12, fontWeight: 700, color, flexShrink: 0 }}>
-                    {net != null ? (net >= 0 ? "+" : "") + net.toFixed(1) + "%" : "—"}
-                  </span>
+                  <PctChip v={net} tc={tc} />
                 </div>
               );
             })}
@@ -172,52 +164,49 @@ export function PMTipusTab({ tipus }) {
       </div>
 
       {/* ── Position list ── */}
-      <div style={{
-        background: tc.card, borderRadius: 12, border: `1px solid ${tc.border}`,
-        padding: "20px 24px",
-      }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: tc.navy, marginBottom: 12 }}>
-          Posicions · ordenades per valor de mercat
-        </div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+      <div style={{ ...card, overflowX: "auto" }}>
+        <div style={secLabel}>Posicions · ordenades per valor de mercat</div>
+        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 520 }}>
           <thead>
-            <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
-              <th style={{ textAlign: "left",  padding: "5px 8px", fontWeight: 600, color: tc.textLight, fontSize: 11 }}></th>
-              <th style={{ textAlign: "left",  padding: "5px 8px", fontWeight: 600, color: tc.textLight, fontSize: 11 }}>Nom</th>
-              <th style={{ textAlign: "left",  padding: "5px 8px", fontWeight: 600, color: tc.textLight, fontSize: 11 }}>Gestor</th>
-              <th style={{ textAlign: "right", padding: "5px 8px", fontWeight: 600, color: tc.textLight, fontSize: 11 }}>Rend. Inici</th>
-              <th style={{ textAlign: "right", padding: "5px 8px", fontWeight: 600, color: tc.textLight, fontSize: 11 }}>Valor mercat</th>
+            <tr>
+              <th style={{ ...th, width: 20 }}></th>
+              <th style={{ ...th, textAlign: "left" }}>Nom</th>
+              <th style={{ ...th, textAlign: "left" }}>Gestor</th>
+              <th style={{ ...th, textAlign: "right" }}>Rend. Inici</th>
+              <th style={{ ...th, textAlign: "right" }}>Valor mercat</th>
             </tr>
           </thead>
           <tbody>
             {visible.map((p, i) => {
               const net = netRendInici(p);
-              const rendColor = net == null ? tc.textLight : net > 0 ? "#22a050" : "#c0392b";
+              const rendColor = net == null ? tc.textLight : net > 0 ? tc.green : tc.red;
               return (
-                <tr key={p.id} style={{ borderBottom: `1px solid ${tc.border}` }}>
-                  <td style={{ padding: "6px 8px", width: 16 }}>
-                    <span style={{
-                      display: "inline-block", width: 10, height: 10, borderRadius: 2,
-                      background: PM_COLORS[i % PM_COLORS.length],
-                    }} />
+                <tr key={p.id} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}` }}>
+                  <td style={{ padding: "7px 10px" }}>
+                    <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: PM_COLORS[i % PM_COLORS.length] }} />
                   </td>
-                  <td style={{ padding: "6px 8px" }}>
+                  <td style={{ padding: "7px 10px" }}>
                     <Link to={`/mercats-publics/${p.id}`}
                       style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>
                       {p.nom}
                     </Link>
                   </td>
-                  <td style={{ padding: "6px 8px", color: tc.textLight, fontSize: 11 }}>{p.gestor}</td>
-                  <td style={{ padding: "6px 8px", textAlign: "right", fontWeight: 600, color: rendColor }}>
-                    {net != null ? (net >= 0 ? "+" : "") + net.toFixed(2) + "%" : "—"}
+                  <td style={{ padding: "7px 10px", color: tc.textLight, fontSize: 11 }}>{p.gestor}</td>
+                  <td style={{ padding: "7px 10px", textAlign: "right" }}>
+                    <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color: rendColor }}>
+                      {net != null ? (net >= 0 ? "+" : "") + net.toFixed(2) + "%" : "—"}
+                    </span>
                   </td>
-                  <td style={{ padding: "6px 8px", textAlign: "right" }}>{fmtM(p.valorMercat)}</td>
+                  <td style={{ padding: "7px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.navy, fontWeight: 600, fontSize: 11 }}>
+                    {fmtM(p.valorMercat)}
+                  </td>
                 </tr>
               );
             })}
           </tbody>
         </table>
       </div>
+
     </div>
   );
 }
