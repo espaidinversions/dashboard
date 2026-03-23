@@ -53,7 +53,7 @@ export const PM_MONTHLY = [
 // rendPct: since-inception TWR for WAM/Andbank; YTD for UBS; null for Abel (multi-sleeve)
 //          Not rendered in this version — reserved for future "des de creació" display
 // Abel ytd/r2025/r2024: Bankinter sleeve only (€16.7M of €20.9M total)
-// Abel valorActual: Bankinter €16,676,391 + IB €4,256,627
+// Abel valorActual: Bankinter €16,676,391 + IB €4,256,626 = €20,933,017 (source-confirmed; arithmetic sums to 18 due to rounding)
 export const PM_MANAGERS = [
   { id:"caixa-rv", nom:"Caixa RV",     gestor:"CaixaBank", tipus:"RV",    valorActual:8_037_347,  rendPct:7.44,  ytd:-1.20,  r2025:9.51,  r2024:17.02 },
   { id:"caixa-rf", nom:"Caixa RF",     gestor:"CaixaBank", tipus:"RF",    valorActual:3_990_758,  rendPct:-0.04, ytd:-0.004, r2025:4.96,  r2024:4.96  },
