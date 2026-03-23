@@ -11,13 +11,13 @@ export const CAT_CFG = {
   "Altres":          { color:TC.textLight, bg:TC.bgAlt  },
 };
 export const VCPE_CFG = {
-  "PE": { color:TC.navy,    bg:"#E8EFF5" },
-  "VC": { color:TC.green,   bg:"#E8F4EE" },
+  "PE": { color:TC.navy,    bg:"#E6EDF3" },
+  "VC": { color:TC.green,   bg:"#E8F8E8" },
   "RE": { color:"#6A4C8A",  bg:"#F3EEF8" },
 };
 export const EST_CFG = {
-  "Fons Primari": { color:TC.navy,      bg:"#E8EFF5" },
-  "Fons de Fons": { color:TC.greenDark, bg:"#D6EAE0" },
+  "Fons Primari": { color:TC.navy,      bg:"#E6EDF3" },
+  "Fons de Fons": { color:TC.greenDark, bg:"#E8F8E8" },
   "SOCIMI":       { color:"#6A4C8A",    bg:"#F3EEF8" },
 };
 export const STATUS_CFG = {
@@ -30,6 +30,20 @@ export const CANAL_CFG = {
   "Placement Agent": { bg:"#E8F4EE", color:TC.greenDark, border:"#A8D5B8" },
   "Propietari":      { bg:"#EAF0F6", color:TC.navyLight, border:"#B0C8DC" },
   "Altres":          { bg:"#F3EEF8", color:"#6A4C8A",    border:"#C4A8DC" },
+};
+export const GEO_NAME = {
+  ES:"ESP", EN:"UK", IT:"ITA", DE:"DEU", FR:"FRA",
+  PT:"POR", NL:"NED", US:"USA", CH:"CHE", SE:"SWE",
+  MX:"MEX", PL:"POL", TR:"TUR",
+};
+export const SEARCHER_STATUS_CFG = {
+  "Invertit en fase de cerca":     { bg:"#E8F8E8", color:"#1C6B1D" },
+  "Invertit en fase d'adquisició": { bg:"#D6EAD6", color:"#1C5220" },
+  "Descartat":                      { bg:"#FDECEA", color:"#B01F17" },
+  "En anàlisi":                     { bg:"#FFF8E1", color:"#8A6400" },
+  "Sobresuscrit":                   { bg:"#F0EEFA", color:"#5A3E9A" },
+  "Pendent de formalitzar":         { bg:"#E6EDF3", color:"#2B5070" },
+  "No tancat":                      { bg:"#F5F5F5", color:"#777"    },
 };
 export const FY_LIST = ["FY 2019","FY 2020","FY 2021","FY 2022","FY 2023","FY 2024","FY 2025","FY 2026","FY 2027"];
 export const MESOS   = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];

@@ -3,22 +3,14 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell
 } from "recharts";
-import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT } from "../config.js";
+import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT, CAT_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
 import { Badge, Logo } from "./SharedComponents.jsx";
 
-const CAT_CFG = {
-  "Capital Call":   { color: "#2B4C7E", bg: "#E8EFF5" },
-  "Distribució":    { color: "#276749", bg: "#E8F5E9" },
-  "Retorn Capital": { color: "#1E5738", bg: "#D6EAE0" },
-  "Compromís":      { color: "#6B8CAE", bg: "#EAF0F6" },
-  "Altres":         { color: "#999",    bg: "#F0F0F0" },
-};
-
 function KpiCard({ label, value, sub, tc, valueColor }) {
   return (
-    <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 160, flex: 1 }}>
+    <div className="kpi-card card-hover" style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 160, flex: 1 }}>
       <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>{label}</div>
       <div style={{ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{sub}</div>}
@@ -108,13 +100,13 @@ function FundDetailInner() {
   const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
 
   const vcpeCfg = {
-    "PE": { color: "#2B4C7E", bg: "#E8EFF5" },
-    "VC": { color: "#276749", bg: "#E8F5E9" },
+    "PE": { color: "#2B5070", bg: "#E6EDF3" },
+    "VC": { color: "#28A029", bg: "#E8F8E8" },
     "RE": { color: "#6B2E7E", bg: "#F3EEF8" },
   };
   const estCfg = {
-    "Fons Primari": { color: "#2B4C7E", bg: "#E8EFF5" },
-    "Fons de Fons": { color: "#276749", bg: "#D6EAE0" },
+    "Fons Primari": { color: "#2B5070", bg: "#E6EDF3" },
+    "Fons de Fons": { color: "#28A029", bg: "#E8F8E8" },
     "SOCIMI":       { color: "#6B2E7E", bg: "#F3EEF8" },
   };
 
@@ -158,7 +150,7 @@ function FundDetailInner() {
             <div style={{ display: "flex", gap: 4 }}>
               {["quarterly", "annual"].map(v => (
                 <button key={v} onClick={() => setChartView(v)}
-                  style={{ padding: "4px 10px", borderRadius: 5, border: `1.5px solid ${chartView === v ? tc.green : tc.border}`, background: chartView === v ? (dark ? "#0E2820" : "#E8F5E9") : "transparent", color: chartView === v ? tc.green : tc.textLight, fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: chartView === v ? 700 : 400 }}>
+                  style={{ padding: "4px 10px", borderRadius: 5, border: `1.5px solid ${chartView === v ? tc.green : tc.border}`, background: chartView === v ? (dark ? "#0A2010" : "#E8F8E8") : "transparent", color: chartView === v ? tc.green : tc.textLight, fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: chartView === v ? 700 : 400 }}>
                   {v === "quarterly" ? "Trimestral" : "Anual"}
                 </button>
               ))}
@@ -181,8 +173,8 @@ function FundDetailInner() {
                     labelStyle={{ color: tc.text }}
                     contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }}
                   />
-                  <Bar dataKey="calls" name="calls" fill="#2B4C7E" fillOpacity={0.8} />
-                  <Bar dataKey="dist"  name="dist"  fill="#276749" fillOpacity={0.8} />
+                  <Bar dataKey="calls" name="calls" fill="#2B5070" fillOpacity={0.8} />
+                  <Bar dataKey="dist"  name="dist"  fill="#3DC83E" fillOpacity={0.8} />
                   <Line dataKey="cumNet" name="cumNet" type="monotone" stroke="#E8A020" strokeWidth={2} dot={{ r: 3, fill: "#E8A020" }} />
                 </ComposedChart>
               </ResponsiveContainer>
@@ -207,7 +199,7 @@ function FundDetailInner() {
               {txLog.map((r, i) => {
                 const cfg = CAT_CFG[r.cat] || {};
                 return (
-                  <tr key={`${r.data}-${r.cat}-${r.eur}`} style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
+                  <tr key={`${r.data}-${r.cat}-${r.eur}`} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
                     <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
                     <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.tipus}</td>
                     <td style={{ padding: "10px 12px" }}>

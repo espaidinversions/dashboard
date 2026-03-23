@@ -5,14 +5,13 @@ import {
 } from "recharts";
 import { useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
+import { GEO_NAME } from "../config.js";
 import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { FlagImg, FlagSvgLabel, EditableCell, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
 import { Link } from "react-router-dom";
 import { upsertCompany, insertCompany, deleteCompany } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
-
-const GEO_NAME = { ES:"ESP", EN:"UK", IT:"ITA", DE:"DEU", FR:"FRA", PT:"POR", NL:"NED", US:"USA", CH:"CHE" };
 
 const fmtDate = iso => { if (!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; };
 const fmtM2 = v => v == null ? "—" : fmtM(v);

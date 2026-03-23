@@ -5,6 +5,7 @@ import {
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
+import { GEO_NAME, SEARCHER_STATUS_CFG } from "../config.js";
 import { ACTIVE_SEARCHERS, ALL_SEARCHERS, PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { FlagImg, FlagSvgLabel, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
@@ -12,25 +13,10 @@ import { upsertSearcher, insertSearcher, deleteSearcher } from "../db.js";
 import { useToast } from "../toast.jsx";
 
 // ── constants ──────────────────────────────────────────────
-const GEO_NAME = {
-  ES:"ESP", EN:"UK", IT:"ITA", DE:"DEU", FR:"FRA",
-  PT:"POR", NL:"NED", US:"USA", CH:"CHE", SE:"SWE",
-  MX:"MEX", PL:"POL", TR:"TUR",
-};
-
-const STATUS_CFG = {
-  "Invertit en fase de cerca":     { bg:"#E8F8E8", color:"#1C6B1D" },
-  "Invertit en fase d'adquisició": { bg:"#D6EAD6", color:"#1C5220" },
-  "Descartat":                      { bg:"#FDECEA", color:"#B01F17" },
-  "En anàlisi":                     { bg:"#FFF8E1", color:"#8A6400" },
-  "Sobresuscrit":                   { bg:"#F0EEFA", color:"#5A3E9A" },
-  "Pendent de formalitzar":         { bg:"#E6EDF3", color:"#2B5070" },
-  "No tancat":                      { bg:"#F5F5F5", color:"#777"    },
-};
 
 const StatusBadge = ({ s }) => {
   const { tc: TC } = useTheme();
-  const cfg = STATUS_CFG[s] || { bg:TC.border, color:TC.textMid };
+  const cfg = SEARCHER_STATUS_CFG[s] || { bg:TC.border, color:TC.textMid };
   return (
     <span style={{
       background:cfg.bg, color:cfg.color,

@@ -1,23 +1,12 @@
 import React, { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT } from "../config.js";
+import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT, VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
 import { Badge, EditableCell, DeleteRowButton } from "./SharedComponents.jsx";
 import { upsertFundMeta, insertFund, deleteFund, loadAll } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
-
-const VCPE_CFG = {
-  "PE": { color: "#2B5070", bg: "#E6EDF3" },
-  "VC": { color: "#28A029", bg: "#E8F8E8" },
-  "RE": { color: "#6B2E7E", bg: "#F3EEF8" },
-};
-const EST_CFG = {
-  "Fons Primari": { color: "#2B5070", bg: "#E6EDF3" },
-  "Fons de Fons": { color: "#28A029", bg: "#E8F8E8" },
-  "SOCIMI":       { color: "#6B2E7E", bg: "#F3EEF8" },
-};
 
 export function FundsIndexInner({ inline = false, searchOverride }) {
   const { isSuperuser } = useAuth();
