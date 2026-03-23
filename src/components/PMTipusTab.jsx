@@ -1,8 +1,4 @@
 import React, { useMemo } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip,
-  ReferenceLine, ResponsiveContainer,
-} from "recharts";
 import { Link } from "react-router-dom";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
@@ -14,59 +10,17 @@ const PM_COLORS = [
   "#D37295","#A0CBE8",
 ];
 
-const YEAR_DEFS = [
-  { field: "rend2023", label: "2023" },
-  { field: "rend2024", label: "2024" },
-  { field: "rend2025", label: "2025" },
-  { field: "rend2026", label: "2026" },
-];
-
 const TOGGLES = [
   { id: "all",       label: "Tots" },
   { id: "directe",   label: "Directe" },
   { id: "bankinter", label: "Bankinter" },
 ];
 
-function netRend(p, rendField) {
-  const gross = p[rendField];
-  if (gross == null) return null;
-  return p.gestor === "Abel Font" ? gross - (p.costAnual ?? 0) : gross;
-}
-
 function netRendInici(p) {
   if (p.rendInici == null) return null;
   return p.gestor === "Abel Font"
     ? p.rendInici - (p.costAnual ?? 0) * yearsHeld(p.dataCompra)
     : p.rendInici;
-}
-
-// Custom tooltip — only show positions with non-zero contribution for this year
-function AttribTooltip({ active, payload, label }) {
-  if (!active || !payload?.length) return null;
-  const items = payload
-    .filter(e => e.value !== 0 && e.value != null)
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
-    .slice(0, 12); // cap at 12 to avoid overflow
-  return (
-    <div style={{
-      background: "#fff", border: "1px solid #ddd", borderRadius: 8,
-      padding: "10px 14px", fontSize: 11, maxWidth: 280,
-    }}>
-      <div style={{ fontWeight: 700, marginBottom: 6 }}>{label}</div>
-      {items.map(e => (
-        <div key={e.dataKey} style={{ display: "flex", justifyContent: "space-between", gap: 16, marginBottom: 2 }}>
-          <span style={{ color: e.fill }}>■</span>
-          <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.name}</span>
-          <span style={{ fontWeight: 600, color: e.value >= 0 ? "#22a050" : "#c0392b" }}>
-            {(e.value >= 0 ? "+" : "") + e.value.toFixed(2) + "%"}
-          </span>
-        </div>
-      ))}
-      {payload.filter(e => e.value !== 0).length > 12 && (
-        <div style={{ color: "#999", marginTop: 4 }}>+{payload.filter(e => e.value !== 0).length - 12} més…</div>
-      )}
-    </div>
-  );
 }
 
 export function PMTipusTab({ tipus }) {
@@ -90,19 +44,6 @@ export function PMTipusTab({ tipus }) {
     [visible]
   );
 
-  const chartData = useMemo(() => {
-    if (totalMV === 0) return [];
-    return YEAR_DEFS.map(({ field, label }) => {
-      const point = { year: label };
-      visible.forEach(p => {
-        const net = netRend(p, field);
-        if (net == null) return;
-        point[p.id] = parseFloat((net * (p.valorMercat / totalMV)).toFixed(4));
-      });
-      return point;
-    });
-  }, [visible, totalMV]);
-
   const totalReturn = useMemo(() => {
     if (totalMV === 0) return null;
     let sum = 0, weight = 0;
@@ -120,7 +61,7 @@ export function PMTipusTab({ tipus }) {
 
   return (
     <div>
-      {/* ── Header row: toggle + return label ── */}
+      {/* ── Header row: toggle + total return ── */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
         <div style={{ display: "flex", gap: 6 }}>
           {TOGGLES.map(t => (
@@ -147,26 +88,87 @@ export function PMTipusTab({ tipus }) {
         )}
       </div>
 
-      {/* ── Attribution chart ── */}
-      <div style={{
-        background: tc.card, borderRadius: 12, border: `1px solid ${tc.border}`,
-        padding: "20px 24px", marginBottom: 20,
-      }}>
-        <div style={{ fontSize: 12, fontWeight: 600, color: tc.navy, marginBottom: 12 }}>
-          Contribució per posició · rendiments {toggle === "bankinter" ? "nets TER" : "bruts (Directe) / nets TER (Bankinter)"}
-        </div>
-        <ResponsiveContainer width="100%" height={320}>
-          <BarChart data={chartData} margin={{ top: 8, right: 32, bottom: 8, left: 8 }}>
-            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-            <YAxis tickFormatter={v => v.toFixed(1) + "%"} tick={{ fontSize: 11 }} width={42} />
-            <ReferenceLine y={0} stroke="#ccc" />
-            <Tooltip content={<AttribTooltip />} />
+      {/* ── Two-column: weight chart + IRR list ── */}
+      <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
+
+        {/* LEFT: Portfolio weight composition */}
+        <div style={{
+          flex: "1 1 55%", background: tc.card, borderRadius: 12,
+          border: `1px solid ${tc.border}`, padding: "20px 24px",
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: tc.navy, marginBottom: 16 }}>
+            Pesos cartera · {fmtM(totalMV)} total
+          </div>
+
+          {/* Stacked composition bar */}
+          <div style={{ display: "flex", height: 28, borderRadius: 6, overflow: "hidden", marginBottom: 20 }}>
             {visible.map((p, i) => (
-              <Bar key={p.id} dataKey={p.id} stackId="a"
-                   fill={PM_COLORS[i % PM_COLORS.length]} name={p.nom} />
+              <div key={p.id}
+                style={{
+                  width: `${(p.valorMercat / totalMV * 100).toFixed(3)}%`,
+                  background: PM_COLORS[i % PM_COLORS.length],
+                  flexShrink: 0,
+                }}
+                title={`${p.nom}: ${(p.valorMercat / totalMV * 100).toFixed(1)}%`}
+              />
             ))}
-          </BarChart>
-        </ResponsiveContainer>
+          </div>
+
+          {/* Legend rows */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+            {visible.map((p, i) => {
+              const w = p.valorMercat / totalMV * 100;
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{
+                    display: "inline-block", width: 10, height: 10, borderRadius: 2, flexShrink: 0,
+                    background: PM_COLORS[i % PM_COLORS.length],
+                  }} />
+                  <span style={{ flex: 1, fontSize: 11, color: tc.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {p.nom}
+                  </span>
+                  <span style={{ fontSize: 11, fontWeight: 600, color: tc.navy, flexShrink: 0 }}>
+                    {w.toFixed(1)}%
+                  </span>
+                  <span style={{ fontSize: 11, color: tc.textLight, flexShrink: 0, minWidth: 52, textAlign: "right" }}>
+                    {fmtM(p.valorMercat)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* RIGHT: IRR per position */}
+        <div style={{
+          flex: "0 0 280px", background: tc.card, borderRadius: 12,
+          border: `1px solid ${tc.border}`, padding: "20px 24px",
+        }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: tc.navy, marginBottom: 16 }}>
+            Rendiments des d'inici
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {visible.map((p, i) => {
+              const net = netRendInici(p);
+              const color = net == null ? tc.textLight : net > 0 ? "#22a050" : "#c0392b";
+              return (
+                <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{
+                    display: "inline-block", width: 10, height: 10, borderRadius: 2, flexShrink: 0,
+                    background: PM_COLORS[i % PM_COLORS.length],
+                  }} />
+                  <span style={{ flex: 1, fontSize: 11, color: tc.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {p.nom}
+                  </span>
+                  <span style={{ fontSize: 12, fontWeight: 700, color, flexShrink: 0 }}>
+                    {net != null ? (net >= 0 ? "+" : "") + net.toFixed(1) + "%" : "—"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
       </div>
 
       {/* ── Position list ── */}

@@ -58,14 +58,18 @@ export function PMPositionDetail() {
     ? (isAbelFont ? p.rendInici - (p.costAnual ?? 0) * yh : p.rendInici)
     : null;
 
-  // Return history chart data
+  // Composition bar: cost vs gain (% of market value)
+  const costPct = p.costEur != null && p.valorMercat > 0
+    ? Math.min(p.costEur / p.valorMercat * 100, 100) : 100;
+  const gainPct = Math.max(100 - costPct, 0);
+
+  // Annual return data for the chart (left panel)
   const returnData = useMemo(() => {
     const YEARS = [
       { label: "2023", field: "rend2023" },
       { label: "2024", field: "rend2024" },
       { label: "2025", field: "rend2025" },
       { label: "2026", field: "rend2026" },
-      { label: "Inici", field: "rendInici" },
     ];
     return YEARS
       .filter(y => p[y.field] != null)
@@ -82,7 +86,7 @@ export function PMPositionDetail() {
     : netInici > 0 ? "#22a050" : "#c0392b";
 
   return (
-    <div style={{ padding: "28px 32px 60px", maxWidth: 900, margin: "0 auto" }}>
+    <div style={{ padding: "28px 32px 60px", maxWidth: 960, margin: "0 auto" }}>
 
       {/* ── Header ── */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
@@ -128,88 +132,116 @@ export function PMPositionDetail() {
         <KpiCard label="Pes cartera" value={p.pes != null ? p.pes.toFixed(1) + "%" : "—"} tc={tc} color={tc.textMid} />
       </div>
 
-      {/* ── Return history chart ── */}
-      <div style={{
-        background: tc.card, borderRadius: 12, border: `1px solid ${tc.border}`,
-        padding: "20px 24px", marginBottom: 20,
-      }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: tc.navy, marginBottom: 12 }}>
-          Rendiments anuals {isAbelFont ? "· brut vs net TER" : ""}
-        </div>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={returnData} margin={{ top: 8, right: 16, bottom: 8, left: 8 }}>
-            <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-            <YAxis tickFormatter={v => v.toFixed(1) + "%"} tick={{ fontSize: 11 }} width={42} />
-            <ReferenceLine y={0} stroke="#ccc" />
-            <Tooltip formatter={(v, name) => [
-              (v >= 0 ? "+" : "") + v.toFixed(2) + "%",
-              name === "brut" ? "Brut" : "Net TER",
-            ]} />
-            {isAbelFont && <Legend formatter={n => n === "brut" ? "Brut" : "Net TER"} />}
-            <Bar dataKey="brut" name="brut" fill="#4E79A7" />
-            {isAbelFont && <Bar dataKey="net" name="net" fill="#59A14F" />}
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
+      {/* ── Two-column: weight/chart + IRR ── */}
+      <div style={{ display: "flex", gap: 16, marginBottom: 20 }}>
 
-      {/* ── Two-column: cost breakdown + since-inception ── */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 20, flexWrap: "wrap" }}>
-
-        {/* Cost breakdown */}
+        {/* LEFT: Annual returns chart */}
         <div style={{
-          background: tc.card, borderRadius: 12, border: `1px solid ${tc.border}`,
-          padding: "20px 24px", flex: "1 1 320px",
+          flex: "1 1 55%", background: tc.card, borderRadius: 12,
+          border: `1px solid ${tc.border}`, padding: "20px 24px",
         }}>
           <div style={{ fontSize: 13, fontWeight: 600, color: tc.navy, marginBottom: 12 }}>
-            Detall de cost
+            Pesos · cost vs guany
           </div>
-          <table>
-            <tbody>
-              <InfoRow label="Unitats" value={p.unitats != null ? p.unitats.toLocaleString("ca-ES") : null} tc={tc} />
-              <InfoRow label="Preu d'entrada" value={p.costInici != null ? p.costInici.toFixed(4) : null} tc={tc} />
-              <InfoRow label="Cost total" value={p.costEur != null ? fmtM(p.costEur) : null} tc={tc} />
-              <InfoRow label="TER anual" value={p.costAnual != null ? p.costAnual.toFixed(2) + "%" : null} tc={tc} />
-              <InfoRow label="Cost anual implícit"
-                value={p.costAnual != null && p.costEur != null
-                  ? fmtM(p.costEur * p.costAnual / 100) + "/any" : null}
-                tc={tc} />
-              <InfoRow label="Data compra" value={p.dataCompra} tc={tc} />
-            </tbody>
-          </table>
-          {isAbelFont && (
-            <div style={{ fontSize: 10, color: tc.textLight, marginTop: 12, fontStyle: "italic" }}>
-              Gestió externa — el TER reflecteix el cost de gestió del vehicle.
+
+          {/* Composition bar: cost vs gain */}
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ display: "flex", height: 28, borderRadius: 6, overflow: "hidden", marginBottom: 8 }}>
+              <div style={{ width: `${costPct.toFixed(1)}%`, background: "#4E79A7" }}
+                   title={`Cost: ${fmtM(p.costEur ?? 0)} (${costPct.toFixed(1)}%)`} />
+              <div style={{ width: `${gainPct.toFixed(1)}%`, background: pnl >= 0 ? "#59A14F" : "#E15759" }}
+                   title={`Guany/Pèrdua: ${fmtM(pnl)} (${gainPct.toFixed(1)}%)`} />
             </div>
+            <div style={{ display: "flex", gap: 16, fontSize: 11, color: tc.textLight }}>
+              <span><span style={{ color: "#4E79A7" }}>■</span> Cost {costPct.toFixed(1)}% · {fmtM(p.costEur ?? 0)}</span>
+              <span><span style={{ color: pnl >= 0 ? "#59A14F" : "#E15759" }}>■</span> {pnl >= 0 ? "Guany" : "Pèrdua"} {gainPct.toFixed(1)}% · {fmtM(Math.abs(pnl))}</span>
+            </div>
+          </div>
+
+          {/* Annual returns chart */}
+          {returnData.length > 0 && (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 600, color: tc.navy, marginBottom: 8, marginTop: 16 }}>
+                Rendiments anuals {isAbelFont ? "· brut vs net TER" : ""}
+              </div>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={returnData} margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
+                  <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+                  <YAxis tickFormatter={v => v.toFixed(1) + "%"} tick={{ fontSize: 11 }} width={42} />
+                  <ReferenceLine y={0} stroke="#ccc" />
+                  <Tooltip formatter={(v, name) => [
+                    (v >= 0 ? "+" : "") + v.toFixed(2) + "%",
+                    name === "brut" ? "Brut" : "Net TER",
+                  ]} />
+                  {isAbelFont && <Legend formatter={n => n === "brut" ? "Brut" : "Net TER"} />}
+                  <Bar dataKey="brut" name="brut" fill="#4E79A7" />
+                  {isAbelFont && <Bar dataKey="net" name="net" fill="#59A14F" />}
+                </BarChart>
+              </ResponsiveContainer>
+            </>
           )}
         </div>
 
-        {/* Since-inception summary */}
-        <div style={{
-          background: tc.card, borderRadius: 12, border: `1px solid ${tc.border}`,
-          padding: "20px 24px", flex: "1 1 220px",
-        }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: tc.navy, marginBottom: 16 }}>
-            Des d'inici
-          </div>
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 4 }}>Rendiment brut</div>
-            <div style={{ fontSize: 28, fontWeight: 700, color: rendIniciColor }}>
-              {p.rendInici != null
-                ? (p.rendInici >= 0 ? "+" : "") + p.rendInici.toFixed(2) + "%"
-                : "—"}
+        {/* RIGHT: IRR + cost breakdown */}
+        <div style={{ flex: "0 0 280px", display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Since-inception returns */}
+          <div style={{
+            background: tc.card, borderRadius: 12, border: `1px solid ${tc.border}`,
+            padding: "20px 24px",
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: tc.navy, marginBottom: 16 }}>
+              Des d'inici
             </div>
-          </div>
-          {isAbelFont && netInici != null && (
-            <div>
-              <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 4 }}>Net estimat</div>
-              <div style={{ fontSize: 22, fontWeight: 700, color: netIniciColor }}>
-                {(netInici >= 0 ? "+" : "") + netInici.toFixed(2) + "%"}
-              </div>
-              <div style={{ fontSize: 10, color: tc.textLight, marginTop: 4 }}>
-                Rendiment brut − TER × {yh.toFixed(1)} anys
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 4 }}>Rendiment brut</div>
+              <div style={{ fontSize: 32, fontWeight: 700, color: rendIniciColor }}>
+                {p.rendInici != null
+                  ? (p.rendInici >= 0 ? "+" : "") + p.rendInici.toFixed(2) + "%"
+                  : "—"}
               </div>
             </div>
-          )}
+            {isAbelFont && netInici != null && (
+              <div>
+                <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 4 }}>Net estimat</div>
+                <div style={{ fontSize: 24, fontWeight: 700, color: netIniciColor }}>
+                  {(netInici >= 0 ? "+" : "") + netInici.toFixed(2) + "%"}
+                </div>
+                <div style={{ fontSize: 10, color: tc.textLight, marginTop: 4 }}>
+                  Brut − TER × {yh.toFixed(1)} anys
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Cost breakdown */}
+          <div style={{
+            background: tc.card, borderRadius: 12, border: `1px solid ${tc.border}`,
+            padding: "20px 24px", flex: 1,
+          }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: tc.navy, marginBottom: 12 }}>
+              Detall de cost
+            </div>
+            <table>
+              <tbody>
+                <InfoRow label="Unitats" value={p.unitats != null ? p.unitats.toLocaleString("ca-ES") : null} tc={tc} />
+                <InfoRow label="Preu d'entrada" value={p.costInici != null ? p.costInici.toFixed(4) : null} tc={tc} />
+                <InfoRow label="Cost total" value={p.costEur != null ? fmtM(p.costEur) : null} tc={tc} />
+                <InfoRow label="TER anual" value={p.costAnual != null ? p.costAnual.toFixed(2) + "%" : null} tc={tc} />
+                <InfoRow label="Cost anual implícit"
+                  value={p.costAnual != null && p.costEur != null
+                    ? fmtM(p.costEur * p.costAnual / 100) + "/any" : null}
+                  tc={tc} />
+                <InfoRow label="Data compra" value={p.dataCompra} tc={tc} />
+              </tbody>
+            </table>
+            {isAbelFont && (
+              <div style={{ fontSize: 10, color: tc.textLight, marginTop: 12, fontStyle: "italic" }}>
+                Gestió externa — el TER reflecteix el cost de gestió del vehicle.
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 
