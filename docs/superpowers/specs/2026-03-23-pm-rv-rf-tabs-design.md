@@ -4,7 +4,9 @@
 
 **Architecture:** One shared `PMTipusTab` component (parameterised by `tipus`), a new `PMPositionDetail` route page, and a new React Router route at `/mercats-publics/:id`. Dashboard sub-tab bar gains two new tabs. Capital cridat gate already patched.
 
-**Tech Stack:** React 18, Recharts (`BarChart`), React Router v6, existing `useTheme`/`fmtM`/`usePersistedState` utilities. No new dependencies.
+**Tech Stack:** React 18, Recharts (`BarChart`, `ResponsiveContainer`), React Router v6, existing `useTheme`/`fmtM`/`usePersistedState` utilities. No new dependencies.
+
+**Tranche model:** Every entry in `PM_POSITIONS` has a unique `id` (suffixed `-2`, `-3` for repeated ETF purchases). The detail page shows one tranche at a time — no aggregation. The route param is the tranche `id`. Links in `PMTipusTab` navigate to the individual tranche page.
 
 ---
 
@@ -20,7 +22,7 @@ Resum | Renda Variable | Renda Fixa | Posicions
 
 Tab IDs: `"resum"`, `"rv"`, `"rf"`, `"posicions"`.
 
-Update the `mercatsPublicsTab` state initialiser to `useState("resum")` (already present, no change needed).
+`mercatsPublicsTab` state is already present — no change to `useState("resum")`.
 
 Update the sub-tab list array in the existing `{section==="mercats-publics"&&...}` block:
 
@@ -35,7 +37,7 @@ Update the sub-tab list array in the existing `{section==="mercats-publics"&&...
 
 ### Render conditionals
 
-Add two new render conditionals immediately after the existing `mercatsPublicsTab==="resum"` and before `mercatsPublicsTab==="posicions"` blocks:
+Add two new render conditionals immediately after the existing `mercatsPublicsTab==="resum"` block and before `mercatsPublicsTab==="posicions"`:
 
 ```jsx
 {tab==="mercats-publics"&&mercatsPublicsTab==="rv"&&(
@@ -52,7 +54,7 @@ Add two new render conditionals immediately after the existing `mercatsPublicsTa
 import { PMTipusTab } from "./PMTipusTab.jsx";
 ```
 
-### Capital cridat gate (already patched)
+### Capital cridat gate (already patched in commit a3a7448)
 
 The `{/* ── CAPITAL CALLS: KPIs ── */}` block condition was changed from:
 ```js
@@ -62,7 +64,6 @@ to:
 ```js
 {section==="alternatives"&&supra==="fons"&&tab!=="pipeline"&&(
 ```
-This prevents the block from rendering under Mercats Públics (where `section==="mercats-publics"` but `supra` defaults to `"fons"`).
 
 ---
 
@@ -90,51 +91,57 @@ Persisted per-tipus so switching RV↔RF remembers each tab's toggle independent
 ```js
 const positions = PM_POSITIONS.filter(p => p.tipus === tipus);
 
-const visible = toggle === "all"       ? positions
-              : toggle === "directe"   ? positions.filter(p => p.gestor === "CaixaBank / UBS")
-              : /* bankinter */          positions.filter(p => p.gestor === "Abel Font");
+const visible = toggle === "all"        ? positions
+              : toggle === "directe"    ? positions.filter(p => p.gestor === "CaixaBank / UBS")
+              : /* bankinter */           positions.filter(p => p.gestor === "Abel Font");
 
 const totalMV = visible.reduce((s, p) => s + (p.valorMercat || 0), 0);
 ```
 
 ### Attribution chart data
 
-Years array: `["rend2023", "rend2024", "rend2025", "rend2026"]` with display labels `["2023", "2024", "2025", "2026"]`.
+Years: `[["rend2023","2023"],["rend2024","2024"],["rend2025","2025"],["rend2026","2026"]]`.
 
-For each year, build one Recharts data point:
-
-```js
-{ year: "2023", pos_id_1: contribution, pos_id_2: contribution, ... }
-```
-
-Where for each visible position `p` that has a non-null value for that year's field:
+For each year, build one Recharts data point `{ year: "2023", [p.id]: contribution, ... }`:
 
 ```js
-const grossRend = p[rendField];                                    // e.g. p.rend2023
-const netRend   = p.gestor === "Abel Font"
-                  ? grossRend - (p.costAnual ?? 0)                 // subtract TER for externally managed
-                  : grossRend;
-const contribution = netRend * (p.valorMercat / totalMV);          // weighted contribution
+const chartData = yearDefs.map(([field, label]) => {
+  const point = { year: label };
+  visibleSorted.forEach(p => {
+    if (p[field] == null) return;
+    const grossRend = p[field];
+    const netRend   = p.gestor === "Abel Font"
+                      ? grossRend - (p.costAnual ?? 0)   // subtract annual TER (both in percentage points)
+                      : grossRend;
+    point[p.id] = netRend * (p.valorMercat / totalMV);   // weighted contribution in percentage points
+  });
+  return point;
+});
 ```
 
-Positions with null for that year are excluded from that bar (contribute 0 implicitly — do not push a key).
+`visibleSorted` = `visible` sorted by `valorMercat` descending. In Recharts stacked bars the first `<Bar>` renders at the bottom — largest first gives largest-at-bottom layout.
 
-Positions are sorted by `valorMercat` descending. In Recharts stacked bars, the first `<Bar>` renders at the bottom — so iterate positions largest-first to stack largest-at-bottom.
+### Total return label
 
-**IRR label** (displayed to the right of the chart or as a final column):
+Displayed as a chip above or beside the chart title. This is a **weighted-average total return since inception** (not annualised IRR — the data does not support true IRR computation):
 
 ```js
-const irr = visible.reduce((sum, p) => {
-  if (p.rendInici == null) return sum;
-  const yearsHeld = (Date.now() - new Date(p.dataCompra).getTime()) / (365.25 * 24 * 3600 * 1000);
-  const net = p.gestor === "Abel Font"
-    ? p.rendInici - (p.costAnual ?? 0) * yearsHeld
-    : p.rendInici;
-  return sum + net * (p.valorMercat / totalMV);
-}, 0);
+const totalReturn = totalMV > 0
+  ? visible.reduce((sum, p) => {
+      if (p.rendInici == null) return sum;
+      const net = p.gestor === "Abel Font"
+        ? p.rendInici - (p.costAnual ?? 0) * yearsHeld(p.dataCompra)
+        : p.rendInici;
+      return sum + net * (p.valorMercat / totalMV);
+    }, 0)
+  : null;
+
+function yearsHeld(dataCompra) {
+  return (Date.now() - new Date(dataCompra).getTime()) / (365.25 * 24 * 3600 * 1000);
+}
 ```
 
-Displayed as: `IRR: +X.XX%` (green if positive, red if negative) in a chip to the right of the chart title.
+Display label: `"Rend. Inici: +X.XX%"` (green if positive, red if negative, `tc.textLight` if null). Not labeled "IRR".
 
 ### Toggle UI
 
@@ -161,108 +168,162 @@ Three pill buttons above the chart:
 
 ### Recharts BarChart
 
+Wrap in `<ResponsiveContainer width="100%" height={420}>`:
+
 ```jsx
-<BarChart data={chartData} margin={{ top: 8, right: 48, bottom: 8, left: 8 }}>
-  <XAxis dataKey="year" />
-  <YAxis tickFormatter={v => v.toFixed(1) + "%"} />
-  <Tooltip formatter={(v, name) => [v.toFixed(2) + "%", name]} />
-  {visibleSorted.map((p, i) => (
-    <Bar key={p.id} dataKey={p.id} stackId="a" fill={COLORS[i % COLORS.length]}
-         name={p.nom} />
-  ))}
-</BarChart>
+<ResponsiveContainer width="100%" height={420}>
+  <BarChart data={chartData} margin={{ top: 8, right: 48, bottom: 8, left: 8 }}>
+    <XAxis dataKey="year" />
+    <YAxis tickFormatter={v => v.toFixed(1) + "%"} />
+    <ReferenceLine y={0} stroke="#ccc" />
+    <Tooltip formatter={(v, name) => [v.toFixed(2) + "%", name]} />
+    {visibleSorted.map((p, i) => (
+      <Bar key={p.id} dataKey={p.id} stackId="a"
+           fill={PM_COLORS[i % PM_COLORS.length]} name={p.nom} />
+    ))}
+  </BarChart>
+</ResponsiveContainer>
 ```
 
-`COLORS`: a palette of 12 distinct colors defined at module level (not from theme — needs variety).
+`ReferenceLine` from recharts at `y={0}` for the zero baseline.
+
+### Color palette
+
+Define at module level in `PMTipusTab.jsx`:
+
+```js
+const PM_COLORS = [
+  "#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F",
+  "#EDC948","#B07AA1","#FF9DA7","#9C755F","#BAB0AC",
+  "#D37295","#A0CBE8",
+];
+```
 
 ### Position list below chart
 
-Scrollable list of the visible positions sorted by `valorMercat` desc. Each row:
+Scrollable list of `visibleSorted` (largest valorMercat first). Each row:
 
 ```
-[colored dot] Nom (nom)              Gestor    IRR net    Valor
+[colored dot]  Nom (linked)          Gestor          Rend. Inici     Valor mercat
 ```
 
-`nom` is a `<Link to={/mercats-publics/${p.id}}>` for navigation to the detail page. IRR net = `rendInici` adjusted for Abel Font cost (same formula as above, using yearsHeld). Render `—` if null.
+`nom` cell: `<Link to={`/mercats-publics/${p.id}`}>{p.nom}</Link>`. React Router `Link` from `react-router-dom`.
+
+Rend. Inici cell: net for Abel Font (`p.rendInici - p.costAnual * yearsHeld(p.dataCompra)`), gross for CaixaBank/UBS. Show `—` if null. Green/red coloring.
+
+Valor mercat: `fmtM(p.valorMercat)`.
+
+Colored dot: same `PM_COLORS[i % PM_COLORS.length]` as the chart bar.
 
 ---
 
 ## 3. Detail page — `src/components/PMPositionDetail.jsx`
 
-### Route
-
-Added to `src/router.jsx`:
-
-```jsx
-import { PMPositionDetail } from "./components/PMPositionDetail.jsx";
-// inside <Routes>:
-<Route path="/mercats-publics/:id" element={<PMPositionDetail />} />
-```
-
-The component reads the `id` param with `useParams()` and finds the position:
+### Routing and data loading
 
 ```js
 const { id } = useParams();
-const positions = PM_POSITIONS.filter(p => p.id === id);
-// positions may be multiple (same ETF, multiple tranches)
-// aggregate: sum costEur, sum valorMercat, sum unitats; take first isin/dataCompra/gestor
+const position = PM_POSITIONS.find(p => p.id === id);
+if (!position) return <NotFound />;  // simple "not found" message with back link
 ```
 
-**Aggregation note:** Multiple rows may share the same `id` (same ETF, different purchase tranches). The detail page aggregates them: `valorMercat = sum`, `costEur = sum`, `unitats = sum`, `pes = sum`, returns = weighted average by tranche valorMercat.
+**One page per tranche** — no aggregation. Each unique `id` maps to exactly one `PM_POSITIONS` entry.
 
-If no positions found → show "Posició no trobada" with back link.
+### Back navigation
+
+```js
+const navigate = useNavigate();
+// Back button:
+<button onClick={() => navigate(-1)}>← Mercats Públics</button>
+```
+
+`useNavigate(-1)` works for all in-app navigation (user clicks a link from `PMTipusTab`). Limitation: if the user opens the URL directly (bookmark), `-1` exits the app — acceptable for this internal tool.
 
 ### Layout
 
 **Header**
 ```
-← Mercats Públics          [★ Morningstar link]
-[nom]
-[ISIN monospace]  [gestor badge]  [divisa badge]
+[← Mercats Públics button]                    [★ Morningstar]
+[p.nom — large title]
+[p.isin monospace badge]  [p.gestor badge]  [p.divisa badge]
 ```
 
-Back link: `<Link to="/">` then navigate to Mercats Públics tab (use `useNavigate` + set persisted state, or just `<Link to="/?tab=mercats-publics">`). Simplest: use `useNavigate(-1)` (browser back).
+Morningstar link: `https://www.morningstar.es/es/search/results.aspx?keyword=${p.isin}` — hidden if `p.isin` is null.
 
-**KPI row** — 4 cards side by side:
+**KPI row** — 4 cards:
 | Card | Value |
 |------|-------|
-| Valor mercat | `fmtM(valorMercat)` |
-| Cost total | `fmtM(costEur)` |
-| P&L | `fmtM(valorMercat − costEur)` green/red |
-| Pes cartera | `pes.toFixed(1) + "%"` |
+| Valor mercat | `fmtM(p.valorMercat)` |
+| Cost total | `fmtM(p.costEur)` |
+| P&L | `fmtM(p.valorMercat - p.costEur)` — green if positive, red if negative |
+| Pes cartera | `p.pes != null ? p.pes.toFixed(1) + "%" : "—"` |
 
-**Return history chart** — `BarChart` (grouped, not stacked). X-axis = years. For each year with a non-null return:
-- If Abel Font: two bars — gross return (`rend_year`, lighter color) and net return (`rend_year − costAnual`, darker color)
-- If CaixaBank/UBS: single bar per year (TER already in NAV)
+**Return history chart**
 
-Reference line at Y=0. Years: 2023, 2024, 2025, 2026. Include `rendInici` as a separate rightmost group labeled "Inici".
+`<ResponsiveContainer width="100%" height={260}>` wrapping a `<BarChart>`. Not stacked — grouped.
+
+Data array (one object per year group):
+```js
+const years = [
+  { label: "2023", field: "rend2023" },
+  { label: "2024", field: "rend2024" },
+  { label: "2025", field: "rend2025" },
+  { label: "2026", field: "rend2026" },
+  { label: "Inici", field: "rendInici" },
+];
+
+const returnData = years
+  .filter(y => p[y.field] != null)
+  .map(y => ({
+    year: y.label,
+    brut:  p[y.field],
+    net:   p.gestor === "Abel Font" ? p[y.field] - (p.costAnual ?? 0) : null,
+  }));
+```
+
+Two `<Bar>` components:
+- `dataKey="brut"` fill `"#4E79A7"` name `"Brut"` — always shown
+- `dataKey="net"` fill `"#59A14F"` name `"Net TER"` — only rendered if `p.gestor === "Abel Font"` (omit the `<Bar>` entirely otherwise)
+
+`<ReferenceLine y={0} stroke="#ccc" />`. `<YAxis tickFormatter={v => v.toFixed(1) + "%"} />`.
 
 **Cost breakdown panel** — card with table:
 | Label | Value |
 |-------|-------|
-| Unitats | `unitats.toLocaleString("ca-ES")` |
-| Preu d'entrada | `costInici.toFixed(4)` |
-| Cost total | `fmtM(costEur)` |
-| TER anual | `costAnual != null ? costAnual.toFixed(2) + "%" : "—"` |
-| Cost anual implícit | `costAnual != null ? fmtM(costEur * costAnual / 100) + "/any" : "—"` |
-| Data compra | `dataCompra` |
+| Unitats | `p.unitats != null ? p.unitats.toLocaleString("ca-ES") : "—"` |
+| Preu d'entrada | `p.costInici != null ? p.costInici.toFixed(4) : "—"` |
+| Cost total | `p.costEur != null ? fmtM(p.costEur) : "—"` |
+| TER anual | `p.costAnual != null ? p.costAnual.toFixed(2) + "%" : "—"` |
+| Cost anual implícit | `p.costAnual != null && p.costEur != null ? fmtM(p.costEur * p.costAnual / 100) + "/any" : "—"` |
+| Data compra | `p.dataCompra ?? "—"` |
 
-For Abel Font positions, add a note: *"Gestió externa — el TER reflecteix el cost de gestió del vehicle."*
+For Abel Font positions (`p.gestor === "Abel Font"`), append a note row: *"Gestió externa — el TER reflecteix el cost de gestió del vehicle."*
 
-**Since-inception summary** — large number display:
+**Since-inception summary** — large display:
+
+```jsx
+<div>Rendiment des d'inici:  {p.rendInici != null ? sign + p.rendInici.toFixed(2) + "%" : "—"}</div>
+{p.gestor === "Abel Font" && p.rendInici != null && p.costAnual != null && (
+  <div>Net estimat: {sign + (p.rendInici - p.costAnual * yearsHeld(p.dataCompra)).toFixed(2) + "%"}
+       <span style={{fontSize:10}}> (rendiment brut − TER × {yearsHeld(p.dataCompra).toFixed(1)} anys)</span>
+  </div>
+)}
 ```
-Rendiment des d'inici:   +XX.XX%  (rendInici, green/red)
-Net estimat:             +XX.XX%  (rendInici − costAnual × yearsHeld) — only for Abel Font
-```
+
+`yearsHeld` same helper as in `PMTipusTab` — define in a shared location or duplicate.
 
 ---
 
 ## 4. Router — `src/router.jsx`
 
-Add one new route. Check existing router structure before editing — the new route goes inside the existing `<Routes>` block, at the same level as existing routes.
+Check existing router structure — all existing routes are wrapped with `<RequireAuth>`. Add the new route with the same wrapper:
 
 ```jsx
-<Route path="/mercats-publics/:id" element={<PMPositionDetail />} />
+import { PMPositionDetail } from "./components/PMPositionDetail.jsx";
+
+// inside <Routes>, at same level as other routes:
+<Route path="/mercats-publics/:id"
+       element={<RequireAuth><PMPositionDetail /></RequireAuth>} />
 ```
 
 ---
@@ -271,17 +332,19 @@ Add one new route. Check existing router structure before editing — the new ro
 
 | File | Action |
 |------|--------|
-| `src/components/Dashboard.jsx` | Modify — sub-tab list (add rv/rf), render conditionals (add PMTipusTab), import, capital cridat gate (already patched) |
+| `src/components/Dashboard.jsx` | Modify — sub-tab list (add rv/rf), render conditionals (add PMTipusTab), import. Capital cridat gate already patched. |
 | `src/components/PMTipusTab.jsx` | Create — shared RV/RF attribution chart + toggle + position list |
-| `src/components/PMPositionDetail.jsx` | Create — standalone position detail page |
-| `src/router.jsx` | Modify — add `/mercats-publics/:id` route |
+| `src/components/PMPositionDetail.jsx` | Create — standalone per-tranche detail page |
+| `src/router.jsx` | Modify — add `/mercats-publics/:id` route with RequireAuth |
 
 ---
 
 ## 6. Out of Scope
 
-- Benchmark comparison lines (requires external data)
-- Historical weight changes per year (only current weights available)
+- Aggregating multiple tranches of the same ETF into a combined detail view
+- True IRR computation (requires cash flow timeline per position)
+- Benchmark comparison lines
+- Historical weight changes per year
 - Real-time NAV / price updates
-- Sorting by other columns in position list (click-to-sort)
+- Sorting by other columns in position list
 - Closed/liquidated positions
