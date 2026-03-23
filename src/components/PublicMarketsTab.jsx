@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
+  AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid,
 } from "recharts";
 import { useTheme } from "../theme.js";
@@ -257,7 +257,7 @@ export function PublicMarketsTab() {
       <div style={card}>
         <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment Comparatiu</div>
         <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={perfData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="25%" barGap={3}>
+          <LineChart data={perfData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
             <XAxis dataKey="nom" tick={{ fontSize: 10, fill: tc.textLight }} />
             <YAxis tickFormatter={v => `${v}%`} tick={{ fontSize: 10, fill: tc.textLight }} width={44} />
@@ -265,10 +265,10 @@ export function PublicMarketsTab() {
               {...tooltipStyle}
               formatter={(v, name) => [v != null ? `${v > 0 ? "+" : ""}${v.toFixed(2)}%` : "—", name]}
             />
-            <Bar dataKey="ytd"   name="YTD"  fill="#2B5070" fillOpacity={0.85} />
-            <Bar dataKey="r2025" name="2025" fill="#3DC83E" fillOpacity={0.85} />
-            <Bar dataKey="r2024" name="2024" fill="#E8A020" fillOpacity={0.85} />
-          </BarChart>
+            <Line dataKey="ytd"   name="YTD"  stroke="#2B5070" strokeWidth={2} dot={{ r: 4 }} connectNulls />
+            <Line dataKey="r2025" name="2025" stroke="#3DC83E" strokeWidth={2} dot={{ r: 4 }} connectNulls />
+            <Line dataKey="r2024" name="2024" stroke="#E8A020" strokeWidth={2} dot={{ r: 4 }} connectNulls />
+          </LineChart>
         </ResponsiveContainer>
       </div>
 

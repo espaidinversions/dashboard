@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip,
-  ReferenceLine, ResponsiveContainer, Legend,
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  ReferenceLine, ResponsiveContainer, Legend, CartesianGrid,
 } from "recharts";
 import { useParams, useNavigate } from "react-router-dom";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
@@ -162,7 +162,8 @@ export function PMPositionDetail() {
             <>
               <div style={secLabel}>Rendiments anuals {isAbelFont ? "· brut vs net TER" : ""}</div>
               <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={returnData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }} barCategoryGap="30%" barGap={3}>
+                <LineChart data={returnData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
                   <XAxis dataKey="year" tick={{ fontSize: 10, fill: tc.textLight }} axisLine={false} tickLine={false} />
                   <YAxis tickFormatter={v => v.toFixed(1) + "%"} tick={{ fontSize: 10, fill: tc.textLight }} axisLine={false} tickLine={false} width={40} />
                   <ReferenceLine y={0} stroke={tc.border} />
@@ -171,9 +172,9 @@ export function PMPositionDetail() {
                     name === "brut" ? "Brut" : "Net TER",
                   ]} />
                   {isAbelFont && <Legend formatter={n => n === "brut" ? "Brut" : "Net TER"} wrapperStyle={{ fontSize: 10 }} />}
-                  <Bar dataKey="brut" name="brut" fill={tc.navy} radius={[4, 4, 0, 0]} fillOpacity={0.85} />
-                  {isAbelFont && <Bar dataKey="net" name="net" fill={tc.green} radius={[4, 4, 0, 0]} fillOpacity={0.85} />}
-                </BarChart>
+                  <Line dataKey="brut" name="brut" stroke={tc.navy} strokeWidth={2} dot={{ r: 4, fill: tc.navy }} connectNulls />
+                  {isAbelFont && <Line dataKey="net" name="net" stroke={tc.green} strokeWidth={2} dot={{ r: 4, fill: tc.green }} connectNulls />}
+                </LineChart>
               </ResponsiveContainer>
             </>
           )}
