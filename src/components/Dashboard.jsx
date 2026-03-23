@@ -392,41 +392,47 @@ function DashboardInner() {
     {id:"fons",    label:"🏦 Per Fons"},
     {id:"txlog",   label:"📋 Transaccions"},
   ];
+  const SECTIONS = [
+    {id:"alternatives",   label:"Alternatives"},
+    {id:"mercats-publics", label:"Mercats Públics"},
+    {id:"real-estate",    label:"Real Estate"},
+  ];
   const SUPRA = [
-    {id:"fons",         label:"Fons"},
-    {id:"searchers",    label:"Searchers"},
-    {id:"portfolio",    label:"Participades"},
-    {id:"inversions",   label:"Detall per Inversió"},
-    {id:"alternatives", label:"Alternatives"},
+    {id:"fons",       label:"Fons"},
+    {id:"searchers",  label:"Searchers"},
+    {id:"portfolio",  label:"Participades"},
+    {id:"inversions", label:"Detall per Inversió"},
   ];
-  const ALTERNATIVES_TABS = [
-    { id:"mercats-publics", label:"Mercats Públics" },
-    { id:"real-estate",     label:"Real Estate" },
-  ];
-  const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":(tab==="mercats-publics"||tab==="real-estate")?"alternatives":"fons";
+  const section = (tab==="mercats-publics"||tab==="real-estate") ? tab : "alternatives";
+  const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":"fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Pipeline FY26"}, ...TABS_CC];
 
-  // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs
+  // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs or sections
   useEffect(() => {
     const onKey = (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       const dir = e.key === "ArrowRight" ? 1 : -1;
-      if (supra === "fons") {
+      if (section !== "alternatives") {
+        const sectionIds = ["alternatives", "mercats-publics", "real-estate"];
+        const idx = sectionIds.indexOf(section);
+        const next = sectionIds[(idx + dir + sectionIds.length) % sectionIds.length];
+        setTab(next === "alternatives" ? "pipeline" : next);
+      } else if (supra === "fons") {
         const idx = TABS_FONS.findIndex(t => t.id === tab);
         const next = TABS_FONS[(idx + dir + TABS_FONS.length) % TABS_FONS.length];
         setTab(next.id);
       } else {
-        const supraIds = ["fons", "searchers", "portfolio", "inversions", "alternatives"];
+        const supraIds = ["fons", "searchers", "portfolio", "inversions"];
         const idx = supraIds.indexOf(supra);
         const nextSupra = supraIds[(idx + dir + supraIds.length) % supraIds.length];
-        setTab(nextSupra === "fons" ? "pipeline" : nextSupra === "alternatives" ? "mercats-publics" : nextSupra);
+        setTab(nextSupra === "fons" ? "pipeline" : nextSupra);
       }
       e.preventDefault();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tab, supra, TABS_FONS]);
+  }, [tab, section, supra, TABS_FONS]);
 
   return (
     <div id="dashboard-content" style={{minHeight:"100vh",background:tc.bg,color:tc.text,fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,letterSpacing:"0.005em"}}>
@@ -469,16 +475,29 @@ function DashboardInner() {
         </button>
       </div>
 
-      {/* ── Supra-category nav ── */}
+      {/* ── Section nav (top level) ── */}
       <div className="tab-bar no-print" style={{background:tc.navy,padding:"0 32px",display:"flex",gap:0}}>
-        {SUPRA.map(s=>(
+        {SECTIONS.map(s=>(
           <button key={s.id}
-            onClick={()=>{ setTab(s.id==="fons"?"pipeline":s.id==="searchers"?"searchers":s.id==="portfolio"?"portfolio":s.id==="inversions"?"inversions":"mercats-publics"); }}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${supra===s.id?"rgba(255,255,255,0.9)":"transparent"}`,padding:"12px 24px",cursor:"pointer",fontSize:12,fontWeight:supra===s.id?600:400,color:supra===s.id?"#fff":"rgba(255,255,255,0.5)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s, transform 0.1s cubic-bezier(0.23,1,0.32,1), opacity 0.1s ease",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
+            onClick={()=>{ if(s.id!=="alternatives") setTab(s.id); else if(section!=="alternatives") setTab("pipeline"); }}
+            style={{background:"none",border:"none",borderBottom:`2px solid ${section===s.id?"rgba(255,255,255,0.9)":"transparent"}`,padding:"12px 24px",cursor:"pointer",fontSize:12,fontWeight:section===s.id?600:400,color:section===s.id?"#fff":"rgba(255,255,255,0.5)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s, transform 0.1s cubic-bezier(0.23,1,0.32,1), opacity 0.1s ease",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
             {s.label}
           </button>
         ))}
       </div>
+
+      {/* ── Supra-category nav (Alternatives only) ── */}
+      {section==="alternatives"&&(
+      <div className="tab-bar no-print" style={{background:"#1a3a5c",padding:"0 32px",display:"flex",gap:0}}>
+        {SUPRA.map(s=>(
+          <button key={s.id}
+            onClick={()=>{ setTab(s.id==="fons"?"pipeline":s.id); }}
+            style={{background:"none",border:"none",borderBottom:`2px solid ${supra===s.id?"rgba(255,255,255,0.75)":"transparent"}`,padding:"10px 22px",cursor:"pointer",fontSize:11,fontWeight:supra===s.id?600:400,color:supra===s.id?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.4)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+      )}
 
       {/* ── Sub-toolbar (Searchers) ── */}
       {supra==="searchers"&&(
@@ -505,18 +524,6 @@ function DashboardInner() {
           <button key={s.id} onClick={()=>setInversionsSubTab(s.id)}
             style={{background:"none",border:"none",borderBottom:`2px solid ${inversionsSubTab===s.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:inversionsSubTab===s.id?600:400,color:inversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
             {s.label}
-          </button>
-        ))}
-      </div>
-      )}
-
-      {/* ── Sub-tabs (Alternatives) ── */}
-      {supra==="alternatives"&&(
-      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0}}>
-        {ALTERNATIVES_TABS.map(t=>(
-          <button key={t.id} onClick={()=>setTab(t.id)}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
-            {t.label}
           </button>
         ))}
       </div>
