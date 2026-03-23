@@ -8,7 +8,7 @@ import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { upsertCompany } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, slugify } from "../utils.js";
+import { fmtM, slugify, usePersistedState } from "../utils.js";
 import { EditableCell, FlagImg, Logo } from "./SharedComponents.jsx";
 
 function KpiCard({ label, value, sub, valueColor, tc }) {
@@ -86,12 +86,7 @@ function CompanyDetailInner() {
   const navigate = useNavigate();
   const [chartView, setChartView] = useState("quarterly");
 
-  const [companies, setCompanies] = useState(() => {
-    try {
-      const s = localStorage.getItem("tc_portfolioCompanies");
-      return s ? JSON.parse(s) : PORTFOLIO_COMPANIES;
-    } catch { return PORTFOLIO_COMPANIES; }
-  });
+  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", PORTFOLIO_COMPANIES);
 
   const company = companies.find(c => slugify(c.nom) === id);
 
@@ -103,7 +98,6 @@ function CompanyDetailInner() {
     const updatedCompany = { ...company, quarters: updatedQuarters };
     const updatedCompanies = companies.map(c => c.nom === company.nom ? updatedCompany : c);
     setCompanies(updatedCompanies);
-    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updatedCompanies)); } catch {}
     const { error } = await upsertCompany(updatedCompany);
     if (error) toast({ message: "Error desant KPI: " + error.message, type: "error" });
   };
@@ -119,7 +113,6 @@ function CompanyDetailInner() {
     const updatedCompany = { ...company, quarters: [...company.quarters, blank] };
     const updatedCompanies = companies.map(c => c.nom === company.nom ? updatedCompany : c);
     setCompanies(updatedCompanies);
-    try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updatedCompanies)); } catch {}
     const { error } = await upsertCompany(updatedCompany);
     if (error) toast({ message: "Error desant trimestre: " + error.message, type: "error" });
     setAddingQuarter(false);
