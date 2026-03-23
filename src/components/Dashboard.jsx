@@ -24,6 +24,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { DataLoader } from "./DataLoader.jsx";
 import { PublicMarketsTab } from "./PublicMarketsTab.jsx";
+import { HoldingsTable } from "./HoldingsTable.jsx";
 
 // ── Helpers localStorage ──────────────────────────────────
 const LS_CC = "tc_rawCC";
@@ -48,6 +49,7 @@ function DashboardInner() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [inversionsSubTab, setInversionsSubTab] = useState("fons");
   const [realEstateTab, setRealEstateTab] = useState("directe");
+  const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
 
   // Dades dinàmiques (localStorage → static fallback)
   const [rawCC,   setRawCC]   = useState(()=>loadFromLS(LS_CC, RAW_CC_DEFAULT));
@@ -530,6 +532,18 @@ function DashboardInner() {
       </div>
       )}
 
+      {/* ── Sub-tabs (Mercats Públics) ── */}
+      {section==="mercats-publics"&&(
+      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0}}>
+        {[{id:"resum",label:"Resum"},{id:"posicions",label:"Posicions"}].map(t=>(
+          <button key={t.id} onClick={()=>setMercatsPublicsTab(t.id)}
+            style={{background:"none",border:"none",borderBottom:`2px solid ${mercatsPublicsTab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:mercatsPublicsTab===t.id?600:400,color:mercatsPublicsTab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+      )}
+
       {/* ── Sub-tabs (Real Estate) ── */}
       {section==="real-estate"&&(
       <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0}}>
@@ -587,7 +601,12 @@ function DashboardInner() {
         {tab==="portfolio"&&<div className="tab-panel"><PortfolioCompaniesTab search={globalSearch}/></div>}
 
         {/* ── ALTERNATIVES ── */}
-        {tab==="mercats-publics"&&<div className="tab-panel"><PublicMarketsTab/></div>}
+        {tab==="mercats-publics"&&mercatsPublicsTab==="resum"&&(
+          <div className="tab-panel"><PublicMarketsTab/></div>
+        )}
+        {tab==="mercats-publics"&&mercatsPublicsTab==="posicions"&&(
+          <div className="tab-panel"><HoldingsTable/></div>
+        )}
         {tab==="real-estate"&&realEstateTab==="directe"&&(
           <div className="tab-panel" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 0",gap:12}}>
             <div style={{fontSize:32}}>🏗️</div>
