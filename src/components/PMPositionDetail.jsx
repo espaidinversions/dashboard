@@ -6,7 +6,7 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
-import { fmtM, yearsHeld } from "../utils.js";
+import { fmtM, yearsHeld, cagr } from "../utils.js";
 
 function KpiCard({ label, value, accent, tc }) {
   return (
@@ -86,6 +86,11 @@ export function PMPositionDetail() {
 
   const rendIniciColor = p.rendInici == null ? tc.textLight : p.rendInici > 0 ? tc.green : tc.red;
   const netIniciColor  = netInici == null ? tc.textLight : netInici > 0 ? tc.green : tc.red;
+
+  const cagrBrut = cagr(p.rendInici, yh);
+  const cagrNet  = isAbelFont ? cagr(netInici, yh) : null;
+  const cagrBrutColor = cagrBrut == null ? tc.textLight : cagrBrut > 0 ? tc.green : tc.red;
+  const cagrNetColor  = cagrNet  == null ? tc.textLight : cagrNet  > 0 ? tc.green : tc.red;
 
   return (
     <div style={{ padding: "28px 32px 60px", maxWidth: 960, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -183,22 +188,50 @@ export function PMPositionDetail() {
         {/* RIGHT: IRR + cost breakdown */}
         <div style={{ flex: "0 0 260px", display: "flex", flexDirection: "column", gap: 16 }}>
 
-          {/* Since-inception returns */}
+          {/* Since-inception returns: TWR + CAGR (MWR) */}
           <div style={card}>
             <div style={secLabel}>Des d'inici</div>
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>Rendiment brut</div>
-              <div style={{ fontSize: 30, fontWeight: 700, color: rendIniciColor, fontFamily: "'DM Mono',monospace", letterSpacing: "-0.02em" }}>
-                {p.rendInici != null
-                  ? (p.rendInici >= 0 ? "+" : "") + p.rendInici.toFixed(2) + "%"
-                  : "—"}
+
+            {/* TWR row */}
+            <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
+                  TWR {isAbelFont ? "brut" : "total"}
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: rendIniciColor, fontFamily: "'DM Mono',monospace", letterSpacing: "-0.02em" }}>
+                  {p.rendInici != null ? (p.rendInici >= 0 ? "+" : "") + p.rendInici.toFixed(2) + "%" : "—"}
+                </div>
+              </div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
+                  MWR / CAGR
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 700, color: cagrBrutColor, fontFamily: "'DM Mono',monospace", letterSpacing: "-0.02em" }}>
+                  {cagrBrut != null ? (cagrBrut >= 0 ? "+" : "") + cagrBrut.toFixed(2) + "%" : "—"}
+                </div>
               </div>
             </div>
+            <div style={{ fontSize: 10, color: tc.textLight, marginBottom: isAbelFont && netInici != null ? 12 : 0 }}>
+              {yh.toFixed(1)} anys · TWR acumulat vs CAGR anualitzat
+            </div>
+
+            {/* Net row (Abel Font only) */}
             {isAbelFont && netInici != null && (
-              <div>
-                <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>Net estimat</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: netIniciColor, fontFamily: "'DM Mono',monospace", letterSpacing: "-0.02em" }}>
-                  {(netInici >= 0 ? "+" : "") + netInici.toFixed(2) + "%"}
+              <div style={{ borderTop: `1px solid ${tc.border}`, paddingTop: 12, marginTop: 4 }}>
+                <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>Net TER estimat</div>
+                <div style={{ display: "flex", gap: 16 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 2 }}>TWR net</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: netIniciColor, fontFamily: "'DM Mono',monospace" }}>
+                      {(netInici >= 0 ? "+" : "") + netInici.toFixed(2) + "%"}
+                    </div>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 2 }}>CAGR net</div>
+                    <div style={{ fontSize: 20, fontWeight: 700, color: cagrNetColor, fontFamily: "'DM Mono',monospace" }}>
+                      {cagrNet != null ? (cagrNet >= 0 ? "+" : "") + cagrNet.toFixed(2) + "%" : "—"}
+                    </div>
+                  </div>
                 </div>
                 <div style={{ fontSize: 10, color: tc.textLight, marginTop: 4 }}>
                   Brut − TER × {yh.toFixed(1)} anys

@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
 } from "recharts";
 import { useTheme } from "../theme.js";
-import { fmtM } from "../utils.js";
+import { fmtM, cagr } from "../utils.js";
 import { Badge } from "./SharedComponents.jsx";
 import { PM_MONTHLY, PM_MANAGERS } from "../data/publicMarkets.js";
 
@@ -130,6 +130,36 @@ export function PublicMarketsTab() {
   const bestGestor2025 = useMemo(() =>
     [...PM_MANAGERS].filter(m => m.r2025 != null).sort((a, b) => b.r2025 - a.r2025)[0], []);
 
+  // ── Portfolio TWR (chain-linked monthly sub-period returns, Abel injection as external CF) ──
+  const portfolioTWR = useMemo(() => {
+    let cum = 1;
+    for (let i = 1; i < PM_MONTHLY.length; i++) {
+      const prev = PM_MONTHLY[i - 1];
+      const curr = PM_MONTHLY[i];
+      const vPrev = prev.caixaRV + prev.caixaRF + prev.ubsRV + prev.ubsRF + (prev.abelBK ?? 0);
+      // External CF: Abel BK injection at the start of the period where it first appears
+      const cf    = prev.abelBK == null && curr.abelBK != null ? curr.abelBK : 0;
+      const vCurr = curr.caixaRV + curr.caixaRF + curr.ubsRV + curr.ubsRF + (curr.abelBK ?? 0);
+      cum *= (1 + (vCurr - vPrev - cf) / (vPrev + cf));
+    }
+    return (cum - 1) * 100;
+  }, []);
+
+  // ── Portfolio MWR (Modified Dietz, Dec 2023 → Mar 2026, Abel injection as primary CF) ──
+  const portfolioMWR = useMemo(() => {
+    const first      = PM_MONTHLY[0];
+    const last       = PM_MONTHLY[PM_MONTHLY.length - 1];
+    const vStart     = first.caixaRV + first.caixaRF + first.ubsRV + first.ubsRF;
+    const vEnd       = last.caixaRV  + last.caixaRF  + last.ubsRV  + last.ubsRF + (last.abelBK ?? 0);
+    const totalMonths = PM_MONTHLY.length - 1; // 27
+    const abelIdx    = PM_MONTHLY.findIndex(d => d.abelBK != null);
+    const cf         = PM_MONTHLY[abelIdx].abelBK;
+    const w          = (totalMonths - abelIdx) / totalMonths; // time-weighted fraction remaining
+    const totalReturn = (vEnd - vStart - cf) / (vStart + cf * w);
+    const years      = totalMonths / 12;
+    return (Math.pow(1 + totalReturn, 1 / years) - 1) * 100;
+  }, []);
+
   // ── Return charts data ───────────────────────────────────
 
   // Per provider: X = period, one data key per manager
@@ -204,9 +234,14 @@ export function PublicMarketsTab() {
           value={pctFmt(ytdWeighted)}
           sub="Ponderat per AUM" tc={tc}
           valueColor={ytdWeighted >= 0 ? tc.green : tc.red} />
-        <KpiCard label="Millor Gestor '25"
-          value={bestGestor2025 ? pctFmt(bestGestor2025.r2025) : "—"}
-          sub={bestGestor2025?.nom} tc={tc} valueColor={tc.green} />
+        <KpiCard label="TWR Cartera (Des '23)"
+          value={pctFmt(portfolioTWR)}
+          sub="Retorn acumulat, sense fluxos"
+          tc={tc} valueColor={portfolioTWR >= 0 ? tc.green : tc.red} />
+        <KpiCard label="MWR Cartera (Des '23)"
+          value={pctFmt(portfolioMWR)}
+          sub="Anualitzat, Modified Dietz"
+          tc={tc} valueColor={portfolioMWR >= 0 ? tc.green : tc.red} />
       </div>
 
       {/* ── ② Returns: per provider + per strategy ── */}
@@ -328,35 +363,63 @@ export function PublicMarketsTab() {
         </div>
       </div>
 
-      {/* ── ④ Manager cards ── */}
-      <div>
-        <div style={{ ...secLabel, marginBottom: 12 }}>Gestors</div>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
-          {PM_MANAGERS.map(m => (
-            <div key={m.id} className="kpi-card card-hover" style={{
-              background: tc.card, border: `1px solid ${tc.border}`,
-              borderRadius: 10, padding: "14px 18px", minWidth: 190, flex: "1 1 190px",
-            }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: tc.navy }}>{m.nom}</span>
-                <Badge label={m.tipus} cfg={TIPUS_CFG[m.tipus] || {}} />
-              </div>
-              <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, fontFamily: "'DM Mono',monospace", marginBottom: 8 }}>
-                {fmtM(m.valorActual)}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.04em" }}>YTD</span>
-                <PctChip v={m.ytd} tc={tc} />
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <span style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.04em" }}>2025</span>
-                <PctChip v={m.r2025} tc={tc} />
-                <span style={{ fontSize: 10, color: tc.textLight, marginLeft: 4, letterSpacing: "0.04em" }}>2024</span>
-                <PctChip v={m.r2024} tc={tc} />
-              </div>
-              <div style={{ fontSize: 10, color: tc.textLight, marginTop: 6 }}>{m.gestor}</div>
-            </div>
-          ))}
+      {/* ── ④ Manager table ── */}
+      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)", overflowX: "auto" }}>
+        <div style={{ ...secLabel, marginBottom: 16 }}>Gestors</div>
+        <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 700 }}>
+          <thead>
+            <tr>
+              {[
+                { label: "Gestor",        align: "left"  },
+                { label: "Tipus",         align: "left"  },
+                { label: "AUM",           align: "right" },
+                { label: "YTD",           align: "right" },
+                { label: "2025",          align: "right" },
+                { label: "2024",          align: "right" },
+                { label: "Des d'inici (TWR)", align: "right" },
+                { label: "CAGR inici",    align: "right" },
+              ].map(({ label, align }) => (
+                <th key={label} style={{
+                  padding: "8px 12px", fontSize: 10, letterSpacing: "0.09em",
+                  color: tc.textLight, textTransform: "uppercase", fontWeight: 600,
+                  borderBottom: `2px solid ${tc.border}`, textAlign: align, whiteSpace: "nowrap",
+                }}>{label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {PM_MANAGERS.map((m, i) => {
+              const zebra = i % 2 === 1;
+              // CAGR from inception: use rendPct as TWR total; inception years from first available monthly data
+              // For managers with monthly data, compute years from Dec 2023; for static (WAM, Andbank) use rendPct as CAGR approx
+              const hasMonthly = ["caixa-rv", "caixa-rf", "ubs-rv", "ubs-rf", "abel"].includes(m.id);
+              const inceptionMonths = m.id === "abel" ? 11 : 27; // Abel BK started Apr 2025
+              const yrs = inceptionMonths / 12;
+              const mgrCagr = m.rendPct != null ? cagr(m.rendPct, yrs) : null;
+              return (
+                <tr key={m.id} className="hoverable" style={{
+                  background: zebra ? (dark ? tc.bgAlt : "#f8f9fb") : tc.card,
+                  borderBottom: `1px solid ${tc.border}`,
+                }}>
+                  <td style={{ padding: "8px 12px", fontWeight: 600, color: tc.navy }}>{m.nom}</td>
+                  <td style={{ padding: "8px 12px" }}>
+                    <Badge label={m.tipus} cfg={TIPUS_CFG[m.tipus] || {}} />
+                  </td>
+                  <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>
+                    {fmtM(m.valorActual)}
+                  </td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.ytd}   tc={tc} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.r2025} tc={tc} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.r2024} tc={tc} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.rendPct} tc={tc} /></td>
+                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={mgrCagr} tc={tc} /></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <div style={{ fontSize: 10, color: tc.textLight, marginTop: 10, fontStyle: "italic" }}>
+          Des d'inici: TWR reportat pels gestors (WAM/Andbank des de creació; UBS YTD; Abel BK des d'abr. 2025). CAGR: retorn anualitzat equivalent.
         </div>
       </div>
 

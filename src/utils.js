@@ -262,6 +262,15 @@ export function yearsHeld(dataCompra) {
   return (Date.now() - new Date(dataCompra).getTime()) / (365.25 * 24 * 3600 * 1000);
 }
 
+/**
+ * Annualized CAGR from a total return % and holding years.
+ * For single-entry positions (no interim cash flows) this equals the MWR (IRR).
+ */
+export function cagr(rendPct, yearsHeld) {
+  if (rendPct == null || yearsHeld <= 0) return null;
+  return (Math.pow(1 + rendPct / 100, 1 / yearsHeld) - 1) * 100;
+}
+
 export function parseSearchersCSV(text) {
   const lines = text.trim().split("\n");
   const header = lines[0].split(",");
