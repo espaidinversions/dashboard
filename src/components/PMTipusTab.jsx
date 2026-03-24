@@ -1,7 +1,7 @@
 import React, { useMemo } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, ReferenceLine,
+  ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
 } from "recharts";
 import { Link } from "react-router-dom";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
@@ -20,13 +20,15 @@ const TOGGLES = [
   { id: "bankinter", label: "Bankinter" },
 ];
 
-// Annual return fields available in PM_POSITIONS
 const YEAR_FIELDS = [
   { field: "rend2023", label: "2023" },
   { field: "rend2024", label: "2024" },
   { field: "rend2025", label: "2025" },
   { field: "rend2026", label: "2026" },
 ];
+
+// How many individual positions to show as separate lines
+const TOP_N = 10;
 
 function netRendInici(p) {
   if (p.rendInici == null) return null;
@@ -92,45 +94,44 @@ export function PMTipusTab({ tipus }) {
     return weight > 0 ? sum / weight : null;
   }, [visible, totalMV]);
 
-  // Weight concentration curve: sorted by size, each point = one position
-  const weightData = useMemo(() => {
-    let cum = 0;
-    return visible.map((p, i) => {
-      const w = totalMV > 0 ? p.valorMercat / totalMV * 100 : 0;
-      cum += w;
-      return {
-        name:    p.nom.replace(/\bUCITS\b.*/, "").replace(/\bETF\b.*/, "ETF").trim(),
-        weight:  parseFloat(w.toFixed(2)),
-        cum:     parseFloat(cum.toFixed(2)),
-        color:   PM_COLORS[i % PM_COLORS.length],
-        fullNom: p.nom,
-      };
-    });
-  }, [visible, totalMV]);
+  // Years that have at least one non-null value across visible positions
+  const activeYears = useMemo(() =>
+    YEAR_FIELDS.filter(({ field }) => visible.some(p => p[field] != null)),
+    [visible]
+  );
 
-  // Annual returns per year (only years with at least one non-null value across visible)
-  const returnData = useMemo(() => {
-    if (totalMV === 0) return { years: [], data: [] };
-    const activeYears = YEAR_FIELDS.filter(({ field }) =>
-      visible.some(p => p[field] != null)
-    );
-    // One data point per position, keyed by year field
-    // Alternative: one data point per year, one line per position — too many lines
-    // Instead: one line per year, one point per position (X = position rank)
-    const data = visible.map((p, i) => {
-      const point = {
-        name:    p.nom.replace(/\bUCITS\b.*/, "").replace(/\bETF\b.*/, "ETF").trim(),
-        fullNom: p.nom,
-        color:   PM_COLORS[i % PM_COLORS.length],
+  // Chart 1: portfolio weighted return per year (X = year, one line)
+  const portfolioData = useMemo(() =>
+    activeYears.map(({ field, label }) => {
+      let sum = 0, weight = 0;
+      visible.forEach(p => {
+        const net = netRend(p, field);
+        if (net == null) return;
+        sum    += net * p.valorMercat;
+        weight += p.valorMercat;
+      });
+      return {
+        year:      label,
+        portfolio: weight > 0 ? parseFloat((sum / weight).toFixed(2)) : undefined,
       };
-      activeYears.forEach(({ field, label }) => {
-        const v = netRend(p, field);
-        point[label] = v != null ? parseFloat(v.toFixed(2)) : undefined;
+    }),
+    [visible, activeYears]
+  );
+
+  // Chart 2: top N positions by AUM, annual returns over time (X = year, one line per position)
+  const topPositions = useMemo(() => visible.slice(0, TOP_N), [visible]);
+
+  const positionsData = useMemo(() =>
+    activeYears.map(({ field, label }) => {
+      const point = { year: label };
+      topPositions.forEach(p => {
+        const net = netRend(p, field);
+        if (net != null) point[p.id] = parseFloat(net.toFixed(2));
       });
       return point;
-    });
-    return { years: activeYears, data };
-  }, [visible, totalMV]);
+    }),
+    [topPositions, activeYears]
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -158,66 +159,80 @@ export function PMTipusTab({ tipus }) {
         </div>
       </div>
 
-      {/* ── Two-column: weight chart + IRR list ── */}
+      {/* ── Two-column: charts + IRR list ── */}
       <div style={{ display: "flex", gap: 16 }}>
 
-        {/* LEFT: Weight concentration line chart */}
-        <div style={{ ...card, flex: "1 1 58%" }}>
-          <div style={secLabel}>Pesos cartera · concentració · <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmtM(totalMV)}</span></div>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={weightData} margin={{ top: 8, right: 16, bottom: 40, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 9, fill: tc.textLight }}
-                angle={-40}
-                textAnchor="end"
-                interval={0}
-                height={60}
-              />
-              <YAxis
-                tickFormatter={v => v.toFixed(0) + "%"}
-                tick={{ fontSize: 10, fill: tc.textLight }}
-                axisLine={false} tickLine={false}
-                width={36}
-                yAxisId="left"
-              />
-              <YAxis
-                tickFormatter={v => v.toFixed(0) + "%"}
-                tick={{ fontSize: 10, fill: tc.textLight }}
-                axisLine={false} tickLine={false}
-                width={36}
-                yAxisId="right"
-                orientation="right"
-                domain={[0, 100]}
-              />
-              <Tooltip
-                {...tooltipStyle}
-                formatter={(v, name) => [v.toFixed(1) + "%", name]}
-                labelFormatter={(_, payload) => payload?.[0]?.payload?.fullNom ?? ""}
-              />
-              <Line
-                yAxisId="left"
-                dataKey="weight"
-                name="Pes individual"
-                stroke={tc.navy}
-                strokeWidth={2}
-                dot={{ r: 3, fill: tc.navy }}
-              />
-              <Line
-                yAxisId="right"
-                dataKey="cum"
-                name="Pes acumulat"
-                stroke={tc.green}
-                strokeWidth={1.5}
-                dot={false}
-                strokeDasharray="5 3"
-              />
-            </LineChart>
-          </ResponsiveContainer>
-          <div style={{ fontSize: 10, color: tc.textLight, marginTop: 4, fontStyle: "italic" }}>
-            Pes individual (esquerra) · Acumulat (dreta, línia discontínua)
+        {/* LEFT: two stacked line charts */}
+        <div style={{ flex: "1 1 60%", display: "flex", flexDirection: "column", gap: 16 }}>
+
+          {/* Chart 1: portfolio weighted return over time */}
+          <div style={card}>
+            <div style={secLabel}>Rendiment ponderat per any · cartera visible</div>
+            <ResponsiveContainer width="100%" height={200}>
+              <LineChart data={portfolioData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
+                <XAxis dataKey="year" tick={{ fontSize: 11, fill: tc.textLight }} axisLine={false} tickLine={false} />
+                <YAxis
+                  tickFormatter={v => v.toFixed(0) + "%"}
+                  tick={{ fontSize: 10, fill: tc.textLight }}
+                  axisLine={false} tickLine={false} width={40}
+                />
+                <ReferenceLine y={0} stroke={tc.border} strokeDasharray="4 2" />
+                <Tooltip
+                  {...tooltipStyle}
+                  formatter={v => [(v >= 0 ? "+" : "") + v.toFixed(2) + "%", "Cartera"]}
+                />
+                <Line
+                  dataKey="portfolio"
+                  name="Cartera"
+                  stroke={tc.navy}
+                  strokeWidth={2.5}
+                  dot={{ r: 5, fill: tc.navy }}
+                  connectNulls
+                />
+              </LineChart>
+            </ResponsiveContainer>
+            <div style={{ fontSize: 10, color: tc.textLight, marginTop: 6, fontStyle: "italic" }}>
+              Ponderat per valor de mercat. Abel Font net de TER. Gestors sense dades del any exclosos.
+            </div>
           </div>
+
+          {/* Chart 2: top N positions over time */}
+          {topPositions.length > 0 && activeYears.length > 0 && (
+            <div style={card}>
+              <div style={secLabel}>
+                Rendiment anual · top {topPositions.length} posicions per AUM (net TER Abel Font)
+              </div>
+              <ResponsiveContainer width="100%" height={240}>
+                <LineChart data={positionsData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
+                  <XAxis dataKey="year" tick={{ fontSize: 11, fill: tc.textLight }} axisLine={false} tickLine={false} />
+                  <YAxis
+                    tickFormatter={v => v.toFixed(0) + "%"}
+                    tick={{ fontSize: 10, fill: tc.textLight }}
+                    axisLine={false} tickLine={false} width={40}
+                  />
+                  <ReferenceLine y={0} stroke={tc.border} strokeDasharray="4 2" />
+                  <Tooltip
+                    {...tooltipStyle}
+                    formatter={(v, name) => [(v >= 0 ? "+" : "") + v.toFixed(2) + "%", name]}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 9, paddingTop: 8 }} />
+                  {topPositions.map((p, i) => (
+                    <Line
+                      key={p.id}
+                      dataKey={p.id}
+                      name={p.nom.replace(/\bUCITS\b.*/, "").replace(/\bETF\b.*$/, "ETF").trim()}
+                      stroke={PM_COLORS[i % PM_COLORS.length]}
+                      strokeWidth={1.5}
+                      dot={{ r: 3 }}
+                      connectNulls={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </div>
 
         {/* RIGHT: IRR per position */}
@@ -240,49 +255,6 @@ export function PMTipusTab({ tipus }) {
         </div>
 
       </div>
-
-      {/* ── Annual returns line chart ── */}
-      {returnData.years.length > 0 && (
-        <div style={card}>
-          <div style={secLabel}>Rendiment anual per posició · {returnData.years.map(y => y.label).join(" / ")} (net TER Abel Font)</div>
-          <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={returnData.data} margin={{ top: 8, right: 16, bottom: 40, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 9, fill: tc.textLight }}
-                angle={-40}
-                textAnchor="end"
-                interval={0}
-                height={60}
-              />
-              <YAxis
-                tickFormatter={v => v.toFixed(0) + "%"}
-                tick={{ fontSize: 10, fill: tc.textLight }}
-                axisLine={false} tickLine={false}
-                width={40}
-              />
-              <ReferenceLine y={0} stroke={tc.border} strokeDasharray="4 2" />
-              <Tooltip
-                {...tooltipStyle}
-                formatter={(v, name) => [v != null ? (v >= 0 ? "+" : "") + v.toFixed(2) + "%" : "—", name]}
-                labelFormatter={(_, payload) => payload?.[0]?.payload?.fullNom ?? ""}
-              />
-              {returnData.years.map(({ label }, i) => (
-                <Line
-                  key={label}
-                  dataKey={label}
-                  name={label}
-                  stroke={[tc.navy, tc.green, "#E8A020", "#6B2E7E"][i % 4]}
-                  strokeWidth={2}
-                  dot={{ r: 3 }}
-                  connectNulls={false}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
 
       {/* ── Position list ── */}
       <div style={{ ...card, overflowX: "auto" }}>
