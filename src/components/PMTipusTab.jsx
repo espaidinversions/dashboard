@@ -106,16 +106,18 @@ export function PMTipusTab({ tipus }) {
   );
 
   // Chart 2: top 12 unique ISINs by AUM, market value over time
-  // Deduplicate by ISIN first — multiple tranches of the same fund share an ISIN
-  // and would produce duplicate dataKeys / overwritten chart data.
+  // Sum all tranches per ISIN for correct ranking (multiple tranches share an ISIN).
   const top12 = useMemo(() => {
-    const seen = new Set();
-    const out = [];
+    const isinTotals = new Map();
+    const isinRep = new Map();
     for (const p of visible) {
-      if (!seen.has(p.isin)) { seen.add(p.isin); out.push(p); }
-      if (out.length >= 12) break;
+      isinTotals.set(p.isin, (isinTotals.get(p.isin) ?? 0) + p.valorMercat);
+      if (!isinRep.has(p.isin)) isinRep.set(p.isin, p);
     }
-    return out;
+    return [...isinTotals.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 12)
+      .map(([isin]) => isinRep.get(isin));
   }, [visible]);
 
   const mvChartData = useMemo(() => {
@@ -136,7 +138,7 @@ export function PMTipusTab({ tipus }) {
         const total = Object.values(custodians)
           .map(s => s.find(d => d.date === date)?.value ?? 0)
           .reduce((a, b) => a + b, 0);
-        row[pos.isin] = total || null;
+        row[pos.isin] = total > 0 ? total : null;
       });
       return row;
     });
