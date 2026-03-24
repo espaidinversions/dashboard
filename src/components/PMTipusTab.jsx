@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
@@ -58,6 +58,7 @@ function PctChip({ v, tc }) {
 export function PMTipusTab({ tipus }) {
   const { tc, dark } = useTheme();
   const [toggle, setToggle] = usePersistedState(`pm_toggle_${tipus}`, "all");
+  const [retMode, setRetMode] = useState("brut");
 
   const secLabel     = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -92,9 +93,9 @@ export function PMTipusTab({ tipus }) {
     activeYears.map(({ field, label }) => {
       let sum = 0, weight = 0;
       visible.forEach(p => {
-        const net = netRend(p, field);
-        if (net == null) return;
-        sum    += net * p.valorMercat;
+        const v = retMode === "net" ? netRend(p, field) : p[field];
+        if (v == null) return;
+        sum    += v * p.valorMercat;
         weight += p.valorMercat;
       });
       return {
@@ -102,7 +103,7 @@ export function PMTipusTab({ tipus }) {
         portfolio: weight > 0 ? parseFloat((sum / weight).toFixed(2)) : undefined,
       };
     }),
-    [visible, activeYears]
+    [visible, activeYears, retMode]
   );
 
   // Chart 2: top 12 unique ISINs by AUM, market value over time
@@ -148,7 +149,7 @@ export function PMTipusTab({ tipus }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
 
       {/* ── Header: toggle pills ── */}
-      <div style={{ display: "flex", gap: 5 }}>
+      <div style={{ display: "flex", gap: 5, alignItems: "center" }}>
         {TOGGLES.map(t => (
           <button key={t.id} onClick={() => setToggle(t.id)}
             style={{
@@ -158,6 +159,20 @@ export function PMTipusTab({ tipus }) {
               color: toggle === t.id ? tc.green : tc.textLight,
               fontSize: 11, cursor: "pointer", fontFamily: "inherit",
               fontWeight: toggle === t.id ? 700 : 400,
+            }}>
+            {t.label}
+          </button>
+        ))}
+        <div style={{ flex: 1 }} />
+        {[{ id: "brut", label: "Brut" }, { id: "net", label: "Net TER" }].map(t => (
+          <button key={t.id} onClick={() => setRetMode(t.id)}
+            style={{
+              padding: "4px 10px", borderRadius: 5,
+              border: `1.5px solid ${retMode === t.id ? tc.navy : tc.border}`,
+              background: retMode === t.id ? (dark ? "#0A1A30" : "#E8F0FA") : "transparent",
+              color: retMode === t.id ? tc.navy : tc.textLight,
+              fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+              fontWeight: retMode === t.id ? 700 : 400,
             }}>
             {t.label}
           </button>
@@ -258,9 +273,9 @@ export function PMTipusTab({ tipus }) {
           </thead>
           <tbody>
             {visible.map((p, i) => {
-              const net = netRendInici(p);
-              const yh  = yearsHeld(p.dataCompra);
-              const mwr = cagr(net, yh);
+              const rendInici = retMode === "net" ? netRendInici(p) : p.rendInici;
+              const yh        = yearsHeld(p.dataCompra);
+              const mwr       = cagr(rendInici, yh);
               return (
                 <tr key={p.id} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}` }}>
                   <td style={{ padding: "7px 10px" }}>
@@ -275,11 +290,11 @@ export function PMTipusTab({ tipus }) {
                   <td style={{ padding: "7px 10px", color: tc.textLight, fontSize: 11 }}>{p.gestor}</td>
                   {YEAR_FIELDS.map(({ field }) => (
                     <td key={field} style={{ padding: "7px 10px", textAlign: "right" }}>
-                      <PctChip v={netRend(p, field)} tc={tc} />
+                      <PctChip v={retMode === "net" ? netRend(p, field) : p[field]} tc={tc} />
                     </td>
                   ))}
                   <td style={{ padding: "7px 10px", textAlign: "right" }}>
-                    <PctChip v={net} tc={tc} />
+                    <PctChip v={rendInici} tc={tc} />
                   </td>
                   <td style={{ padding: "7px 10px", textAlign: "right" }}>
                     <PctChip v={mwr} tc={tc} />
@@ -293,7 +308,7 @@ export function PMTipusTab({ tipus }) {
           </tbody>
         </table>
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-          Des d'inici: retorn total acumulat. CAGR: retorn anualitzat equivalent (= MWR per posicions sense fluxos intermedis). Abel Font net de TER.
+          Des d'inici: retorn total acumulat. CAGR: retorn anualitzat equivalent. {retMode === "net" ? "Net TER per Abel Font." : "Brut (sense deducció TER)."}
         </div>
       </div>
 
