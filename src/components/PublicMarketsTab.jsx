@@ -34,13 +34,11 @@ const AREA_COLORS = {
 
 // Color per manager for return charts
 const MGR_COLORS = {
-  "caixa-rv": "#2B5070",
-  "caixa-rf": "#E8A020",
-  "ubs-rv":   "#4E79A7",
-  "ubs-rf":   "#76B7B2",
-  "wam":      "#6B2E7E",
-  "abel":     "#3DC83E",
-  "andbank":  "#7A6000",
+  "caixa":   "#2B5070",
+  "ubs":     "#4E79A7",
+  "wam":     "#6B2E7E",
+  "abel":    "#3DC83E",
+  "andbank": "#7A6000",
 };
 
 // Periods with return fields
@@ -76,8 +74,7 @@ const andbankVal = PM_MANAGERS.find(m => m.id === "andbank").valorActual;
 
 // Map mgrId → default tipus filter for expand
 const DEFAULT_EXPAND_TIPUS = {
-  "caixa-rv": "RV", "caixa-rf": "RF",
-  "ubs-rv":   "RV", "ubs-rf":   "RF",
+  "caixa": "all", "ubs": "all",
   "abel": "all", "wam": null, "andbank": null,
 };
 
@@ -189,21 +186,42 @@ export function PublicMarketsTab() {
     return (Math.pow(1 + totalReturn, 1 / years) - 1) * 100;
   }, []);
 
+  // ── 5 display managers (Caixa = caixa-rv + caixa-rf, UBS = ubs-rv + ubs-rf) ──
+  const displayManagers = useMemo(() => {
+    const wtd = (ids, field) => {
+      const mgrs = ids.map(id => PM_MANAGERS.find(m => m.id === id)).filter(m => m[field] != null);
+      if (mgrs.length === 0) return null;
+      const wSum = mgrs.reduce((s, m) => s + m[field] * m.valorActual, 0);
+      const wTot = mgrs.reduce((s, m) => s + m.valorActual, 0);
+      return wSum / wTot;
+    };
+    const combine = (id, nom, ids) => {
+      const val = ids.reduce((s, i) => s + PM_MANAGERS.find(m => m.id === i).valorActual, 0);
+      return { id, nom, tipus: "RV+RF", valorActual: val,
+        ytd: wtd(ids, "ytd"), r2025: wtd(ids, "r2025"), r2024: wtd(ids, "r2024"), rendPct: wtd(ids, "rendPct") };
+    };
+    return [
+      combine("caixa", "CaixaBank", ["caixa-rv", "caixa-rf"]),
+      combine("ubs",   "UBS",       ["ubs-rv",   "ubs-rf"  ]),
+      ...PM_MANAGERS.filter(m => ["wam", "abel", "andbank"].includes(m.id)),
+    ];
+  }, []);
+
   // ── Return charts data ───────────────────────────────────
 
   // Per provider: X = period, one data key per manager
   const providerData = useMemo(() =>
     PERIODS.map(({ field, label }) => {
       const point = { year: label };
-      PM_MANAGERS.forEach(m => {
+      displayManagers.forEach(m => {
         if (m[field] != null) point[m.id] = parseFloat(m[field].toFixed(2));
       });
       return point;
-    }), []);
+    }), [displayManagers]);
 
   // Managers that have at least one non-null return across the three periods
   const activeMgrs = useMemo(() =>
-    PM_MANAGERS.filter(m => PERIODS.some(p => m[p.field] != null)), []);
+    displayManagers.filter(m => PERIODS.some(p => m[p.field] != null)), [displayManagers]);
 
   // Per strategy: X = period, lines for RV, RF, Total
   const strategyData = useMemo(() =>
@@ -475,10 +493,9 @@ export function PublicMarketsTab() {
             </tr>
           </thead>
           <tbody>
-            {PM_MANAGERS.map((m, i) => {
+            {displayManagers.map((m, i) => {
               const isExpanded = expanded.has(m.id);
               const zebra = i % 2 === 1;
-              const hasMonthly = ["caixa-rv", "caixa-rf", "ubs-rv", "ubs-rf", "abel"].includes(m.id);
               const inceptionMonths = m.id === "abel" ? 11 : 27;
               const yrs = inceptionMonths / 12;
               const mgrCagr = m.rendPct != null ? cagr(m.rendPct, yrs) : null;

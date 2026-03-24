@@ -86,9 +86,10 @@ export function PMPositionDetail() {
     if (!custodianData) return null;
     const custodians = Object.keys(custodianData).filter(c => custodianData[c].length > 0);
     if (custodians.length === 0) return null;
+    const acqMonth = p.dataCompra ? p.dataCompra.slice(0, 7) : null;
     const dateSet = new Set();
     custodians.forEach(c => custodianData[c].forEach(d => dateSet.add(d.date)));
-    const dates = [...dateSet].sort();
+    const dates = [...dateSet].sort().filter(d => !acqMonth || d >= acqMonth);
     if (dates.length === 0) return null;
     return {
       custodians,
@@ -100,7 +101,7 @@ export function PMPositionDetail() {
         return row;
       }),
     };
-  }, [p.isin]);
+  }, [p.isin, p.dataCompra]);
 
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card        = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -170,7 +171,7 @@ export function PMPositionDetail() {
       {/* ── Market value over time ── */}
       {valueData && (
         <div style={card}>
-          <div style={secLabel}>Valor de mercat · evolució mensual</div>
+          <div style={secLabel}>Valor de mercat · des de la compra</div>
           <ResponsiveContainer width="100%" height={240}>
             <LineChart data={valueData.rows} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
