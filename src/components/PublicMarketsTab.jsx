@@ -4,9 +4,11 @@ import {
   ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
 } from "recharts";
 import { useTheme } from "../theme.js";
-import { fmtM, cagr } from "../utils.js";
+import { fmtM, cagr, fmtMonth, yearsHeld } from "../utils.js";
 import { Badge } from "./SharedComponents.jsx";
-import { PM_MONTHLY, PM_MANAGERS } from "../data/publicMarkets.js";
+import { PM_MONTHLY, PM_MANAGERS, PM_POSITIONS } from "../data/publicMarkets.js";
+import { Link } from "react-router-dom";
+import { PM_VALUES } from "../data/portfolioValues.js";
 
 // ── Constants ──────────────────────────────────────────────
 const ABEL_RV_SPLIT = 0.7516;
@@ -19,14 +21,15 @@ const TIPUS_CFG = {
 };
 
 const AREA_COLORS = {
-  total:   "#2B5070",
-  rv:      "#2B5070",
-  rf:      "#E8A020",
-  caixa:   "#2B5070",
-  ubs:     "#E8A020",
-  abel:    "#3DC83E",
-  wam:     "#6B2E7E",
-  andbank: "#7A6000",
+  total:    "#2B5070",
+  rv:       "#2B5070",
+  rf:       "#E8A020",
+  caixa:    "#2B5070",
+  caixaUbs: "#2B5070",
+  ubs:      "#E8A020",
+  abel:     "#3DC83E",
+  wam:      "#6B2E7E",
+  andbank:  "#7A6000",
 };
 
 // Color per manager for return charts
@@ -71,6 +74,22 @@ function weightedReturn(field, tipus = null) {
 const wamVal     = PM_MANAGERS.find(m => m.id === "wam").valorActual;
 const andbankVal = PM_MANAGERS.find(m => m.id === "andbank").valorActual;
 
+// Map mgrId → default tipus filter for expand
+const DEFAULT_EXPAND_TIPUS = {
+  "caixa-rv": "RV", "caixa-rf": "RF",
+  "ubs-rv":   "RV", "ubs-rf":   "RF",
+  "abel": "all", "wam": null, "andbank": null,
+};
+
+// Get PM_POSITIONS for a manager row
+function getMgrPositions(mgrId, tipusFilter) {
+  if (mgrId === "wam" || mgrId === "andbank") return null;
+  const gestorKey = mgrId === "abel" ? "Abel Font" : "CaixaBank / UBS";
+  let rows = PM_POSITIONS.filter(p => p.gestor === gestorKey);
+  if (tipusFilter && tipusFilter !== "all") rows = rows.filter(p => p.tipus === tipusFilter);
+  return rows.sort((a, b) => b.valorMercat - a.valorMercat);
+}
+
 // ── Helpers ─────────────────────────────────────────────────
 function KpiCard({ label, value, sub, tc, valueColor }) {
   return (
@@ -107,6 +126,16 @@ function pctFmt(v) {
 export function PublicMarketsTab() {
   const { tc, dark } = useTheme();
   const [chartView, setChartView] = useState("total");
+  const [expanded, setExpanded] = useState(new Set());
+  const [expandTipus, setExpandTipus] = useState({});
+
+  const toggleExpand = (id) => {
+    setExpanded(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
 
   // ── KPI derivations ─────────────────────────────────────
   const total = useMemo(() => PM_MANAGERS.reduce((s, m) => s + m.valorActual, 0), []);
@@ -185,26 +214,78 @@ export function PublicMarketsTab() {
       total: weightedReturn(field),
     })), []);
 
+  // Build monthly chart data from PM_VALUES mark-to-market (falls back to null if empty)
+  const mvData = useMemo(() => {
+    if (Object.keys(PM_VALUES).length === 0) return null;
+
+    // Build isin → tipus lookup from PM_POSITIONS
+    const isinTipus = {};
+    PM_POSITIONS.forEach(p => { if (!isinTipus[p.isin]) isinTipus[p.isin] = p.tipus; });
+
+    // Aggregate value per date × custodian group
+    const byDate = {};
+    for (const [isin, custodians] of Object.entries(PM_VALUES)) {
+      const tipus = isinTipus[isin] ?? null;
+      for (const [custodian, series] of Object.entries(custodians)) {
+        for (const { date, value } of series) {
+          if (!byDate[date]) byDate[date] = { caixaUbs: 0, abel: 0, rv: 0, rf: 0 };
+          if (custodian === "CaixaBank / UBS") byDate[date].caixaUbs += value;
+          else if (custodian === "Abel Font")   byDate[date].abel    += value;
+          if (tipus === "RV")      byDate[date].rv += value;
+          else if (tipus === "RF") byDate[date].rf += value;
+        }
+      }
+    }
+
+    return Object.keys(byDate).sort().map(date => {
+      const d = byDate[date];
+      return {
+        label:    fmtMonth(date),
+        total:    d.caixaUbs + d.abel,  // WAM/Andbank excluded (no time series)
+        rv:       d.rv,
+        rf:       d.rf,
+        caixaUbs: d.caixaUbs,
+        abel:     d.abel,
+        wam:      wamVal,
+        andbank:  andbankVal,
+      };
+    });
+  }, []);
+
   // ── Evolution chart data ────────────────────────────────
-  const chartData = useMemo(() => PM_MONTHLY.map(d => {
-    if (chartView === "total") return {
-      label: d.label,
-      total: d.caixaRV + d.caixaRF + d.ubsRV + d.ubsRF + (d.abelBK ?? 0),
-    };
-    if (chartView === "actiu") return {
-      label: d.label,
-      rv: d.caixaRV + d.ubsRV + (d.abelBK != null ? d.abelBK * ABEL_RV_SPLIT : 0),
-      rf: d.caixaRF + d.ubsRF + (d.abelBK != null ? d.abelBK * ABEL_RF_SPLIT : 0),
-    };
-    return {
-      label:   d.label,
-      caixa:   d.caixaRV + d.caixaRF,
-      ubs:     d.ubsRV + d.ubsRF,
-      abel:    d.abelBK ?? 0,
-      wam:     wamVal,
-      andbank: andbankVal,
-    };
-  }), [chartView]);
+  const chartData = useMemo(() => {
+    // Prefer PM_VALUES mark-to-market; fall back to PM_MONTHLY static data
+    if (mvData) {
+      if (chartView === "total") return mvData.map(d => ({ label: d.label, total: d.total }));
+      if (chartView === "actiu") return mvData.map(d => ({ label: d.label, rv: d.rv, rf: d.rf }));
+      return mvData.map(d => ({
+        label:    d.label,
+        caixaUbs: d.caixaUbs,
+        abel:     d.abel,
+        wam:      d.wam,
+        andbank:  d.andbank,
+      }));
+    }
+    // Fallback: PM_MONTHLY
+    return PM_MONTHLY.map(d => {
+      if (chartView === "total") return {
+        label: d.label,
+        total: d.caixaRV + d.caixaRF + d.ubsRV + d.ubsRF + (d.abelBK ?? 0),
+      };
+      if (chartView === "actiu") return {
+        label: d.label,
+        rv: d.caixaRV + d.ubsRV + (d.abelBK != null ? d.abelBK * ABEL_RV_SPLIT : 0),
+        rf: d.caixaRF + d.ubsRF + (d.abelBK != null ? d.abelBK * ABEL_RF_SPLIT : 0),
+      };
+      return {
+        label:    d.label,
+        caixaUbs: d.caixaRV + d.caixaRF + d.ubsRV + d.ubsRF,
+        abel:     d.abelBK ?? 0,
+        wam:      wamVal,
+        andbank:  andbankVal,
+      };
+    });
+  }, [chartView, mvData]);
 
   // ── Shared styles ────────────────────────────────────────
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -265,7 +346,12 @@ export function PublicMarketsTab() {
                 <Line
                   key={m.id}
                   dataKey={m.id}
-                  name={m.nom.replace("(BK+IB)", "").replace("(Goyo)", "").replace("Bons", "").trim()}
+                  name={
+                    m.id === "abel"    ? "Bankinter" :
+                    m.id === "wam"     ? "WAM" :
+                    m.id === "andbank" ? "Andbank" :
+                    m.nom.replace("(BK+IB)", "").replace("(Goyo)", "").replace("Bons", "").trim()
+                  }
                   stroke={MGR_COLORS[m.id]}
                   strokeWidth={2}
                   dot={{ r: 4, fill: MGR_COLORS[m.id] }}
@@ -347,19 +433,20 @@ export function PublicMarketsTab() {
                 strokeWidth={1.5} dot={false} name="Renda Fixa" />
             </>}
             {chartView === "gestor" && <>
-              <Area type="monotone" dataKey="andbank" stackId="g" stroke={AREA_COLORS.andbank} fill={`url(#pm-grad-andbank)`} strokeWidth={1.5} dot={false} name="Andbank" />
-              <Area type="monotone" dataKey="wam"     stackId="g" stroke={AREA_COLORS.wam}     fill={`url(#pm-grad-wam)`}     strokeWidth={1.5} dot={false} name="WAM" />
-              <Area type="monotone" dataKey="abel"    stackId="g" stroke={AREA_COLORS.abel}    fill={`url(#pm-grad-abel)`}    strokeWidth={1.5} dot={false} name="Abel" />
-              <Area type="monotone" dataKey="ubs"     stackId="g" stroke={AREA_COLORS.ubs}     fill={`url(#pm-grad-ubs)`}     strokeWidth={1.5} dot={false} name="UBS" />
-              <Area type="monotone" dataKey="caixa"   stackId="g" stroke={AREA_COLORS.caixa}   fill={`url(#pm-grad-caixa)`}   strokeWidth={1.5} dot={false} name="Caixa" />
+              <Area type="monotone" dataKey="andbank"  stackId="g" stroke={AREA_COLORS.andbank}  fill={`url(#pm-grad-andbank)`}  strokeWidth={1.5} dot={false} name="Andbank" />
+              <Area type="monotone" dataKey="wam"      stackId="g" stroke={AREA_COLORS.wam}      fill={`url(#pm-grad-wam)`}      strokeWidth={1.5} dot={false} name="WAM" />
+              <Area type="monotone" dataKey="abel"     stackId="g" stroke={AREA_COLORS.abel}      fill={`url(#pm-grad-abel)`}      strokeWidth={1.5} dot={false} name="Bankinter" />
+              <Area type="monotone" dataKey="caixaUbs" stackId="g" stroke={AREA_COLORS.caixa}    fill={`url(#pm-grad-caixa)`}    strokeWidth={1.5} dot={false} name="Caixa/UBS" />
             </>}
           </AreaChart>
         </ResponsiveContainer>
 
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
           {chartView === "gestor"
-            ? "WAM i Andbank mostrats com a valor actual (sense sèrie mensual disponible)."
-            : "WAM (€6.1M) i Andbank (€6.1M) no inclosos a la sèrie temporal per manca de dades mensuals."}
+            ? "Caixa i UBS mostrats agregats. WAM i Andbank: valor actual (sense sèrie mensual)."
+            : mvData
+              ? "WAM i Andbank no inclosos a la sèrie (sense dades mensuals). Posicions no confirmades excloses."
+              : "Dades de PM_MONTHLY (font manual). WAM i Andbank exclosos de la sèrie temporal."}
         </div>
       </div>
 
@@ -389,31 +476,135 @@ export function PublicMarketsTab() {
           </thead>
           <tbody>
             {PM_MANAGERS.map((m, i) => {
+              const isExpanded = expanded.has(m.id);
               const zebra = i % 2 === 1;
-              // CAGR from inception: use rendPct as TWR total; inception years from first available monthly data
-              // For managers with monthly data, compute years from Dec 2023; for static (WAM, Andbank) use rendPct as CAGR approx
               const hasMonthly = ["caixa-rv", "caixa-rf", "ubs-rv", "ubs-rf", "abel"].includes(m.id);
-              const inceptionMonths = m.id === "abel" ? 11 : 27; // Abel BK started Apr 2025
+              const inceptionMonths = m.id === "abel" ? 11 : 27;
               const yrs = inceptionMonths / 12;
               const mgrCagr = m.rendPct != null ? cagr(m.rendPct, yrs) : null;
+              const curTipus = expandTipus[m.id] ?? DEFAULT_EXPAND_TIPUS[m.id] ?? "all";
+              const subPositions = getMgrPositions(m.id, curTipus);
+
               return (
-                <tr key={m.id} className="hoverable" style={{
-                  background: zebra ? (dark ? tc.bgAlt : "#f8f9fb") : tc.card,
-                  borderBottom: `1px solid ${tc.border}`,
-                }}>
-                  <td style={{ padding: "8px 12px", fontWeight: 600, color: tc.navy }}>{m.nom}</td>
-                  <td style={{ padding: "8px 12px" }}>
-                    <Badge label={m.tipus} cfg={TIPUS_CFG[m.tipus] || {}} />
-                  </td>
-                  <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>
-                    {fmtM(m.valorActual)}
-                  </td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.ytd}   tc={tc} /></td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.r2025} tc={tc} /></td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.r2024} tc={tc} /></td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.rendPct} tc={tc} /></td>
-                  <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={mgrCagr} tc={tc} /></td>
-                </tr>
+                <React.Fragment key={m.id}>
+                  <tr className="hoverable" style={{
+                    background: zebra ? (dark ? tc.bgAlt : "#f8f9fb") : tc.card,
+                    borderBottom: `1px solid ${tc.border}`,
+                  }}>
+                    <td style={{ padding: "8px 12px", fontWeight: 600, color: tc.navy, cursor: "pointer", userSelect: "none" }}
+                        onClick={() => toggleExpand(m.id)}>
+                      <span style={{ display: "inline-block", width: 14, fontSize: 10, color: tc.textLight }}>
+                        {isExpanded ? "▾" : "▸"}
+                      </span>
+                      {m.nom}
+                    </td>
+                    <td style={{ padding: "8px 12px" }}>
+                      <Badge label={m.tipus} cfg={TIPUS_CFG[m.tipus] || {}} />
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>
+                      {fmtM(m.valorActual)}
+                    </td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.ytd}   tc={tc} /></td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.r2025} tc={tc} /></td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.r2024} tc={tc} /></td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={m.rendPct} tc={tc} /></td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={mgrCagr} tc={tc} /></td>
+                  </tr>
+
+                  {isExpanded && (
+                    <tr>
+                      <td colSpan={8} style={{ padding: 0, background: dark ? "#0C1A28" : "#f0f4f8", borderBottom: `1px solid ${tc.border}` }}>
+                        <div style={{ padding: "10px 16px 16px 32px" }}>
+
+                          {/* RV/RF toggle — only for managers with positions */}
+                          {subPositions !== null && (
+                            <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
+                              {[["all","Tots"],["RV","RV"],["RF","RF"]].map(([id, label]) => (
+                                <button key={id}
+                                  onClick={() => setExpandTipus(prev => ({ ...prev, [m.id]: id }))}
+                                  style={{
+                                    padding: "3px 8px", borderRadius: 4, fontSize: 10,
+                                    border: `1.5px solid ${curTipus === id ? tc.navy : tc.border}`,
+                                    background: curTipus === id ? (dark ? "#0A1A30" : "#E8F0FA") : "transparent",
+                                    color: curTipus === id ? tc.navy : tc.textLight,
+                                    cursor: "pointer", fontFamily: "inherit",
+                                    fontWeight: curTipus === id ? 700 : 400,
+                                  }}>
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* No positions note */}
+                          {subPositions === null && (
+                            <div style={{ fontSize: 11, color: tc.textLight, fontStyle: "italic", padding: "4px 0" }}>
+                              Posicions individuals gestionades pel gestor — sense desglossament disponible.
+                            </div>
+                          )}
+
+                          {/* Positions sub-table */}
+                          {subPositions !== null && subPositions.length === 0 && (
+                            <div style={{ fontSize: 11, color: tc.textLight, fontStyle: "italic" }}>Cap posició per al filtre seleccionat.</div>
+                          )}
+
+                          {subPositions !== null && subPositions.length > 0 && (
+                            <table style={{ borderCollapse: "collapse", fontSize: 11, width: "100%", minWidth: 640 }}>
+                              <thead>
+                                <tr>
+                                  {[
+                                    { label: "Nom",         align: "left"  },
+                                    { label: "Tipus",       align: "left"  },
+                                    { label: "YTD",         align: "right" },
+                                    { label: "2025",        align: "right" },
+                                    { label: "2024",        align: "right" },
+                                    { label: "Des d'inici", align: "right" },
+                                    { label: "CAGR",        align: "right" },
+                                    { label: "Valor mercat",align: "right" },
+                                  ].map(({ label, align }) => (
+                                    <th key={label} style={{
+                                      padding: "5px 8px", fontSize: 9, letterSpacing: "0.08em",
+                                      color: tc.textLight, textTransform: "uppercase", fontWeight: 600,
+                                      borderBottom: `1px solid ${tc.border}`, textAlign: align,
+                                    }}>{label}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {subPositions.map(p => {
+                                  const yh = yearsHeld(p.dataCompra);
+                                  const pc = cagr(p.rendInici, yh);
+                                  return (
+                                    <tr key={p.id} style={{ borderBottom: `1px solid ${tc.border}` }}>
+                                      <td style={{ padding: "5px 8px", color: tc.navy }}>
+                                        <Link to={`/mercats-publics/${p.id}`}
+                                          style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>
+                                          {p.nom}
+                                        </Link>
+                                      </td>
+                                      <td style={{ padding: "5px 8px" }}>
+                                        <Badge label={p.tipus} cfg={TIPUS_CFG[p.tipus] || {}} />
+                                      </td>
+                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={p.rend2026} tc={tc} /></td>
+                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={p.rend2025} tc={tc} /></td>
+                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={p.rend2024} tc={tc} /></td>
+                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={p.rendInici} tc={tc} /></td>
+                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={pc} tc={tc} /></td>
+                                      <td style={{ padding: "5px 8px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>
+                                        {fmtM(p.valorMercat)}
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          )}
+
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })}
           </tbody>
