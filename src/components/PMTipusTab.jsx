@@ -207,7 +207,9 @@ export function PMTipusTab({ tipus }) {
           </LineChart>
         </ResponsiveContainer>
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 6, fontStyle: "italic" }}>
-          Ponderat per valor de mercat. Abel Font net de TER. Gestors sense dades del any exclosos.
+          {retMode === "net"
+            ? "Ponderat per valor de mercat. Abel Font net de TER. Gestors sense dades del any exclosos."
+            : "Ponderat per valor de mercat. Retorns bruts (sense deducció TER). Gestors sense dades del any exclosos."}
         </div>
       </div>
 
