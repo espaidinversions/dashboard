@@ -17,10 +17,16 @@ Get a free API key at: https://www.openfigi.com/api
 import argparse
 import json
 import re
+import sys
 import time
 from pathlib import Path
 
 import requests
+
+# Ensure UTF-8 output on Windows
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    import io
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 # ── ISINs extracted from src/data/publicMarkets.js ─────────────────────────
 # Raw values — some have a leading "TICKER - " artefact that we strip below.
@@ -73,7 +79,8 @@ EXCH_SUFFIX = {
 }
 
 OPENFIGI_URL = "https://api.openfigi.com/v3/mapping"
-BATCH_SIZE   = 100  # max jobs per request with API key (10 without)
+BATCH_SIZE_KEY    = 100  # max jobs per request with API key
+BATCH_SIZE_NOKEY  = 10   # max jobs per request without API key
 
 
 def clean_isin(raw: str) -> str:
@@ -125,8 +132,9 @@ def query_openfigi(isins: list[str], api_key: str | None) -> dict[str, dict | No
 
     results = {}
 
-    for i in range(0, len(isins), BATCH_SIZE):
-        batch = isins[i : i + BATCH_SIZE]
+    batch_size = BATCH_SIZE_KEY if api_key else BATCH_SIZE_NOKEY
+    for i in range(0, len(isins), batch_size):
+        batch = isins[i : i + batch_size]
         jobs  = [{"idType": "ID_ISIN", "idValue": isin} for isin in batch]
 
         resp = requests.post(OPENFIGI_URL, headers=headers, json=jobs, timeout=30)
@@ -142,10 +150,10 @@ def query_openfigi(isins: list[str], api_key: str | None) -> dict[str, dict | No
             if "data" in result and result["data"]:
                 results[isin] = pick_ticker(result["data"])
             else:
-                print(f"  ⚠  No mapping found for {isin}: {result.get('error', 'unknown')}")
+                print(f"  WARN  No mapping found for {isin}: {result.get('error', 'unknown')}")
                 results[isin] = None
 
-        if i + BATCH_SIZE < len(isins):
+        if i + batch_size < len(isins):
             time.sleep(1)  # be polite between batches
 
     return results

@@ -24,9 +24,33 @@ Requirements:
 """
 
 import argparse
+import io
 import json
+import os
+import sys
 from datetime import date, timedelta
 from pathlib import Path
+
+# UTF-8 output on Windows
+if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+
+# Fix SSL cert path broken on Windows Store Python when username has non-ASCII chars.
+# libcurl (used by yfinance's curl_cffi backend) fails if the cacert.pem path contains
+# unicode characters. Copy it to an ASCII-safe temp location BEFORE importing yfinance.
+try:
+    import certifi, shutil
+    _cert_src = certifi.where()
+    if not all(ord(c) < 128 for c in _cert_src):
+        _cert_dst = Path(os.environ.get("TEMP", "C:/tmp")) / "cacert_ascii.pem"
+        _cert_dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(_cert_src, _cert_dst)
+        _cert_src = str(_cert_dst)
+    os.environ["SSL_CERT_FILE"]      = _cert_src
+    os.environ["REQUESTS_CA_BUNDLE"] = _cert_src
+    os.environ["CURL_CA_BUNDLE"]     = _cert_src
+except ImportError:
+    pass
 
 import pandas as pd
 import yfinance as yf
@@ -54,8 +78,15 @@ def fetch_prices(ticker_map: dict[str, dict], start: str, end: str) -> pd.DataFr
     Download adjusted close (OHLCV) for all tickers in one batched yfinance call.
     Returns a MultiIndex DataFrame (field × ticker).
     """
-    # Build isin→ticker and ticker→isin lookups
-    isin_to_ticker = {isin: info["yf_ticker"] for isin, info in ticker_map.items()}
+    # Build isin→ticker and ticker→isin lookups (skip ISINs with no valid ticker)
+    isin_to_ticker = {
+        isin: info["yf_ticker"]
+        for isin, info in ticker_map.items()
+        if info.get("yf_ticker")
+    }
+    skipped = [isin for isin, info in ticker_map.items() if not info.get("yf_ticker")]
+    if skipped:
+        print(f"Skipping {len(skipped)} ISINs with no ticker: {skipped}")
     ticker_to_isin = {v: k for k, v in isin_to_ticker.items()}
     tickers = list(isin_to_ticker.values())
 
@@ -79,7 +110,7 @@ def fetch_prices(ticker_map: dict[str, dict], start: str, end: str) -> pd.DataFr
     # Check for tickers that returned no data
     missing = [t for t in tickers if t not in close.columns or close[t].isna().all()]
     if missing:
-        print(f"\n⚠  No data returned for: {missing}")
+        print(f"\nWARN  No data returned for: {missing}")
         print("   These may need a different exchange suffix. Check etf_map_isins.py output.")
 
     return raw, close, ticker_to_isin
