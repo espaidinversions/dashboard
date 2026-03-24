@@ -245,6 +245,9 @@ function DashboardInner() {
   const baseTx    = useMemo(()=>TRANSACTIONS.filter(r=>!excluded.has(r.fons)),[TRANSACTIONS,excluded]);
   const baseCompr = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)),[COMPROMISOS,excluded]);
 
+  // Hoisted above filtered so it can be used in the dep array without TDZ:
+  const section = (tab==="mercats-publics"||tab==="real-estate") ? tab : "alternatives";
+
   // Filtres addicionals
   const filtered = useMemo(()=>{
     let d=baseTx;
@@ -256,12 +259,12 @@ function DashboardInner() {
       const q=txSearch.trim().toLowerCase();
       d=d.filter(r=>(r.fons||"").toLowerCase().includes(q)||(r.tipus||"").toLowerCase().includes(q)||(r.cat||"").toLowerCase().includes(q));
     }
-    if(globalSearch.trim()) {
+    if(section==="alternatives"&&globalSearch.trim()) {
       const q=globalSearch.trim().toLowerCase();
       d=d.filter(r=>(r.fons||"").toLowerCase().includes(q));
     }
     return d;
-  },[baseTx,fFy,fVcpe,fEst,fCat,txSearch,globalSearch]);
+  },[baseTx,fFy,fVcpe,fEst,fCat,txSearch,globalSearch,section]);
 
   // KPIs
   const gCompr = useMemo(()=>baseCompr.reduce((s,r)=>s+r.eur,0),[baseCompr]);
@@ -407,7 +410,6 @@ function DashboardInner() {
     {id:"portfolio",  label:"Participades"},
     {id:"inversions", label:"Detall per Inversió"},
   ];
-  const section = (tab==="mercats-publics"||tab==="real-estate") ? tab : "alternatives";
   const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":"fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Pipeline FY26"}, ...TABS_CC];
 
