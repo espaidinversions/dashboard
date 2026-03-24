@@ -6,7 +6,8 @@ import {
 import { Link } from "react-router-dom";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
-import { fmtM, usePersistedState, yearsHeld, cagr } from "../utils.js";
+import { fmtM, fmtMonth, usePersistedState, yearsHeld, cagr } from "../utils.js";
+import { PM_VALUES } from "../data/portfolioValues.js";
 
 const PM_COLORS = [
   "#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F",
@@ -27,8 +28,6 @@ const YEAR_FIELDS = [
   { field: "rend2026", label: "2026" },
 ];
 
-// How many individual positions to show as separate lines
-const TOP_N = 10;
 
 function netRendInici(p) {
   if (p.rendInici == null) return null;
@@ -106,20 +105,42 @@ export function PMTipusTab({ tipus }) {
     [visible, activeYears]
   );
 
-  // Chart 2: top N positions by AUM, annual returns over time (X = year, one line per position)
-  const topPositions = useMemo(() => visible.slice(0, TOP_N), [visible]);
+  // Chart 2: top 12 unique ISINs by AUM, market value over time
+  // Deduplicate by ISIN first — multiple tranches of the same fund share an ISIN
+  // and would produce duplicate dataKeys / overwritten chart data.
+  const top12 = useMemo(() => {
+    const seen = new Set();
+    const out = [];
+    for (const p of visible) {
+      if (!seen.has(p.isin)) { seen.add(p.isin); out.push(p); }
+      if (out.length >= 12) break;
+    }
+    return out;
+  }, [visible]);
 
-  const positionsData = useMemo(() =>
-    activeYears.map(({ field, label }) => {
-      const point = { year: label };
-      topPositions.forEach(p => {
-        const net = netRend(p, field);
-        if (net != null) point[p.id] = parseFloat(net.toFixed(2));
+  const mvChartData = useMemo(() => {
+    if (Object.keys(PM_VALUES).length === 0) return null;
+    const dateSet = new Set();
+    top12.forEach(pos => {
+      const custodians = PM_VALUES[pos.isin];
+      if (!custodians) return;
+      Object.values(custodians).forEach(series => series.forEach(d => dateSet.add(d.date)));
+    });
+    const dates = [...dateSet].sort();
+    if (dates.length === 0) return null;
+    return dates.map(date => {
+      const row = { date };
+      top12.forEach(pos => {
+        const custodians = PM_VALUES[pos.isin];
+        if (!custodians) { row[pos.isin] = null; return; }
+        const total = Object.values(custodians)
+          .map(s => s.find(d => d.date === date)?.value ?? 0)
+          .reduce((a, b) => a + b, 0);
+        row[pos.isin] = total || null;
       });
-      return point;
-    }),
-    [topPositions, activeYears]
-  );
+      return row;
+    });
+  }, [top12]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -173,35 +194,41 @@ export function PMTipusTab({ tipus }) {
         </div>
       </div>
 
-      {/* ── Chart 2: top N positions over time ── */}
-      {topPositions.length > 0 && activeYears.length > 0 && (
+      {/* ── Chart 2: market value over time ── */}
+      {mvChartData && (
         <div style={card}>
           <div style={secLabel}>
-            Rendiment anual · top {topPositions.length} posicions per AUM (net TER Abel Font)
+            Valor de mercat · top {top12.length} posicions per AUM
           </div>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={positionsData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+          <ResponsiveContainer width="100%" height={280}>
+            <LineChart data={mvChartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-              <XAxis dataKey="year" tick={{ fontSize: 11, fill: tc.textLight }} axisLine={false} tickLine={false} />
-              <YAxis
-                tickFormatter={v => v.toFixed(0) + "%"}
-                tick={{ fontSize: 10, fill: tc.textLight }}
-                axisLine={false} tickLine={false} width={40}
+              <XAxis
+                dataKey="date"
+                tickFormatter={fmtMonth}
+                tick={{ fontSize: 9, fill: tc.textLight }}
+                axisLine={false} tickLine={false}
+                interval="preserveStartEnd"
               />
-              <ReferenceLine y={0} stroke={tc.border} strokeDasharray="4 2" />
+              <YAxis
+                tickFormatter={v => fmtM(v)}
+                tick={{ fontSize: 10, fill: tc.textLight }}
+                axisLine={false} tickLine={false} width={60}
+              />
               <Tooltip
                 {...tooltipStyle}
-                formatter={(v, name) => [(v >= 0 ? "+" : "") + v.toFixed(2) + "%", name]}
+                formatter={(v, name) => [v != null ? fmtM(v) : "—", name]}
+                labelFormatter={fmtMonth}
               />
               <Legend wrapperStyle={{ fontSize: 9, paddingTop: 8 }} />
-              {topPositions.map((p, i) => (
+              {top12.map((p, i) => (
                 <Line
-                  key={p.id}
-                  dataKey={p.id}
+                  key={p.isin}
+                  dataKey={p.isin}
                   name={p.nom.replace(/\bUCITS\b.*/, "").replace(/\bETF\b.*$/, "ETF").trim()}
                   stroke={PM_COLORS[i % PM_COLORS.length]}
                   strokeWidth={1.5}
-                  dot={{ r: 3 }}
+                  dot={false}
                   connectNulls={false}
                 />
               ))}
