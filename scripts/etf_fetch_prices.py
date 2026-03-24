@@ -1,26 +1,29 @@
 """
 etf_fetch_prices.py
 ───────────────────
-Downloads historical daily OHLCV prices for all portfolio ETFs using yfinance.
-Reads the ISIN→ticker map produced by etf_map_isins.py.
+Downloads historical daily prices for all portfolio ETFs.
+
+Primary source:  justetf-scraping (ISIN-native, full history back to inception,
+                 handles renamed/discontinued/Lyxor→Amundi funds perfectly)
+Fallback source: yfinance (exchange prices, used if justETF fetch fails)
 
 Output:
-  ../Mercats Públics/prices/<ISIN>.csv      — one file per ETF
-  ../Mercats Públics/prices_combined.csv    — all ETFs in one long-format CSV
-  ../Mercats Públics/prices_wide.csv        — close prices only, wide format (date × ETF)
+  ../Mercats Públics/prices/<ISIN>.csv      — one file per ETF (close/NAV price)
+  ../Mercats Públics/prices_combined.csv    — long format, all ETFs
+  ../Mercats Públics/prices_wide.csv        — close prices only, wide (date × ISIN)
 
 Usage:
-    # First time (fetch all history from 2021-01-01):
+    # Full history from inception:
     python scripts/etf_fetch_prices.py
 
-    # Incremental update (only last 30 days):
-    python scripts/etf_fetch_prices.py --days 30
+    # Only update from a specific date:
+    python scripts/etf_fetch_prices.py --start 2024-01-01
 
-    # Custom date range:
-    python scripts/etf_fetch_prices.py --start 2023-01-01 --end 2025-03-31
+    # Incremental update (last N days):
+    python scripts/etf_fetch_prices.py --days 90
 
 Requirements:
-    pip install yfinance pandas
+    pip install -r scripts/requirements.txt
 """
 
 import argparse
@@ -28,6 +31,7 @@ import io
 import json
 import os
 import sys
+import time
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -36,8 +40,8 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 # Fix SSL cert path broken on Windows Store Python when username has non-ASCII chars.
-# libcurl (used by yfinance's curl_cffi backend) fails if the cacert.pem path contains
-# unicode characters. Copy it to an ASCII-safe temp location BEFORE importing yfinance.
+# libcurl (used by yfinance's curl_cffi backend) fails if cacert.pem path contains
+# unicode characters. Copy it to an ASCII-safe location BEFORE importing yfinance.
 try:
     import certifi, shutil
     _cert_src = certifi.where()
@@ -53,165 +57,168 @@ except ImportError:
     pass
 
 import pandas as pd
-import yfinance as yf
 
-MAP_PATH     = Path(__file__).parent.parent / "Mercats Públics" / "isin_ticker_map.json"
 PRICES_DIR   = Path(__file__).parent.parent / "Mercats Públics" / "prices"
 COMBINED_CSV = Path(__file__).parent.parent / "Mercats Públics" / "prices_combined.csv"
 WIDE_CSV     = Path(__file__).parent.parent / "Mercats Públics" / "prices_wide.csv"
+MAP_PATH     = Path(__file__).parent.parent / "Mercats Públics" / "isin_ticker_map.json"
 
-DEFAULT_START = "2021-01-01"
+# All valid ISINs in the portfolio.
+# The 3 ISINs with bad check digits (IE00B3ZW0K19, LU1681043600, LU1834988519)
+# are data-entry typos in publicMarkets.js — they map to the valid ISINs already listed.
+ALL_ISINS = [
+    "FR0010524777", "FR0010527275",
+    "IE000F6G1DE0", "IE00B3VWM098", "IE00B3XXRP09", "IE00B3ZW0K18",
+    "IE00B441G979", "IE00B9M6SJ31", "IE00BDBRDM35", "IE00BFMXXD54",
+    "IE00BFXR7900", "IE00BGPP6473", "IE00BJGWQN72", "IE00BKM4GZ66",
+    "IE00BKT6FV49", "IE00BQN1K786", "IE00BQN1K901", "IE00BYVQ9F29",
+    "LU1407888137", "LU1681043599", "LU1681044647", "LU1834988518",
+    "US4642871507", "US4642876555", "US78464A8392", "US9220428588", "US92206C7065",
+]
 
 
-def load_map() -> dict[str, dict]:
-    if not MAP_PATH.exists():
-        raise FileNotFoundError(
-            f"Ticker map not found at {MAP_PATH}.\n"
-            "Run  python scripts/etf_map_isins.py  first."
-        )
-    data = json.loads(MAP_PATH.read_text())
-    return data["map"]  # {isin: {yf_ticker, name, ...}}
+# ── justETF source ────────────────────────────────────────────────────────────
 
-
-def fetch_prices(ticker_map: dict[str, dict], start: str, end: str) -> pd.DataFrame:
+def fetch_justetf(isin: str, start: str | None, end: str | None) -> pd.DataFrame | None:
     """
-    Download adjusted close (OHLCV) for all tickers in one batched yfinance call.
-    Returns a MultiIndex DataFrame (field × ticker).
+    Fetch full NAV history from justETF.com for a single ISIN.
+    Returns a DataFrame with columns [date, close, source] or None on failure.
+    justETF uses NAV prices — essentially identical to exchange close for
+    accumulating UCITS ETFs (typically within 0.1-0.2% of market price).
     """
-    # Build isin→ticker and ticker→isin lookups (skip ISINs with no valid ticker)
-    isin_to_ticker = {
-        isin: info["yf_ticker"]
-        for isin, info in ticker_map.items()
-        if info.get("yf_ticker")
-    }
-    skipped = [isin for isin, info in ticker_map.items() if not info.get("yf_ticker")]
-    if skipped:
-        print(f"Skipping {len(skipped)} ISINs with no ticker: {skipped}")
-    ticker_to_isin = {v: k for k, v in isin_to_ticker.items()}
-    tickers = list(isin_to_ticker.values())
-
-    print(f"Downloading {len(tickers)} tickers from {start} to {end}…")
-    raw = yf.download(
-        tickers,
-        start=start,
-        end=end,
-        auto_adjust=True,   # adjusts for splits + dividends
-        progress=True,
-        threads=True,
-    )
-
-    # yfinance returns MultiIndex columns (field, ticker) when >1 ticker
-    if isinstance(raw.columns, pd.MultiIndex):
-        close = raw["Close"]
-    else:
-        # Single ticker edge case — wrap in a DataFrame with the ticker as column
-        close = raw[["Close"]].rename(columns={"Close": tickers[0]})
-
-    # Check for tickers that returned no data
-    missing = [t for t in tickers if t not in close.columns or close[t].isna().all()]
-    if missing:
-        print(f"\nWARN  No data returned for: {missing}")
-        print("   These may need a different exchange suffix. Check etf_map_isins.py output.")
-
-    return raw, close, ticker_to_isin
-
-
-def build_long_df(raw: pd.DataFrame, ticker_to_isin: dict[str, str], ticker_map: dict[str, dict]) -> pd.DataFrame:
-    """Build a long-format DataFrame with columns: date, isin, ticker, name, open, high, low, close, volume."""
-    isin_to_name = {isin: info.get("name", "") for isin, info in ticker_map.items()}
-
-    if not isinstance(raw.columns, pd.MultiIndex):
-        # Single ticker
-        ticker = list(ticker_to_isin.keys())[0]
-        isin   = ticker_to_isin[ticker]
-        df = raw.copy()
-        df.columns = [c.lower() for c in df.columns]
-        df["isin"]   = isin
-        df["ticker"] = ticker
-        df["name"]   = isin_to_name.get(isin, "")
+    try:
+        from justetf_scraping import load_chart
+        df = load_chart(isin)
+        df = df[["quote"]].rename(columns={"quote": "close"})
         df.index.name = "date"
-        return df.reset_index()[["date", "isin", "ticker", "name", "open", "high", "low", "close", "volume"]]
-
-    records = []
-    for ticker in raw["Close"].columns:
-        isin = ticker_to_isin.get(ticker, "")
-        name = isin_to_name.get(isin, "")
-        sub  = raw.xs(ticker, axis=1, level=1).copy()
-        sub.columns = [c.lower() for c in sub.columns]
-        sub["isin"]   = isin
-        sub["ticker"] = ticker
-        sub["name"]   = name
-        sub.index.name = "date"
-        records.append(sub.reset_index())
-
-    return pd.concat(records, ignore_index=True)[
-        ["date", "isin", "ticker", "name", "open", "high", "low", "close", "volume"]
-    ]
+        df = df.reset_index()
+        df["date"] = pd.to_datetime(df["date"])
+        if start:
+            df = df[df["date"] >= pd.Timestamp(start)]
+        if end:
+            df = df[df["date"] <= pd.Timestamp(end)]
+        df["source"] = "justetf"
+        return df if len(df) > 0 else None
+    except Exception as e:
+        print(f"  justETF fail {isin}: {e}")
+        return None
 
 
-def save_per_isin(long_df: pd.DataFrame):
-    """Save one CSV per ISIN to Mercats Públics/prices/."""
-    PRICES_DIR.mkdir(exist_ok=True)
-    for isin, group in long_df.groupby("isin"):
-        path = PRICES_DIR / f"{isin}.csv"
-        group.sort_values("date").to_csv(path, index=False)
-    print(f"Saved {long_df['isin'].nunique()} per-ISIN CSV files → {PRICES_DIR}/")
+# ── yfinance fallback ─────────────────────────────────────────────────────────
 
+def load_ticker_map() -> dict:
+    if not MAP_PATH.exists():
+        return {}
+    return json.loads(MAP_PATH.read_text(encoding="utf-8")).get("map", {})
+
+
+def fetch_yfinance(isin: str, ticker: str, start: str | None, end: str | None) -> pd.DataFrame | None:
+    """Fetch exchange price history from Yahoo Finance for a single ticker."""
+    try:
+        import yfinance as yf
+        t = yf.Ticker(ticker)
+        kw = dict(auto_adjust=True)
+        if start:
+            kw["start"] = start
+        else:
+            kw["period"] = "max"
+        if end:
+            kw["end"] = end
+        hist = t.history(**kw)
+        if hist.empty:
+            return None
+        df = hist[["Close"]].rename(columns={"Close": "close"})
+        df.index.name = "date"
+        df = df.reset_index()
+        df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+        df["source"] = "yfinance"
+        return df
+    except Exception as e:
+        print(f"  yfinance fail {isin} ({ticker}): {e}")
+        return None
+
+
+# ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
-    parser = argparse.ArgumentParser(description="Fetch historical ETF prices via yfinance")
-    parser.add_argument("--start", default=DEFAULT_START, help="Start date YYYY-MM-DD")
-    parser.add_argument("--end",   default=date.today().isoformat(), help="End date YYYY-MM-DD")
+    parser = argparse.ArgumentParser(description="Fetch ETF price history (justETF + yfinance fallback)")
+    parser.add_argument("--start", default=None, help="Start date YYYY-MM-DD (default: from inception)")
+    parser.add_argument("--end",   default=None, help="End date YYYY-MM-DD (default: today)")
     parser.add_argument("--days",  type=int, default=None,
-                        help="Shortcut: fetch last N days (overrides --start/--end)")
+                        help="Fetch last N days (overrides --start/--end)")
+    parser.add_argument("--isins", nargs="*", default=None,
+                        help="Specific ISINs to fetch (default: all)")
     args = parser.parse_args()
 
     if args.days:
         args.start = (date.today() - timedelta(days=args.days)).isoformat()
         args.end   = date.today().isoformat()
 
-    ticker_map = load_map()
-    print(f"Loaded ticker map: {len(ticker_map)} ISINs")
+    isins = args.isins if args.isins else ALL_ISINS
+    ticker_map = load_ticker_map()
 
-    raw, close, ticker_to_isin = fetch_prices(ticker_map, args.start, args.end)
+    PRICES_DIR.mkdir(parents=True, exist_ok=True)
 
-    # ── Per-ISIN CSVs ─────────────────────────────────────────────────────
-    long_df = build_long_df(raw, ticker_to_isin, ticker_map)
-    long_df = long_df.dropna(subset=["close"])
+    results = []
+    justetf_ok, yf_ok, failed = [], [], []
 
-    save_per_isin(long_df)
+    for isin in isins:
+        print(f"  {isin} ...", end=" ", flush=True)
 
-    # ── Combined long CSV ─────────────────────────────────────────────────
-    long_df.sort_values(["isin", "date"]).to_csv(COMBINED_CSV, index=False)
-    print(f"Saved combined CSV → {COMBINED_CSV}")
+        # ── Step 1: try justETF ──
+        df = fetch_justetf(isin, args.start, args.end)
+        if df is not None and len(df) > 0:
+            justetf_ok.append(isin)
+            print(f"justETF  {len(df):5d} rows  {df['date'].min().date()} -> {df['date'].max().date()}")
+        else:
+            # ── Step 2: yfinance fallback ──
+            info = ticker_map.get(isin, {})
+            ticker = info.get("yf_ticker") if info else None
+            if ticker:
+                df = fetch_yfinance(isin, ticker, args.start, args.end)
+                if df is not None:
+                    yf_ok.append(isin)
+                    print(f"yfinance {len(df):5d} rows  {df['date'].min().date()} -> {df['date'].max().date()}")
+                else:
+                    failed.append(isin)
+                    print("FAILED")
+                    continue
+            else:
+                failed.append(isin)
+                print("FAILED (no ticker)")
+                continue
 
-    # ── Wide close prices CSV (date × ISIN) ───────────────────────────────
-    isin_to_ticker = {isin: info["yf_ticker"] for isin, info in ticker_map.items()}
-    ticker_to_isin_clean = {v: k for k, v in isin_to_ticker.items()}
+        df["isin"] = isin
+        df["name"] = ticker_map.get(isin, {}).get("name", "") if ticker_map else ""
 
-    wide = close.copy()
-    # Rename columns from ticker to ISIN for clarity
-    wide.rename(columns=ticker_to_isin_clean, inplace=True)
-    wide.index.name = "date"
-    wide.sort_index().to_csv(WIDE_CSV)
-    print(f"Saved wide close prices CSV → {WIDE_CSV}")
+        # Save per-ISIN CSV
+        out = PRICES_DIR / f"{isin}.csv"
+        df[["date", "isin", "name", "close", "source"]].sort_values("date").to_csv(out, index=False)
+        results.append(df)
 
-    # ── Summary ───────────────────────────────────────────────────────────
-    print(f"\n── Summary ──────────────────────────────────────────")
-    print(f"Period:  {args.start} → {args.end}")
-    print(f"ETFs:    {long_df['isin'].nunique()} with data / {len(ticker_map)} total")
-    print(f"Rows:    {len(long_df):,}")
-    print(f"Dates:   {long_df['date'].min().date()} → {long_df['date'].max().date()}")
-    if not long_df.empty:
-        print("\nLatest close prices:")
-        latest = (
-            long_df.sort_values("date")
-            .groupby("isin")
-            .last()
-            .reset_index()[["isin", "name", "ticker", "date", "close"]]
-        )
-        latest["name"] = latest["name"].str[:45]
-        print(latest.to_string(index=False))
+        time.sleep(0.25)   # be polite to justETF
+
+    # ── Merge and save ────────────────────────────────────────────────────────
+    if results:
+        combined = pd.concat(results, ignore_index=True)
+        combined = combined.sort_values(["isin", "date"])
+        combined[["date", "isin", "name", "close", "source"]].to_csv(COMBINED_CSV, index=False)
+
+        wide = combined.pivot(index="date", columns="isin", values="close").sort_index()
+        wide.to_csv(WIDE_CSV)
+
+        print(f"\n{'─'*56}")
+        print(f"justETF source:  {len(justetf_ok):2d} ISINs")
+        print(f"yfinance source: {len(yf_ok):2d} ISINs")
+        if failed:
+            print(f"Failed:          {len(failed):2d} ISINs: {failed}")
+        print(f"Total rows:      {len(combined):,}")
+        print(f"Date range:      {combined['date'].min().date()} -> {combined['date'].max().date()}")
+        print(f"Output:          {PRICES_DIR}/")
+        print(f"                 {COMBINED_CSV}")
+        print(f"                 {WIDE_CSV}")
+    else:
+        print("No data fetched.")
 
 
 if __name__ == "__main__":
