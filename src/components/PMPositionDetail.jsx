@@ -6,7 +6,8 @@ import {
 import { useParams, useNavigate } from "react-router-dom";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
-import { fmtM, yearsHeld, cagr } from "../utils.js";
+import { fmtM, fmtMonth, yearsHeld, cagr } from "../utils.js";
+import { PM_VALUES } from "../data/portfolioValues.js";
 
 function KpiCard({ label, value, accent, tc }) {
   return (
@@ -80,6 +81,27 @@ export function PMPositionDetail() {
       }));
   }, [p, isAbelFont]);
 
+  const valueData = useMemo(() => {
+    const custodianData = PM_VALUES[p.isin];
+    if (!custodianData) return null;
+    const custodians = Object.keys(custodianData).filter(c => custodianData[c].length > 0);
+    if (custodians.length === 0) return null;
+    const dateSet = new Set();
+    custodians.forEach(c => custodianData[c].forEach(d => dateSet.add(d.date)));
+    const dates = [...dateSet].sort();
+    if (dates.length === 0) return null;
+    return {
+      custodians,
+      rows: dates.map(date => {
+        const row = { date };
+        custodians.forEach(c => {
+          row[c] = custodianData[c].find(d => d.date === date)?.value ?? null;
+        });
+        return row;
+      }),
+    };
+  }, [p.isin]);
+
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card        = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
   const tooltipStyle = { contentStyle: { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }, labelStyle: { color: tc.text, fontWeight: 600 } };
@@ -144,6 +166,49 @@ export function PMPositionDetail() {
         <KpiCard label="P&L"           value={`${pnl >= 0 ? "+" : ""}${fmtM(pnl)}`} accent={pnlColor} tc={tc} />
         <KpiCard label="Pes cartera"   value={p.pes != null ? p.pes.toFixed(1) + "%" : "—"} accent={tc.navyLight} tc={tc} />
       </div>
+
+      {/* ── Market value over time ── */}
+      {valueData && (
+        <div style={card}>
+          <div style={secLabel}>Valor de mercat · evolució mensual</div>
+          <ResponsiveContainer width="100%" height={240}>
+            <LineChart data={valueData.rows} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={fmtMonth}
+                tick={{ fontSize: 9, fill: tc.textLight }}
+                axisLine={false} tickLine={false}
+                interval="preserveStartEnd"
+              />
+              <YAxis
+                tickFormatter={v => fmtM(v)}
+                tick={{ fontSize: 10, fill: tc.textLight }}
+                axisLine={false} tickLine={false} width={60}
+              />
+              <Tooltip
+                {...tooltipStyle}
+                formatter={(v, name) => [v != null ? fmtM(v) : "—", name]}
+                labelFormatter={fmtMonth}
+              />
+              {valueData.custodians.length > 1 && (
+                <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }} />
+              )}
+              {valueData.custodians.map((c, i) => (
+                <Line
+                  key={c}
+                  dataKey={c}
+                  name={c}
+                  stroke={["#4E79A7", "#F28E2B", "#E15759", "#76B7B2"][i % 4]}
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
       {/* ── Two-column: weight chart + IRR / cost ── */}
       <div style={{ display: "flex", gap: 16 }}>
