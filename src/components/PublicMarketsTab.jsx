@@ -80,9 +80,9 @@ const DEFAULT_EXPAND_TIPUS = {
 
 // Get PM_POSITIONS for a manager row
 function getMgrPositions(mgrId, tipusFilter) {
-  if (mgrId === "wam" || mgrId === "andbank") return null;
-  const gestorKey = mgrId === "abel" ? "Abel Font" : "CaixaBank / UBS";
-  let rows = PM_POSITIONS.filter(p => p.gestor === gestorKey);
+  // Only Abel Font has individual position data in PM_POSITIONS
+  if (mgrId !== "abel") return null;
+  let rows = PM_POSITIONS;
   if (tipusFilter && tipusFilter !== "all") rows = rows.filter(p => p.tipus === tipusFilter);
   return rows.sort((a, b) => b.valorMercat - a.valorMercat);
 }
@@ -247,8 +247,8 @@ export function PublicMarketsTab() {
       for (const [custodian, series] of Object.entries(custodians)) {
         for (const { date, value } of series) {
           if (!byDate[date]) byDate[date] = { caixaUbs: 0, abel: 0, rv: 0, rf: 0 };
-          if (custodian === "CaixaBank / UBS") byDate[date].caixaUbs += value;
-          else if (custodian === "Abel Font")   byDate[date].abel    += value;
+          if (custodian === "CaixaBank") byDate[date].caixaUbs += value;
+          else if (custodian === "Bankinter") byDate[date].abel += value;
           if (tipus === "RV")      byDate[date].rv += value;
           else if (tipus === "RF") byDate[date].rf += value;
         }
@@ -502,16 +502,18 @@ export function PublicMarketsTab() {
               const curTipus = expandTipus[m.id] ?? DEFAULT_EXPAND_TIPUS[m.id] ?? "all";
               const subPositions = getMgrPositions(m.id, curTipus);
 
+              const isExpandable = subPositions !== null;
               return (
                 <React.Fragment key={m.id}>
                   <tr className="hoverable" style={{
                     background: zebra ? (dark ? tc.bgAlt : "#f8f9fb") : tc.card,
                     borderBottom: `1px solid ${tc.border}`,
                   }}>
-                    <td style={{ padding: "8px 12px", fontWeight: 600, color: tc.navy, cursor: "pointer", userSelect: "none" }}
-                        onClick={() => toggleExpand(m.id)}>
+                    <td style={{ padding: "8px 12px", fontWeight: 600, color: tc.navy,
+                                 cursor: isExpandable ? "pointer" : "default", userSelect: "none" }}
+                        onClick={() => isExpandable && toggleExpand(m.id)}>
                       <span style={{ display: "inline-block", width: 14, fontSize: 10, color: tc.textLight }}>
-                        {isExpanded ? "▾" : "▸"}
+                        {isExpandable ? (isExpanded ? "▾" : "▸") : ""}
                       </span>
                       {m.nom}
                     </td>
@@ -528,7 +530,7 @@ export function PublicMarketsTab() {
                     <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={mgrCagr} tc={tc} /></td>
                   </tr>
 
-                  {isExpanded && (
+                  {isExpanded && isExpandable && (
                     <tr>
                       <td colSpan={8} style={{ padding: 0, background: dark ? "#0C1A28" : "#f0f4f8", borderBottom: `1px solid ${tc.border}` }}>
                         <div style={{ padding: "10px 16px 16px 32px" }}>
@@ -550,13 +552,6 @@ export function PublicMarketsTab() {
                                   {label}
                                 </button>
                               ))}
-                            </div>
-                          )}
-
-                          {/* No positions note */}
-                          {subPositions === null && (
-                            <div style={{ fontSize: 11, color: tc.textLight, fontStyle: "italic", padding: "4px 0" }}>
-                              Posicions individuals gestionades pel gestor — sense desglossament disponible.
                             </div>
                           )}
 

@@ -71,8 +71,8 @@ export function PMTipusTab({ tipus }) {
   );
 
   const visible = useMemo(() => {
-    const base = toggle === "directe"   ? positions.filter(p => p.gestor === "CaixaBank / UBS")
-               : toggle === "bankinter" ? positions.filter(p => p.gestor === "Abel Font")
+    const base = toggle === "directe"   ? positions.filter(p => p.custodian === "CaixaBank")
+               : toggle === "bankinter" ? positions.filter(p => p.custodian === "Bankinter")
                : positions;
     return [...base].sort((a, b) => b.valorMercat - a.valorMercat);
   }, [positions, toggle]);
