@@ -11,6 +11,11 @@ export function fmtS(n) {
   if(a>=1e3) return (n/1e3).toFixed(0)+"K€";
   return n.toFixed(0)+"€";
 }
+const _CAT_MONTHS = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
+export function fmtMonth(yyyymm) {
+  const [y, m] = yyyymm.split("-");
+  return `${_CAT_MONTHS[+m]} '${y.slice(2)}`;
+}
 
 // ── CSV Parsers ───────────────────────────────────────────
 function parseCSVRows(text) {
