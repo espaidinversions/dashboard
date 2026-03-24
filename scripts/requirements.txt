@@ -1,0 +1,7 @@
+# Python dependencies for dashboard data scripts
+# Install with: pip install -r scripts/requirements.txt
+
+yfinance>=0.2.51
+pandas>=2.0.0
+requests>=2.31.0
+openpyxl>=3.1.0        # for existing xlsx scripts
