@@ -1,6 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { isRateLimited } from "../../_rateLimit.js";
 
+function setCors(res) {
+  const origin = process.env.ALLOWED_ORIGIN || "http://localhost:5173";
+  res.setHeader("Access-Control-Allow-Origin", origin);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+}
+
 function serverError(res, error, context) {
   console.error(`[admin/users/[id]] ${context}:`, error);
   return res.status(500).json({ error: "Internal server error" });
@@ -22,6 +29,9 @@ async function verifyAdmin(req, serviceClient) {
 }
 
 export default async function handler(req, res) {
+  setCors(res);
+  if (req.method === "OPTIONS") return res.status(204).end();
+
   const ip = req.headers["x-forwarded-for"]?.split(",")[0] ?? req.socket?.remoteAddress ?? "unknown";
   if (isRateLimited(ip)) return res.status(429).json({ error: "Too many requests" });
 
