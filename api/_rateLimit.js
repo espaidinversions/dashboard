@@ -1,5 +1,7 @@
 const rateLimitMap = new Map();
 
+// Simple in-memory rate limiter: max 30 requests per IP per minute.
+// NOTE: state resets on cold start and is not shared across serverless instances.
 export function isRateLimited(ip) {
   const now = Date.now();
   const window = 60_000;
