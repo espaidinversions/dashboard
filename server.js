@@ -15,8 +15,13 @@ app.use(express.json({ limit: "20mb" }));
 
 // ── Helpers ───────────────────────────────────────────────
 
-function csvEscape(v) {
+function sanitizeCsvValue(v) {
   const s = String(v ?? "");
+  return /^[=+\-@\t\r]/.test(s) ? "'" + s : s;
+}
+
+function csvEscape(v) {
+  const s = sanitizeCsvValue(v);
   return s.includes(",") || s.includes('"') || s.includes("\n")
     ? `"${s.replace(/"/g, '""')}"` : s;
 }
