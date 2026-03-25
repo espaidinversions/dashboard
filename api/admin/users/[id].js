@@ -1,12 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { isRateLimited } from "../../_rateLimit.js";
-
-function setCors(res) {
-  const origin = process.env.ALLOWED_ORIGIN || "http://localhost:5173";
-  res.setHeader("Access-Control-Allow-Origin", origin);
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-}
+import { setCors } from "../../_cors.js";
 
 function serverError(res, error, context) {
   console.error(`[admin/users/[id]] ${context}:`, error);
