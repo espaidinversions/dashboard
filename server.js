@@ -72,7 +72,7 @@ app.post("/api/pipeline", (req, res) => {
     res.json({ ok: true, saved: funds.length });
   } catch (e) {
     console.error("/api/pipeline error:", e);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -115,7 +115,7 @@ app.post("/api/capital-calls", (req, res) => {
     res.json({ ok: true, saved: rows.length });
   } catch (e) {
     console.error("/api/capital-calls error:", e);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -155,7 +155,7 @@ app.get("/api/data-version", (req, res) => {
     }, 0);
     res.json({ version: latest });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
@@ -172,7 +172,7 @@ app.get("/api/board", (req, res) => {
     res.json({ nodes: canvas.nodes || [], edges: canvas.edges || [] });
   } catch (e) {
     console.error("/api/board error:", e);
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 
