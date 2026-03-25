@@ -21,8 +21,9 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
       const XLSX = await import("xlsx");
       const buf  = await file.arrayBuffer();
       const wb   = XLSX.read(buf, { type: "array" });
-      if (wb.SheetNames.length > 20) {
-        setError("El fitxer té massa fulls (màxim 20).");
+      const MAX_SHEETS = 20;
+      if (wb.SheetNames.length > MAX_SHEETS) {
+        setError(`El fitxer té massa fulls (màxim ${MAX_SHEETS}).`);
         return;
       }
       const sheet = name => {
