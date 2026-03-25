@@ -21,6 +21,10 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
       const XLSX = await import("xlsx");
       const buf  = await file.arrayBuffer();
       const wb   = XLSX.read(buf, { type: "array" });
+      if (wb.SheetNames.length > 20) {
+        setError("El fitxer té massa fulls (màxim 20).");
+        return;
+      }
       const sheet = name => {
         const ws = wb.Sheets[name];
         return ws ? XLSX.utils.sheet_to_json(ws) : null;
