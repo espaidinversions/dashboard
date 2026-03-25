@@ -155,6 +155,7 @@ app.get("/api/data-version", (req, res) => {
     }, 0);
     res.json({ version: latest });
   } catch (e) {
+    console.error("/api/data-version error:", e);
     res.status(500).json({ error: "Internal server error" });
   }
 });
