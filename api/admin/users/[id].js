@@ -1,24 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
+import { isRateLimited } from "../../_rateLimit.js";
 
 function serverError(res, error, context) {
   console.error(`[admin/users/[id]] ${context}:`, error);
   return res.status(500).json({ error: "Internal server error" });
-}
-
-// Simple in-memory rate limiter: max 30 requests per IP per minute
-const rateLimitMap = new Map();
-function isRateLimited(ip) {
-  const now = Date.now();
-  const window = 60_000;
-  const max = 30;
-  const entry = rateLimitMap.get(ip) ?? { count: 0, start: now };
-  if (now - entry.start > window) {
-    rateLimitMap.set(ip, { count: 1, start: now });
-    return false;
-  }
-  if (entry.count >= max) return true;
-  rateLimitMap.set(ip, { ...entry, count: entry.count + 1 });
-  return false;
 }
 
 function makeServiceClient() {
