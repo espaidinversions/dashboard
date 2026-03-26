@@ -3,11 +3,12 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
 } from "recharts";
-import { Link } from "react-router-dom";
-import { PM_POSITIONS } from "../data/publicMarkets.js";
+import { Link, useNavigate } from "react-router-dom";
+import { PM_POSITIONS, PM_CLOSED } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonth, usePersistedState, yearsHeld, cagr } from "../utils.js";
 import { PM_VALUES } from "../data/portfolioValues.js";
+import { PM_TER } from "../data/pmTer.js";
 
 const PM_COLORS = [
   "#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F",
@@ -29,17 +30,21 @@ const YEAR_FIELDS = [
 ];
 
 
+function getTer(p) {
+  return PM_TER[p.isin] ?? p.costAnual ?? 0;
+}
+
 function netRendInici(p) {
   if (p.rendInici == null) return null;
   return p.gestor === "Abel Font"
-    ? p.rendInici - (p.costAnual ?? 0) * yearsHeld(p.dataCompra)
+    ? p.rendInici - getTer(p) * yearsHeld(p.dataCompra)
     : p.rendInici;
 }
 
 function netRend(p, field) {
   const v = p[field];
   if (v == null) return null;
-  return p.gestor === "Abel Font" ? v - (p.costAnual ?? 0) : v;
+  return p.gestor === "Abel Font" ? v - getTer(p) : v;
 }
 
 function PctChip({ v, tc }) {
@@ -314,6 +319,108 @@ export function PMTipusTab({ tipus }) {
         </div>
       </div>
 
+      {/* ── Closed positions ── */}
+      <ClosedPositions tipus={tipus} tc={tc} secLabel={secLabel} card={card} th={th} />
+
+    </div>
+  );
+}
+
+function ClosedPositions({ tipus, tc, secLabel, card, th }) {
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const byYear = useMemo(() => {
+    const rows = PM_CLOSED.filter(p => p.tipus === tipus);
+    const map = new Map();
+    rows.forEach(p => {
+      if (!map.has(p.any)) map.set(p.any, []);
+      map.get(p.any).push(p);
+    });
+    return [...map.entries()].sort((a, b) => b[0] - a[0]);
+  }, [tipus]);
+
+  // Build aggregate chart data: total value across all closed positions per month
+  const chartData = useMemo(() => {
+    const allIsins = byYear.flatMap(([, rows]) => rows.map(p => p.isin));
+    const dateMap = new Map();
+    allIsins.forEach(isin => {
+      const custodians = PM_VALUES[isin];
+      if (!custodians) return;
+      Object.values(custodians).forEach(series =>
+        series.forEach(({ date, value }) => {
+          dateMap.set(date, (dateMap.get(date) ?? 0) + value);
+        })
+      );
+    });
+    if (dateMap.size === 0) return null;
+    return [...dateMap.entries()].sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, value]) => ({ date, value }));
+  }, [byYear]);
+
+  if (byYear.length === 0) return null;
+  const total = byYear.reduce((s, [, rows]) => s + rows.length, 0);
+  const tooltipStyle = { contentStyle: { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }, labelStyle: { color: tc.text, fontWeight: 600, fontSize: 11 } };
+
+  return (
+    <div style={{ ...card, opacity: 0.85 }}>
+      <div
+        onClick={() => setOpen(o => !o)}
+        style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}
+      >
+        <div style={secLabel}>Posicions tancades · {total} vehicles</div>
+        <span style={{ fontSize: 11, color: tc.textLight, marginLeft: "auto" }}>{open ? "▲" : "▼"}</span>
+      </div>
+
+      {open && chartData && (
+        <div style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.07em", marginBottom: 6 }}>Valor de mercat agregat (posicions tancades)</div>
+          <ResponsiveContainer width="100%" height={180}>
+            <LineChart data={chartData} margin={{ top: 4, right: 16, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
+              <XAxis dataKey="date" tickFormatter={fmtMonth} tick={{ fontSize: 9, fill: tc.textLight }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
+              <YAxis tickFormatter={v => fmtM(v)} tick={{ fontSize: 10, fill: tc.textLight }} axisLine={false} tickLine={false} width={60} />
+              <Tooltip {...tooltipStyle} formatter={v => [fmtM(v), "Valor"]} labelFormatter={fmtMonth} />
+              <Line dataKey="value" stroke={tc.textLight} strokeWidth={1.5} dot={false} connectNulls />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {open && byYear.map(([year, rows]) => (
+        <div key={year} style={{ marginTop: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: tc.textLight, letterSpacing: "0.07em", marginBottom: 6 }}>
+            Tancat {year} · {rows.length} posicions
+          </div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
+            <thead>
+              <tr>
+                <th style={{ ...th, textAlign: "left" }}>Nom</th>
+                <th style={{ ...th, textAlign: "left" }}>ISIN</th>
+                <th style={{ ...th, textAlign: "left" }}>Custodi</th>
+                <th style={{ ...th, textAlign: "center" }}>Dades</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map(p => (
+                <tr key={p.isin}
+                  onClick={() => navigate(`/mercats-publics/${p.isin}`)}
+                  style={{ borderBottom: `1px solid ${tc.border}`, cursor: "pointer" }}
+                  onMouseEnter={e => e.currentTarget.style.background = tc.bgAlt}
+                  onMouseLeave={e => e.currentTarget.style.background = ""}
+                >
+                  <td style={{ padding: "5px 10px", color: tc.text }}>{p.nom}</td>
+                  <td style={{ padding: "5px 10px", fontFamily: "'DM Mono',monospace", color: tc.textLight, fontSize: 10 }}>{p.isin}</td>
+                  <td style={{ padding: "5px 10px", color: tc.textLight }}>{p.custodian || "—"}</td>
+                  <td style={{ padding: "5px 10px", textAlign: "center" }}>
+                    <span style={{ fontSize: 10, color: tc.navy }}>→</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
     </div>
   );
 }

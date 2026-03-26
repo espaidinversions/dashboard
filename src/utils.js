@@ -12,9 +12,14 @@ export function fmtS(n) {
   return n.toFixed(0)+"€";
 }
 const _CAT_MONTHS = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
-export function fmtMonth(yyyymm) {
-  const [y, m] = yyyymm.split("-");
-  return `${_CAT_MONTHS[+m]} '${y.slice(2)}`;
+// Accepts "YYYY-MM" (legacy PM_MONTHLY) or "YYYY-MM-DD" (bi-weekly PM_VALUES)
+export function fmtMonth(s) {
+  if (!s) return "";
+  const parts = s.split("-");
+  const y = parts[0], m = parts[1], d = parts[2];
+  const label = `${_CAT_MONTHS[+m]} '${y.slice(2)}`;
+  // For bi-weekly dates, prefix the day number
+  return d && +d !== 1 ? `${+d} ${label}` : label;
 }
 
 // ── CSV Parsers ───────────────────────────────────────────

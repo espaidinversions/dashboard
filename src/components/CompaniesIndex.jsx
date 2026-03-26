@@ -6,8 +6,8 @@ import { fmtM, slugify } from "../utils.js";
 import { Badge } from "./SharedComponents.jsx";
 
 const TIPUS_CFG = {
-  "SF": { color: "#276749", bg: "#E8F5E9" },
-  "PE": { color: "#2B4C7E", bg: "#E8EFF5" },
+  "SF": { color: "#28A029", bg: "#E8F8E8" },
+  "PE": { color: "#2B5070", bg: "#E6EDF3" },
 };
 
 export function CompaniesIndexInner({ inline = false, searchOverride }) {
@@ -87,7 +87,7 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
           </div>
           <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
             <Link to="/investments/funds" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Fons</Link>
-            <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Empreses</span>
+            <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Participades</span>
           </div>
         </>
       )}
@@ -109,7 +109,7 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
               </thead>
               <tbody>
                 {sorted.map((r, i) => (
-                  <tr key={r.slug} style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
+                  <tr key={r.slug} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
                       <Link to={`/company/${r.slug}`} style={{ color: tc.navy, textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}

@@ -1,8 +1,11 @@
 """
 portfolio_export_js.py
 ──────────────────────
-Reads Mercats Públics/portfolio_value.csv and exports monthly-aggregated
+Reads Mercats Públics/portfolio_value.csv and exports bi-weekly-aggregated
 portfolio values as a JavaScript module for use in the dashboard.
+
+Each date is bucketed to the nearest prior 1st or 15th of the month.
+Date keys are ISO "YYYY-MM-DD" strings (e.g. "2024-01-01", "2024-01-15").
 
 Output: src/data/portfolioValues.js
 
@@ -26,28 +29,35 @@ IN_CSV = ROOT / "Mercats Públics" / "portfolio_value.csv"
 OUT_JS = ROOT / "src" / "data" / "portfolioValues.js"
 
 
+def biweekly_bucket(dt) -> str:
+    """Map a date to the nearest prior 1st or 15th of the month → 'YYYY-MM-DD'."""
+    day = dt.day
+    anchor = 1 if day < 15 else 15
+    return f"{dt.year:04d}-{dt.month:02d}-{anchor:02d}"
+
+
 def main():
     if not IN_CSV.exists():
         print(f"ERROR: {IN_CSV} not found. Run portfolio_build_values.py first.")
         sys.exit(1)
 
     df = pd.read_csv(IN_CSV, parse_dates=["date"])
-    df["month"] = df["date"].dt.to_period("M").astype(str)  # "2024-01"
+    df["bucket"] = df["date"].apply(biweekly_bucket)
 
-    # Keep last row per (isin, custodian, month)
+    # Keep last row per (isin, custodian, bucket)
     df = df.sort_values("date")
-    monthly = (
-        df.groupby(["isin", "custodian", "month"], sort=False)
+    bucketed = (
+        df.groupby(["isin", "custodian", "bucket"], sort=False)
         .last()
         .reset_index()
     )
 
     # Build nested dict: { isin: { custodian: [{date, value}] } }
     result = {}
-    for (isin, custodian), grp in monthly.groupby(["isin", "custodian"]):
+    for (isin, custodian), grp in bucketed.groupby(["isin", "custodian"]):
         rows = (
-            grp.sort_values("month")[["month", "value_eur"]]
-            .rename(columns={"month": "date", "value_eur": "value"})
+            grp.sort_values("bucket")[["bucket", "value_eur"]]
+            .rename(columns={"bucket": "date", "value_eur": "value"})
         )
         rows = rows.copy()
         rows["value"] = rows["value"].round(0).astype(int)
@@ -68,10 +78,10 @@ def main():
         for isin_data in result.values()
         for rows in isin_data.values()
     )
-    print(f"ISINs:        {len(result)}")
-    print(f"Series:       {sum(len(v) for v in result.values())}")
-    print(f"Monthly rows: {total_rows}")
-    print(f"Output:       {OUT_JS}")
+    print(f"ISINs:         {len(result)}")
+    print(f"Series:        {sum(len(v) for v in result.values())}")
+    print(f"Bi-weekly rows:{total_rows}")
+    print(f"Output:        {OUT_JS}")
 
 
 if __name__ == "__main__":

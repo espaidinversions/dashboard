@@ -36,8 +36,8 @@ export function FonsSelector({excluded, setExcluded, rawCC = RAW_CC_DEFAULT}) {
   const someExcluded  = excluded.size > 0;
   const inp = {border:`1px solid ${TC.border}`,borderRadius:5,padding:"4px 7px",fontSize:11,color:TC.text,background:TC.card,outline:"none",fontFamily:"inherit"};
 
-  const vcpeBg = (vcpe) => dark ? (vcpe==="PE"?"#1A2F45":vcpe==="VC"?"#0E2820":"#20163A") : (VCPE_CFG[vcpe]?.bg||TC.bgAlt);
-  const estBg  = (est)  => dark ? "#1A2838" : (EST_CFG[est]?.bg||TC.bgAlt);
+  const vcpeBg = (vcpe) => dark ? (vcpe==="PE"?"#112030":vcpe==="VC"?"#0A2010":"#20163A") : (VCPE_CFG[vcpe]?.bg||TC.bgAlt);
+  const estBg  = (est)  => dark ? "#112030" : (EST_CFG[est]?.bg||TC.bgAlt);
 
   const toggle = fons => setExcluded(p=>{ const n=new Set(p); n.has(fons)?n.delete(fons):n.add(fons); return n; });
   const toggleAll = () => {
@@ -94,7 +94,7 @@ export function FonsSelector({excluded, setExcluded, rawCC = RAW_CC_DEFAULT}) {
                   style={{display:"flex",alignItems:"center",gap:10,padding:"7px 16px",cursor:"pointer",background:excl?TC.redLight:"transparent",opacity:excl?0.7:1,transition:"background 0.12s"}}
                   onMouseEnter={e=>!excl&&(e.currentTarget.style.background=TC.bgAlt)}
                   onMouseLeave={e=>!excl&&(e.currentTarget.style.background="transparent")}>
-                  <div style={{width:16,height:16,border:`2px solid ${excl?TC.red:TC.green}`,background:excl?"transparent":TC.green,borderRadius:4,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"all 0.15s"}}>
+                  <div style={{width:16,height:16,border:`2px solid ${excl?TC.red:TC.green}`,background:excl?"transparent":TC.green,borderRadius:4,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",transition:"background 0.15s ease, border-color 0.15s ease"}}>
                     {!excl&&<span style={{color:"#fff",fontSize:9,fontWeight:900}}>✓</span>}
                     {excl&&<span style={{color:TC.red,fontSize:10,fontWeight:900}}>✕</span>}
                   </div>

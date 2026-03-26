@@ -277,6 +277,75 @@ export async function upsertPipelineDeal(deal) {
   return { error };
 }
 
+// ── Public Markets overrides ──────────────────────────────
+
+export async function loadPMOverrides() {
+  if (!supabase) return null;
+  const [tx, ter, meta] = await Promise.all([
+    supabase.from("pm_transactions").select("*").order("date"),
+    supabase.from("pm_ter_overrides").select("*"),
+    supabase.from("pm_position_meta").select("*"),
+  ]);
+  if (tx.error || ter.error || meta.error) return null;
+  return {
+    transactions: tx.data.map(r => ({
+      id:        r.id,
+      action:    r.action,
+      date:      r.date,
+      isin:      r.isin,
+      nom:       r.nom,
+      tipus:     r.tipus,
+      custodian: r.custodian,
+      units:     r.units,
+      nav:       r.nav,
+      valueEur:  r.value_eur,
+      source:    r.source ?? "manual",
+    })),
+    terOverrides:  Object.fromEntries(ter.data.map(r => [r.isin, r.ter])),
+    positionMeta:  Object.fromEntries(meta.data.map(r => [r.isin, {
+      nom:      r.nom,
+      gestor:   r.gestor,
+      custodian: r.custodian,
+    }])),
+  };
+}
+
+export async function upsertTransaction(tx) {
+  if (!supabase) return { error: null };
+  const row = {
+    action:    tx.action,
+    date:      tx.date,
+    isin:      tx.isin,
+    nom:       tx.nom ?? null,
+    tipus:     tx.tipus ?? null,
+    custodian: tx.custodian ?? null,
+    units:     tx.units ?? null,
+    nav:       tx.nav ?? null,
+    value_eur: tx.valueEur ?? null,
+    source:    "manual",
+  };
+  if (tx.id) row.id = tx.id;
+  const { data, error } = await supabase.from("pm_transactions")
+    .upsert(row, { onConflict: "id" })
+    .select()
+    .single();
+  return { data, error };
+}
+
+export async function upsertTerOverride(isin, ter) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("pm_ter_overrides")
+    .upsert({ isin, ter, updated_at: new Date().toISOString() }, { onConflict: "isin" });
+  return { error };
+}
+
+export async function upsertPositionMeta(isin, fields) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("pm_position_meta")
+    .upsert({ isin, ...fields, updated_at: new Date().toISOString() }, { onConflict: "isin" });
+  return { error };
+}
+
 // ── Admin: bulk clear ─────────────────────────────────────
 
 const CLEARABLE_TABLES = ["capital_calls", "portfolio_companies", "searchers", "pipeline"];

@@ -4,32 +4,62 @@
 
 ```
 01. Dashboard/
-├── data/
-│   ├── capital-calls.csv   ← EDIT THIS to add/update transactions
-│   ├── pipeline.csv        ← EDIT THIS to add/update pipeline funds
-│   ├── capital-calls.js    ← static fallback (auto-generated, do not edit)
-│   └── pipeline.js         ← static fallback (auto-generated, do not edit)
-├── config.js               ← UI colours, labels, derived constants
-├── utils.js                ← formatting helpers + CSV parsers
-├── SharedComponents.jsx    ← Logo, Badge, chart tooltips
-├── FonsSelector.jsx        ← fund multi-selector panel
-├── MesSelector.jsx         ← month/year dropdown
-├── PipelineFY26.jsx        ← FY26 pipeline tab
-├── MensualTab.jsx          ← monthly transactions tab
-├── Dashboard.jsx           ← main component (entry point)
-├── convert-data.py         ← optional: regenerates JS fallback from CSVs
-└── INSTRUCTIONS.md         ← this file
+├── raw-data/                    ← DROP CSV FILES HERE — auto-converted on save
+│   ├── capital-calls.csv        ← EDIT THIS to add/update transactions
+│   └── pipeline.csv             ← EDIT THIS to add/update pipeline funds
+├── src/
+│   ├── data/
+│   │   ├── capital-calls.js     ← auto-generated from CSV (do not edit)
+│   │   └── pipeline.js          ← auto-generated from CSV (do not edit)
+│   ├── components/
+│   │   ├── Dashboard.jsx        ← main component (entry point)
+│   │   ├── PipelineFY26.jsx     ← FY pipeline tab
+│   │   ├── MensualTab.jsx       ← monthly transactions tab
+│   │   ├── SearchersTab.jsx     ← searchers / relationships tab
+│   │   ├── PortfolioCompaniesTab.jsx ← portfolio companies tab
+│   │   ├── FonsSelector.jsx     ← fund multi-selector panel
+│   │   ├── MesSelector.jsx      ← month/year dropdown
+│   │   └── SharedComponents.jsx ← Logo, Badge, EmptyState, chart tooltips
+│   ├── config.js                ← UI colours, labels, FY list
+│   ├── utils.js                 ← formatting helpers + CSV parsers
+│   └── index.css                ← global styles, animations, responsive grids
+├── public/
+│   └── board.html               ← read-only Kanvas board viewer
+├── server.js                    ← Express API + raw-data watcher + static serving
+├── convert-data.py              ← CSV → JS converter (called automatically by server)
+├── canvas-watcher.cjs           ← Obsidian canvas linter (run separately)
+├── Dockerfile                   ← multi-stage Docker build
+├── docker-compose.yml           ← one-liner deployment
+└── INSTRUCTIONS.md              ← this file
 ```
 
 ---
 
 ## How to Update Data
 
-### 1. Edit the CSV files
+### Option A — Drop & forget (recommended)
 
-Open either file in Excel, Google Sheets, or any text editor.
+1. Edit `raw-data/capital-calls.csv` or `raw-data/pipeline.csv` in Excel / Sheets.
+2. Save the file.
+3. The server detects the change, auto-converts it to `src/data/*.js`, and the dashboard reloads automatically within ~10 seconds.
 
-#### `data/capital-calls.csv` — Transactions & Commitments
+No terminal, no manual steps needed.
+
+### Option B — Manual conversion
+
+If the server is not running, convert manually:
+
+```bash
+python convert-data.py
+```
+
+**Requirements:** Python 3 (no extra packages needed).
+
+---
+
+## CSV Columns
+
+### `raw-data/capital-calls.csv` — Transactions & Commitments
 
 | Column | Type | Description | Example |
 |--------|------|-------------|---------|
@@ -47,7 +77,7 @@ Open either file in Excel, Google Sheets, or any text editor.
 
 **To add a new transaction:** append a new row at the bottom.
 
-#### `data/pipeline.csv` — Pipeline FY26
+### `raw-data/pipeline.csv` — Pipeline
 
 | Column | Type | Description | Example |
 |--------|------|-------------|---------|
@@ -57,26 +87,82 @@ Open either file in Excel, Google Sheets, or any text editor.
 | `currency` | text | Currency | `EUR`, `USD` |
 | `geography` | text | Geography | `EU`, `US`, `EU/US` |
 | `strategy` | text | Strategy | `Fons primari`, `Coinversions`, `Fons secundaris`, `Fons de fons` |
-| `sector` | text | Sector focus | `Software`, `Healthcare`, `Generalista`, `B2B Services`, `Software / B2B` |
+| `sector` | text | Sector focus | `Software`, `Healthcare`, `Generalista`, `B2B Services` |
 | `status` | text | Current status | `En estudi`, `Aprovat`, `Descartat` |
 | `canal` | text | Sourcing channel | `Arcano`, `Placement Agent`, `Propietari`, `Altres` |
 | `active` | boolean | Show in dashboard | `true`, `false` |
 
-**To remove a fund from the dashboard:** set `active` to `false` (keeps the history).
+**To remove a fund from the dashboard:** set `active` to `false` (keeps history).
 
 ---
 
-### 2. Load the CSV in the dashboard
+## Running the Dashboard
 
-No terminal needed. Directly from the dashboard:
+### Development (hot-reload)
 
-1. Click **"↑ Carregar dades"** in the top-right of the header
-2. Select the updated CSV file(s) using the file pickers in the modal
-3. The dashboard updates instantly
+```bash
+npm run dev
+```
 
-Loaded data is **saved in the browser** (localStorage) and persists across page refreshes. The modal shows how many rows are currently loaded and when they were last updated.
+Opens at `http://localhost:5173`. Vite HMR updates the UI instantly on any source file change.
 
-> **Note:** If you clear browser storage, the dashboard falls back to the static data in `data/capital-calls.js` / `data/pipeline.js`.
+### Production (Docker — one-liner)
+
+```bash
+docker compose up --build
+```
+
+Opens at `http://localhost:3001`. Mounts `raw-data/` and `src/data/` as volumes so data updates work without rebuilding.
+
+### Production (Node, no Docker)
+
+```bash
+npm run start
+```
+
+Builds with Vite first (`npm run build`), then serves at `http://localhost:3001`.
+
+---
+
+## Kanvas Board
+
+The read-only board is always available at `/board.html` (e.g. `http://localhost:3001/board.html`).
+
+To use the full interactive Kanvas workflow (task management in Obsidian):
+
+1. Open the `01. Dashboard` folder as an Obsidian vault.
+2. Open `Dashboard.canvas`.
+3. Run the canvas watcher in a terminal to get live linting and auto-blocked-state management:
+
+```bash
+node kanvas/canvas-watcher.cjs
+```
+
+Use `canvas-tool.py` for CLI task operations:
+
+```bash
+python kanvas/canvas-tool.py Dashboard.canvas start DA-01
+python kanvas/canvas-tool.py Dashboard.canvas finish DA-01
+python kanvas/canvas-tool.py Dashboard.canvas status
+```
+
+---
+
+## Adding a New Fiscal Year
+
+1. Add the new FY label to `FY_LIST` in `src/config.js` (e.g. `"FY 2027"`).
+2. Add transactions for that year to `raw-data/capital-calls.csv` with the matching `fy` value.
+3. The server auto-converts and reloads.
+
+---
+
+## EUR/USD Rate
+
+The dashboard fetches the live EUR/USD rate automatically from [frankfurter.app](https://frankfurter.app) (free, no key needed) with a 1-hour cache. The fallback rate (used if the API is unavailable) is defined in `src/config.js`:
+
+```js
+export const EUR_USD = 1.08;  // fallback only — live rate is fetched automatically
+```
 
 ---
 
@@ -86,37 +172,13 @@ Load only the files relevant to your task to avoid context overload:
 
 | Task | Files to load |
 |------|--------------|
-| Add/fix transactions | `data/capital-calls.csv` |
-| Add/fix pipeline funds | `data/pipeline.csv` |
-| Fix pipeline UI | `PipelineFY26.jsx` |
-| Fix monthly view UI | `MensualTab.jsx` |
-| Fix fund selector | `FonsSelector.jsx` |
-| Change colours/labels | `config.js` |
-| Fix the main layout | `Dashboard.jsx` |
-| Fix chart tooltips / badges | `SharedComponents.jsx` |
-
----
-
-## Adding a New Fiscal Year
-
-1. Add the new FY label to `FY_LIST` in `config.js` (e.g. `"FY 2027"`).
-2. Add transactions for that year to `capital-calls.csv` with the matching `fy` value.
-3. Load the updated CSV via "↑ Carregar dades" in the dashboard.
-
-## Changing the EUR/USD Rate
-
-Edit `EUR_USD` in `config.js`:
-
-```js
-export const EUR_USD = 1.08;  // ← change this value
-```
-
-## Regenerating the JS fallback (optional)
-
-If you want to update the static fallback files (used when browser storage is empty), run:
-
-```bash
-python convert-data.py
-```
-
-**Requirements:** Python 3 (no extra packages needed).
+| Add/fix transactions | `raw-data/capital-calls.csv` |
+| Add/fix pipeline funds | `raw-data/pipeline.csv` |
+| Fix pipeline UI | `src/components/PipelineFY26.jsx` |
+| Fix monthly view UI | `src/components/MensualTab.jsx` |
+| Fix fund selector | `src/components/FonsSelector.jsx` |
+| Change colours/labels | `src/config.js` |
+| Fix the main layout | `src/components/Dashboard.jsx` |
+| Fix chart tooltips / badges | `src/components/SharedComponents.jsx` |
+| Add global styles | `src/index.css` |
+| Change API endpoints | `server.js` |

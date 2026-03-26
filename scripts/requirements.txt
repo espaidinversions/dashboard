@@ -6,3 +6,4 @@ pandas>=2.0.0
 requests>=2.31.0
 openpyxl>=3.1.0        # for existing xlsx scripts
 justetf-scraping @ git+https://github.com/druzsan/justetf-scraping.git
+mstarpy>=0.0.17              # for fund_fetch_prices.py (Morningstar NAV data)

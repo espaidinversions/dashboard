@@ -1,13 +1,19 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
-  LineChart, Line, XAxis, YAxis, Tooltip,
+  ComposedChart, LineChart, Line, Bar, XAxis, YAxis, Tooltip,
   ReferenceLine, ResponsiveContainer, Legend, CartesianGrid,
 } from "recharts";
 import { useParams, useNavigate } from "react-router-dom";
-import { PM_POSITIONS } from "../data/publicMarkets.js";
+import { PM_POSITIONS, PM_CLOSED } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonth, yearsHeld, cagr } from "../utils.js";
 import { PM_VALUES } from "../data/portfolioValues.js";
+import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
+import { PM_TER } from "../data/pmTer.js";
+import { loadPMOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
+
+const ISIN_RE = /([A-Z]{2}[A-Z0-9]{10})/;
+const cleanIsin = raw => (ISIN_RE.exec(String(raw ?? "").toUpperCase())?.[1]) ?? raw;
 
 function KpiCard({ label, value, accent, tc }) {
   return (
@@ -35,9 +41,28 @@ function InfoRow({ label, value, tc }) {
 export function PMPositionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { tc } = useTheme();
+  const { tc, dark } = useTheme();
 
-  const p = PM_POSITIONS.find(pos => pos.id === id);
+  let p = PM_POSITIONS.find(pos => pos.id === id);
+  let isClosed = false;
+  if (!p) {
+    const closed = PM_CLOSED.find(pos => pos.isin === id);
+    if (closed) { p = closed; isClosed = true; }
+  }
+
+  // Supabase overrides for this position
+  const [metaOverride, setMetaOverride] = useState({});
+  const [terOverride, setTerOverride] = useState(null);
+  const isin = p ? cleanIsin(p.isin) : null;
+
+  useEffect(() => {
+    if (!isin) return;
+    loadPMOverrides().then(data => {
+      if (!data) return;
+      if (data.positionMeta[isin]) setMetaOverride(data.positionMeta[isin]);
+      if (data.terOverrides[isin] != null) setTerOverride(data.terOverrides[isin]);
+    });
+  }, [isin]);
 
   if (!p) {
     return (
@@ -52,13 +77,19 @@ export function PMPositionDetail() {
     );
   }
 
-  const isAbelFont  = p.gestor === "Abel Font";
+  // Apply overrides on top of static data
+  const displayNom      = metaOverride.nom      ?? p.nom;
+  const displayGestor   = metaOverride.gestor   ?? p.gestor;
+  const displayCustodian = metaOverride.custodian ?? p.custodian;
+
+  const isAbelFont  = displayGestor === "Abel Font";
   const pnl         = (p.valorMercat ?? 0) - (p.costEur ?? 0);
   const pnlColor    = pnl > 0 ? tc.green : pnl < 0 ? tc.red : tc.textLight;
-  const msUrl       = p.isin ? `https://www.morningstar.es/es/search/results.aspx?keyword=${p.isin}` : null;
+  const msUrl       = isin ? `https://www.morningstar.es/es/search/results.aspx?keyword=${isin}` : null;
   const yh          = yearsHeld(p.dataCompra);
+  const ter         = terOverride ?? PM_TER[isin] ?? p.costAnual ?? 0;
   const netInici    = p.rendInici != null
-    ? (isAbelFont ? p.rendInici - (p.costAnual ?? 0) * yh : p.rendInici)
+    ? (isAbelFont ? p.rendInici - ter * yh : p.rendInici)
     : null;
 
   const costPct = p.costEur != null && p.valorMercat > 0
@@ -77,31 +108,43 @@ export function PMPositionDetail() {
       .map(y => ({
         year:  y.label,
         brut:  p[y.field],
-        net:   isAbelFont ? p[y.field] - (p.costAnual ?? 0) : null,
+        net:   isAbelFont ? p[y.field] - ter : null,
       }));
   }, [p, isAbelFont]);
 
   const valueData = useMemo(() => {
-    const custodianData = PM_VALUES[p.isin];
-    if (!custodianData) return null;
-    const custodians = Object.keys(custodianData).filter(c => custodianData[c].length > 0);
-    if (custodians.length === 0) return null;
+    const custodianData = PM_VALUES[isin];
     const acqMonth = p.dataCompra ? p.dataCompra.slice(0, 7) : null;
+
+    // Buy inflows for this position
+    const txBuys = PM_TRANSACTIONS.filter(t => t.isin === isin && t.action === "buy" && t.date && t.valueEur);
+    const inflowByDate = {};
+    txBuys.forEach(t => { inflowByDate[t.date] = (inflowByDate[t.date] || 0) + t.valueEur; });
+    const inflowDates = Object.keys(inflowByDate).filter(d => !acqMonth || d >= acqMonth);
+
+    const hasCustodianData = custodianData && Object.values(custodianData).some(arr => arr.length > 0);
+    const custodians = hasCustodianData ? Object.keys(custodianData).filter(c => custodianData[c].length > 0) : [];
+
     const dateSet = new Set();
     custodians.forEach(c => custodianData[c].forEach(d => dateSet.add(d.date)));
+    inflowDates.forEach(d => dateSet.add(d));
     const dates = [...dateSet].sort().filter(d => !acqMonth || d >= acqMonth);
-    if (dates.length === 0) return null;
-    return {
-      custodians,
-      rows: dates.map(date => {
-        const row = { date };
-        custodians.forEach(c => {
-          row[c] = custodianData[c].find(d => d.date === date)?.value ?? null;
-        });
-        return row;
-      }),
-    };
-  }, [p.isin, p.dataCompra]);
+
+    if (dates.length === 0 && inflowDates.length === 0) return null;
+
+    const rows = dates.map(date => {
+      const row = { date };
+      custodians.forEach(c => {
+        row[c] = custodianData[c].find(d => d.date === date)?.value ?? null;
+      });
+      if (inflowByDate[date]) row.inflow = inflowByDate[date];
+      return row;
+    });
+
+    const maxInflow = Math.max(...inflowDates.map(d => inflowByDate[d]), 0);
+
+    return { custodians, rows, maxInflow, inflowDates };
+  }, [isin, p.dataCompra]);
 
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card        = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -127,8 +170,15 @@ export function PMPositionDetail() {
                      letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 600 }}>
             ← Mercats Públics
           </button>
-          <div style={{ fontSize: 22, fontWeight: 700, color: tc.navy, marginBottom: 8 }}>{p.nom}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: tc.navy, marginBottom: 8 }}>{displayNom}</div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {isClosed && (
+              <span style={{ fontSize: 10, background: "#FFF3CD", color: "#7B5800",
+                             padding: "3px 8px", borderRadius: 4, fontWeight: 700,
+                             letterSpacing: "0.06em", textTransform: "uppercase", border: "1px solid #F5C542" }}>
+                Tancat {p.any}
+              </span>
+            )}
             {p.isin && (
               <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, background: tc.bgAlt,
                              padding: "3px 8px", borderRadius: 4, color: tc.textMid, border: `1px solid ${tc.border}` }}>
@@ -138,7 +188,7 @@ export function PMPositionDetail() {
             <span style={{ fontSize: 10, background: tc.navy + "18", color: tc.navy,
                            padding: "3px 8px", borderRadius: 4, fontWeight: 700,
                            letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              {p.gestor}
+              {displayGestor}
             </span>
             {p.divisa && (
               <span style={{ fontSize: 10, background: tc.bgAlt, padding: "3px 8px", borderRadius: 4,
@@ -154,10 +204,6 @@ export function PMPositionDetail() {
             </span>
           </div>
         </div>
-        {msUrl && (
-          <a href={msUrl} target="_blank" rel="noreferrer"
-            style={{ color: "#E8A020", fontSize: 20, textDecoration: "none" }} title="Morningstar">★</a>
-        )}
       </div>
 
       {/* ── KPI row ── */}
@@ -168,12 +214,20 @@ export function PMPositionDetail() {
         <KpiCard label="Pes cartera"   value={p.pes != null ? p.pes.toFixed(1) + "%" : "—"} accent={tc.navyLight} tc={tc} />
       </div>
 
-      {/* ── Market value over time ── */}
+      {/* ── Market value over time + inflows ── */}
       {valueData && (
         <div style={card}>
-          <div style={secLabel}>Valor de mercat · des de la compra</div>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={valueData.rows} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 12 }}>
+            <div style={{ ...secLabel, marginBottom: 0, flex: 1 }}>Valor de mercat · des de la compra</div>
+            {valueData.inflowDates.length > 0 && (
+              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: tc.textLight }}>
+                <span style={{ display: "inline-block", width: 10, height: 10, background: tc.navy, opacity: 0.35, borderRadius: 2 }} />
+                Entrades de capital
+              </div>
+            )}
+          </div>
+          <ResponsiveContainer width="100%" height={260}>
+            <ComposedChart data={valueData.rows} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
               <XAxis
                 dataKey="date"
@@ -183,33 +237,50 @@ export function PMPositionDetail() {
                 interval="preserveStartEnd"
               />
               <YAxis
+                yAxisId="val"
                 tickFormatter={v => fmtM(v)}
                 tick={{ fontSize: 10, fill: tc.textLight }}
                 axisLine={false} tickLine={false} width={60}
               />
+              {valueData.maxInflow > 0 && (
+                <YAxis
+                  yAxisId="inf"
+                  orientation="right"
+                  domain={[0, valueData.maxInflow * 8]}
+                  hide
+                />
+              )}
               <Tooltip
                 {...tooltipStyle}
-                formatter={(v, name) => [v != null ? fmtM(v) : "—", name]}
+                formatter={(v, name) => {
+                  if (name === "inflow") return v != null ? [`+${fmtM(v)}`, "Entrada de capital"] : null;
+                  return [v != null ? fmtM(v) : "—", name];
+                }}
                 labelFormatter={fmtMonth}
               />
               {valueData.custodians.length > 1 && (
-                <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }} />
+                <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }}
+                  formatter={n => n === "inflow" ? "Entrada" : n} />
+              )}
+              {valueData.maxInflow > 0 && (
+                <Bar yAxisId="inf" dataKey="inflow" name="inflow"
+                  fill={tc.navy} fillOpacity={0.28} barSize={8} isAnimationActive={false} />
               )}
               {valueData.custodians.map((c, i) => (
                 <Line
-                  key={c}
-                  dataKey={c}
-                  name={c}
+                  key={c} yAxisId="val"
+                  dataKey={c} name={c}
                   stroke={["#4E79A7", "#F28E2B", "#E15759", "#76B7B2"][i % 4]}
-                  strokeWidth={2}
-                  dot={false}
-                  connectNulls={false}
+                  strokeWidth={2} dot={false} connectNulls={false}
                 />
               ))}
-            </LineChart>
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       )}
+
+      {/* ── Historial de transaccions ── */}
+      <PositionTxHistory isin={isin} tc={tc} card={card} secLabel={secLabel} />
 
       {/* ── Two-column: weight chart + IRR / cost ── */}
       <div style={{ display: "flex", gap: 16 }}>
@@ -300,7 +371,7 @@ export function PMPositionDetail() {
                   </div>
                 </div>
                 <div style={{ fontSize: 10, color: tc.textLight, marginTop: 4 }}>
-                  Brut − TER × {yh.toFixed(1)} anys
+                  Brut − {ter.toFixed(2)}% TER × {yh.toFixed(1)} anys
                 </div>
               </div>
             )}
@@ -314,10 +385,10 @@ export function PMPositionDetail() {
                 <InfoRow label="Unitats"           value={p.unitats != null ? p.unitats.toLocaleString("ca-ES") : null} tc={tc} />
                 <InfoRow label="Preu d'entrada"    value={p.costInici != null ? p.costInici.toFixed(4) : null} tc={tc} />
                 <InfoRow label="Cost total"        value={p.costEur != null ? fmtM(p.costEur) : null} tc={tc} />
-                <InfoRow label="TER anual"         value={p.costAnual != null ? p.costAnual.toFixed(2) + "%" : null} tc={tc} />
+                <InfoRow label="TER anual"         value={ter > 0 ? ter.toFixed(2) + "%" : null} tc={tc} />
                 <InfoRow label="Cost anual"
-                  value={p.costAnual != null && p.costEur != null
-                    ? fmtM(p.costEur * p.costAnual / 100) + "/any" : null}
+                  value={ter > 0 && p.costEur != null
+                    ? fmtM(p.costEur * ter / 100) + "/any" : null}
                   tc={tc} />
                 <InfoRow label="Data compra"       value={p.dataCompra} tc={tc} />
               </tbody>
@@ -332,6 +403,192 @@ export function PMPositionDetail() {
         </div>
       </div>
 
+      {/* ── Editar metadades ── */}
+      <PositionMetaEditor
+        p={p} isin={isin} tc={tc} dark={dark} card={card} secLabel={secLabel}
+        metaOverride={metaOverride} terOverride={terOverride}
+        onSaveMeta={fields => setMetaOverride(prev => ({ ...prev, ...fields }))}
+        onSaveTer={ter => setTerOverride(ter)}
+      />
+
+    </div>
+  );
+}
+
+function PositionTxHistory({ isin, tc, card, secLabel }) {
+  const [sortDesc, setSortDesc] = useState(true);
+  const txs = useMemo(() => {
+    const rows = PM_TRANSACTIONS.filter(t => t.isin === isin);
+    return [...rows].sort((a, b) => {
+      const cmp = (a.date ?? "").localeCompare(b.date ?? "");
+      return sortDesc ? -cmp : cmp;
+    });
+  }, [isin, sortDesc]);
+
+  return (
+    <div style={card}>
+      <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
+        <div style={{ ...secLabel, flex: 1 }}>Moviments</div>
+        {txs.length > 0 && (
+          <button onClick={() => setSortDesc(d => !d)} style={{
+            padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+            border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textLight,
+          }}>{sortDesc ? "↓ Més recent" : "↑ Més antic"}</button>
+        )}
+      </div>
+      {txs.length === 0 && (
+        <div style={{ fontSize: 12, color: tc.textLight, fontStyle: "italic" }}>Sense moviments registrats.</div>
+      )}
+      {txs.length > 0 && <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
+        <thead>
+          <tr>
+            {["Data", "Acció", "Units", "NAV", "Valor", "Custodi"].map(h => (
+              <th key={h} style={{
+                padding: "5px 10px", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
+                color: tc.textLight, fontWeight: 600, borderBottom: `2px solid ${tc.border}`,
+                textAlign: h === "Custodi" ? "left" : "right", whiteSpace: "nowrap",
+              }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {txs.map(t => {
+            const isBuy = t.action === "buy";
+            return (
+              <tr key={t.id} style={{ borderBottom: `1px solid ${tc.border}` }}>
+                <td style={{ padding: "5px 10px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight, textAlign: "right", whiteSpace: "nowrap" }}>{t.date}</td>
+                <td style={{ padding: "5px 10px", textAlign: "right" }}>
+                  <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                    background: isBuy ? "#E8F8E8" : "#FDECEA",
+                    color:      isBuy ? "#1C6B1D" : "#C62828", fontWeight: 600 }}>
+                    {isBuy ? "Compra" : "Venda"}
+                  </span>
+                </td>
+                <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{t.units != null ? t.units.toLocaleString("ca-ES", { maximumFractionDigits: 0 }) : "—"}</td>
+                <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{t.nav != null ? t.nav.toFixed(2) : "—"}</td>
+                <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>{t.valueEur != null ? fmtM(t.valueEur) : "—"}</td>
+                <td style={{ padding: "5px 10px", fontSize: 11, color: tc.textLight }}>{t.custodian}</td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>}
+    </div>
+  );
+}
+
+// ── Position metadata editor ──────────────────────────────────
+const CUSTODIAN_OPTIONS = ["CaixaBank", "Bankinter", "UBS", "Credit Suisse", "Abel Font", "WAM", "Andbank", "Altre"];
+
+function PositionMetaEditor({ p, isin, tc, dark, card, secLabel, metaOverride, terOverride, onSaveMeta, onSaveTer }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [saved, setSaved] = useState(false);
+
+  const startEdit = () => {
+    setForm({
+      nom:      metaOverride.nom      ?? p.nom      ?? "",
+      gestor:   metaOverride.gestor   ?? p.gestor   ?? "",
+      custodian: metaOverride.custodian ?? p.custodian ?? "CaixaBank",
+      ter:      String(terOverride ?? p.costAnual ?? ""),
+    });
+    setOpen(true);
+    setError(null);
+    setSaved(false);
+  };
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    setError(null);
+    const metaFields = {};
+    if (form.nom      !== (p.nom      ?? "")) metaFields.nom      = form.nom || null;
+    if (form.gestor   !== (p.gestor   ?? "")) metaFields.gestor   = form.gestor || null;
+    if (form.custodian !== (p.custodian ?? "")) metaFields.custodian = form.custodian || null;
+
+    const terVal = form.ter !== "" ? parseFloat(form.ter) : null;
+
+    const [r1, r2] = await Promise.all([
+      Object.keys(metaFields).length ? upsertPositionMeta(isin, metaFields) : Promise.resolve({ error: null }),
+      terVal !== null && terVal !== (terOverride ?? p.costAnual ?? null) ? upsertTerOverride(isin, terVal) : Promise.resolve({ error: null }),
+    ]);
+
+    setSaving(false);
+    if (r1.error || r2.error) return setError((r1.error ?? r2.error).message);
+
+    if (Object.keys(metaFields).length) onSaveMeta(metaFields);
+    if (terVal !== null) onSaveTer(terVal);
+    setSaved(true);
+    setTimeout(() => setOpen(false), 800);
+  };
+
+  const inp = {
+    width: "100%", padding: "6px 10px", fontSize: 12,
+    border: `1.5px solid ${tc.border}`, borderRadius: 7,
+    background: tc.bg, color: tc.text, fontFamily: "inherit",
+    outline: "none", boxSizing: "border-box",
+  };
+
+  return (
+    <div style={card}>
+      <div style={{ display: "flex", alignItems: "center" }}>
+        <div style={{ ...secLabel, flex: 1 }}>Metadades</div>
+        <button onClick={open ? () => setOpen(false) : startEdit} style={{
+          padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+          border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textLight,
+        }}>{open ? "Cancel·lar" : "✏ Editar"}</button>
+      </div>
+
+      {!open && (
+        <div style={{ fontSize: 12, color: tc.textLight, marginTop: 8 }}>
+          {Object.keys(metaOverride).filter(k => metaOverride[k]).length === 0 && terOverride == null
+            ? "Sense sobreescriptures. Clica Editar per personalitzar nom, gestor, custodi o TER."
+            : <span style={{ color: tc.green }}>✓ Sobreescriptures actives: {[
+                metaOverride.nom && "Nom", metaOverride.gestor && "Gestor",
+                metaOverride.custodian && "Custodi", terOverride != null && "TER",
+              ].filter(Boolean).join(", ")}</span>
+          }
+        </div>
+      )}
+
+      {open && form && (
+        <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 2 }}>
+              <label style={{ fontSize: 10, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Nom</label>
+              <input value={form.nom} onChange={e => set("nom", e.target.value)} style={inp} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 10, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 3 }}>TER (%)</label>
+              <input type="number" step="0.001" value={form.ter} onChange={e => set("ter", e.target.value)} placeholder="0.00" style={inp} />
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 10, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Gestor</label>
+              <input value={form.gestor} onChange={e => set("gestor", e.target.value)} style={inp} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 10, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Custodi</label>
+              <select value={form.custodian} onChange={e => set("custodian", e.target.value)} style={inp}>
+                {CUSTODIAN_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+          </div>
+          {error && <div style={{ fontSize: 11, color: "#C62828", background: "#FDECEA", borderRadius: 6, padding: "6px 10px" }}>{error}</div>}
+          {saved && <div style={{ fontSize: 11, color: tc.green }}>✓ Guardat</div>}
+          <div style={{ display: "flex", justifyContent: "flex-end" }}>
+            <button onClick={handleSave} disabled={saving} style={{
+              padding: "7px 18px", borderRadius: 7, border: "none",
+              background: tc.navy, color: "#fff", cursor: saving ? "default" : "pointer",
+              fontFamily: "inherit", fontSize: 12, fontWeight: 600, opacity: saving ? 0.7 : 1,
+            }}>{saving ? "Guardant…" : "Guardar"}</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

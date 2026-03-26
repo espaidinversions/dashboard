@@ -90,8 +90,9 @@ tr.hoverable:hover { filter: brightness(0.96); }
 }
 
 /* ── Focus rings ────────────────────────────────────────── */
-button:focus-visible {
-  outline: 2px solid #5A966E;
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid #3DC83E;
   outline-offset: 2px;
 }
 

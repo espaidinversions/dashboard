@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
@@ -9,6 +9,8 @@ import { Badge } from "./SharedComponents.jsx";
 import { PM_MONTHLY, PM_MANAGERS, PM_POSITIONS } from "../data/publicMarkets.js";
 import { Link } from "react-router-dom";
 import { PM_VALUES } from "../data/portfolioValues.js";
+import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
+import { loadPMOverrides, upsertTransaction } from "../db.js";
 
 // ── Constants ──────────────────────────────────────────────
 const ABEL_RV_SPLIT = 0.7516;
@@ -125,6 +127,14 @@ export function PublicMarketsTab() {
   const [chartView, setChartView] = useState("total");
   const [expanded, setExpanded] = useState(new Set());
   const [expandTipus, setExpandTipus] = useState({});
+
+  // PM overrides from Supabase (manual transactions take priority over Excel-generated ones)
+  const [manualTxs, setManualTxs] = useState([]);
+  useEffect(() => {
+    loadPMOverrides().then(data => {
+      if (data?.transactions?.length) setManualTxs(data.transactions);
+    });
+  }, []);
 
   const toggleExpand = (id) => {
     setExpanded(prev => {
@@ -305,6 +315,40 @@ export function PublicMarketsTab() {
     });
   }, [chartView, mvData]);
 
+  // ── Inflow data (from transaction log) ──────────────────
+  // cumulativeCost: running sum of buy valueEur, keyed by bi-weekly bucket date
+  // topInflows: top-5 largest single buy events (for reference lines)
+  const { cumulativeCostByLabel, topInflowLabels, topInflows } = useMemo(() => {
+    const buys = PM_TRANSACTIONS.filter(t => t.action === "buy" && t.date && t.valueEur);
+    // Aggregate by bi-weekly bucket
+    const byBucket = {};
+    buys.forEach(t => {
+      const [y, mo, d] = t.date.split("-");
+      const anchor = +d < 15 ? "01" : "15";
+      const bucket = `${y}-${mo}-${anchor}`;
+      byBucket[bucket] = (byBucket[bucket] ?? 0) + t.valueEur;
+    });
+    // Cumulative sum by bucket
+    const sortedBuckets = Object.keys(byBucket).sort();
+    let running = 0;
+    const cumByBucket = {};
+    sortedBuckets.forEach(b => { running += byBucket[b]; cumByBucket[b] = running; });
+    // Map bucket → chart label for lookup
+    const cumByLabel = {};
+    sortedBuckets.forEach(b => { cumByLabel[fmtMonth(b)] = cumByBucket[b]; });
+    // Top-5 largest single-day inflows for markers
+    const top5 = sortedBuckets
+      .map(b => ({ label: fmtMonth(b), value: byBucket[b] }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+    return { cumulativeCostByLabel: cumByLabel, topInflowLabels: new Set(top5.map(t => t.label)), topInflows: top5 };
+  }, []);
+
+  // Attach cumulativeCost to each chartData point (only for "total" view)
+  const chartDataWithCost = useMemo(() =>
+    chartData.map(d => ({ ...d, costBasis: cumulativeCostByLabel[d.label] ?? null })),
+  [chartData, cumulativeCostByLabel]);
+
   // ── Shared styles ────────────────────────────────────────
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
   const secLabel     = { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 };
@@ -421,7 +465,7 @@ export function PublicMarketsTab() {
         </div>
 
         <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={chartData} stackOffset="none" margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <AreaChart data={chartDataWithCost} stackOffset="none" margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <defs>
               {Object.entries(AREA_COLORS).map(([id, color]) => (
                 <linearGradient key={id} id={`pm-grad-${id}`} x1="0" y1="0" x2="0" y2="1">
@@ -437,10 +481,21 @@ export function PublicMarketsTab() {
               {...tooltipStyle}
               formatter={(v, name) => [fmtM(v), name.charAt(0).toUpperCase() + name.slice(1)]}
             />
+            {chartView === "total" && topInflows.map(inf => (
+              <ReferenceLine key={inf.label} x={inf.label}
+                stroke={tc.textLight} strokeDasharray="3 3" strokeWidth={1}
+                label={{ value: `+${fmtM(inf.value)}`, position: "top", fontSize: 8, fill: tc.textLight }} />
+            ))}
             {chartView === "total" && (
               <Area type="monotone" dataKey="total"
                 stroke={AREA_COLORS.total} fill={`url(#pm-grad-total)`}
                 strokeWidth={2} dot={false} name="Total" />
+            )}
+            {chartView === "total" && (
+              <Area type="monotone" dataKey="costBasis"
+                stroke={tc.textLight} fill="none" fillOpacity={0}
+                strokeDasharray="4 2" strokeWidth={1} dot={false}
+                name="Capital invertit" connectNulls />
             )}
             {chartView === "actiu" && <>
               <Area type="monotone" dataKey="rv" stackId="a"
@@ -626,6 +681,283 @@ export function PublicMarketsTab() {
         </div>
       </div>
 
+      {/* ── ⑤ Transaction log ── */}
+      <TransaccionsPanel tc={tc} card={card} secLabel={secLabel} dark={dark}
+        manualTxs={manualTxs} setManualTxs={setManualTxs} />
+
+    </div>
+  );
+}
+
+// ── Transaction log (global) ─────────────────────────────────
+function TransaccionsPanel({ tc, card, secLabel, dark, manualTxs = [], setManualTxs }) {
+  const [actionFilter, setActionFilter] = useState("tots");
+  const [custodianFilter, setCustodianFilter] = useState("tots");
+  const [sortDesc, setSortDesc] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+
+  // Merge manual (Supabase) + static (Excel) transactions, deduplicated by id
+  const allTxs = useMemo(() => {
+    const staticIds = new Set(PM_TRANSACTIONS.map(t => t.id));
+    const extras = manualTxs.filter(t => !staticIds.has(t.id));
+    return [...PM_TRANSACTIONS, ...extras];
+  }, [manualTxs]);
+
+  const custodians = useMemo(() =>
+    [...new Set(allTxs.map(t => t.custodian).filter(Boolean))].sort(),
+  [allTxs]);
+
+  const filtered = useMemo(() => {
+    let rows = allTxs;
+    if (actionFilter !== "tots") rows = rows.filter(t => t.action === actionFilter);
+    if (custodianFilter !== "tots") rows = rows.filter(t => t.custodian === custodianFilter);
+    rows = [...rows].sort((a, b) => {
+      const cmp = (a.date ?? "").localeCompare(b.date ?? "");
+      return sortDesc ? -cmp : cmp;
+    });
+    return rows;
+  }, [allTxs, actionFilter, custodianFilter, sortDesc]);
+
+  const chip = (label, active, onClick) => (
+    <button key={label} onClick={onClick} style={{
+      padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+      border: `1.5px solid ${active ? tc.green : tc.border}`,
+      background: active ? (dark ? "#0A2010" : "#E8F8E8") : "transparent",
+      color: active ? tc.green : tc.textLight, fontWeight: active ? 700 : 400,
+    }}>{label}</button>
+  );
+
+  return (
+    <div style={card}>
+      {showModal && (
+        <NovaTxModal
+          tc={tc} dark={dark}
+          onClose={() => setShowModal(false)}
+          onSave={tx => setManualTxs(prev => [...prev, tx])}
+        />
+      )}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
+        <div style={{ ...secLabel, flex: 1 }}>Transaccions</div>
+        <button onClick={() => setShowModal(true)} style={{
+          padding: "4px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+          border: `1.5px solid ${tc.green}`, background: dark ? "#0A2010" : "#E8F8E8",
+          color: tc.green, fontWeight: 700,
+        }}>+ Nova</button>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {chip("Totes", actionFilter === "tots", () => setActionFilter("tots"))}
+          {chip("Compres", actionFilter === "buy",  () => setActionFilter("buy"))}
+          {chip("Vendes",  actionFilter === "sell", () => setActionFilter("sell"))}
+        </div>
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          {chip("Tot custodi", custodianFilter === "tots", () => setCustodianFilter("tots"))}
+          {custodians.map(c => chip(c, custodianFilter === c, () => setCustodianFilter(c)))}
+        </div>
+        <button onClick={() => setSortDesc(d => !d)} style={{
+          padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+          border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textLight,
+        }}>{sortDesc ? "↓ Més recent" : "↑ Més antic"}</button>
+      </div>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 700 }}>
+          <thead>
+            <tr>
+              {["Data", "Nom", "Tipus", "Acció", "Units", "NAV", "Valor", "Custodi"].map(h => (
+                <th key={h} style={{
+                  padding: "6px 10px", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
+                  color: tc.textLight, fontWeight: 600, borderBottom: `2px solid ${tc.border}`,
+                  textAlign: h === "Nom" || h === "Custodi" ? "left" : "right",
+                  whiteSpace: "nowrap",
+                }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.map(t => {
+              const isBuy = t.action === "buy";
+              return (
+                <tr key={t.id} style={{ borderBottom: `1px solid ${tc.border}` }}>
+                  <td style={{ padding: "5px 10px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight, textAlign: "right", whiteSpace: "nowrap" }}>{t.date}</td>
+                  <td style={{ padding: "5px 10px", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.nom}</td>
+                  <td style={{ padding: "5px 10px", textAlign: "right" }}>
+                    <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                      background: t.tipus === "RV" ? "#E6EDF3" : "#FFF8E1",
+                      color:      t.tipus === "RV" ? "#2B5070" : "#7A6000" }}>{t.tipus}</span>
+                  </td>
+                  <td style={{ padding: "5px 10px", textAlign: "right" }}>
+                    <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                      background: isBuy ? "#E8F8E8" : "#FDECEA",
+                      color:      isBuy ? "#1C6B1D" : "#C62828", fontWeight: 600 }}>
+                      {isBuy ? "Compra" : "Venda"}
+                    </span>
+                  </td>
+                  <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{t.units != null ? t.units.toLocaleString("ca-ES", { maximumFractionDigits: 0 }) : "—"}</td>
+                  <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{t.nav != null ? t.nav.toFixed(2) : "—"}</td>
+                  <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>{t.valueEur != null ? fmtM(t.valueEur) : "—"}</td>
+                  <td style={{ padding: "5px 10px", fontSize: 11, color: tc.textLight }}>{t.custodian}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+        {filtered.length} de {allTxs.length} transaccions{manualTxs.length > 0 ? ` (${manualTxs.length} manuals)` : ""}. Dates de venda aproximades a 31/12 de l'any de tancament.
+      </div>
+    </div>
+  );
+}
+
+// ── Nova transacció modal ─────────────────────────────────────
+const CUSTODIANS = ["CaixaBank", "Bankinter", "UBS", "Credit Suisse", "Altre"];
+
+function NovaTxModal({ tc, dark, onClose, onSave }) {
+  const [form, setForm] = useState({
+    action: "buy", date: new Date().toISOString().slice(0, 10),
+    isin: "", nom: "", tipus: "RV", custodian: "CaixaBank",
+    units: "", nav: "", valueEur: "",
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+
+  // Auto-fill nom when ISIN matches a known position
+  const knownPos = useMemo(() =>
+    PM_POSITIONS.find(p => p.isin === form.isin.trim().toUpperCase()),
+  [form.isin]);
+  useEffect(() => {
+    if (knownPos) set("nom", knownPos.nom);
+  }, [knownPos]);
+
+  // Auto-compute valueEur from units × nav
+  const computedValue = form.units && form.nav
+    ? (parseFloat(form.units) * parseFloat(form.nav)).toFixed(0)
+    : "";
+
+  const inp = {
+    width: "100%", padding: "7px 10px", fontSize: 13,
+    border: `1.5px solid ${tc.border}`, borderRadius: 7,
+    background: tc.bg, color: tc.text, fontFamily: "inherit",
+    outline: "none", boxSizing: "border-box",
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setError(null);
+    if (!form.isin.trim()) return setError("ISIN és obligatori");
+    if (!form.date) return setError("Data és obligatòria");
+    setSaving(true);
+    const tx = {
+      action:    form.action,
+      date:      form.date,
+      isin:      form.isin.trim().toUpperCase(),
+      nom:       form.nom || null,
+      tipus:     form.tipus,
+      custodian: form.custodian,
+      units:     form.units ? parseFloat(form.units) : null,
+      nav:       form.nav ? parseFloat(form.nav) : null,
+      valueEur:  form.valueEur ? parseFloat(form.valueEur) : (computedValue ? parseFloat(computedValue) : null),
+    };
+    const { data, error: err } = await upsertTransaction(tx);
+    setSaving(false);
+    if (err) return setError(err.message);
+    onSave(data ?? { ...tx, id: `manual-${Date.now()}` });
+    onClose();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex",
+      alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div style={{ background: tc.card, borderRadius: 14, padding: "28px 28px 24px",
+        width: 440, maxWidth: "92vw", boxShadow: "0 8px 40px rgba(0,0,0,.25)" }}>
+        <div style={{ fontSize: 16, fontWeight: 700, color: tc.navy, marginBottom: 20 }}>Nova transacció</div>
+        <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+          {/* Action + Tipus row */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Acció</label>
+              <select value={form.action} onChange={e => set("action", e.target.value)} style={inp}>
+                <option value="buy">Compra</option>
+                <option value="sell">Venda</option>
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Tipus</label>
+              <select value={form.tipus} onChange={e => set("tipus", e.target.value)} style={inp}>
+                <option value="RV">RV</option>
+                <option value="RF">RF</option>
+              </select>
+            </div>
+          </div>
+
+          {/* ISIN + Date row */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 2 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>ISIN</label>
+              <input list="pm-isins" value={form.isin} onChange={e => set("isin", e.target.value.toUpperCase())}
+                placeholder="IE00BFMXXD54" style={inp} />
+              <datalist id="pm-isins">
+                {PM_POSITIONS.map(p => <option key={p.isin} value={p.isin}>{p.nom}</option>)}
+              </datalist>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Data</label>
+              <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={inp} />
+            </div>
+          </div>
+
+          {/* Nom */}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Nom del fons</label>
+            <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="Auto-omplert si l'ISIN és conegut" style={inp} />
+          </div>
+
+          {/* Units + NAV + Value row */}
+          <div style={{ display: "flex", gap: 10 }}>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Units</label>
+              <input type="number" step="any" value={form.units} onChange={e => set("units", e.target.value)} placeholder="0" style={inp} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>NAV</label>
+              <input type="number" step="any" value={form.nav} onChange={e => set("nav", e.target.value)} placeholder="0.00" style={inp} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Valor (€)</label>
+              <input type="number" step="any" value={form.valueEur || computedValue}
+                onChange={e => set("valueEur", e.target.value)}
+                placeholder={computedValue || "0"} style={{ ...inp, color: form.valueEur ? tc.text : tc.textLight }} />
+            </div>
+          </div>
+
+          {/* Custodian */}
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Custodi</label>
+            <select value={form.custodian} onChange={e => set("custodian", e.target.value)} style={inp}>
+              {CUSTODIANS.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {error && (
+            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA", borderRadius: 7, padding: "8px 12px" }}>{error}</div>
+          )}
+          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+            <button type="button" onClick={onClose}
+              style={{ padding: "8px 16px", borderRadius: 7, border: `1.5px solid ${tc.border}`,
+                background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
+              Cancel·lar
+            </button>
+            <button type="submit" disabled={saving}
+              style={{ padding: "8px 16px", borderRadius: 7, border: "none",
+                background: tc.navy, color: "#fff", cursor: saving ? "default" : "pointer",
+                fontFamily: "inherit", fontSize: 13, fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
+              {saving ? "Guardant…" : "Afegir"}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

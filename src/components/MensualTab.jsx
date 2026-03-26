@@ -18,13 +18,13 @@ export function MensualTab({filtered, fFy}) {
     borderBottom:`2px solid ${TC.border}`,whiteSpace:"nowrap",userSelect:"none"};
 
   // Theme-aware row colors
-  const greenRow1 = dark ? "#132218" : "#EEF6F1";   // expanded month row bg
-  const greenRow2 = dark ? "#0F1E14" : "#E8F5EE";   // expanded fund row alt
-  const greenRow3 = dark ? "#0B1910" : "#F4FAF6";   // expanded fund row main
-  const greenRow4 = dark ? "#172E1E" : "#E3F2E9";   // total row
-  const greenRow5 = dark ? "#0E1C12" : "#F0FAF5";   // tx table bg
-  const greenRow6 = dark ? "#0C1A10" : "#E0F2E9";   // tx table header
-  const greenRow7 = dark ? "#102016" : "#E8F4EE";   // expanded header
+  const greenRow1 = dark ? "#0E2412" : "#F0F8F0";   // expanded month row bg
+  const greenRow2 = dark ? "#091C0B" : "#E8F8E8";   // expanded fund row alt
+  const greenRow3 = dark ? "#071A08" : "#F4FBF4";   // expanded fund row main
+  const greenRow4 = dark ? "#133218" : "#E0F2E0";   // total row
+  const greenRow5 = dark ? "#091C0B" : "#F0FBF0";   // tx table bg
+  const greenRow6 = dark ? "#071A08" : "#E0F2E0";   // tx table header
+  const greenRow7 = dark ? "#0A1E0C" : "#E8F8E8";   // expanded header
   const rowMain   = dark ? TC.card    : "#fff";
   const rowAlt    = dark ? TC.bgAlt   : "#FAFBFC";
 
@@ -66,13 +66,13 @@ export function MensualTab({filtered, fFy}) {
   const toggleFonsTx = key => setExpandedTx(p => { const n=new Set(p); n.has(key)?n.delete(key):n.add(key); return n; });
 
   const CAT_CFG_LOCAL = {
-    "Capital Call":   { color:TC.navy,      bg: dark ? "#1A2F45" : "#E8EFF5" },
-    "Distribució":    { color:TC.green,     bg: dark ? "#0E2820" : "#E8F5E9" },
-    "Retorn Capital": { color:TC.greenDark, bg: dark ? "#0A2018" : "#D6EAE0" },
+    "Capital Call":   { color:TC.navy,      bg: dark ? "#112030" : "#E6EDF3" },
+    "Distribució":    { color:TC.green,     bg: dark ? "#0A2010" : "#E8F8E8" },
+    "Retorn Capital": { color:TC.greenDark, bg: dark ? "#0A2010" : "#D6EAD6" },
     "Altres":         { color:TC.textLight, bg: TC.bgAlt },
   };
 
-  const vcpeBg = (vcpe) => dark ? (vcpe==="PE"?"#1A2F45":vcpe==="VC"?"#0E2820":"#20163A") : (VCPE_CFG[vcpe]?.bg||TC.bgAlt);
+  const vcpeBg = (vcpe) => dark ? (vcpe==="PE"?"#112030":vcpe==="VC"?"#0A2010":"#20163A") : (VCPE_CFG[vcpe]?.bg||TC.bgAlt);
 
   // Dades per al gràfic de barres
   const chartData = useMemo(() => {

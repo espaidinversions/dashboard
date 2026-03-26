@@ -1,5 +1,4 @@
-// AUTO-GENERATED — do not edit manually.
-// Edit data/pipeline.csv and run: python convert-data.py
+// AUTO-GENERATED — edit via dashboard or raw-data files
 
 export const FUNDS0 = [
   {
@@ -53,7 +52,7 @@ export const FUNDS0 = [
   {
     "id": 5,
     "name": "Bex Capital",
-    "amount": 2.0,
+    "amount": 2,
     "currency": "EUR",
     "geography": "EU",
     "strategy": "Fons secundaris",
