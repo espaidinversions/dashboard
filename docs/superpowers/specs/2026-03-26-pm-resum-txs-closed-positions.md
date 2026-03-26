@@ -1,0 +1,174 @@
+# Spec: PM Resum — Monthly Transactions & Closed Position Pages
+**Date:** 2026-03-26
+**Status:** Approved
+
+---
+
+## Overview
+
+Two related improvements to the Public Markets section:
+
+1. **Monthly transactions accordion** — replace the flat `TransaccionsPanel` in the Resum tab with a month-grouped accordion, matching the Private Markets `MensualTab` UX.
+2. **Closed position detail pages** — enrich `PM_CLOSED` with full position data so each closed vehicle gets a proper `PMPositionDetail` page (same fidelity as open positions), including historic price chart.
+
+---
+
+## Feature 1 — Monthly Transactions Accordion
+
+### Current state
+`TransaccionsPanel` in `PublicMarketsTab.jsx` renders a flat sortable/filterable table of all transactions.
+
+### Target state
+A two-level accordion:
+
+**Level 1 — Month rows** (sorted newest-first):
+- Month label (e.g., "Mar 2026")
+- Buy count + total value
+- Sell count + total value
+- Click to expand
+
+**Level 2 — Individual transaction rows** (same columns as today):
+- Data · Nom · Tipus · Acció · Units · NAV · Valor · Custodi
+
+**Header bar** (unchanged):
+- Section label + `+ Nova` button
+- Action chips: Totes / Compres / Vendes
+- Custodian chips
+
+**Edge cases:**
+- Transactions with no `date` → grouped into a "Sense data" bucket at the bottom
+- Filters apply before grouping (filtering `buy` collapses months that have only sells, etc.)
+
+### Files changed
+- `src/components/PublicMarketsTab.jsx` — replace `TransaccionsPanel` internals; no new file needed
+
+---
+
+## Feature 2 — Closed Positions with Full Data
+
+### Current state
+`PM_CLOSED` entries have only `{ any, nom, isin, tipus }`. The detail page at `/mercats-publics/:isin` renders but shows all KPIs as "—" and no charts.
+
+### Target state
+Each closed position has the same data fidelity as an open position, including a historic price chart for its holding period.
+
+---
+
+### 2a. Script — `scripts/enrich_closed_positions.py`
+
+**Inputs:**
+- `src/data/pmTransactions.js` (parsed)
+- `src/data/publicMarkets.js` — existing `PM_CLOSED` array
+
+**Per-ISIN computed fields (from transactions):**
+
+| Field | Derivation |
+|---|---|
+| `gestor` | gestor from the first (oldest) buy transaction for this ISIN |
+| `custodian` | custodian from the first (oldest) buy transaction for this ISIN |
+| `divisa` | default `"EUR"` |
+| `dataCompra` | min date of buy transactions |
+| `costEur` | sum of buy `valueEur` |
+| `unitats` | sum of buy `units` |
+| `costInici` | `costEur / unitats` |
+| `valorMercat` | sum of sell `valueEur` (realized); fallback 0 if no sell found |
+| `rendInici` | `(valorMercat − costEur) / costEur × 100` |
+
+**Per-ISIN price history:**
+- Attempt price fetch for each closed ISIN using the same yfinance/API sources as `etf_fetch_prices.py` / `fund_fetch_prices.py`
+- Fetch period: `dataCompra` → Dec 31 of `any` (year closed)
+- Multiply daily/monthly price by `unitats` to get market-value series
+- For ISINs with no price feed: skip silently; the chart is hidden by existing `valueData = null` guard
+
+**Outputs (two separate files for review before merging):**
+1. `scripts/out/pm_closed_enriched.js` — enriched `PM_CLOSED` array (drop-in replacement for the block in `publicMarkets.js`); Excel-sourced fields (`rend20XX`, `costAnual`) left as `null` for manual fill-in
+2. `scripts/out/pm_closed_values.js` — `PM_CLOSED_VALUES` export (same shape as `PM_VALUES`): `{ [isin]: { [custodian]: [{date, value}] } }`
+
+**Why separate output files:** avoids auto-overwriting `publicMarkets.js` (80+ entries) or `portfolioValues.js` before review. The `scripts/out/` directory should be in `.gitignore`.
+
+---
+
+### 2b. `PM_CLOSED` schema additions
+
+```js
+{
+  // existing
+  any: 2022,
+  nom: "...",
+  isin: "...",
+  tipus: "RV",
+  // new — script-derived
+  gestor: "CaixaBank",
+  custodian: "CaixaBank",
+  divisa: "EUR",
+  dataCompra: "2020-01-15",
+  costEur: 150000,
+  unitats: 1500,
+  costInici: 100.0,
+  valorMercat: 142000,   // realized (sum of sells)
+  rendInici: -5.33,
+  // new — manual from Excel (null until filled)
+  costAnual: null,
+  rend2019: null,
+  rend2020: null,
+  rend2021: null,
+  rend2022: null,
+}
+```
+
+No `pes` field (not meaningful for closed positions).
+
+---
+
+### 2c. `PMPositionDetail` changes
+
+Three small adjustments when `isClosed === true`:
+
+1. "Valor mercat" KPI label → "Valor tancament"
+2. Hide "Pes cartera" KPI card
+3. Add `dataCompra` and "Any tancament" rows to the metadata info table (already shows `isClosed` badge)
+
+**Historic price chart:** `PMPositionDetail` already reads `PM_VALUES[isin]` in the `valueData` useMemo. Extend the lookup to fall back to `PM_CLOSED_VALUES[isin]` when `isClosed`:
+```js
+const custodianData = PM_VALUES[isin] ?? (isClosed ? PM_CLOSED_VALUES[isin] : null);
+```
+The rest of the chart logic is unchanged.
+
+---
+
+### 2d. New data export — `src/data/pmClosedValues.js`
+
+After user review and merge of `scripts/out/pm_closed_values.js`:
+```js
+// Auto-generated by scripts/enrich_closed_positions.py
+export const PM_CLOSED_VALUES = {
+  "LU0113258742": {
+    "UBS": [{ date: "2020-01-31", value: 631000 }, ...]
+  },
+  ...
+};
+```
+
+Imported in `PMPositionDetail.jsx` alongside `PM_VALUES`.
+
+---
+
+## Routing — no changes needed
+
+Closed positions already route via `/mercats-publics/:isin`. `PMPositionDetail` already does ISIN-based lookup into `PM_CLOSED`. No new routes.
+
+**Duplicate ISIN caveat:** some ISINs appear in `PM_CLOSED` for multiple years (position reopened and closed again). `PM_CLOSED.find()` returns the first match. This is a pre-existing limitation; acceptable since transaction history for that ISIN is shown regardless.
+
+---
+
+## File map
+
+| File | Change |
+|---|---|
+| `src/components/PublicMarketsTab.jsx` | Replace `TransaccionsPanel` internals with monthly accordion |
+| `src/components/PMPositionDetail.jsx` | 3 small tweaks for `isClosed`; import `PM_CLOSED_VALUES` |
+| `src/data/publicMarkets.js` | Replace `PM_CLOSED` block with enriched version (post-script) |
+| `src/data/pmClosedValues.js` | New file — price series for closed positions |
+| `scripts/enrich_closed_positions.py` | New script |
+| `scripts/out/pm_closed_enriched.js` | Script output (review artifact, not committed) |
+| `scripts/out/pm_closed_values.js` | Script output (review artifact, not committed) |
