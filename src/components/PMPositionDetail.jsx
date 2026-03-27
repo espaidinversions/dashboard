@@ -132,18 +132,34 @@ export function PMPositionDetail() {
 
     if (dates.length === 0 && inflowDates.length === 0) return null;
 
+    // Cumulative units from all transactions (buy +, sell -)
+    const txAll = PM_TRANSACTIONS.filter(t => t.isin === isin && t.date && t.units != null);
+    const unitDeltaByDate = {};
+    txAll.forEach(t => {
+      const delta = t.action === "buy" ? t.units : -t.units;
+      unitDeltaByDate[t.date] = (unitDeltaByDate[t.date] ?? 0) + delta;
+    });
+    const sortedUnitDates = Object.keys(unitDeltaByDate).sort();
+    let runUnits = 0;
+    let unitIdx = 0;
+
     const rows = dates.map(date => {
       const row = { date };
       custodians.forEach(c => {
         row[c] = custodianData[c].find(d => d.date === date)?.value ?? null;
       });
+      while (unitIdx < sortedUnitDates.length && sortedUnitDates[unitIdx] <= date) {
+        runUnits += unitDeltaByDate[sortedUnitDates[unitIdx]];
+        unitIdx++;
+      }
       if (inflowByDate[date]) row.inflow = inflowByDate[date];
+      if (runUnits > 0) row.units = Math.round(runUnits);
       return row;
     });
 
-    const maxInflow = Math.max(...inflowDates.map(d => inflowByDate[d]), 0);
+    const hasUnits = rows.some(r => r.units != null);
 
-    return { custodians, rows, maxInflow, inflowDates };
+    return { custodians, rows, inflowDates, inflowByDate, hasUnits };
   }, [isin, p.dataCompra]);
 
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
@@ -219,12 +235,20 @@ export function PMPositionDetail() {
         <div style={card}>
           <div style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 12 }}>
             <div style={{ ...secLabel, marginBottom: 0, flex: 1 }}>Valor de mercat · des de la compra</div>
-            {valueData.inflowDates.length > 0 && (
-              <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: tc.textLight }}>
-                <span style={{ display: "inline-block", width: 10, height: 10, background: tc.navy, opacity: 0.35, borderRadius: 2 }} />
-                Entrades de capital
-              </div>
-            )}
+            <div style={{ display: "flex", gap: 12 }}>
+              {valueData.inflowDates.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: tc.textLight }}>
+                  <svg width="12" height="12"><line x1="6" y1="0" x2="6" y2="12" stroke={tc.navy} strokeWidth="1.5" strokeDasharray="4 3" strokeOpacity={0.6}/></svg>
+                  {valueData.inflowDates.length} entrada{valueData.inflowDates.length > 1 ? "es" : ""} de capital
+                </div>
+              )}
+              {p.costEur != null && (
+                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#E8A020" }}>
+                  <svg width="18" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#E8A020" strokeWidth="1.5" strokeDasharray="5 3"/></svg>
+                  Cost {fmtM(p.costEur)}
+                </div>
+              )}
+            </div>
           </div>
           <ResponsiveContainer width="100%" height={260}>
             <ComposedChart data={valueData.rows} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
@@ -242,38 +266,41 @@ export function PMPositionDetail() {
                 tick={{ fontSize: 10, fill: tc.textLight }}
                 axisLine={false} tickLine={false} width={60}
               />
-              {valueData.maxInflow > 0 && (
-                <YAxis
-                  yAxisId="inf"
-                  orientation="right"
-                  domain={[0, valueData.maxInflow * 8]}
-                  hide
-                />
-              )}
+              <YAxis
+                yAxisId="units"
+                orientation="right"
+                tickFormatter={v => v >= 1000 ? (v / 1000).toFixed(1) + "K" : v.toLocaleString("ca-ES")}
+                tick={{ fontSize: 9, fill: tc.textLight }}
+                axisLine={false} tickLine={false} width={46}
+              />
               <Tooltip
                 {...tooltipStyle}
                 formatter={(v, name) => {
-                  if (name === "inflow") return v != null ? [`+${fmtM(v)}`, "Entrada de capital"] : null;
+                  if (name === "units")  return v != null ? [v.toLocaleString("ca-ES"), "Participacions"] : null;
                   return [v != null ? fmtM(v) : "—", name];
                 }}
                 labelFormatter={fmtMonth}
               />
-              {valueData.custodians.length > 1 && (
-                <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }}
-                  formatter={n => n === "inflow" ? "Entrada" : n} />
+              {p.costEur != null && (
+                <ReferenceLine yAxisId="val" y={p.costEur}
+                  stroke="#E8A020" strokeDasharray="5 3" strokeWidth={1.5}
+                  label={{ value: `Cost ${fmtM(p.costEur)}`, position: "insideTopRight", fontSize: 9, fill: "#E8A020" }} />
               )}
-              {valueData.maxInflow > 0 && (
-                <Bar yAxisId="inf" dataKey="inflow" name="inflow"
-                  fill={tc.navy} fillOpacity={0.28} barSize={8} isAnimationActive={false} />
-              )}
-              {valueData.custodians.map((c, i) => (
-                <Line
-                  key={c} yAxisId="val"
-                  dataKey={c} name={c}
-                  stroke={["#4E79A7", "#F28E2B", "#E15759", "#76B7B2"][i % 4]}
-                  strokeWidth={2} dot={false} connectNulls={false}
-                />
+              {valueData.inflowDates.map(d => (
+                <ReferenceLine key={d} yAxisId="val" x={d}
+                  stroke={tc.navy} strokeDasharray="4 3" strokeOpacity={0.55} strokeWidth={1.5}
+                  label={{ value: `+${fmtM(valueData.inflowByDate[d])}`, position: "insideTopRight", fontSize: 8, fill: tc.navy, opacity: 0.75 }} />
               ))}
+              {valueData.custodians.map((c, i) => (
+                <Line key={c} yAxisId="val" dataKey={c} name={c}
+                  stroke={["#4E79A7", "#F28E2B", "#E15759", "#76B7B2"][i % 4]}
+                  strokeWidth={2} dot={false} connectNulls={false} />
+              ))}
+              {valueData.hasUnits && (
+                <Line yAxisId="units" dataKey="units" name="units"
+                  stroke={tc.green} strokeWidth={1.5} strokeDasharray="3 2"
+                  dot={false} connectNulls type="stepAfter" legendType="none" />
+              )}
             </ComposedChart>
           </ResponsiveContainer>
         </div>

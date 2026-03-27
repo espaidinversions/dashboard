@@ -15,17 +15,19 @@ A security audit surfaced several actionable issues. This spec covers the Option
 
 ### 1. server.js — Error message exposure
 
-**Problem:** `/api/pipeline` and `/api/capital-calls` catch blocks return `e.message` directly:
-```js
-res.status(500).json({ error: e.message });
-```
-This can leak internal file paths, stack frames, or OS details.
+**Problem:** Four catch blocks in `server.js` return `e.message` directly:
+- `/api/pipeline` (line 75)
+- `/api/capital-calls` (line 118)
+- `/api/data-version` (line 159)
+- `/api/board` (line 175)
 
-**Fix:** Replace with a generic message:
+This can leak internal file paths, stack frames, or OS details. The admin API handlers in `api/` already return generic errors correctly and are not affected.
+
+**Fix:** Replace all four with a generic message:
 ```js
 res.status(500).json({ error: "Internal server error" });
 ```
-Keep `console.error` for internal visibility; remove it from the response body.
+Keep `console.error` for internal visibility; remove the raw error from the response body.
 
 ---
 
@@ -48,7 +50,7 @@ Applied to all field values before CSV serialization in `/api/pipeline` and `/ap
 
 ### 3. server.js — CORS
 
-**Problem:** No CORS policy. Relies on browser defaults, which allows any origin to make credentialed requests to the local server.
+**Problem:** `server.js` (port 3001) has no CORS headers. The React dev server runs on port 5173 — a different origin. Browsers block cross-origin requests by default, so without explicit CORS headers the frontend cannot call the API in development. More importantly, adding CORS later without an explicit allowlist risks being too permissive in production.
 
 **Fix:** Add a minimal CORS middleware at the top of server.js:
 - Reads `ALLOWED_ORIGIN` env var (falls back to `http://localhost:5173` for dev)
@@ -59,9 +61,11 @@ No new dependency needed — plain Express middleware.
 
 ---
 
-### 4. api/_rateLimit.js — Shared rate limiter
+### 4. api/_rateLimit.js — Shared rate limiter (DRY refactor)
 
 **Problem:** `rateLimitMap` + `isRateLimited` are copy-pasted identically in both `api/admin/users.js` and `api/admin/users/[id].js`. Changes must be made in two places.
+
+**Note:** On Vercel, each serverless function file has its own module scope — extracting to a shared file does not create shared state across endpoints. Each handler retains its own independent rate limit counter. The extraction is purely a code-quality improvement.
 
 **Fix:** Extract to `api/_rateLimit.js` (underscore prefix = Vercel non-route convention):
 ```js
@@ -93,29 +97,25 @@ Both admin handlers import from this shared module.
 ```
 Content-Security-Policy:
   default-src 'self';
-  script-src 'self' 'unsafe-inline';
+  script-src 'self';
   style-src 'self' 'unsafe-inline';
   img-src 'self' data: blob:;
   connect-src 'self' https://*.supabase.co https://api.frankfurter.app;
   font-src 'self' data:;
   frame-ancestors 'none'
 ```
-- `unsafe-inline` for scripts and styles: required by Recharts/Nivo which inject inline styles
+- `style-src 'unsafe-inline'`: required by Recharts/Nivo which inject inline styles at runtime
+- `script-src 'self'` only: Vite bundles all JS into files, no inline scripts needed
 - `connect-src` explicitly whitelists Supabase and the EUR/USD rate API
 - `frame-ancestors 'none'` redundant with X-Frame-Options but defense-in-depth
 
 ---
 
-### 7. DataLoader.jsx — xlsx input guard
+### 7. DataLoader.jsx — xlsx sheet count guard
 
-**Problem:** No validation before `XLSX.read()`. A crafted file can trigger ReDoS or prototype pollution via the xlsx library (no upstream fix available).
+**Problem:** `DataLoader.jsx` already rejects files over 10 MB before parsing. However, there is no limit on sheet count — a crafted workbook with thousands of sheets can cause memory exhaustion after the file-size check passes.
 
-**Fix:** Add two guards before parsing in the `readXLSX` function:
-
-1. **File size**: reject files > 10 MB with a user-visible error set via `setXlsxStatus`
-2. **Sheet count**: after `XLSX.read()`, reject workbooks with > 20 sheets
-
-Both surface errors in the existing `xlsxStatus` UI state — no new UI needed.
+**Fix:** After `XLSX.read()`, check `wb.SheetNames.length`. If more than 20 sheets, reject with a user-visible error via the existing `setXlsxStatus` mechanism.
 
 ---
 
@@ -123,12 +123,12 @@ Both surface errors in the existing `xlsxStatus` UI state — no new UI needed.
 
 | File | Change |
 |------|--------|
-| `server.js` | Generic errors, CSV sanitization, CORS middleware |
+| `server.js` | Generic errors (4 catch blocks), CSV sanitization, CORS middleware |
 | `api/_rateLimit.js` | New shared module (extracted from admin handlers) |
 | `api/admin/users.js` | Import shared rate limiter, add CORS headers |
 | `api/admin/users/[id].js` | Import shared rate limiter, add CORS headers |
 | `vercel.json` | Add CSP header |
-| `src/components/DataLoader.jsx` | File size + sheet count guard before xlsx parse |
+| `src/components/DataLoader.jsx` | Sheet count guard after xlsx parse |
 
 ---
 

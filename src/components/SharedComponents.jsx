@@ -211,6 +211,8 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
     Object.fromEntries(fields.map(f => [f.key, f.defaultValue ?? ""]))
   );
   const [error, setError] = useState(null);
+  const [closing, setClosing] = useState(false);
+  const handleClose = () => { setClosing(true); setTimeout(onClose, 175); };
 
   const set = (key, val) => setValues(v => ({ ...v, [key]: val }));
 
@@ -228,12 +230,14 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
   };
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex",
-      alignItems: "center", justifyContent: "center", zIndex: 1000 }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: tc.card, borderRadius: 14, padding: "28px 28px 24px",
-        width: 420, maxWidth: "90vw", boxShadow: "0 8px 40px rgba(0,0,0,.25)",
-        fontFamily: "'Outfit',system-ui,sans-serif" }}>
+    <div className={`modal-overlay${closing ? " closing" : ""}`}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex",
+        alignItems: "center", justifyContent: "center", zIndex: 1000 }}
+      onClick={e => { if (e.target === e.currentTarget) handleClose(); }}>
+      <div className={`modal-card${closing ? " closing" : ""}`}
+        style={{ background: tc.card, borderRadius: 14, padding: "28px 28px 24px",
+          width: 420, maxWidth: "90vw", boxShadow: "0 8px 40px rgba(0,0,0,.25)",
+          fontFamily: "'Outfit',system-ui,sans-serif" }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: tc.navy, marginBottom: 20 }}>{title}</div>
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {fields.map(f => (
@@ -259,7 +263,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
               borderRadius: 7, padding: "8px 12px" }}>{error}</div>
           )}
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
-            <button type="button" onClick={onClose}
+            <button type="button" onClick={handleClose}
               style={{ padding: "8px 16px", borderRadius: 7, border: `1.5px solid ${tc.border}`,
                 background: "transparent", color: tc.textMid, cursor: "pointer",
                 fontFamily: "inherit", fontSize: 13 }}>

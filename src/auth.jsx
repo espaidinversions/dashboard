@@ -12,7 +12,13 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (!supabase) { setSession(null); return; }
-    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        supabase.auth.refreshSession().then(({ data: r }) => setSession(r.session ?? data.session));
+      } else {
+        setSession(data.session);
+      }
+    });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
     return () => subscription.unsubscribe();
   }, []);

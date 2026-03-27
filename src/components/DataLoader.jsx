@@ -14,6 +14,9 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
   const [ccDrag,     setCcDrag]     = useState(false);
   const [plDrag,     setPlDrag]     = useState(false);
   const [xlsxDrag,   setXlsxDrag]  = useState(false);
+  const [closing,    setClosing]    = useState(false);
+
+  const handleClose = () => { setClosing(true); setTimeout(onClose, 175); };
 
   const readXLSX = async (file) => {
     if (file.size > 10 * 1024 * 1024) { setError("El fitxer és massa gran (màxim 10 MB)."); return; }
@@ -133,8 +136,8 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
   );
 
   return (
-    <div className="modal-overlay" style={sty.overlay} onClick={e=>{ if(e.target===e.currentTarget) onClose(); }}>
-      <div className="modal-card" style={sty.modal}>
+    <div className={`modal-overlay${closing ? " closing" : ""}`} style={sty.overlay} onClick={e=>{ if(e.target===e.currentTarget) handleClose(); }}>
+      <div className={`modal-card${closing ? " closing" : ""}`} style={sty.modal}>
         <div style={sty.title}>Carregar dades</div>
         <div style={sty.sub}>Selecciona o arrossega els fitxers CSV per actualitzar el dashboard.</div>
 
@@ -189,7 +192,7 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
         {error && <div style={sty.error}>{error}</div>}
 
         <div style={{display:"flex", justifyContent:"flex-end", gap:10, marginTop:8}}>
-          <button style={sty.close} onClick={onClose}>Tancar</button>
+          <button style={sty.close} onClick={handleClose}>Tancar</button>
         </div>
       </div>
     </div>

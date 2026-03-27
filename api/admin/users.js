@@ -29,40 +29,44 @@ export default async function handler(req, res) {
   const ip = req.headers["x-forwarded-for"]?.split(",")[0] ?? req.socket?.remoteAddress ?? "unknown";
   if (isRateLimited(ip)) return res.status(429).json({ error: "Too many requests" });
 
-  const supabase = makeServiceClient();
-  const admin = await verifyAdmin(req, supabase);
-  if (!admin) return res.status(403).json({ error: "Forbidden" });
+  try {
+    const supabase = makeServiceClient();
+    const admin = await verifyAdmin(req, supabase);
+    if (!admin) return res.status(403).json({ error: "Forbidden" });
 
-  if (req.method === "GET") {
-    const { data, error } = await supabase.auth.admin.listUsers();
-    if (error) return serverError(res, error, "listUsers");
-    return res.json({ users: data.users });
-  }
-
-  if (req.method === "POST") {
-    const { email, role } = req.body;
-    if (!email) return res.status(400).json({ error: "Email required" });
-
-    // Check domain allowlist
-    const { data: setting } = await supabase
-      .from("app_settings")
-      .select("value")
-      .eq("key", "allowed_domains")
-      .single();
-    const domains = setting?.value ?? [];
-    if (domains.length > 0) {
-      const domain = email.split("@")[1];
-      if (!domains.includes(domain)) {
-        return res.status(400).json({ error: "Email domain not allowed" });
-      }
+    if (req.method === "GET") {
+      const { data, error } = await supabase.auth.admin.listUsers();
+      if (error) return serverError(res, error, "listUsers");
+      return res.json({ users: data.users });
     }
 
-    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
-      data: { role: role || "user" },
-    });
-    if (error) return serverError(res, error, "inviteUserByEmail");
-    return res.json({ user: data.user });
-  }
+    if (req.method === "POST") {
+      const { email, role } = req.body ?? {};
+      if (!email) return res.status(400).json({ error: "Email required" });
 
-  res.status(405).json({ error: "Method not allowed" });
+      // Check domain allowlist
+      const { data: setting } = await supabase
+        .from("app_settings")
+        .select("value")
+        .eq("key", "allowed_domains")
+        .single();
+      const domains = setting?.value ?? [];
+      if (domains.length > 0) {
+        const domain = email.split("@")[1];
+        if (!domains.includes(domain)) {
+          return res.status(400).json({ error: "Email domain not allowed" });
+        }
+      }
+
+      const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+        data: { role: role || "user" },
+      });
+      if (error) return serverError(res, error, "inviteUserByEmail");
+      return res.json({ user: data?.user ?? null });
+    }
+
+    res.status(405).json({ error: "Method not allowed" });
+  } catch (e) {
+    return serverError(res, e, "handler");
+  }
 }

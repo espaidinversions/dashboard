@@ -26,6 +26,7 @@ import { DataLoader } from "./DataLoader.jsx";
 import { PublicMarketsTab } from "./PublicMarketsTab.jsx";
 import { HoldingsTable } from "./HoldingsTable.jsx";
 import { PMTipusTab } from "./PMTipusTab.jsx";
+import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
 
 // ── Helpers localStorage ──────────────────────────────────
 const LS_CC = "tc_rawCC";
@@ -538,7 +539,7 @@ function DashboardInner() {
       {/* ── Sub-tabs (Mercats Públics) ── */}
       {section==="mercats-publics"&&(
       <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0}}>
-        {[{id:"resum",label:"Resum"},{id:"rv",label:"Renda Variable"},{id:"rf",label:"Renda Fixa"},{id:"posicions",label:"Posicions"}].map(t=>(
+        {[{id:"resum",label:"Resum"},{id:"rv",label:"Renda Variable"},{id:"rf",label:"Renda Fixa"},{id:"posicions",label:"Posicions"},{id:"transaccions",label:"Transaccions"}].map(t=>(
           <button key={t.id} onClick={()=>setMercatsPublicsTab(t.id)}
             style={{background:"none",border:"none",borderBottom:`2px solid ${mercatsPublicsTab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:mercatsPublicsTab===t.id?600:400,color:mercatsPublicsTab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
             {t.label}
@@ -615,6 +616,9 @@ function DashboardInner() {
         )}
         {tab==="mercats-publics"&&mercatsPublicsTab==="posicions"&&(
           <div className="tab-panel"><HoldingsTable/></div>
+        )}
+        {tab==="mercats-publics"&&mercatsPublicsTab==="transaccions"&&(
+          <div className="tab-panel"><PMTransaccionsTab/></div>
         )}
         {tab==="real-estate"&&realEstateTab==="directe"&&(
           <div className="tab-panel" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 0",gap:12}}>

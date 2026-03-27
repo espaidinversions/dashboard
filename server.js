@@ -2,6 +2,7 @@ import express from "express";
 import { writeFileSync, readFileSync, existsSync, mkdirSync, statSync, watch } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
+import { createClient } from "@supabase/supabase-js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DATA  = join(__dirname, "src/data");
@@ -171,6 +172,99 @@ app.get("/api/data-version", (req, res) => {
     res.json({ version: latest });
   } catch (e) {
     console.error("/api/data-version error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Admin helpers ─────────────────────────────────────────
+
+function makeAdminClient() {
+  return createClient(
+    process.env.VITE_SUPABASE_URL,
+    process.env.SUPABASE_SERVICE_ROLE_KEY,
+  );
+}
+
+async function verifyAdminToken(req, supabase) {
+  const token = req.headers.authorization?.replace("Bearer ", "");
+  if (!token) return null;
+  const { data: { user }, error } = await supabase.auth.getUser(token);
+  if (error || user?.user_metadata?.role !== "admin") return null;
+  return user;
+}
+
+// ── GET /api/admin/users ──────────────────────────────────
+app.get("/api/admin/users", async (req, res) => {
+  try {
+    const supabase = makeAdminClient();
+    const admin = await verifyAdminToken(req, supabase);
+    if (!admin) return res.status(403).json({ error: "Forbidden" });
+    const { data, error } = await supabase.auth.admin.listUsers();
+    if (error) throw error;
+    res.json({ users: data.users });
+  } catch (e) {
+    console.error("/api/admin/users GET error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── POST /api/admin/users ─────────────────────────────────
+app.post("/api/admin/users", async (req, res) => {
+  try {
+    const supabase = makeAdminClient();
+    const admin = await verifyAdminToken(req, supabase);
+    if (!admin) return res.status(403).json({ error: "Forbidden" });
+    const { email, role } = req.body ?? {};
+    if (!email) return res.status(400).json({ error: "Email required" });
+    const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
+      data: { role: role || "user" },
+    });
+    if (error) throw error;
+    res.json({ user: data?.user ?? null });
+  } catch (e) {
+    console.error("/api/admin/users POST error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── PATCH /api/admin/users/:id ────────────────────────────
+app.patch("/api/admin/users/:id", async (req, res) => {
+  try {
+    const supabase = makeAdminClient();
+    const admin = await verifyAdminToken(req, supabase);
+    if (!admin) return res.status(403).json({ error: "Forbidden" });
+    const { id } = req.params;
+    const { role, email_confirm } = req.body ?? {};
+    const updates = {};
+    if (role !== undefined) updates.user_metadata = { role };
+    if (email_confirm) updates.email_confirm = true;
+    const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
+    if (error) throw error;
+    res.json({ user: data?.user ?? null });
+  } catch (e) {
+    console.error("/api/admin/users PATCH error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── DELETE /api/admin/users/:id ───────────────────────────
+app.delete("/api/admin/users/:id", async (req, res) => {
+  try {
+    const supabase = makeAdminClient();
+    const admin = await verifyAdminToken(req, supabase);
+    if (!admin) return res.status(403).json({ error: "Forbidden" });
+    const { id } = req.params;
+    const { data: allUsers } = await supabase.auth.admin.listUsers();
+    const admins = (allUsers?.users ?? []).filter(u => u.user_metadata?.role === "admin");
+    const target = admins.find(u => u.id === id);
+    if (target && admins.length <= 1) {
+      return res.status(409).json({ error: "Cannot delete the last admin" });
+    }
+    const { error } = await supabase.auth.admin.deleteUser(id);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (e) {
+    console.error("/api/admin/users DELETE error:", e);
     res.status(500).json({ error: "Internal server error" });
   }
 });

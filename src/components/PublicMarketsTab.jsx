@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo } from "react";
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
@@ -10,7 +10,6 @@ import { PM_MONTHLY, PM_MANAGERS, PM_POSITIONS } from "../data/publicMarkets.js"
 import { Link } from "react-router-dom";
 import { PM_VALUES } from "../data/portfolioValues.js";
 import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
-import { loadPMOverrides, upsertTransaction } from "../db.js";
 
 // ── Constants ──────────────────────────────────────────────
 const ABEL_RV_SPLIT = 0.7516;
@@ -30,15 +29,14 @@ const AREA_COLORS = {
   caixaUbs: "#2B5070",
   ubs:      "#E8A020",
   abel:     "#3DC83E",
-  wam:      "#6B2E7E",
-  andbank:  "#7A6000",
+  andbank:  "#6B2E7E",
 };
 
 // Color per manager for return charts
 const MGR_COLORS = {
   "caixa":   "#2B5070",
   "ubs":     "#4E79A7",
-  "wam":     "#6B2E7E",
+  "andbank": "#6B2E7E",
   "abel":    "#3DC83E",
   "andbank": "#7A6000",
 };
@@ -71,13 +69,15 @@ function weightedReturn(field, tipus = null) {
 }
 
 // ── Module-level statics ────────────────────────────────────
-const wamVal     = PM_MANAGERS.find(m => m.id === "wam").valorActual;
 const andbankVal = PM_MANAGERS.find(m => m.id === "andbank").valorActual;
+
+// Monthly Andbank lookup: "YYYY-MM" → andbank value
+const ANDBANK_BY_MONTH = new Map(PM_MONTHLY.map(d => [d.date, d.andbank]));
 
 // Map mgrId → default tipus filter for expand
 const DEFAULT_EXPAND_TIPUS = {
   "caixa": "all", "ubs": "all",
-  "abel": "all", "wam": null, "andbank": null,
+  "abel": "all", "andbank": null,
 };
 
 // Get PM_POSITIONS for a manager row
@@ -127,14 +127,6 @@ export function PublicMarketsTab() {
   const [chartView, setChartView] = useState("total");
   const [expanded, setExpanded] = useState(new Set());
   const [expandTipus, setExpandTipus] = useState({});
-
-  // PM overrides from Supabase (manual transactions take priority over Excel-generated ones)
-  const [manualTxs, setManualTxs] = useState([]);
-  useEffect(() => {
-    loadPMOverrides().then(data => {
-      if (data?.transactions?.length) setManualTxs(data.transactions);
-    });
-  }, []);
 
   const toggleExpand = (id) => {
     setExpanded(prev => {
@@ -213,7 +205,7 @@ export function PublicMarketsTab() {
     return [
       combine("caixa", "CaixaBank", ["caixa-rv", "caixa-rf"]),
       combine("ubs",   "UBS",       ["ubs-rv",   "ubs-rf"  ]),
-      ...PM_MANAGERS.filter(m => ["wam", "abel", "andbank"].includes(m.id)),
+      ...PM_MANAGERS.filter(m => ["abel", "andbank"].includes(m.id)),
     ];
   }, []);
 
@@ -256,26 +248,28 @@ export function PublicMarketsTab() {
       const tipus = isinTipus[isin] ?? null;
       for (const [custodian, series] of Object.entries(custodians)) {
         for (const { date, value } of series) {
-          if (!byDate[date]) byDate[date] = { caixaUbs: 0, abel: 0, rv: 0, rf: 0 };
+          if (!byDate[date]) byDate[date] = { total: 0, caixaUbs: 0, abel: 0, rv: 0, rf: 0 };
+          byDate[date].total += value;  // ALL custodians — fixes mismatch vs cost basis
           if (custodian === "CaixaBank") byDate[date].caixaUbs += value;
           else if (custodian === "Bankinter") byDate[date].abel += value;
-          if (tipus === "RV")      byDate[date].rv += value;
-          else if (tipus === "RF") byDate[date].rf += value;
+          if (tipus === "RV") byDate[date].rv += value;
+          else               byDate[date].rf += value; // RF + unclassified → rf always
         }
       }
     }
 
     return Object.keys(byDate).sort().map(date => {
       const d = byDate[date];
+      const monthKey = date.slice(0, 7); // "YYYY-MM"
+      const andbank = ANDBANK_BY_MONTH.get(monthKey) ?? andbankVal;
       return {
         label:    fmtMonth(date),
-        total:    d.caixaUbs + d.abel,  // WAM/Andbank excluded (no time series)
+        total:    d.total + andbank,
         rv:       d.rv,
         rf:       d.rf,
         caixaUbs: d.caixaUbs,
         abel:     d.abel,
-        wam:      wamVal,
-        andbank:  andbankVal,
+        andbank,
       };
     });
   }, []);
@@ -285,12 +279,11 @@ export function PublicMarketsTab() {
     // Prefer PM_VALUES mark-to-market; fall back to PM_MONTHLY static data
     if (mvData) {
       if (chartView === "total") return mvData.map(d => ({ label: d.label, total: d.total }));
-      if (chartView === "actiu") return mvData.map(d => ({ label: d.label, rv: d.rv, rf: d.rf }));
+      if (chartView === "actiu") return mvData.map(d => ({ label: d.label, rv: d.rv, rf: d.rf + d.andbank }));
       return mvData.map(d => ({
         label:    d.label,
         caixaUbs: d.caixaUbs,
         abel:     d.abel,
-        wam:      d.wam,
         andbank:  d.andbank,
       }));
     }
@@ -298,19 +291,18 @@ export function PublicMarketsTab() {
     return PM_MONTHLY.map(d => {
       if (chartView === "total") return {
         label: d.label,
-        total: d.caixaRV + d.caixaRF + d.ubsRV + d.ubsRF + (d.abelBK ?? 0),
+        total: d.caixaRV + d.caixaRF + d.ubsRV + d.ubsRF + (d.abelBK ?? 0) + d.andbank,
       };
       if (chartView === "actiu") return {
         label: d.label,
         rv: d.caixaRV + d.ubsRV + (d.abelBK != null ? d.abelBK * ABEL_RV_SPLIT : 0),
-        rf: d.caixaRF + d.ubsRF + (d.abelBK != null ? d.abelBK * ABEL_RF_SPLIT : 0),
+        rf: d.caixaRF + d.ubsRF + (d.abelBK != null ? d.abelBK * ABEL_RF_SPLIT : 0) + d.andbank,
       };
       return {
         label:    d.label,
         caixaUbs: d.caixaRV + d.caixaRF + d.ubsRV + d.ubsRF,
         abel:     d.abelBK ?? 0,
-        wam:      wamVal,
-        andbank:  andbankVal,
+        andbank:  d.andbank,
       };
     });
   }, [chartView, mvData]);
@@ -344,10 +336,15 @@ export function PublicMarketsTab() {
     return { cumulativeCostByLabel: cumByLabel, topInflowLabels: new Set(top5.map(t => t.label)), topInflows: top5 };
   }, []);
 
-  // Attach cumulativeCost to each chartData point (only for "total" view)
-  const chartDataWithCost = useMemo(() =>
-    chartData.map(d => ({ ...d, costBasis: cumulativeCostByLabel[d.label] ?? null })),
-  [chartData, cumulativeCostByLabel]);
+  // Attach cumulativeCost to each chartData point — forward-filled so it's a continuous step
+  const chartDataWithCost = useMemo(() => {
+    let lastCost = null;
+    return chartData.map(d => {
+      const cost = cumulativeCostByLabel[d.label] ?? lastCost;
+      if (cost != null) lastCost = cost;
+      return { ...d, costBasis: cost };
+    });
+  }, [chartData, cumulativeCostByLabel]);
 
   // ── Shared styles ────────────────────────────────────────
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -410,9 +407,8 @@ export function PublicMarketsTab() {
                   dataKey={m.id}
                   name={
                     m.id === "abel"    ? "Bankinter" :
-                    m.id === "wam"     ? "WAM" :
-                    m.id === "andbank" ? "Andbank" :
-                    m.nom.replace("(BK+IB)", "").replace("(Goyo)", "").replace("Bons", "").trim()
+                    m.id === "andbank" ? "WAM–Andbank" :
+                    m.nom.replace("(BK+IB)", "").trim()
                   }
                   stroke={MGR_COLORS[m.id]}
                   strokeWidth={2}
@@ -473,6 +469,10 @@ export function PublicMarketsTab() {
                   <stop offset="95%" stopColor={color} stopOpacity={0.04} />
                 </linearGradient>
               ))}
+              <linearGradient id="pm-grad-cost" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#E8A020" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="#E8A020" stopOpacity={0.08} />
+              </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
             <XAxis dataKey="label" tick={{ fontSize: 10, fill: tc.textLight }} />
@@ -487,15 +487,14 @@ export function PublicMarketsTab() {
                 label={{ value: `+${fmtM(inf.value)}`, position: "top", fontSize: 8, fill: tc.textLight }} />
             ))}
             {chartView === "total" && (
-              <Area type="monotone" dataKey="total"
-                stroke={AREA_COLORS.total} fill={`url(#pm-grad-total)`}
-                strokeWidth={2} dot={false} name="Total" />
+              <Area type="monotone" dataKey="costBasis"
+                stroke="#E8A020" fill="url(#pm-grad-cost)"
+                strokeWidth={1.5} dot={false} name="Capital invertit" connectNulls />
             )}
             {chartView === "total" && (
-              <Area type="monotone" dataKey="costBasis"
-                stroke={tc.textLight} fill="none" fillOpacity={0}
-                strokeDasharray="4 2" strokeWidth={1} dot={false}
-                name="Capital invertit" connectNulls />
+              <Area type="monotone" dataKey="total"
+                stroke={AREA_COLORS.total} fill={`url(#pm-grad-total)`}
+                strokeWidth={2} dot={false} name="Valor cartera" fillOpacity={0.7} />
             )}
             {chartView === "actiu" && <>
               <Area type="monotone" dataKey="rv" stackId="a"
@@ -506,9 +505,8 @@ export function PublicMarketsTab() {
                 strokeWidth={1.5} dot={false} name="Renda Fixa" />
             </>}
             {chartView === "gestor" && <>
-              <Area type="monotone" dataKey="andbank"  stackId="g" stroke={AREA_COLORS.andbank}  fill={`url(#pm-grad-andbank)`}  strokeWidth={1.5} dot={false} name="Andbank" />
-              <Area type="monotone" dataKey="wam"      stackId="g" stroke={AREA_COLORS.wam}      fill={`url(#pm-grad-wam)`}      strokeWidth={1.5} dot={false} name="WAM" />
-              <Area type="monotone" dataKey="abel"     stackId="g" stroke={AREA_COLORS.abel}      fill={`url(#pm-grad-abel)`}      strokeWidth={1.5} dot={false} name="Bankinter" />
+              <Area type="monotone" dataKey="andbank"  stackId="g" stroke={AREA_COLORS.andbank}  fill={`url(#pm-grad-andbank)`}  strokeWidth={1.5} dot={false} name="WAM–Andbank" />
+              <Area type="monotone" dataKey="abel"     stackId="g" stroke={AREA_COLORS.abel}     fill={`url(#pm-grad-abel)`}     strokeWidth={1.5} dot={false} name="Bankinter" />
               <Area type="monotone" dataKey="caixaUbs" stackId="g" stroke={AREA_COLORS.caixa}    fill={`url(#pm-grad-caixa)`}    strokeWidth={1.5} dot={false} name="Caixa/UBS" />
             </>}
           </AreaChart>
@@ -516,10 +514,10 @@ export function PublicMarketsTab() {
 
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
           {chartView === "gestor"
-            ? "Caixa i UBS mostrats agregats. WAM i Andbank: valor actual (sense sèrie mensual)."
+            ? "Caixa i UBS mostrats agregats. WAM i Andbank amb sèrie mensual interpolada (anchors anuals)."
             : mvData
-              ? "WAM i Andbank no inclosos a la sèrie (sense dades mensuals). Posicions no confirmades excloses."
-              : "Dades de PM_MONTHLY (font manual). WAM i Andbank exclosos de la sèrie temporal."}
+              ? "WAM i Andbank inclosos amb interpolació lineal (anchors Dec 2023–Mar 2026). Posicions no confirmades excloses."
+              : "Dades de PM_MONTHLY (font manual). WAM i Andbank amb sèrie mensual interpolada."}
         </div>
       </div>
 
@@ -681,283 +679,7 @@ export function PublicMarketsTab() {
         </div>
       </div>
 
-      {/* ── ⑤ Transaction log ── */}
-      <TransaccionsPanel tc={tc} card={card} secLabel={secLabel} dark={dark}
-        manualTxs={manualTxs} setManualTxs={setManualTxs} />
-
     </div>
   );
 }
 
-// ── Transaction log (global) ─────────────────────────────────
-function TransaccionsPanel({ tc, card, secLabel, dark, manualTxs = [], setManualTxs }) {
-  const [actionFilter, setActionFilter] = useState("tots");
-  const [custodianFilter, setCustodianFilter] = useState("tots");
-  const [sortDesc, setSortDesc] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-
-  // Merge manual (Supabase) + static (Excel) transactions, deduplicated by id
-  const allTxs = useMemo(() => {
-    const staticIds = new Set(PM_TRANSACTIONS.map(t => t.id));
-    const extras = manualTxs.filter(t => !staticIds.has(t.id));
-    return [...PM_TRANSACTIONS, ...extras];
-  }, [manualTxs]);
-
-  const custodians = useMemo(() =>
-    [...new Set(allTxs.map(t => t.custodian).filter(Boolean))].sort(),
-  [allTxs]);
-
-  const filtered = useMemo(() => {
-    let rows = allTxs;
-    if (actionFilter !== "tots") rows = rows.filter(t => t.action === actionFilter);
-    if (custodianFilter !== "tots") rows = rows.filter(t => t.custodian === custodianFilter);
-    rows = [...rows].sort((a, b) => {
-      const cmp = (a.date ?? "").localeCompare(b.date ?? "");
-      return sortDesc ? -cmp : cmp;
-    });
-    return rows;
-  }, [allTxs, actionFilter, custodianFilter, sortDesc]);
-
-  const chip = (label, active, onClick) => (
-    <button key={label} onClick={onClick} style={{
-      padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
-      border: `1.5px solid ${active ? tc.green : tc.border}`,
-      background: active ? (dark ? "#0A2010" : "#E8F8E8") : "transparent",
-      color: active ? tc.green : tc.textLight, fontWeight: active ? 700 : 400,
-    }}>{label}</button>
-  );
-
-  return (
-    <div style={card}>
-      {showModal && (
-        <NovaTxModal
-          tc={tc} dark={dark}
-          onClose={() => setShowModal(false)}
-          onSave={tx => setManualTxs(prev => [...prev, tx])}
-        />
-      )}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-        <div style={{ ...secLabel, flex: 1 }}>Transaccions</div>
-        <button onClick={() => setShowModal(true)} style={{
-          padding: "4px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
-          border: `1.5px solid ${tc.green}`, background: dark ? "#0A2010" : "#E8F8E8",
-          color: tc.green, fontWeight: 700,
-        }}>+ Nova</button>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {chip("Totes", actionFilter === "tots", () => setActionFilter("tots"))}
-          {chip("Compres", actionFilter === "buy",  () => setActionFilter("buy"))}
-          {chip("Vendes",  actionFilter === "sell", () => setActionFilter("sell"))}
-        </div>
-        <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-          {chip("Tot custodi", custodianFilter === "tots", () => setCustodianFilter("tots"))}
-          {custodians.map(c => chip(c, custodianFilter === c, () => setCustodianFilter(c)))}
-        </div>
-        <button onClick={() => setSortDesc(d => !d)} style={{
-          padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
-          border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textLight,
-        }}>{sortDesc ? "↓ Més recent" : "↑ Més antic"}</button>
-      </div>
-      <div style={{ overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 700 }}>
-          <thead>
-            <tr>
-              {["Data", "Nom", "Tipus", "Acció", "Units", "NAV", "Valor", "Custodi"].map(h => (
-                <th key={h} style={{
-                  padding: "6px 10px", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
-                  color: tc.textLight, fontWeight: 600, borderBottom: `2px solid ${tc.border}`,
-                  textAlign: h === "Nom" || h === "Custodi" ? "left" : "right",
-                  whiteSpace: "nowrap",
-                }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(t => {
-              const isBuy = t.action === "buy";
-              return (
-                <tr key={t.id} style={{ borderBottom: `1px solid ${tc.border}` }}>
-                  <td style={{ padding: "5px 10px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight, textAlign: "right", whiteSpace: "nowrap" }}>{t.date}</td>
-                  <td style={{ padding: "5px 10px", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.nom}</td>
-                  <td style={{ padding: "5px 10px", textAlign: "right" }}>
-                    <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
-                      background: t.tipus === "RV" ? "#E6EDF3" : "#FFF8E1",
-                      color:      t.tipus === "RV" ? "#2B5070" : "#7A6000" }}>{t.tipus}</span>
-                  </td>
-                  <td style={{ padding: "5px 10px", textAlign: "right" }}>
-                    <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
-                      background: isBuy ? "#E8F8E8" : "#FDECEA",
-                      color:      isBuy ? "#1C6B1D" : "#C62828", fontWeight: 600 }}>
-                      {isBuy ? "Compra" : "Venda"}
-                    </span>
-                  </td>
-                  <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{t.units != null ? t.units.toLocaleString("ca-ES", { maximumFractionDigits: 0 }) : "—"}</td>
-                  <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{t.nav != null ? t.nav.toFixed(2) : "—"}</td>
-                  <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>{t.valueEur != null ? fmtM(t.valueEur) : "—"}</td>
-                  <td style={{ padding: "5px 10px", fontSize: 11, color: tc.textLight }}>{t.custodian}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-      <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-        {filtered.length} de {allTxs.length} transaccions{manualTxs.length > 0 ? ` (${manualTxs.length} manuals)` : ""}. Dates de venda aproximades a 31/12 de l'any de tancament.
-      </div>
-    </div>
-  );
-}
-
-// ── Nova transacció modal ─────────────────────────────────────
-const CUSTODIANS = ["CaixaBank", "Bankinter", "UBS", "Credit Suisse", "Altre"];
-
-function NovaTxModal({ tc, dark, onClose, onSave }) {
-  const [form, setForm] = useState({
-    action: "buy", date: new Date().toISOString().slice(0, 10),
-    isin: "", nom: "", tipus: "RV", custodian: "CaixaBank",
-    units: "", nav: "", valueEur: "",
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  // Auto-fill nom when ISIN matches a known position
-  const knownPos = useMemo(() =>
-    PM_POSITIONS.find(p => p.isin === form.isin.trim().toUpperCase()),
-  [form.isin]);
-  useEffect(() => {
-    if (knownPos) set("nom", knownPos.nom);
-  }, [knownPos]);
-
-  // Auto-compute valueEur from units × nav
-  const computedValue = form.units && form.nav
-    ? (parseFloat(form.units) * parseFloat(form.nav)).toFixed(0)
-    : "";
-
-  const inp = {
-    width: "100%", padding: "7px 10px", fontSize: 13,
-    border: `1.5px solid ${tc.border}`, borderRadius: 7,
-    background: tc.bg, color: tc.text, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box",
-  };
-
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setError(null);
-    if (!form.isin.trim()) return setError("ISIN és obligatori");
-    if (!form.date) return setError("Data és obligatòria");
-    setSaving(true);
-    const tx = {
-      action:    form.action,
-      date:      form.date,
-      isin:      form.isin.trim().toUpperCase(),
-      nom:       form.nom || null,
-      tipus:     form.tipus,
-      custodian: form.custodian,
-      units:     form.units ? parseFloat(form.units) : null,
-      nav:       form.nav ? parseFloat(form.nav) : null,
-      valueEur:  form.valueEur ? parseFloat(form.valueEur) : (computedValue ? parseFloat(computedValue) : null),
-    };
-    const { data, error: err } = await upsertTransaction(tx);
-    setSaving(false);
-    if (err) return setError(err.message);
-    onSave(data ?? { ...tx, id: `manual-${Date.now()}` });
-    onClose();
-  };
-
-  return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex",
-      alignItems: "center", justifyContent: "center", zIndex: 1000 }}
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div style={{ background: tc.card, borderRadius: 14, padding: "28px 28px 24px",
-        width: 440, maxWidth: "92vw", boxShadow: "0 8px 40px rgba(0,0,0,.25)" }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: tc.navy, marginBottom: 20 }}>Nova transacció</div>
-        <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-
-          {/* Action + Tipus row */}
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Acció</label>
-              <select value={form.action} onChange={e => set("action", e.target.value)} style={inp}>
-                <option value="buy">Compra</option>
-                <option value="sell">Venda</option>
-              </select>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Tipus</label>
-              <select value={form.tipus} onChange={e => set("tipus", e.target.value)} style={inp}>
-                <option value="RV">RV</option>
-                <option value="RF">RF</option>
-              </select>
-            </div>
-          </div>
-
-          {/* ISIN + Date row */}
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 2 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>ISIN</label>
-              <input list="pm-isins" value={form.isin} onChange={e => set("isin", e.target.value.toUpperCase())}
-                placeholder="IE00BFMXXD54" style={inp} />
-              <datalist id="pm-isins">
-                {PM_POSITIONS.map(p => <option key={p.isin} value={p.isin}>{p.nom}</option>)}
-              </datalist>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Data</label>
-              <input type="date" value={form.date} onChange={e => set("date", e.target.value)} style={inp} />
-            </div>
-          </div>
-
-          {/* Nom */}
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Nom del fons</label>
-            <input value={form.nom} onChange={e => set("nom", e.target.value)} placeholder="Auto-omplert si l'ISIN és conegut" style={inp} />
-          </div>
-
-          {/* Units + NAV + Value row */}
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Units</label>
-              <input type="number" step="any" value={form.units} onChange={e => set("units", e.target.value)} placeholder="0" style={inp} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>NAV</label>
-              <input type="number" step="any" value={form.nav} onChange={e => set("nav", e.target.value)} placeholder="0.00" style={inp} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Valor (€)</label>
-              <input type="number" step="any" value={form.valueEur || computedValue}
-                onChange={e => set("valueEur", e.target.value)}
-                placeholder={computedValue || "0"} style={{ ...inp, color: form.valueEur ? tc.text : tc.textLight }} />
-            </div>
-          </div>
-
-          {/* Custodian */}
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>Custodi</label>
-            <select value={form.custodian} onChange={e => set("custodian", e.target.value)} style={inp}>
-              {CUSTODIANS.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </div>
-
-          {error && (
-            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA", borderRadius: 7, padding: "8px 12px" }}>{error}</div>
-          )}
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
-            <button type="button" onClick={onClose}
-              style={{ padding: "8px 16px", borderRadius: 7, border: `1.5px solid ${tc.border}`,
-                background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
-              Cancel·lar
-            </button>
-            <button type="submit" disabled={saving}
-              style={{ padding: "8px 16px", borderRadius: 7, border: "none",
-                background: tc.navy, color: "#fff", cursor: saving ? "default" : "pointer",
-                fontFamily: "inherit", fontSize: 13, fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
-              {saving ? "Guardant…" : "Afegir"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
