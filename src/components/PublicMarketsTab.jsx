@@ -67,7 +67,7 @@ function weightedReturn(field, tipus = null) {
 }
 
 // ── Module-level statics ────────────────────────────────────
-const andbankVal = PM_MANAGERS.find(m => m.id === "andbank").valorActual;
+const andbankVal = PM_MANAGERS.find(m => m.id === "andbank")?.valorActual ?? 0;
 
 // Monthly Andbank lookup: "YYYY-MM" → andbank value
 const ANDBANK_BY_MONTH = new Map(PM_MONTHLY.map(d => [d.date, d.andbank]));
@@ -182,6 +182,7 @@ export function PublicMarketsTab() {
     const vEnd       = last.caixaRV  + last.caixaRF  + last.ubsRV  + last.ubsRF + (last.abelBK ?? 0);
     const totalMonths = PM_MONTHLY.length - 1; // 27
     const abelIdx    = PM_MONTHLY.findIndex(d => d.abelBK != null);
+    if (abelIdx === -1) return null;
     const cf         = PM_MONTHLY[abelIdx].abelBK;
     const w          = (totalMonths - abelIdx) / totalMonths; // time-weighted fraction remaining
     const totalReturn = (vEnd - vStart - cf) / (vStart + cf * w);
