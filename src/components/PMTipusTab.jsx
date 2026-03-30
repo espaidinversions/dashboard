@@ -79,7 +79,7 @@ export function PMTipusTab({ tipus }) {
     const base = toggle === "caixabank"  ? positions.filter(p => p.custodian === "CaixaBank")
                : toggle === "bankinter"  ? positions.filter(p => p.custodian === "Bankinter")
                : positions;
-    return [...base].sort((a, b) => b.valorMercat - a.valorMercat);
+    return [...base].sort((a, b) => (b.valorMercat ?? 0) - (a.valorMercat ?? 0));
   }, [positions, toggle]);
 
   const totalMV = useMemo(

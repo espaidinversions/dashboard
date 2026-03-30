@@ -87,7 +87,7 @@ function getMgrPositions(mgrId, tipusFilter) {
   if (mgrId !== "abel") return null;
   let rows = PM_POSITIONS.filter(p => p.gestor === "Abel Font");
   if (tipusFilter && tipusFilter !== "all") rows = rows.filter(p => p.tipus === tipusFilter);
-  return rows.sort((a, b) => b.valorMercat - a.valorMercat);
+  return rows.sort((a, b) => (b.valorMercat ?? 0) - (a.valorMercat ?? 0));
 }
 
 // ── Helpers ─────────────────────────────────────────────────
