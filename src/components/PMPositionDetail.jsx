@@ -143,6 +143,11 @@ export function PMPositionDetail() {
     let runUnits = 0;
     let unitIdx = 0;
 
+    // Cumulative buy cost step function: increases at each buy transaction date
+    const sortedBuyDates = [...inflowDates].sort();
+    let runCost = 0;
+    let buyIdx = 0;
+
     const rows = dates.map(date => {
       const row = { date };
       custodians.forEach(c => {
@@ -152,8 +157,13 @@ export function PMPositionDetail() {
         runUnits += unitDeltaByDate[sortedUnitDates[unitIdx]];
         unitIdx++;
       }
+      while (buyIdx < sortedBuyDates.length && sortedBuyDates[buyIdx] <= date) {
+        runCost += inflowByDate[sortedBuyDates[buyIdx]] ?? 0;
+        buyIdx++;
+      }
       if (inflowByDate[date]) row.inflow = inflowByDate[date];
       if (runUnits > 0) row.units = Math.round(runUnits);
+      if (runCost > 0) row.costLine = runCost;
       return row;
     });
 
@@ -201,11 +211,20 @@ export function PMPositionDetail() {
                 {p.isin}
               </span>
             )}
-            <span style={{ fontSize: 10, background: tc.navy + "18", color: tc.navy,
-                           padding: "3px 8px", borderRadius: 4, fontWeight: 700,
-                           letterSpacing: "0.06em", textTransform: "uppercase" }}>
-              {displayGestor}
-            </span>
+            {displayCustodian && (
+              <span style={{ fontSize: 10, background: tc.navy + "18", color: tc.navy,
+                             padding: "3px 8px", borderRadius: 4, fontWeight: 700,
+                             letterSpacing: "0.06em", textTransform: "uppercase" }}>
+                {displayCustodian}
+              </span>
+            )}
+            {p.tipus && (
+              <span style={{ fontSize: 10, background: tc.bgAlt, padding: "3px 8px", borderRadius: 4,
+                             color: tc.textMid, border: `1px solid ${tc.border}`,
+                             letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
+                {p.tipus === "RV" ? "Renda Variable" : p.tipus === "RF" ? "Renda Fixa" : p.tipus}
+              </span>
+            )}
             {p.divisa && (
               <span style={{ fontSize: 10, background: tc.bgAlt, padding: "3px 8px", borderRadius: 4,
                              color: tc.textMid, border: `1px solid ${tc.border}`,
@@ -213,21 +232,24 @@ export function PMPositionDetail() {
                 {p.divisa}
               </span>
             )}
-            <span style={{ fontSize: 10, background: tc.bgAlt, padding: "3px 8px", borderRadius: 4,
-                           color: tc.textMid, border: `1px solid ${tc.border}`,
-                           letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
-              {p.tipus}
-            </span>
           </div>
         </div>
       </div>
 
       {/* ── KPI row ── */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <KpiCard label="Valor mercat"  value={p.valorMercat != null ? fmtM(p.valorMercat) : "—"} accent={tc.navy} tc={tc} />
-        <KpiCard label="Cost total"    value={p.costEur != null ? fmtM(p.costEur) : "—"} accent={tc.navyLight} tc={tc} />
-        <KpiCard label="P&L"           value={`${pnl >= 0 ? "+" : ""}${fmtM(pnl)}`} accent={pnlColor} tc={tc} />
-        <KpiCard label="Pes cartera"   value={p.pes != null ? p.pes.toFixed(1) + "%" : "—"} accent={tc.navyLight} tc={tc} />
+        <KpiCard label="Valor mercat"   value={p.valorMercat != null ? fmtM(p.valorMercat) : "—"} accent={tc.navy} tc={tc} />
+        <KpiCard label="Cost total"     value={p.costEur != null ? fmtM(p.costEur) : "—"} accent={tc.navyLight} tc={tc} />
+        <KpiCard label="P&L"            value={`${pnl >= 0 ? "+" : ""}${fmtM(pnl)}`} accent={pnlColor} tc={tc} />
+        {p.unitats != null && (
+          <KpiCard label="Participacions" value={p.unitats.toLocaleString("ca-ES")} accent={tc.navyLight} tc={tc} />
+        )}
+        {p.rendInici != null && (
+          <KpiCard label="TWR inici"    value={(p.rendInici >= 0 ? "+" : "") + p.rendInici.toFixed(2) + "%"} accent={rendIniciColor} tc={tc} />
+        )}
+        {!isClosed && (
+          <KpiCard label="Pes cartera"  value={p.pes != null ? p.pes.toFixed(1) + "%" : "—"} accent={tc.navyLight} tc={tc} />
+        )}
       </div>
 
       {/* ── Market value over time + inflows ── */}
@@ -242,10 +264,10 @@ export function PMPositionDetail() {
                   {valueData.inflowDates.length} entrada{valueData.inflowDates.length > 1 ? "es" : ""} de capital
                 </div>
               )}
-              {p.costEur != null && (
+              {valueData.inflowDates.length > 0 && (
                 <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#E8A020" }}>
                   <svg width="18" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#E8A020" strokeWidth="1.5" strokeDasharray="5 3"/></svg>
-                  Cost {fmtM(p.costEur)}
+                  Cost acumulat
                 </div>
               )}
             </div>
@@ -281,10 +303,10 @@ export function PMPositionDetail() {
                 }}
                 labelFormatter={fmtMonth}
               />
-              {p.costEur != null && (
-                <ReferenceLine yAxisId="val" y={p.costEur}
-                  stroke="#E8A020" strokeDasharray="5 3" strokeWidth={1.5}
-                  label={{ value: `Cost ${fmtM(p.costEur)}`, position: "insideTopRight", fontSize: 9, fill: "#E8A020" }} />
+              {valueData.rows.some(r => r.costLine != null) && (
+                <Line yAxisId="val" dataKey="costLine" name="Cost acumulat"
+                  stroke="#E8A020" strokeWidth={1.5} strokeDasharray="5 3"
+                  dot={false} connectNulls type="stepAfter" legendType="none" />
               )}
               {valueData.inflowDates.map(d => (
                 <ReferenceLine key={d} yAxisId="val" x={d}

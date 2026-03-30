@@ -17,9 +17,9 @@ const PM_COLORS = [
 ];
 
 const TOGGLES = [
-  { id: "all",       label: "Tots" },
-  { id: "directe",   label: "Directe" },
-  { id: "bankinter", label: "Bankinter" },
+  { id: "all",        label: "Tots" },
+  { id: "caixabank",  label: "CaixaBank" },
+  { id: "bankinter",  label: "Bankinter" },
 ];
 
 const YEAR_FIELDS = [
@@ -76,8 +76,8 @@ export function PMTipusTab({ tipus }) {
   );
 
   const visible = useMemo(() => {
-    const base = toggle === "directe"   ? positions.filter(p => p.custodian === "CaixaBank")
-               : toggle === "bankinter" ? positions.filter(p => p.custodian === "Bankinter")
+    const base = toggle === "caixabank"  ? positions.filter(p => p.custodian === "CaixaBank")
+               : toggle === "bankinter"  ? positions.filter(p => p.custodian === "Bankinter")
                : positions;
     return [...base].sort((a, b) => b.valorMercat - a.valorMercat);
   }, [positions, toggle]);
@@ -269,7 +269,7 @@ export function PMTipusTab({ tipus }) {
             <tr>
               <th style={{ ...th, width: 20 }}></th>
               <th style={{ ...th, textAlign: "left" }}>Nom</th>
-              <th style={{ ...th, textAlign: "left" }}>Gestor</th>
+              <th style={{ ...th, textAlign: "left" }}>Custodi</th>
               {YEAR_FIELDS.map(({ label }) => (
                 <th key={label} style={{ ...th, textAlign: "right" }}>{label}</th>
               ))}
@@ -294,7 +294,7 @@ export function PMTipusTab({ tipus }) {
                       {p.nom}
                     </Link>
                   </td>
-                  <td style={{ padding: "7px 10px", color: tc.textLight, fontSize: 11 }}>{p.gestor}</td>
+                  <td style={{ padding: "7px 10px", color: tc.textLight, fontSize: 11 }}>{p.custodian}</td>
                   {YEAR_FIELDS.map(({ field }) => (
                     <td key={field} style={{ padding: "7px 10px", textAlign: "right" }}>
                       <PctChip v={retMode === "net" ? netRend(p, field) : p[field]} tc={tc} />

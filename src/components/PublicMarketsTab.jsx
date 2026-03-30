@@ -22,14 +22,13 @@ const TIPUS_CFG = {
 };
 
 const AREA_COLORS = {
-  total:    "#2B5070",
-  rv:       "#2B5070",
-  rf:       "#E8A020",
-  caixa:    "#2B5070",
-  caixaUbs: "#2B5070",
-  ubs:      "#E8A020",
-  abel:     "#3DC83E",
-  andbank:  "#6B2E7E",
+  total:   "#2B5070",
+  rv:      "#2B5070",
+  rf:      "#E8A020",
+  caixa:   "#2B5070",
+  ubs:     "#4E79A7",
+  abel:    "#3DC83E",
+  andbank: "#6B2E7E",
 };
 
 // Color per manager for return charts
@@ -38,7 +37,6 @@ const MGR_COLORS = {
   "ubs":     "#4E79A7",
   "andbank": "#6B2E7E",
   "abel":    "#3DC83E",
-  "andbank": "#7A6000",
 };
 
 // Periods with return fields
@@ -80,11 +78,14 @@ const DEFAULT_EXPAND_TIPUS = {
   "abel": "all", "andbank": null,
 };
 
-// Get PM_POSITIONS for a manager row
+// Static lookups derived from PM_POSITIONS (imported data never changes at runtime)
+const ISIN_TIPUS = Object.fromEntries(PM_POSITIONS.map(p => [p.isin, p.tipus]));
+const ABEL_ISINS = new Set(PM_POSITIONS.filter(p => p.gestor === "Abel Font").map(p => p.isin));
+
+// Get PM_POSITIONS for a manager row (only Bankinter/Abel has individual position tracking)
 function getMgrPositions(mgrId, tipusFilter) {
-  // Only Abel Font has individual position data in PM_POSITIONS
   if (mgrId !== "abel") return null;
-  let rows = PM_POSITIONS;
+  let rows = PM_POSITIONS.filter(p => p.gestor === "Abel Font");
   if (tipusFilter && tipusFilter !== "all") rows = rows.filter(p => p.tipus === tipusFilter);
   return rows.sort((a, b) => b.valorMercat - a.valorMercat);
 }
@@ -203,9 +204,10 @@ export function PublicMarketsTab() {
         ytd: wtd(ids, "ytd"), r2025: wtd(ids, "r2025"), r2024: wtd(ids, "r2024"), rendPct: wtd(ids, "rendPct") };
     };
     return [
-      combine("caixa", "CaixaBank", ["caixa-rv", "caixa-rf"]),
-      combine("ubs",   "UBS",       ["ubs-rv",   "ubs-rf"  ]),
-      ...PM_MANAGERS.filter(m => ["abel", "andbank"].includes(m.id)),
+      combine("caixa",   "CaixaBank",   ["caixa-rv", "caixa-rf"]),
+      combine("ubs",     "UBS",         ["ubs-rv",   "ubs-rf"  ]),
+      { ...PM_MANAGERS.find(m => m.id === "abel"),    id: "abel",    nom: "Bankinter"   },
+      { ...PM_MANAGERS.find(m => m.id === "andbank"), id: "andbank", nom: "WAM–Andbank" },
     ];
   }, []);
 
@@ -238,37 +240,41 @@ export function PublicMarketsTab() {
   const mvData = useMemo(() => {
     if (Object.keys(PM_VALUES).length === 0) return null;
 
-    // Build isin → tipus lookup from PM_POSITIONS
-    const isinTipus = {};
-    PM_POSITIONS.forEach(p => { if (!isinTipus[p.isin]) isinTipus[p.isin] = p.tipus; });
-
     // Aggregate value per date × custodian group
     const byDate = {};
     for (const [isin, custodians] of Object.entries(PM_VALUES)) {
-      const tipus = isinTipus[isin] ?? null;
+      const tipus = ISIN_TIPUS[isin] ?? null;
       for (const [custodian, series] of Object.entries(custodians)) {
+        // CaixaBank custodian covers both direct Caixa positions and Abel Font positions
+        const gestorGroup =
+          (custodian === "Abel Font" || custodian === "Bankinter")  ? "abel" :
+          (custodian === "CaixaBank" && ABEL_ISINS.has(isin))       ? "abel" :
+          (custodian === "CaixaBank")                               ? "caixa" :
+          (custodian === "UBS" || custodian === "Credit Suisse")    ? "ubs" :
+          "caixa"; // fallback (JPMorgan, etc.)
+
         for (const { date, value } of series) {
-          if (!byDate[date]) byDate[date] = { total: 0, caixaUbs: 0, abel: 0, rv: 0, rf: 0 };
-          byDate[date].total += value;  // ALL custodians — fixes mismatch vs cost basis
-          if (custodian === "CaixaBank") byDate[date].caixaUbs += value;
-          else if (custodian === "Bankinter") byDate[date].abel += value;
+          if (!byDate[date]) byDate[date] = { total: 0, caixa: 0, ubs: 0, abel: 0, rv: 0, rf: 0 };
+          byDate[date].total += value;
+          byDate[date][gestorGroup] += value;
           if (tipus === "RV") byDate[date].rv += value;
-          else               byDate[date].rf += value; // RF + unclassified → rf always
+          else               byDate[date].rf += value;
         }
       }
     }
 
     return Object.keys(byDate).sort().map(date => {
       const d = byDate[date];
-      const monthKey = date.slice(0, 7); // "YYYY-MM"
+      const monthKey = date.slice(0, 7);
       const andbank = ANDBANK_BY_MONTH.get(monthKey) ?? andbankVal;
       return {
-        label:    fmtMonth(date),
-        total:    d.total + andbank,
-        rv:       d.rv,
-        rf:       d.rf,
-        caixaUbs: d.caixaUbs,
-        abel:     d.abel,
+        label:   fmtMonth(date),
+        total:   d.total + andbank,
+        rv:      d.rv,
+        rf:      d.rf,
+        caixa:   d.caixa,
+        ubs:     d.ubs,
+        abel:    d.abel,
         andbank,
       };
     });
@@ -276,18 +282,20 @@ export function PublicMarketsTab() {
 
   // ── Evolution chart data ────────────────────────────────
   const chartData = useMemo(() => {
-    // Prefer PM_VALUES mark-to-market; fall back to PM_MONTHLY static data
-    if (mvData) {
+    // Prefer PM_VALUES mark-to-market for total + gestor views.
+    // Actiu (RV/RF split) always uses PM_MONTHLY — UBS/Caixa positions lack individual ISIN
+    // type data in PM_VALUES, so their value would land in RF by default, inflating that bucket.
+    if (mvData && chartView !== "actiu") {
       if (chartView === "total") return mvData.map(d => ({ label: d.label, total: d.total }));
-      if (chartView === "actiu") return mvData.map(d => ({ label: d.label, rv: d.rv, rf: d.rf + d.andbank }));
       return mvData.map(d => ({
-        label:    d.label,
-        caixaUbs: d.caixaUbs,
-        abel:     d.abel,
-        andbank:  d.andbank,
+        label:   d.label,
+        caixa:   d.caixa,
+        ubs:     d.ubs,
+        abel:    d.abel,
+        andbank: d.andbank,
       }));
     }
-    // Fallback: PM_MONTHLY
+    // PM_MONTHLY for actiu view (correct RV/RF split) and fallback for all views
     return PM_MONTHLY.map(d => {
       if (chartView === "total") return {
         label: d.label,
@@ -299,10 +307,11 @@ export function PublicMarketsTab() {
         rf: d.caixaRF + d.ubsRF + (d.abelBK != null ? d.abelBK * ABEL_RF_SPLIT : 0) + d.andbank,
       };
       return {
-        label:    d.label,
-        caixaUbs: d.caixaRV + d.caixaRF + d.ubsRV + d.ubsRF,
-        abel:     d.abelBK ?? 0,
-        andbank:  d.andbank,
+        label:   d.label,
+        caixa:   d.caixaRV + d.caixaRF,
+        ubs:     d.ubsRV + d.ubsRF,
+        abel:    d.abelBK ?? 0,
+        andbank: d.andbank,
       };
     });
   }, [chartView, mvData]);
@@ -405,11 +414,7 @@ export function PublicMarketsTab() {
                 <Line
                   key={m.id}
                   dataKey={m.id}
-                  name={
-                    m.id === "abel"    ? "Bankinter" :
-                    m.id === "andbank" ? "WAM–Andbank" :
-                    m.nom.replace("(BK+IB)", "").trim()
-                  }
+                  name={m.nom}
                   stroke={MGR_COLORS[m.id]}
                   strokeWidth={2}
                   dot={{ r: 4, fill: MGR_COLORS[m.id] }}
@@ -503,18 +508,21 @@ export function PublicMarketsTab() {
               <Area type="monotone" dataKey="rf" stackId="a"
                 stroke={AREA_COLORS.rf}  fill={`url(#pm-grad-rf)`}
                 strokeWidth={1.5} dot={false} name="Renda Fixa" />
+              <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
             </>}
             {chartView === "gestor" && <>
-              <Area type="monotone" dataKey="andbank"  stackId="g" stroke={AREA_COLORS.andbank}  fill={`url(#pm-grad-andbank)`}  strokeWidth={1.5} dot={false} name="WAM–Andbank" />
-              <Area type="monotone" dataKey="abel"     stackId="g" stroke={AREA_COLORS.abel}     fill={`url(#pm-grad-abel)`}     strokeWidth={1.5} dot={false} name="Bankinter" />
-              <Area type="monotone" dataKey="caixaUbs" stackId="g" stroke={AREA_COLORS.caixa}    fill={`url(#pm-grad-caixa)`}    strokeWidth={1.5} dot={false} name="Caixa/UBS" />
+              <Area type="monotone" dataKey="andbank" stackId="g" stroke={AREA_COLORS.andbank} fill={`url(#pm-grad-andbank)`} strokeWidth={1.5} dot={false} name="WAM–Andbank" />
+              <Area type="monotone" dataKey="abel"    stackId="g" stroke={AREA_COLORS.abel}    fill={`url(#pm-grad-abel)`}    strokeWidth={1.5} dot={false} name="Bankinter" />
+              <Area type="monotone" dataKey="ubs"     stackId="g" stroke={AREA_COLORS.ubs}     fill={`url(#pm-grad-ubs)`}     strokeWidth={1.5} dot={false} name="UBS" />
+              <Area type="monotone" dataKey="caixa"   stackId="g" stroke={AREA_COLORS.caixa}   fill={`url(#pm-grad-caixa)`}   strokeWidth={1.5} dot={false} name="CaixaBank" />
+              <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
             </>}
           </AreaChart>
         </ResponsiveContainer>
 
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
           {chartView === "gestor"
-            ? "Caixa i UBS mostrats agregats. WAM i Andbank amb sèrie mensual interpolada (anchors anuals)."
+            ? "CaixaBank, UBS, Bankinter i WAM–Andbank mostrats per separat. WAM–Andbank amb sèrie mensual interpolada (anchors anuals)."
             : mvData
               ? "WAM i Andbank inclosos amb interpolació lineal (anchors Dec 2023–Mar 2026). Posicions no confirmades excloses."
               : "Dades de PM_MONTHLY (font manual). WAM i Andbank amb sèrie mensual interpolada."}
@@ -523,12 +531,12 @@ export function PublicMarketsTab() {
 
       {/* ── ④ Manager table ── */}
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)", overflowX: "auto" }}>
-        <div style={{ ...secLabel, marginBottom: 16 }}>Gestors</div>
+        <div style={{ ...secLabel, marginBottom: 16 }}>Banc Custodi</div>
         <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 700 }}>
           <thead>
             <tr>
               {[
-                { label: "Gestor",        align: "left"  },
+                { label: "Banc Custodi",  align: "left"  },
                 { label: "Tipus",         align: "left"  },
                 { label: "AUM",           align: "right" },
                 { label: "YTD",           align: "right" },
@@ -619,6 +627,7 @@ export function PublicMarketsTab() {
                                 <tr>
                                   {[
                                     { label: "Nom",         align: "left"  },
+                                    { label: "Custodi",     align: "left"  },
                                     { label: "Tipus",       align: "left"  },
                                     { label: "YTD",         align: "right" },
                                     { label: "2025",        align: "right" },
@@ -647,6 +656,7 @@ export function PublicMarketsTab() {
                                           {p.nom}
                                         </Link>
                                       </td>
+                                      <td style={{ padding: "5px 8px", fontSize: 10, color: tc.textLight }}>{p.custodian ?? "—"}</td>
                                       <td style={{ padding: "5px 8px" }}>
                                         <Badge label={p.tipus} cfg={TIPUS_CFG[p.tipus] || {}} />
                                       </td>
