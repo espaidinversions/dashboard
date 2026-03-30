@@ -8,6 +8,7 @@ import { PM_POSITIONS, PM_CLOSED } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonth, yearsHeld, cagr } from "../utils.js";
 import { PM_VALUES } from "../data/portfolioValues.js";
+import { PM_CLOSED_VALUES } from "../data/pmClosedValues.js";
 import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
 import { PM_TER } from "../data/pmTer.js";
 import { loadPMOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
@@ -113,7 +114,7 @@ export function PMPositionDetail() {
   }, [p, isAbelFont]);
 
   const valueData = useMemo(() => {
-    const custodianData = PM_VALUES[isin];
+    const custodianData = PM_VALUES[isin] ?? (isClosed ? PM_CLOSED_VALUES[isin] : null);
     const acqMonth = p.dataCompra ? p.dataCompra.slice(0, 7) : null;
 
     // Buy inflows for this position
@@ -238,7 +239,7 @@ export function PMPositionDetail() {
 
       {/* ── KPI row ── */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <KpiCard label="Valor mercat"   value={p.valorMercat != null ? fmtM(p.valorMercat) : "—"} accent={tc.navy} tc={tc} />
+        <KpiCard label={isClosed ? "Valor tancament" : "Valor mercat"}   value={p.valorMercat != null ? fmtM(p.valorMercat) : "—"} accent={tc.navy} tc={tc} />
         <KpiCard label="Cost total"     value={p.costEur != null ? fmtM(p.costEur) : "—"} accent={tc.navyLight} tc={tc} />
         <KpiCard label="P&L"            value={pnl != null ? `${pnl >= 0 ? "+" : ""}${fmtM(pnl)}` : "—"} accent={pnlColor} tc={tc} />
         {p.unitats != null && (
@@ -440,6 +441,7 @@ export function PMPositionDetail() {
                     ? fmtM(p.costEur * ter / 100) + "/any" : null}
                   tc={tc} />
                 <InfoRow label="Data compra"       value={p.dataCompra} tc={tc} />
+                {isClosed && p.any && <InfoRow label="Any tancament" value={String(p.any)} tc={tc} />}
               </tbody>
             </table>
             {isAbelFont && (
