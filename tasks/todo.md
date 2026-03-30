@@ -70,3 +70,12 @@
 
 **Review:**
 > Clean rework. All transitions now use explicit properties. Custom cubic-bezier curves give animations intentional punch vs. default browser easings. Stagger on KPI cards creates rhythm on load. Touch devices will no longer false-fire hover states.
+
+---
+## TODO: Extract useMonthlyGrouping hook
+**What:** Extract byMonth/openMonths/toggleMonth into a shared custom hook (`src/utils/useMonthlyGrouping.js`)
+**Why:** byMonth grouping + openMonths Set + toggleMonth handler will be duplicated in PMTransaccionsTab.jsx and PublicMarketsTab.jsx after Feature 1 ships. Three usages would be the right extraction trigger.
+**Pros:** Eliminates duplication, single place to fix bugs, consistent behavior.
+**Cons:** New abstraction for what is currently 30 lines per component.
+**Trigger:** When a 3rd monthly accordion is added.
+**Found during:** /plan-eng-review of 2026-03-26-pm-resum-txs-closed-positions.md
