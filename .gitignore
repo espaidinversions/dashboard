@@ -38,3 +38,6 @@ HANDOFF.md
 "Mercats Públics/portfolio_value.csv"
 supabase/.temp/
 .gstack/
+
+# Script output artifacts (review before merging into src/)
+scripts/out/
