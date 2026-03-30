@@ -606,7 +606,7 @@ function DashboardInner() {
 
         {/* ── ALTERNATIVES ── */}
         {tab==="mercats-publics"&&mercatsPublicsTab==="resum"&&(
-          <div className="tab-panel"><PublicMarketsTab/></div>
+          <div className="tab-panel"><PublicMarketsTab setMercatsPublicsTab={setMercatsPublicsTab}/></div>
         )}
         {tab==="mercats-publics"&&mercatsPublicsTab==="rv"&&(
           <div className="tab-panel"><PMTipusTab tipus="RV"/></div>

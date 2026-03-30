@@ -90,6 +90,14 @@ function getMgrPositions(mgrId, tipusFilter) {
   return rows.sort((a, b) => (b.valorMercat ?? 0) - (a.valorMercat ?? 0));
 }
 
+// ── Transaction accordion helpers ───────────────────────────
+const _TX_MONTH_NAMES = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
+function fmtTxMonth(yyyymm) {
+  if (!yyyymm || yyyymm === "????-??") return "Sense data";
+  const [y, m] = yyyymm.split("-");
+  return `${_TX_MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
+}
+
 // ── Helpers ─────────────────────────────────────────────────
 function KpiCard({ label, value, sub, tc, valueColor }) {
   return (
@@ -123,11 +131,14 @@ function pctFmt(v) {
 }
 
 // ── Main component ──────────────────────────────────────────
-export function PublicMarketsTab() {
+export function PublicMarketsTab({ setMercatsPublicsTab }) {
   const { tc, dark } = useTheme();
   const [chartView, setChartView] = useState("total");
   const [expanded, setExpanded] = useState(new Set());
   const [expandTipus, setExpandTipus] = useState({});
+  const [txActionFilter, setTxActionFilter] = useState("all");
+  const [txCustodianFilter, setTxCustodianFilter] = useState("all");
+  const [openTxMonths, setOpenTxMonths] = useState(() => new Set());
 
   const toggleExpand = (id) => {
     setExpanded(prev => {
@@ -136,6 +147,12 @@ export function PublicMarketsTab() {
       return next;
     });
   };
+
+  const toggleTxMonth = (m) => setOpenTxMonths(prev => {
+    const s = new Set(prev);
+    s.has(m) ? s.delete(m) : s.add(m);
+    return s;
+  });
 
   // ── KPI derivations ─────────────────────────────────────
   const total = useMemo(() => PM_MANAGERS.reduce((s, m) => s + m.valorActual, 0), []);
@@ -355,6 +372,32 @@ export function PublicMarketsTab() {
       return { ...d, costBasis: cost };
     });
   }, [chartData, cumulativeCostByLabel]);
+
+  // ── Transaction accordion data ───────────────────────────
+  const txCustodians = useMemo(() =>
+    [...new Set(PM_TRANSACTIONS.map(t => t.custodian).filter(Boolean))].sort(),
+  []);
+
+  const txFiltered = useMemo(() => {
+    let rows = PM_TRANSACTIONS;
+    if (txActionFilter !== "all") rows = rows.filter(t => t.action === txActionFilter);
+    if (txCustodianFilter !== "all") rows = rows.filter(t => t.custodian === txCustodianFilter);
+    return rows;
+  }, [txActionFilter, txCustodianFilter]);
+
+  const txByMonth = useMemo(() => {
+    const map = new Map();
+    txFiltered.forEach(t => {
+      const key = t.date ? t.date.slice(0, 7) : "????-??";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(t);
+    });
+    return [...map.entries()].sort(([a], [b]) => {
+      if (a === "????-??") return 1;
+      if (b === "????-??") return -1;
+      return b.localeCompare(a);
+    });
+  }, [txFiltered]);
 
   // ── Shared styles ────────────────────────────────────────
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -687,6 +730,187 @@ export function PublicMarketsTab() {
         </table>
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 10, fontStyle: "italic" }}>
           Des d'inici: TWR reportat pels gestors (WAM/Andbank des de creació; UBS YTD; Abel BK des d'abr. 2025). CAGR: retorn anualitzat equivalent.
+        </div>
+      </div>
+
+      {/* ── ⑦ Moviments mensuals (condensed accordion) ───────── */}
+      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10,
+        boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+
+        {/* Header bar */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
+          padding: "18px 20px 14px", borderBottom: `1px solid ${tc.border}` }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight,
+            textTransform: "uppercase", fontWeight: 600, flex: 1 }}>
+            Moviments · {txFiltered.length}
+          </div>
+          <button onClick={() => setMercatsPublicsTab?.("transaccions")} style={{
+            padding: "4px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+            border: `1.5px solid ${tc.green}`, background: dark ? "#0A2010" : "#E8F8E8",
+            color: tc.green, fontWeight: 700,
+          }}>+ Nova</button>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[["all","Totes"],["buy","Compres"],["sell","Vendes"]].map(([v, lbl]) => {
+              const active = txActionFilter === v;
+              return (
+                <button key={v} onClick={() => setTxActionFilter(v)} style={{
+                  padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+                  border: `1.5px solid ${active ? tc.green : tc.border}`,
+                  background: active ? (dark ? "#0A2010" : "#E8F8E8") : "transparent",
+                  color: active ? tc.green : tc.textLight, fontWeight: active ? 700 : 400,
+                }}>{lbl}</button>
+              );
+            })}
+          </div>
+          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+            {[["all","Tot custodi"], ...txCustodians.map(c => [c, c])].map(([v, lbl]) => {
+              const active = txCustodianFilter === v;
+              return (
+                <button key={v} onClick={() => setTxCustodianFilter(v)} style={{
+                  padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+                  border: `1.5px solid ${active ? tc.green : tc.border}`,
+                  background: active ? (dark ? "#0A2010" : "#E8F8E8") : "transparent",
+                  color: active ? tc.green : tc.textLight, fontWeight: active ? 700 : 400,
+                }}>{lbl}</button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Accordion table */}
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 700 }}>
+            <tbody>
+              {txByMonth.length === 0 && (
+                <tr>
+                  <td colSpan={9} style={{ padding: "18px 20px", fontStyle: "italic",
+                    color: tc.textLight, fontSize: 12 }}>
+                    {PM_TRANSACTIONS.length === 0
+                      ? "Sense moviments registrats."
+                      : "Sense transaccions amb aquest filtre."}
+                  </td>
+                </tr>
+              )}
+              {txByMonth.map(([month, rows]) => {
+                const isOpen = openTxMonths.has(month);
+                const buys      = rows.filter(t => t.action === "buy");
+                const sells     = rows.filter(t => t.action === "sell");
+                const buyTotal  = buys.reduce((s, t) => s + (t.valueEur ?? 0), 0);
+                const sellTotal = sells.reduce((s, t) => s + (t.valueEur ?? 0), 0);
+                const net       = buyTotal - sellTotal;
+                const isNoDate  = month === "????-??";
+                return (
+                  <React.Fragment key={month}>
+                    {/* Level 1 — Month row */}
+                    <tr
+                      role="button"
+                      aria-expanded={isOpen}
+                      tabIndex={0}
+                      onClick={() => toggleTxMonth(month)}
+                      onKeyDown={e => (e.key === "Enter" || e.key === " ") && toggleTxMonth(month)}
+                      style={{
+                        cursor: "pointer",
+                        borderTop: `1px solid ${tc.border}`,
+                        borderBottom: isOpen ? "none" : `1px solid ${tc.border}`,
+                        userSelect: "none",
+                      }}
+                    >
+                      <td style={{ padding: "11px 8px 11px 16px", width: 28, fontSize: 13,
+                        color: tc.navy, fontWeight: 700 }}>
+                        {isOpen ? "▾" : "▸"}
+                      </td>
+                      <td style={{
+                        padding: "11px 10px", fontWeight: 700, fontSize: 13, whiteSpace: "nowrap",
+                        color: isNoDate ? tc.textLight : tc.navy,
+                        fontStyle: isNoDate ? "italic" : "normal",
+                      }}>
+                        {fmtTxMonth(month)}
+                      </td>
+                      <td colSpan={7} style={{ padding: "11px 10px" }}>
+                        <span style={{ display: "inline-flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                          {buys.length > 0 && (
+                            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4,
+                              background: "#E8F8E8", color: "#1C6B1D", fontWeight: 600 }}>
+                              Compres: {buys.length} · {fmtM(buyTotal)}
+                            </span>
+                          )}
+                          {sells.length > 0 && (
+                            <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4,
+                              background: "#FDECEA", color: "#C62828", fontWeight: 600 }}>
+                              Vendes: {sells.length} · {fmtM(sellTotal)}
+                            </span>
+                          )}
+                          {buys.length > 0 && sells.length > 0 && (
+                            <span style={{
+                              fontSize: 10, padding: "2px 6px", borderRadius: 4, fontWeight: 700,
+                              fontFamily: "'DM Mono',monospace",
+                              background: net > 0 ? "#E8F8E8" : net < 0 ? "#FDECEA" : tc.bgAlt,
+                              color: net > 0 ? tc.green : net < 0 ? tc.red : tc.textLight,
+                            }}>
+                              Net: {net > 0 ? "+" : ""}{fmtM(net)}
+                            </span>
+                          )}
+                        </span>
+                      </td>
+                    </tr>
+
+                    {/* Level 2 — Transaction rows */}
+                    {isOpen && rows.map((t, i) => {
+                      const isBuy = t.action === "buy";
+                      const rowBg = i % 2 === 0
+                        ? (dark ? "#091C0B" : "#F4FBF4")
+                        : (dark ? "#071A08" : "#E8F8E8");
+                      return (
+                        <tr key={t.id} style={{ borderBottom: `1px solid ${tc.border}`, background: rowBg }}>
+                          <td />
+                          <td style={{ padding: "7px 10px 7px 28px", fontFamily: "'DM Mono',monospace",
+                            fontSize: 11, color: tc.textLight, whiteSpace: "nowrap" }}>
+                            {t.date ?? "—"}
+                          </td>
+                          <td style={{ padding: "7px 10px", maxWidth: 220, overflow: "hidden",
+                            textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            <Link to={`/mercats-publics/${t.isin}`}
+                              style={{ color: tc.navy, textDecoration: "none", fontWeight: 600 }}>
+                              {t.nom}
+                            </Link>
+                          </td>
+                          <td style={{ padding: "7px 10px", textAlign: "center" }}>
+                            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                              background: t.tipus === "RV" ? "#E6EDF3" : "#FFF8E1",
+                              color:      t.tipus === "RV" ? "#2B5070" : "#7A6000" }}>
+                              {t.tipus}
+                            </span>
+                          </td>
+                          <td style={{ padding: "7px 10px", textAlign: "center" }}>
+                            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                              background: isBuy ? "#E8F8E8" : "#FDECEA",
+                              color:      isBuy ? "#1C6B1D" : "#C62828", fontWeight: 600 }}>
+                              {isBuy ? "Compra" : "Venda"}
+                            </span>
+                          </td>
+                          <td style={{ padding: "7px 10px", textAlign: "right",
+                            fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
+                            {t.units != null ? t.units.toLocaleString("ca-ES", { maximumFractionDigits: 0 }) : "—"}
+                          </td>
+                          <td style={{ padding: "7px 10px", textAlign: "right",
+                            fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
+                            {t.nav != null ? t.nav.toFixed(2) : "—"}
+                          </td>
+                          <td style={{ padding: "7px 10px", textAlign: "right",
+                            fontFamily: "'DM Mono',monospace", fontWeight: 700, color: tc.navy }}>
+                            {t.valueEur != null ? fmtM(t.valueEur) : "—"}
+                          </td>
+                          <td style={{ padding: "7px 10px", fontSize: 11, color: tc.textLight }}>
+                            {t.custodian}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </React.Fragment>
+                );
+              })}
+            </tbody>
+          </table>
         </div>
       </div>
 
