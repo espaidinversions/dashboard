@@ -83,8 +83,8 @@ export function PMPositionDetail() {
   const displayCustodian = metaOverride.custodian ?? p.custodian;
 
   const isAbelFont  = displayGestor === "Abel Font";
-  const pnl         = (p.valorMercat ?? 0) - (p.costEur ?? 0);
-  const pnlColor    = pnl > 0 ? tc.green : pnl < 0 ? tc.red : tc.textLight;
+  const pnl         = p.costEur != null ? (p.valorMercat ?? 0) - p.costEur : null;
+  const pnlColor    = pnl == null ? tc.textLight : pnl > 0 ? tc.green : pnl < 0 ? tc.red : tc.textLight;
   const msUrl       = isin ? `https://www.morningstar.es/es/search/results.aspx?keyword=${isin}` : null;
   const yh          = yearsHeld(p.dataCompra);
   const ter         = terOverride ?? PM_TER[isin] ?? p.costAnual ?? 0;
@@ -93,7 +93,7 @@ export function PMPositionDetail() {
     : null;
 
   const costPct = p.costEur != null && p.valorMercat > 0
-    ? Math.min(p.costEur / p.valorMercat * 100, 100) : 100;
+    ? Math.min(p.costEur / p.valorMercat * 100, 100) : p.costEur != null ? 100 : 0;
   const gainPct = Math.max(100 - costPct, 0);
 
   const returnData = useMemo(() => {
@@ -240,7 +240,7 @@ export function PMPositionDetail() {
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <KpiCard label="Valor mercat"   value={p.valorMercat != null ? fmtM(p.valorMercat) : "—"} accent={tc.navy} tc={tc} />
         <KpiCard label="Cost total"     value={p.costEur != null ? fmtM(p.costEur) : "—"} accent={tc.navyLight} tc={tc} />
-        <KpiCard label="P&L"            value={`${pnl >= 0 ? "+" : ""}${fmtM(pnl)}`} accent={pnlColor} tc={tc} />
+        <KpiCard label="P&L"            value={pnl != null ? `${pnl >= 0 ? "+" : ""}${fmtM(pnl)}` : "—"} accent={pnlColor} tc={tc} />
         {p.unitats != null && (
           <KpiCard label="Participacions" value={p.unitats.toLocaleString("ca-ES")} accent={tc.navyLight} tc={tc} />
         )}
@@ -341,12 +341,12 @@ export function PMPositionDetail() {
           <div style={{ display: "flex", height: 22, borderRadius: 4, overflow: "hidden", marginBottom: 8 }}>
             <div style={{ width: `${costPct.toFixed(1)}%`, background: "#4E79A7" }}
                  title={`Cost: ${fmtM(p.costEur ?? 0)} (${costPct.toFixed(1)}%)`} />
-            <div style={{ width: `${gainPct.toFixed(1)}%`, background: pnl >= 0 ? tc.green : tc.red }}
-                 title={`${pnl >= 0 ? "Guany" : "Pèrdua"}: ${fmtM(Math.abs(pnl))} (${gainPct.toFixed(1)}%)`} />
+            <div style={{ width: `${gainPct.toFixed(1)}%`, background: (pnl ?? 0) >= 0 ? tc.green : tc.red }}
+                 title={pnl != null ? `${pnl >= 0 ? "Guany" : "Pèrdua"}: ${fmtM(Math.abs(pnl))} (${gainPct.toFixed(1)}%)` : "P&L desconegut"} />
           </div>
           <div style={{ display: "flex", gap: 16, fontSize: 10, color: tc.textLight, marginBottom: 20, letterSpacing: "0.04em" }}>
             <span><span style={{ color: "#4E79A7" }}>■</span> Cost {costPct.toFixed(1)}% · <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmtM(p.costEur ?? 0)}</span></span>
-            <span><span style={{ color: pnl >= 0 ? tc.green : tc.red }}>■</span> {pnl >= 0 ? "Guany" : "Pèrdua"} {gainPct.toFixed(1)}% · <span style={{ fontFamily: "'DM Mono',monospace" }}>{fmtM(Math.abs(pnl))}</span></span>
+            <span><span style={{ color: (pnl ?? 0) >= 0 ? tc.green : tc.red }}>■</span> {(pnl ?? 0) >= 0 ? "Guany" : "Pèrdua"} {gainPct.toFixed(1)}% · <span style={{ fontFamily: "'DM Mono',monospace" }}>{pnl != null ? fmtM(Math.abs(pnl)) : "—"}</span></span>
           </div>
 
           {returnData.length > 0 && (
