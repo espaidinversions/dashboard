@@ -51,7 +51,6 @@ export const MESOS   = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set"
 // ── Data imports ─────────────────────────────────────────
 export { RAW_CC } from "./data/capital-calls.js";
 export { FUNDS0 } from "./data/pipeline.js";
-import { RAW_CC } from "./data/capital-calls.js";
 
 export const EUR_USD = 1.08;
 export const toEUR = (a,c) => c==="USD" ? a/EUR_USD : a;

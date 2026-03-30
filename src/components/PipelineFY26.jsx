@@ -7,10 +7,11 @@ import {
 } from "recharts";
 import { useTheme } from "../theme.js";
 import { FUNDS0 as FUNDS0_DEFAULT, EUR_USD as EUR_USD_DEFAULT, STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE } from "../config.js";
-import { EmptyState } from "./SharedComponents.jsx";
+import { EmptyState, EditableCell } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { insertPipelineDeal, deletePipelineDeal, upsertPipelineDeal } from "../db.js";
 import { useToast } from "../toast.jsx";
+import { useCurrency } from "./hooks/useCurrency.js";
 
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function genMonthOpts(months = 36) {
@@ -24,29 +25,9 @@ function genMonthOpts(months = 36) {
 }
 const MONTHS_OPTS = genMonthOpts(36);
 
-function EditableSelect({value,onChange}) {
-  const { tc: TC } = useTheme();
-  const [editing,setEditing] = useState(false);
-  if(editing) return (
-    <select autoFocus value={value||""} onBlur={()=>setEditing(false)}
-      onChange={e=>{onChange(e.target.value);setEditing(false);}}
-      style={{fontSize:12,border:`1px solid ${TC.border}`,borderRadius:5,padding:"3px 6px",fontFamily:"inherit",background:TC.card,color:TC.text,cursor:"pointer",outline:"none"}}>
-      {MONTHS_OPTS.map(o=><option key={o} value={o}>{o||"— sense data"}</option>)}
-    </select>
-  );
-  return (
-    <span onClick={()=>setEditing(true)} style={{fontSize:12,color:value?TC.text:TC.textLight,cursor:"pointer",display:"inline-block",minWidth:70,padding:"2px 4px"}}>
-      {value||<span style={{fontSize:11,fontStyle:"italic"}}>— ✎</span>}
-      {value&&<span style={{fontSize:9,opacity:0.5,marginLeft:4}}>✎</span>}
-    </span>
-  );
-}
-
 // ══════════════════════════════════════════════════════════
-export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_DEFAULT }) {
-  const rate  = eurUsd || EUR_USD_DEFAULT;
-  const toEUR = (a, c) => c === "USD" ? a / rate : a;
-  const toUSD = (a, c) => c === "EUR" ? a * rate : a;
+export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = null }) {
+  const { rate, toEUR, toUSD } = useCurrency(eurUsd);
   const { tc: TC, dark } = useTheme();
   const { isSuperuser } = useAuth();
   const { toast } = useToast();
@@ -175,24 +156,6 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
     const R=Math.PI/180, r=innerRadius+(outerRadius-innerRadius)*0.5;
     return <text x={cx+r*Math.cos(-midAngle*R)} y={cy+r*Math.sin(-midAngle*R)} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight="700">{`${(percent*100).toFixed(0)}%`}</text>;
   };
-
-  function EditCell({value,options,cfg,onChange}) {
-    const [editing,setEditing]=useState(false);
-    const s=cfg[value]||{bg:TC.bgAlt,color:TC.textMid,border:TC.border};
-    if(editing) return (
-      <select autoFocus value={value} onBlur={()=>setEditing(false)}
-        onChange={e=>{onChange(e.target.value);setEditing(false);}}
-        style={{fontSize:12,border:`1px solid ${TC.border}`,borderRadius:5,padding:"3px 6px",fontFamily:"inherit",background:TC.card,color:TC.text,cursor:"pointer",outline:"none"}}>
-        {options.map(o=><option key={o}>{o}</option>)}
-      </select>
-    );
-    return (
-      <span onClick={()=>setEditing(true)}
-        style={{fontSize:12,background:s.bg,color:s.color,borderRadius:5,padding:"3px 9px",fontWeight:600,cursor:"pointer",border:`1px solid ${s.border||s.bg}`,display:"inline-block",userSelect:"none"}}>
-        {value} <span style={{fontSize:9,opacity:0.6}}>✎</span>
-      </span>
-    );
-  }
 
   const greenBadgeBg = dark ? "#0A2010" : "#E8F8E8";
   const CPie = ({data,colors,type,title}) => (
@@ -386,9 +349,9 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = EUR_USD_D
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>
                   <td style={{padding:"9px 10px",fontSize:12,color:TC.textMid,whiteSpace:"nowrap"}}>{f.sector}</td>
-                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditCell value={f.status} options={["En estudi","Aprovat","Descartat"]} cfg={STATUS_CFG} onChange={v=>upd(f.id,"status",v)}/> : <span style={{display:"block"}}>{f.status}</span>}</td>
-                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditCell value={f.canal} options={["Arcano","Placement Agent","Propietari","Altres"]} cfg={CANAL_CFG} onChange={v=>upd(f.id,"canal",v)}/> : <span style={{display:"block"}}>{f.canal}</span>}</td>
-                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditableSelect value={f.estimatedClosing||""} onChange={v=>upd(f.id,"estimatedClosing",v)}/> : <span>{f.estimatedClosing||""}</span>}</td>
+                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditableCell value={f.status} options={["En estudi","Aprovat","Descartat"]} badgeCfg={STATUS_CFG} onSave={v=>upd(f.id,"status",v)}/> : <span style={{display:"block"}}>{f.status}</span>}</td>
+                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditableCell value={f.canal} options={["Arcano","Placement Agent","Propietari","Altres"]} badgeCfg={CANAL_CFG} onSave={v=>upd(f.id,"canal",v)}/> : <span style={{display:"block"}}>{f.canal}</span>}</td>
+                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditableCell value={f.estimatedClosing} options={MONTHS_OPTS} emptyDisplay="— sense data" onSave={v=>upd(f.id,"estimatedClosing",v)}/> : <span>{f.estimatedClosing||""}</span>}</td>
                   <td style={{padding:"9px 10px"}}>
                     {isSuperuser && <button onClick={()=>del(f.id)} style={{background:"transparent",border:"none",color:TC.border,cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}
                       onMouseEnter={e=>e.target.style.color="#C0392B"} onMouseLeave={e=>e.target.style.color=TC.border}>×</button>}

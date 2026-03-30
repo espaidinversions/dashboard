@@ -9,17 +9,7 @@ import { upsertCompany } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify, usePersistedState } from "../utils.js";
-import { EditableCell, FlagImg, Logo } from "./SharedComponents.jsx";
-
-function KpiCard({ label, value, sub, valueColor, tc }) {
-  return (
-    <div className="kpi-card card-hover" style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 130, flex: 1 }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: valueColor || tc.navy, fontFamily: "'DM Mono',monospace" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{sub}</div>}
-    </div>
-  );
-}
+import { EditableCell, FlagImg, Logo, KpiCard } from "./SharedComponents.jsx";
 
 function MetricChart({ title, data, actualKey, budgetKey, ltmKey, color, view, tc, withMargin }) {
   const isLTM = view === "ltm" && ltmKey != null;

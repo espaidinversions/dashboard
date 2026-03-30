@@ -2,6 +2,30 @@ import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
 
+// ── Shared style helpers ──────────────────────────────────
+export const sharedStyles = {
+  card: (tc) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10 }),
+  cardPad: (tc, pad = "20px 24px") => ({ ...sharedStyles.card(tc), padding: pad }),
+  th: (tc) => ({ padding: "10px 12px", fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
+  sec: (tc) => ({ fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
+  badge: (tc) => ({ fontSize: 11, borderRadius: 5, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
+  kpi: (tc) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 140, flex: 1 }),
+  kpiLabel: (tc) => ({ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }),
+  kpiValue: (tc, valueColor) => ({ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }),
+  kpiSub: (tc) => ({ fontSize: 11, color: tc.textLight, marginTop: 4 }),
+};
+
+// ── KPI Card ─────────────────────────────────────────────
+export function KpiCard({ label, value, sub, valueColor, tc }) {
+  return (
+    <div className="kpi-card card-hover" style={sharedStyles.kpi(tc)}>
+      <div style={sharedStyles.kpiLabel(tc)}>{label}</div>
+      <div style={sharedStyles.kpiValue(tc, valueColor)}>{value}</div>
+      {sub && <div style={sharedStyles.kpiSub(tc)}>{sub}</div>}
+    </div>
+  );
+}
+
 // ── Flag emoji as images via Twemoji (works on Windows) ───
 // EN maps to GB (United Kingdom ISO code)
 const GEO_TO_ISO = { EN:"gb" };
@@ -87,8 +111,10 @@ export const PL = ({cx,cy,midAngle,innerRadius,outerRadius,percent}) => {
 // ── EditableCell ──────────────────────────────────────────
 // Click-to-edit cell. type: "text" | "number" | "select"
 // options: string[] for select. fmt: v => display string.
+// badgeCfg: object mapping values to {bg, color, border} for badge styling
+// emptyDisplay: string to show when value is empty (default "—")
 // onSave(newValue) called only when value actually changes.
-export function EditableCell({ value, onSave, type = "text", options, fmt, style = {}, align = "left", disabled = false }) {
+export function EditableCell({ value, onSave, type = "text", options, fmt, style = {}, align = "left", disabled = false, badgeCfg, emptyDisplay }) {
   const { tc } = useTheme();
   const [editing, setEditing] = useState(false);
   const [draft,   setDraft]   = useState("");
@@ -142,7 +168,25 @@ export function EditableCell({ value, onSave, type = "text", options, fmt, style
     );
   }
 
-  const display = fmt ? fmt(value) : (value ?? "—");
+  const display = fmt ? fmt(value) : (value ?? emptyDisplay ?? "—");
+
+  // Badge mode: show styled badge with edit icon
+  if (badgeCfg && value) {
+    const s = badgeCfg[value] || { bg: tc.bgAlt, color: tc.textMid, border: tc.border };
+    if (disabled) {
+      return (
+        <span style={{ fontSize: 12, background: s.bg, color: s.color, borderRadius: 5, padding: "3px 9px", fontWeight: 600, border: `1px solid ${s.border || s.bg}`, display: "inline-block" }}>
+          {display}
+        </span>
+      );
+    }
+    return (
+      <span onClick={start} title="Fes clic per editar"
+        style={{ fontSize: 12, background: s.bg, color: s.color, borderRadius: 5, padding: "3px 9px", fontWeight: 600, cursor: "pointer", border: `1px solid ${s.border || s.bg}`, display: "inline-block", userSelect: "none" }}>
+        {display} <span style={{ fontSize: 9, opacity: 0.6 }}>✎</span>
+      </span>
+    );
+  }
 
   if (disabled) {
     return (
@@ -152,16 +196,17 @@ export function EditableCell({ value, onSave, type = "text", options, fmt, style
     );
   }
 
+  const isEmpty = value == null || value === "";
+
   return (
     <span onClick={start} title="Fes clic per editar"
-      style={{ cursor: "text", display: "block", textAlign: align,
-        borderRadius: 3, padding: "1px 2px",
-        transition: "background 0.1s",
+      style={{ cursor: "text", display: "inline-block", textAlign: align,
+        borderRadius: 3, padding: "2px 4px", minWidth: 70,
+        color: isEmpty ? tc.textLight : tc.text,
         ...style,
-      }}
-      onMouseEnter={e => e.currentTarget.style.background = tc.bgAlt}
-      onMouseLeave={e => e.currentTarget.style.background = "transparent"}>
-      {display}
+      }}>
+      {isEmpty ? <span style={{ fontStyle: "italic", fontSize: 11 }}>{emptyDisplay ?? "— ✎"}</span> : display}
+      {!isEmpty && <span style={{ fontSize: 9, opacity: 0.5, marginLeft: 4 }}>✎</span>}
     </span>
   );
 }

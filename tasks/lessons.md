@@ -19,3 +19,75 @@
 -->
 
 _No lessons yet. This file grows as corrections are made._
+
+---
+
+## [Duplicated KpiCard component]
+
+**Rule:** Always extract duplicated components to SharedComponents.jsx before starting new work.
+
+**Why:** Found KpiCard defined identically in FundDetail.jsx and CompanyDetail.jsx.
+
+**How to apply:** When creating a component, grep codebase first. If identical/similar exists, import and extend it.
+
+---
+
+## [Centralized configs]
+
+**Rule:** Keep all configuration objects (colors, badges, categories) in config.js, never define them inline.
+
+**Why:** FundDetail.jsx had local vcpeCfg/estCfg that were duplicated versions of config.js's VCPE_CFG/EST_CFG.
+
+**How to apply:** When adding a new config object, check config.js first. Add there, import everywhere.
+
+---
+
+## [Centralized utilities]
+
+**Rule:** Extract duplicated patterns (localStorage keys, formatting) to utils.js.
+
+**Why:** LocalStorage cleanup keys were duplicated in auth.jsx.
+
+**How to apply:** When repeating 3+ lines across files, extract to utils.js with proper documentation.
+
+---
+
+## [Lazy loading for code splitting]
+
+**Rule:** Use React.lazy() for all route components to enable code splitting.
+
+**Why:** Dashboard.jsx (582KB) was loading everything upfront, blocking initial render.
+
+**How to apply:** Wrap route components with lazy() and Suspense as demonstrated in router.jsx.
+
+---
+
+## [Error boundaries for stability]
+
+**Rule:** Wrap routes in ErrorBoundary component to prevent full app crashes.
+
+**Why:** Chart or component failures could crash entire React tree.
+
+**How to apply:** router.jsx now has ErrorBoundary wrapping all routes. Add ErrorBoundary to any complex component subtree.
+
+---
+
+## [Flexible component props]
+
+**Rule:** Design shared components with optional props for flexibility (badgeCfg, emptyDisplay, etc.).
+
+**Why:** Consolidating EditableSelect and EditCell required adding badge styling support to EditableCell.
+
+**How to apply:** When creating variants of a component, add optional props instead of creating new components.
+
+---
+
+## [Relative import paths in subfolders]
+
+**Rule:** Use correct relative paths when files are in subdirectories.
+
+**Why:** ResumTab.jsx in `components/tabs/` was importing from `./SharedComponents.jsx` instead of `../SharedComponents.jsx`.
+
+**How to apply:** Remember: from `components/tabs/`, use `../` for sibling files in `components/`, `../../` for files in `src/` root.
+
+

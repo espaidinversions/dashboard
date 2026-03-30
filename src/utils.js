@@ -291,3 +291,15 @@ export function parseSearchersCSV(text) {
     return obj;
   });
 }
+
+// ── Turtle Capital LocalStorage keys ──────────────────────
+export const TC_LS_KEYS = [
+  "tc_rawCC",
+  "tc_fundMeta",
+  "tc_portfolioCompanies",
+  "tc_allSearchers",
+];
+
+export function clearTurtleCapitalLS() {
+  TC_LS_KEYS.forEach(k => localStorage.removeItem(k));
+}

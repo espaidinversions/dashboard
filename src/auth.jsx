@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase.js";
+import { clearTurtleCapitalLS } from "./utils.js";
 
 const AuthContext = createContext(null);
 
@@ -30,7 +31,7 @@ export function AuthProvider({ children }) {
     const resetTimer = () => {
       clearTimeout(idleTimerRef.current);
       idleTimerRef.current = setTimeout(() => {
-        ["tc_rawCC","tc_fundMeta","tc_portfolioCompanies","tc_allSearchers"].forEach(k => localStorage.removeItem(k));
+        clearTurtleCapitalLS();
         supabase.auth.signOut();
       }, IDLE_TIMEOUT_MS);
     };
@@ -46,7 +47,7 @@ export function AuthProvider({ children }) {
   const signIn  = (email, password) => supabase.auth.signInWithPassword({ email, password });
   const signUp  = (email, password) => supabase.auth.signUp({ email, password });
   const signOut = () => {
-    ["tc_rawCC","tc_fundMeta","tc_portfolioCompanies","tc_allSearchers"].forEach(k => localStorage.removeItem(k));
+    clearTurtleCapitalLS();
     return supabase.auth.signOut();
   };
   const resendConfirmation = (email) => supabase.auth.resend({ type: "signup", email });

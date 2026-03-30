@@ -3,20 +3,10 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell
 } from "recharts";
-import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT, CAT_CFG } from "../config.js";
+import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT, CAT_CFG, VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
-import { Badge, Logo } from "./SharedComponents.jsx";
-
-function KpiCard({ label, value, sub, tc, valueColor }) {
-  return (
-    <div className="kpi-card card-hover" style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 160, flex: 1 }}>
-      <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{sub}</div>}
-    </div>
-  );
-}
+import { Badge, Logo, KpiCard } from "./SharedComponents.jsx";
 
 function FundDetailInner() {
   const { id } = useParams();
@@ -99,17 +89,6 @@ function FundDetailInner() {
   // Transaction log: sorted newest first
   const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
 
-  const vcpeCfg = {
-    "PE": { color: "#2B5070", bg: "#E6EDF3" },
-    "VC": { color: "#28A029", bg: "#E8F8E8" },
-    "RE": { color: "#6B2E7E", bg: "#F3EEF8" },
-  };
-  const estCfg = {
-    "Fons Primari": { color: "#2B5070", bg: "#E6EDF3" },
-    "Fons de Fons": { color: "#28A029", bg: "#E8F8E8" },
-    "SOCIMI":       { color: "#6B2E7E", bg: "#F3EEF8" },
-  };
-
   return (
     <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
       {/* Top bar */}
@@ -126,8 +105,8 @@ function FundDetailInner() {
         <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>/</span>
         <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fundName}</span>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-          <Badge label={vcpe} cfg={vcpeCfg[vcpe] || {}} />
-          <Badge label={est}  cfg={estCfg[est]   || {}} />
+          <Badge label={vcpe} cfg={VCPE_CFG[vcpe] || {}} />
+          <Badge label={est}  cfg={EST_CFG[est]   || {}} />
         </div>
       </div>
 

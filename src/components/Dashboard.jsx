@@ -5,7 +5,7 @@ import {
   Cell, PieChart, Pie, Legend
 } from "recharts";
 import {
-  FY_LIST, MESOS,
+  FY_LIST, MESOS, CAT_CFG, VCPE_CFG, EST_CFG,
   RAW_CC as RAW_CC_DEFAULT, FUNDS0 as FUNDS0_DEFAULT, FUND_META as FUND_META_DEFAULT,
 } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
@@ -27,6 +27,7 @@ import { PublicMarketsTab } from "./PublicMarketsTab.jsx";
 import { HoldingsTable } from "./HoldingsTable.jsx";
 import { PMTipusTab } from "./PMTipusTab.jsx";
 import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
+import { ResumTab, FonsTab, TxLogTab } from "./tabs/index.js";
 
 // ── Helpers localStorage ──────────────────────────────────
 const LS_CC = "tc_rawCC";
@@ -726,41 +727,7 @@ function DashboardInner() {
         )}
 
         {/* ── RESUM ANUAL ── */}
-        {tab==="resum"&&(<div key="resum" className="tab-panel"><>
-          <div style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"20px 22px",marginBottom:18,boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
-            <div style={{fontSize:11,letterSpacing:"0.13em",color:tc.textLight,textTransform:"uppercase",marginBottom:16,fontWeight:600}}>Capital Cridat vs. Retornat per Any Fiscal</div>
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={byFy} margin={{left:10,right:10,top:5,bottom:5}} barGap={4} barCategoryGap="30%">
-                <XAxis dataKey="fy" tick={{fill:tc.textMid,fontSize:12}} axisLine={false} tickLine={false}/>
-                <YAxis tickFormatter={v=>fmtS(v)} tick={{fill:tc.textLight,fontSize:10}} axisLine={false} tickLine={false} width={72}/>
-                <Tooltip content={<BarTip/>}/>
-                <Legend formatter={v=><span style={{color:tc.textMid,fontSize:11}}>{v}</span>}/>
-                <Bar dataKey="Capital Call"   fill={tc.navy}      radius={[5,5,0,0]}/>
-                <Bar dataKey="Distribució"    fill={tc.green}     radius={[5,5,0,0]}/>
-                <Bar dataKey="Retorn Capital" fill={tc.greenDark} radius={[5,5,0,0]}/>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="grid-2" style={{gap:16,marginBottom:18}}>
-            {[
-              {title:"Capital Cridat per Tipus",     data:byVcpe, colorFn:n=>vcpeCfg[n]?.color||tc.navy},
-              {title:"Capital Cridat per Estratègia",data:byEst,  colorFn:n=>estCfg[n]?.color||tc.navy},
-            ].map((ch,i)=>(
-              <div key={i} style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"18px 22px",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
-                <div style={{fontSize:11,letterSpacing:"0.13em",color:tc.textLight,textTransform:"uppercase",marginBottom:14,fontWeight:600}}>{ch.title}</div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <PieChart>
-                    <Pie data={ch.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} labelLine={false} label={PL}>
-                      {ch.data.map((e,j)=><Cell key={j} fill={ch.colorFn(e.name)}/>)}
-                    </Pie>
-                    <Tooltip content={<PieTip/>}/>
-                    <Legend formatter={v=><span style={{color:tc.textMid,fontSize:11}}>{v}</span>}/>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            ))}
-          </div>
-        </></div>)}
+        {tab==="resum"&&(<div key="resum" className="tab-panel"><ResumTab tc={tc} byFy={byFy} byVcpe={byVcpe} byEst={byEst} vcpeCfg={VCPE_CFG} /></div>)}
 
         {/* ── MENSUAL ── */}
         {tab==="mensual"&&(<div key="mensual" className="tab-panel"><MensualTab filtered={filtered} fFy={fFy}/></div>)}
