@@ -22,10 +22,29 @@ type: project
 
 4. Execute with `superpowers:subagent-driven-development`.
 
+## Example
+
+Feature: "Add CSV export button to the monthly breakdown tab"
+
+```
+git checkout -b feat/monthly-export
+→ brainstorming → spec: docs/superpowers/specs/2026-03-30-monthly-export-design.md
+→ writing-plans → plan: docs/superpowers/plans/2026-03-30-monthly-export-plan.md
+→ subagent-driven-development → implement, verify, PR
+```
+
 ## Reference
 
 - `docs/superpowers/specs/` — existing specs for pattern reference
 - `docs/superpowers/plans/` — existing plans for task structure reference
+
+## Verification
+
+After implementation:
+- [ ] Spec committed to `docs/superpowers/specs/`
+- [ ] Plan committed to `docs/superpowers/plans/`
+- [ ] `/verify-dashboard` checklist passes (no console errors, build exits 0)
+- [ ] Feature branch merged or PR open — never leave work on `main` directly
 
 ## Gotchas
 

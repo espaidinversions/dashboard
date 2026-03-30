@@ -20,6 +20,20 @@ type: project
 - [ ] No React key warnings in browser console
 - [ ] Build passes: `npm run build` exits 0
 
+## Example
+
+Passing run:
+```
+✅ npm run dev — server on :5173 + :3001, no errors
+✅ / — "Turtle Capital" header, 5 KPI cards visible
+✅ /investments — fund table + company table, no blank rows
+✅ /fund/acme-growth — Compromís €1.2M, J-curve renders
+✅ /company/abc-co — TVPI 1.4×, revenue €5M, flag "ES"
+✅ Dark toggle — colors switch, no flash of unstyled content
+✅ Console — 0 errors, 0 key warnings
+✅ npm run build — exit 0
+```
+
 ## Gotchas
 
 - **Blank page, no error** — ThemeContext crash. The page's outer wrapper must pass `{ tc, dark, toggle }` to `ThemeContext.Provider`. Never pass a raw color object (`TC_LIGHT`/`TC_DARK`). `useTheme()` returns `{ tc, dark, toggle }`.

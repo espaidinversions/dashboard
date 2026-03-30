@@ -46,6 +46,13 @@ Score the target skill on each item (yes = 1, no = 0):
 - **Project skills** (`.claude/skills/`): use `Read` tool, edit with `Edit` tool
 - **Superpowers plugin skills**: use `Skill` tool to load content; the skill output header shows "Base directory" — use `Edit` tool on the skill file at that path
 
+## Gotchas
+
+- **Don't chase style** — only fix structural gaps (missing trigger, missing verification, etc.). Rewording a sentence that already works is not an improvement.
+- **Identical rewrites = stop** — if two consecutive iterations produce the same change or no net score gain, the skill needs user context, not more looping.
+- **Superpowers skills are read-only via Skill tool** — you can read their content but cannot edit the plugin source. Flag to user if a superpowers skill scores below 6/8.
+- **Don't inflate scores** — a "yes" requires the item to be meaningfully present, not just technically present with a one-word mention.
+
 ## Stopping Conditions
 
 - Score reaches 7/8 or 8/8
