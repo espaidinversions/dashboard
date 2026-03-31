@@ -158,7 +158,32 @@ Closed rows render return columns as `—` (no data available).
 
 ---
 
-## 6. Remove Transaction Links
+## 6. Per-Vehicle Chart (PMPositionDetail)
+
+**File:** `src/components/PMPositionDetail.jsx`
+
+### Replaces
+The existing "Price Evolution" `ComposedChart` (custodian price lines + cost basis step area)
+
+### New chart
+```jsx
+<CumulativeFlowsChart
+  groupBy="total"
+  transactions={PM_TRANSACTIONS.filter(t => t.isin === position.isin)}
+  valuesSeries={positionValues}
+  height={220}
+/>
+```
+
+Where `positionValues` = `PM_VALUES[position.isin]` entries merged across custodians:
+- If the ISIN appears under multiple custodians, sum their values per date
+- Result: `[{ date, value }]` sorted ascending
+
+If `PM_VALUES[position.isin]` is undefined (vehicle without price data — 3 active, 11 closed), render a `<p>Sense dades de preus disponibles</p>` placeholder instead of the chart.
+
+---
+
+## 7. Remove Transaction Links
 
 **Files:** `src/components/PMTransaccionsTab.jsx`, `src/components/PublicMarketsTab.jsx` (accordion section)
 
@@ -166,7 +191,7 @@ In both files, fund name cells and ISIN cells that currently render `<Link to="/
 
 ---
 
-## 7. Coverage Report
+## 8. Coverage Report
 
 **File:** `docs/pm-coverage-report.md`
 
@@ -188,7 +213,7 @@ Content:
 3. `CumulativeFlowsChart.jsx` — new component, no existing code touched
 4. Wire into `PMTipusTab.jsx` — chart replacement + merged table
 5. Wire into `PublicMarketsTab.jsx` — new section + remove old inflow overlay
-6. Wire into `PMPositionDetail.jsx` — replace price evolution chart
+6. Wire into `PMPositionDetail.jsx` — replace price evolution chart, add no-data placeholder
 
 ---
 
