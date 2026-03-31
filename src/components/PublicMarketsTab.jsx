@@ -869,10 +869,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
                           </td>
                           <td style={{ padding: "7px 10px", maxWidth: 220, overflow: "hidden",
                             textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            <Link to={`/mercats-publics/${ISIN_TO_ID[t.isin] ?? t.isin}`}
-                              style={{ color: tc.navy, textDecoration: "none", fontWeight: 600 }}>
-                              {t.nom}
-                            </Link>
+                            <span style={{ color: tc.navy, fontWeight: 600 }}>{t.nom}</span>
                           </td>
                           <td style={{ padding: "7px 10px", textAlign: "center" }}>
                             <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,

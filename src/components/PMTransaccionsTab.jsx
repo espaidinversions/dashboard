@@ -4,7 +4,6 @@ import {
 } from "recharts";
 import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
-import { Link } from "react-router-dom";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
 import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
 import { loadPMOverrides, upsertTransaction } from "../db.js";
@@ -34,12 +33,6 @@ export function PMTransaccionsTab() {
     loadPMOverrides().then(data => {
       if (data?.transactions?.length) setManualTxs(data.transactions);
     });
-  }, []);
-
-  const isinToLink = useMemo(() => {
-    const map = {};
-    PM_POSITIONS.forEach(p => { if (p.isin) map[p.isin] = `/mercats-publics/${p.id}`; });
-    return map;
   }, []);
 
   const allTxs = useMemo(() => {
@@ -262,8 +255,7 @@ export function PMTransaccionsTab() {
                           <td />
                           <td style={{ padding: "8px 10px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight, whiteSpace: "nowrap" }}>{t.date}</td>
                           <td style={{ padding: "8px 10px", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            <Link to={isinToLink[t.isin] ?? `/mercats-publics/${t.isin}`}
-                              style={{ color: tc.navy, textDecoration: "none", fontWeight: 600 }}>{t.nom}</Link>
+                            <span style={{ color: tc.navy, fontWeight: 600 }}>{t.nom}</span>
                           </td>
                           <td style={{ padding: "8px 10px", textAlign: "center" }}>
                             <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
