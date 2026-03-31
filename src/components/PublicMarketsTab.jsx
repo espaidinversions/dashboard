@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from "react";
 import {
-  AreaChart, Area, LineChart, Line, XAxis, YAxis, Tooltip,
+  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
 } from "recharts";
 import { useTheme } from "../theme.js";
@@ -13,7 +13,7 @@ import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
 
 // ── Constants ──────────────────────────────────────────────
 const ABEL_RV_SPLIT = 0.7516;
-const ABEL_RF_SPLIT = 0.1868;
+const ABEL_RF_SPLIT = 1 - ABEL_RV_SPLIT; // remainder so RV+RF sums to 100%
 
 const TIPUS_CFG = {
   "RV":    { color: "#2B5070", bg: "#E6EDF3" },
@@ -81,6 +81,7 @@ const DEFAULT_EXPAND_TIPUS = {
 // Static lookups derived from PM_POSITIONS (imported data never changes at runtime)
 const ISIN_TIPUS = Object.fromEntries(PM_POSITIONS.map(p => [p.isin, p.tipus]));
 const ABEL_ISINS = new Set(PM_POSITIONS.filter(p => p.gestor === "Abel Font").map(p => p.isin));
+const ISIN_TO_ID  = Object.fromEntries(PM_POSITIONS.map(p => [p.isin, p.id]));
 
 // Get PM_POSITIONS for a manager row (only Bankinter/Abel has individual position tracking)
 function getMgrPositions(mgrId, tipusFilter) {
@@ -444,28 +445,27 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
         <div style={{ ...card, flex: "1 1 58%" }}>
           <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment TWR per Proveïdor</div>
           <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={providerData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
+            <BarChart data={providerData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} vertical={false} />
               <XAxis dataKey="year" tick={{ fontSize: 11, fill: tc.textLight }} axisLine={false} tickLine={false} />
               <YAxis tickFormatter={v => v.toFixed(1) + "%"} tick={{ fontSize: 10, fill: tc.textLight }} axisLine={false} tickLine={false} width={44} />
               <ReferenceLine y={0} stroke={tc.border} strokeDasharray="4 2" />
               <Tooltip
                 {...tooltipStyle}
-                formatter={(v, name) => [pctFmt(v), name]}
+                formatter={(v, name) => [v != null ? pctFmt(v) : "—", name]}
               />
               <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }} />
               {activeMgrs.map(m => (
-                <Line
+                <Bar
                   key={m.id}
                   dataKey={m.id}
                   name={m.nom}
-                  stroke={MGR_COLORS[m.id]}
-                  strokeWidth={2}
-                  dot={{ r: 4, fill: MGR_COLORS[m.id] }}
-                  connectNulls
+                  fill={MGR_COLORS[m.id]}
+                  radius={[3, 3, 0, 0]}
+                  maxBarSize={28}
                 />
               ))}
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
           <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
             TWR reportat per cada gestor. UBS sense dades 2024–2025.
@@ -524,7 +524,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: tc.textLight }} />
+            <XAxis dataKey="label" tick={{ fontSize: 10, fill: tc.textLight }} interval={2} />
             <YAxis tickFormatter={fmtM} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
             <Tooltip
               {...tooltipStyle}
@@ -869,7 +869,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
                           </td>
                           <td style={{ padding: "7px 10px", maxWidth: 220, overflow: "hidden",
                             textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            <Link to={`/mercats-publics/${t.isin}`}
+                            <Link to={`/mercats-publics/${ISIN_TO_ID[t.isin] ?? t.isin}`}
                               style={{ color: tc.navy, textDecoration: "none", fontWeight: 600 }}>
                               {t.nom}
                             </Link>
