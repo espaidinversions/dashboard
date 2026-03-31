@@ -21,6 +21,7 @@ export function fmtMonth(s) {
   // For bi-weekly dates, prefix the day number
   return d && +d !== 1 ? `${+d} ${label}` : label;
 }
+
 /** Format a "YYYY-MM" month key → e.g. "Mar '26" */
 export function fmtMonthKey(v) {
   if (!v) return "";
