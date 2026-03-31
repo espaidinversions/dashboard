@@ -10,6 +10,7 @@ import { PM_MONTHLY, PM_MANAGERS, PM_POSITIONS } from "../data/publicMarkets.js"
 import { Link } from "react-router-dom";
 import { PM_VALUES } from "../data/portfolioValues.js";
 import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
+import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
 
 // ── Constants ──────────────────────────────────────────────
 const ABEL_RV_SPLIT = 0.7516;
@@ -140,6 +141,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
   const [txActionFilter, setTxActionFilter] = useState("all");
   const [txCustodianFilter, setTxCustodianFilter] = useState("all");
   const [openTxMonths, setOpenTxMonths] = useState(() => new Set());
+  const [flowGroupBy, setFlowGroupBy] = useState("total");
 
   const toggleExpand = (id) => {
     setExpanded(prev => {
@@ -335,44 +337,13 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
     });
   }, [chartView, mvData]);
 
-  // ── Inflow data (from transaction log) ──────────────────
-  // cumulativeCost: running sum of buy valueEur, keyed by bi-weekly bucket date
-  // topInflows: top-5 largest single buy events (for reference lines)
-  const { cumulativeCostByLabel, topInflowLabels, topInflows } = useMemo(() => {
-    const buys = PM_TRANSACTIONS.filter(t => t.action === "buy" && t.date && t.valueEur);
-    // Aggregate by bi-weekly bucket
-    const byBucket = {};
-    buys.forEach(t => {
-      const [y, mo, d] = t.date.split("-");
-      const anchor = +d < 15 ? "01" : "15";
-      const bucket = `${y}-${mo}-${anchor}`;
-      byBucket[bucket] = (byBucket[bucket] ?? 0) + t.valueEur;
-    });
-    // Cumulative sum by bucket
-    const sortedBuckets = Object.keys(byBucket).sort();
-    let running = 0;
-    const cumByBucket = {};
-    sortedBuckets.forEach(b => { running += byBucket[b]; cumByBucket[b] = running; });
-    // Map bucket → chart label for lookup
-    const cumByLabel = {};
-    sortedBuckets.forEach(b => { cumByLabel[fmtMonth(b)] = cumByBucket[b]; });
-    // Top-5 largest single-day inflows for markers
-    const top5 = sortedBuckets
-      .map(b => ({ label: fmtMonth(b), value: byBucket[b] }))
-      .sort((a, b) => b.value - a.value)
-      .slice(0, 5);
-    return { cumulativeCostByLabel: cumByLabel, topInflowLabels: new Set(top5.map(t => t.label)), topInflows: top5 };
-  }, []);
-
-  // Attach cumulativeCost to each chartData point — forward-filled so it's a continuous step
-  const chartDataWithCost = useMemo(() => {
-    let lastCost = null;
-    return chartData.map(d => {
-      const cost = cumulativeCostByLabel[d.label] ?? lastCost;
-      if (cost != null) lastCost = cost;
-      return { ...d, costBasis: cost };
-    });
-  }, [chartData, cumulativeCostByLabel]);
+  const totalValueSeries = useMemo(
+    () => PM_MONTHLY.map(m => ({
+      date: m.date,
+      value: m.caixaRV + m.caixaRF + m.ubsRV + m.ubsRF + (m.abelBK ?? 0) + m.andbank,
+    })),
+    []
+  );
 
   // ── Transaction accordion data ───────────────────────────
   const txCustodians = useMemo(() =>
@@ -510,7 +481,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
         </div>
 
         <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={chartDataWithCost} stackOffset="none" margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <AreaChart data={chartData} stackOffset="none" margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <defs>
               {Object.entries(AREA_COLORS).map(([id, color]) => (
                 <linearGradient key={id} id={`pm-grad-${id}`} x1="0" y1="0" x2="0" y2="1">
@@ -518,10 +489,6 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
                   <stop offset="95%" stopColor={color} stopOpacity={0.04} />
                 </linearGradient>
               ))}
-              <linearGradient id="pm-grad-cost" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#E8A020" stopOpacity={0.35} />
-                <stop offset="95%" stopColor="#E8A020" stopOpacity={0.08} />
-              </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
             <XAxis dataKey="label" tick={{ fontSize: 10, fill: tc.textLight }} interval={2} />
@@ -530,16 +497,6 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
               {...tooltipStyle}
               formatter={(v, name) => [fmtM(v), name.charAt(0).toUpperCase() + name.slice(1)]}
             />
-            {chartView === "total" && topInflows.map(inf => (
-              <ReferenceLine key={inf.label} x={inf.label}
-                stroke={tc.textLight} strokeDasharray="3 3" strokeWidth={1}
-                label={{ value: `+${fmtM(inf.value)}`, position: "top", fontSize: 8, fill: tc.textLight }} />
-            ))}
-            {chartView === "total" && (
-              <Area type="monotone" dataKey="costBasis"
-                stroke="#E8A020" fill="url(#pm-grad-cost)"
-                strokeWidth={1.5} dot={false} name="Capital invertit" connectNulls />
-            )}
             {chartView === "total" && (
               <Area type="monotone" dataKey="total"
                 stroke={AREA_COLORS.total} fill={`url(#pm-grad-total)`}
@@ -571,6 +528,38 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
               ? "WAM i Andbank inclosos amb interpolació lineal (anchors Dec 2023–Mar 2026). Posicions no confirmades excloses."
               : "Dades de PM_MONTHLY (font manual). WAM i Andbank amb sèrie mensual interpolada."}
         </div>
+      </div>
+
+      {/* ── Fluxos acumulats ── */}
+      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 8 }}>
+          <div style={{ fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, flex: 1 }}>
+            Fluxos acumulats · entrades de capital
+          </div>
+          {[
+            { id: "total",     label: "Total" },
+            { id: "assetType", label: "Per Actiu" },
+            { id: "manager",   label: "Per Gestor" },
+          ].map(opt => (
+            <button key={opt.id} onClick={() => setFlowGroupBy(opt.id)}
+              style={{
+                padding: "3px 10px", borderRadius: 5, fontSize: 11,
+                cursor: "pointer", fontFamily: "inherit",
+                border: `1.5px solid ${flowGroupBy === opt.id ? tc.navy : tc.border}`,
+                background: flowGroupBy === opt.id ? (dark ? "#0A1A30" : "#E8F0FA") : "transparent",
+                color: flowGroupBy === opt.id ? tc.navy : tc.textLight,
+                fontWeight: flowGroupBy === opt.id ? 700 : 400,
+              }}>
+              {opt.label}
+            </button>
+          ))}
+        </div>
+        <CumulativeFlowsChart
+          transactions={PM_TRANSACTIONS}
+          valuesSeries={totalValueSeries}
+          groupBy={flowGroupBy}
+          height={240}
+        />
       </div>
 
       {/* ── ④ Manager table ── */}
