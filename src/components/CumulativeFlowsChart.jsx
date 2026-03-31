@@ -4,7 +4,7 @@ import {
   ResponsiveContainer, CartesianGrid, Legend,
 } from "recharts";
 import { useTheme } from "../theme.js";
-import { fmtM, fmtMonth } from "../utils.js";
+import { fmtM, fmtMonthKey } from "../utils.js";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
 
 // Manager routing — mirrors PublicMarketsTab mvData logic
@@ -27,9 +27,6 @@ const TOP5_COLORS  = ["#4E79A7", "#F28E2B", "#E15759", "#76B7B2", "#59A14F"];
 
 // Normalise any date string to "YYYY-MM" month key
 const toMonth = d => (typeof d === "string" ? d : "").slice(0, 7);
-
-// Format month key for axis labels
-const fmtMonthKey = v => v ? fmtMonth(v.length === 7 ? v + "-01" : v) : "";
 
 /**
  * CumulativeFlowsChart
