@@ -13,6 +13,8 @@ import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
 import { PM_TER } from "../data/pmTer.js";
 import { loadPMOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
 import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
+import { PriceHistoryChart } from "./PriceHistoryChart.jsx";
+import { FUND_PRICES } from "../data/fundPrices.js";
 
 const ISIN_RE = /([A-Z]{2}[A-Z0-9]{10})/;
 const cleanIsin = raw => (ISIN_RE.exec(String(raw ?? "").toUpperCase())?.[1]) ?? raw;
@@ -214,19 +216,31 @@ export function PMPositionDetail() {
         )}
       </div>
 
-      {/* ── Fluxos acumulats i valor de cartera ── */}
+      {/* ── Historial de preus · fluxos acumulats ── */}
       <div style={card}>
         <div style={{ fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase",
           color: tc.textLight, fontWeight: 600, marginBottom: 12 }}>
-          Fluxos acumulats · valor de cartera
+          Historial de preus · fluxos acumulats
         </div>
-        {positionValues.length > 0 || positionTxs.length > 0 ? (
-          <CumulativeFlowsChart
+        {isin && FUND_PRICES[isin]?.length > 0 ? (
+          <PriceHistoryChart
+            isin={isin}
+            dataCompra={p.dataCompra}
             transactions={positionTxs}
-            valuesSeries={positionValues}
-            groupBy="total"
-            height={220}
+            height={280}
           />
+        ) : positionValues.length > 0 || positionTxs.length > 0 ? (
+          <>
+            <p style={{ fontSize: 10, color: tc.textLight, fontStyle: "italic", marginBottom: 8 }}>
+              Sense dades de preus unitaris per a aquest ISIN. Es mostren fluxos acumulats i valor.
+            </p>
+            <CumulativeFlowsChart
+              transactions={positionTxs}
+              valuesSeries={positionValues}
+              groupBy="total"
+              height={220}
+            />
+          </>
         ) : (
           <p style={{ fontSize: 11, color: tc.textLight, fontStyle: "italic", padding: "8px 0" }}>
             Sense dades de preus disponibles per a aquesta posició.
