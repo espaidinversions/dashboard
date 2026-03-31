@@ -1,14 +1,15 @@
 import React, { useMemo, useState } from "react";
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
+  ResponsiveContainer, CartesianGrid, ReferenceLine,
 } from "recharts";
-import { Link, useNavigate } from "react-router-dom";
-import { PM_POSITIONS, PM_CLOSED } from "../data/publicMarkets.js";
+import { Link } from "react-router-dom";
+import { PM_POSITIONS, PM_CLOSED, PM_MONTHLY } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
-import { fmtM, fmtMonth, usePersistedState, yearsHeld, cagr } from "../utils.js";
-import { PM_VALUES } from "../data/portfolioValues.js";
+import { fmtM, usePersistedState, yearsHeld, cagr } from "../utils.js";
 import { PM_TER } from "../data/pmTer.js";
+import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
+import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
 
 const PM_COLORS = [
   "#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F",
@@ -28,6 +29,9 @@ const YEAR_FIELDS = [
   { field: "rend2025", label: "2025" },
   { field: "rend2026", label: "2026" },
 ];
+
+const ABEL_RV_SPLIT = 0.7516;
+const ABEL_RF_SPLIT = 1 - ABEL_RV_SPLIT;
 
 
 function getTer(p) {
@@ -87,6 +91,23 @@ export function PMTipusTab({ tipus }) {
     [visible]
   );
 
+  // Transactions for this asset type
+  const typeTxs = useMemo(
+    () => PM_TRANSACTIONS.filter(t => t.tipus === tipus),
+    [tipus]
+  );
+
+  // Monthly portfolio value series for this asset type
+  const typeValueSeries = useMemo(
+    () => PM_MONTHLY.map(m => ({
+      date: m.date,
+      value: tipus === "RV"
+        ? m.caixaRV + m.ubsRV + (m.abelBK != null ? m.abelBK * ABEL_RV_SPLIT : 0)
+        : m.caixaRF + m.ubsRF + (m.abelBK != null ? m.abelBK * ABEL_RF_SPLIT : 0) + m.andbank,
+    })),
+    [tipus]
+  );
+
   // Years that have at least one non-null value across visible positions
   const activeYears = useMemo(() =>
     YEAR_FIELDS.filter(({ field }) => visible.some(p => p[field] != null)),
@@ -111,44 +132,6 @@ export function PMTipusTab({ tipus }) {
     [visible, activeYears, retMode]
   );
 
-  // Chart 2: top 12 unique ISINs by AUM, market value over time
-  // Sum all tranches per ISIN for correct ranking (multiple tranches share an ISIN).
-  const top12 = useMemo(() => {
-    const isinTotals = new Map();
-    const isinRep = new Map();
-    for (const p of visible) {
-      isinTotals.set(p.isin, (isinTotals.get(p.isin) ?? 0) + p.valorMercat);
-      if (!isinRep.has(p.isin)) isinRep.set(p.isin, p);
-    }
-    return [...isinTotals.entries()]
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 12)
-      .map(([isin]) => isinRep.get(isin));
-  }, [visible]);
-
-  const mvChartData = useMemo(() => {
-    if (Object.keys(PM_VALUES).length === 0) return null;
-    const dateSet = new Set();
-    top12.forEach(pos => {
-      const custodians = PM_VALUES[pos.isin];
-      if (!custodians) return;
-      Object.values(custodians).forEach(series => series.forEach(d => dateSet.add(d.date)));
-    });
-    const dates = [...dateSet].sort();
-    if (dates.length === 0) return null;
-    return dates.map(date => {
-      const row = { date };
-      top12.forEach(pos => {
-        const custodians = PM_VALUES[pos.isin];
-        if (!custodians) { row[pos.isin] = null; return; }
-        const total = Object.values(custodians)
-          .map(s => s.find(d => d.date === date)?.value ?? 0)
-          .reduce((a, b) => a + b, 0);
-        row[pos.isin] = total > 0 ? total : null;
-      });
-      return row;
-    });
-  }, [top12]);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
@@ -218,52 +201,22 @@ export function PMTipusTab({ tipus }) {
         </div>
       </div>
 
-      {/* ── Chart 2: market value over time ── */}
-      {mvChartData && (
-        <div style={card}>
-          <div style={secLabel}>
-            Valor de mercat · top {top12.length} posicions per AUM
-          </div>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={mvChartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-              <XAxis
-                dataKey="date"
-                tickFormatter={fmtMonth}
-                tick={{ fontSize: 9, fill: tc.textLight }}
-                axisLine={false} tickLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                tickFormatter={v => fmtM(v)}
-                tick={{ fontSize: 10, fill: tc.textLight }}
-                axisLine={false} tickLine={false} width={60}
-              />
-              <Tooltip
-                {...tooltipStyle}
-                formatter={(v, name) => [v != null ? fmtM(v) : "—", name]}
-                labelFormatter={fmtMonth}
-              />
-              <Legend wrapperStyle={{ fontSize: 9, paddingTop: 8 }} />
-              {top12.map((p, i) => (
-                <Line
-                  key={p.isin}
-                  dataKey={p.isin}
-                  name={p.nom.replace(/\bUCITS\b.*/, "").replace(/\bETF\b.*$/, "ETF").trim()}
-                  stroke={PM_COLORS[i % PM_COLORS.length]}
-                  strokeWidth={1.5}
-                  dot={false}
-                  connectNulls={false}
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
+      <div style={card}>
+        <div style={secLabel}>
+          Fluxos acumulats · top 5 posicions per inversió
         </div>
-      )}
+        <CumulativeFlowsChart
+          transactions={typeTxs}
+          valuesSeries={typeValueSeries}
+          groupBy="position"
+          topN={5}
+          height={260}
+        />
+      </div>
 
-      {/* ── Position list ── */}
+      {/* ── Merged position table (active + discontinued) ── */}
       <div style={{ ...card, overflowX: "auto" }}>
-        <div style={secLabel}>Posicions · ordenades per valor de mercat</div>
+        <div style={secLabel}>Totes les posicions · actives i discontinuades</div>
         <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 760 }}>
           <thead>
             <tr>
@@ -276,9 +229,11 @@ export function PMTipusTab({ tipus }) {
               <th style={{ ...th, textAlign: "right" }}>Des d'inici</th>
               <th style={{ ...th, textAlign: "right" }}>CAGR</th>
               <th style={{ ...th, textAlign: "right" }}>Valor mercat</th>
+              <th style={{ ...th, textAlign: "center" }}>Estat</th>
             </tr>
           </thead>
           <tbody>
+            {/* Active positions sorted by market value */}
             {visible.map((p, i) => {
               const rendInici = retMode === "net" ? netRendInici(p) : p.rendInici;
               const yh        = yearsHeld(p.dataCompra);
@@ -309,118 +264,55 @@ export function PMTipusTab({ tipus }) {
                   <td style={{ padding: "7px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.navy, fontWeight: 600, fontSize: 11 }}>
                     {fmtM(p.valorMercat)}
                   </td>
+                  <td style={{ padding: "7px 10px", textAlign: "center" }}>
+                    <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, fontWeight: 700,
+                      background: "#E8F8E8", color: "#1C6B1D" }}>
+                      En cartera
+                    </span>
+                  </td>
                 </tr>
               );
             })}
-          </tbody>
-        </table>
-        <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-          Des d'inici: retorn total acumulat. CAGR: retorn anualitzat equivalent. {retMode === "net" ? "Net TER per Abel Font." : "Brut (sense deducció TER)."}
-        </div>
-      </div>
-
-      {/* ── Closed positions ── */}
-      <ClosedPositions tipus={tipus} tc={tc} secLabel={secLabel} card={card} th={th} />
-
-    </div>
-  );
-}
-
-function ClosedPositions({ tipus, tc, secLabel, card, th }) {
-  const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
-
-  const byYear = useMemo(() => {
-    const rows = PM_CLOSED.filter(p => p.tipus === tipus);
-    const map = new Map();
-    rows.forEach(p => {
-      if (!map.has(p.any)) map.set(p.any, []);
-      map.get(p.any).push(p);
-    });
-    return [...map.entries()].sort((a, b) => b[0] - a[0]);
-  }, [tipus]);
-
-  // Build aggregate chart data: total value across all closed positions per month
-  const chartData = useMemo(() => {
-    const allIsins = byYear.flatMap(([, rows]) => rows.map(p => p.isin));
-    const dateMap = new Map();
-    allIsins.forEach(isin => {
-      const custodians = PM_VALUES[isin];
-      if (!custodians) return;
-      Object.values(custodians).forEach(series =>
-        series.forEach(({ date, value }) => {
-          dateMap.set(date, (dateMap.get(date) ?? 0) + value);
-        })
-      );
-    });
-    if (dateMap.size === 0) return null;
-    return [...dateMap.entries()].sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, value]) => ({ date, value }));
-  }, [byYear]);
-
-  if (byYear.length === 0) return null;
-  const total = byYear.reduce((s, [, rows]) => s + rows.length, 0);
-  const tooltipStyle = { contentStyle: { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }, labelStyle: { color: tc.text, fontWeight: 600, fontSize: 11 } };
-
-  return (
-    <div style={{ ...card, opacity: 0.85 }}>
-      <div
-        onClick={() => setOpen(o => !o)}
-        style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", userSelect: "none" }}
-      >
-        <div style={secLabel}>Posicions tancades · {total} vehicles</div>
-        <span style={{ fontSize: 11, color: tc.textLight, marginLeft: "auto" }}>{open ? "▲" : "▼"}</span>
-      </div>
-
-      {open && chartData && (
-        <div style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.07em", marginBottom: 6 }}>Valor de mercat agregat (posicions tancades)</div>
-          <ResponsiveContainer width="100%" height={180}>
-            <LineChart data={chartData} margin={{ top: 4, right: 16, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-              <XAxis dataKey="date" tickFormatter={fmtMonth} tick={{ fontSize: 9, fill: tc.textLight }} axisLine={false} tickLine={false} interval="preserveStartEnd" />
-              <YAxis tickFormatter={v => fmtM(v)} tick={{ fontSize: 10, fill: tc.textLight }} axisLine={false} tickLine={false} width={60} />
-              <Tooltip {...tooltipStyle} formatter={v => [fmtM(v), "Valor"]} labelFormatter={fmtMonth} />
-              <Line dataKey="value" stroke={tc.textLight} strokeWidth={1.5} dot={false} connectNulls />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      )}
-
-      {open && byYear.map(([year, rows]) => (
-        <div key={year} style={{ marginTop: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: tc.textLight, letterSpacing: "0.07em", marginBottom: 6 }}>
-            Tancat {year} · {rows.length} posicions
-          </div>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
-            <thead>
-              <tr>
-                <th style={{ ...th, textAlign: "left" }}>Nom</th>
-                <th style={{ ...th, textAlign: "left" }}>ISIN</th>
-                <th style={{ ...th, textAlign: "left" }}>Custodi</th>
-                <th style={{ ...th, textAlign: "center" }}>Dades</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map(p => (
-                <tr key={p.isin}
-                  onClick={() => navigate(`/mercats-publics/${p.isin}`)}
-                  style={{ borderBottom: `1px solid ${tc.border}`, cursor: "pointer" }}
-                  onMouseEnter={e => e.currentTarget.style.background = tc.bgAlt}
-                  onMouseLeave={e => e.currentTarget.style.background = ""}
-                >
-                  <td style={{ padding: "5px 10px", color: tc.text }}>{p.nom}</td>
-                  <td style={{ padding: "5px 10px", fontFamily: "'DM Mono',monospace", color: tc.textLight, fontSize: 10 }}>{p.isin}</td>
-                  <td style={{ padding: "5px 10px", color: tc.textLight }}>{p.custodian || "—"}</td>
-                  <td style={{ padding: "5px 10px", textAlign: "center" }}>
-                    <span style={{ fontSize: 10, color: tc.navy }}>→</span>
+            {/* Discontinued positions sorted by name */}
+            {[...PM_CLOSED.filter(p => p.tipus === tipus)]
+              .sort((a, b) => a.nom.localeCompare(b.nom))
+              .map(p => (
+                <tr key={p.isin} className="hoverable"
+                  style={{ borderBottom: `1px solid ${tc.border}`, opacity: 0.7 }}>
+                  <td style={{ padding: "7px 10px" }}>
+                    <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: tc.border }} />
+                  </td>
+                  <td style={{ padding: "7px 10px" }}>
+                    <Link to={`/mercats-publics/${p.isin}`}
+                      style={{ color: tc.textMid, textDecoration: "none", fontWeight: 500 }}>
+                      {p.nom}
+                    </Link>
+                  </td>
+                  <td style={{ padding: "7px 10px", color: tc.textLight, fontSize: 11 }}>{p.custodian ?? "—"}</td>
+                  {YEAR_FIELDS.map(({ label }) => (
+                    <td key={label} style={{ padding: "7px 10px", textAlign: "right", color: tc.textLight }}>—</td>
+                  ))}
+                  <td style={{ padding: "7px 10px", textAlign: "right", color: tc.textLight }}>—</td>
+                  <td style={{ padding: "7px 10px", textAlign: "right", color: tc.textLight }}>—</td>
+                  <td style={{ padding: "7px 10px", textAlign: "right", color: tc.textLight }}>—</td>
+                  <td style={{ padding: "7px 10px", textAlign: "center" }}>
+                    <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, fontWeight: 700,
+                      background: tc.bgAlt, color: tc.textLight, border: `1px solid ${tc.border}` }}>
+                      Discontinuat
+                    </span>
                   </td>
                 </tr>
               ))}
-            </tbody>
-          </table>
+          </tbody>
+        </table>
+        <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+          Des d'inici: retorn total acumulat. CAGR: retorn anualitzat equivalent.{" "}
+          {retMode === "net" ? "Net TER per Abel Font." : "Brut (sense deducció TER)."}
+          {" "}Posicions discontinuades sense dades de rendiment.
         </div>
-      ))}
+      </div>
+
     </div>
   );
 }
+
