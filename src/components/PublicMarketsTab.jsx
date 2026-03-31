@@ -4,11 +4,10 @@ import {
   ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
 } from "recharts";
 import { useTheme } from "../theme.js";
-import { fmtM, cagr, fmtMonth, yearsHeld } from "../utils.js";
+import { fmtM, cagr, fmtMonth, fmtMonthKey, yearsHeld } from "../utils.js";
 import { Badge } from "./SharedComponents.jsx";
 import { PM_MONTHLY, PM_MANAGERS, PM_POSITIONS } from "../data/publicMarkets.js";
 import { Link } from "react-router-dom";
-import { PM_VALUES } from "../data/portfolioValues.js";
 import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
 import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
 
@@ -257,85 +256,47 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
       total: weightedReturn(field),
     })), []);
 
-  // Build monthly chart data from PM_VALUES mark-to-market (falls back to null if empty)
-  const mvData = useMemo(() => {
-    if (Object.keys(PM_VALUES).length === 0) return null;
-
-    // Aggregate value per date × custodian group
-    const byDate = {};
-    for (const [isin, custodians] of Object.entries(PM_VALUES)) {
-      const tipus = ISIN_TIPUS[isin] ?? null;
-      for (const [custodian, series] of Object.entries(custodians)) {
-        // CaixaBank custodian covers both direct Caixa positions and Abel Font positions
-        const gestorGroup =
-          (custodian === "Abel Font" || custodian === "Bankinter")  ? "abel" :
-          (custodian === "CaixaBank" && ABEL_ISINS.has(isin))       ? "abel" :
-          (custodian === "CaixaBank")                               ? "caixa" :
-          (custodian === "UBS" || custodian === "Credit Suisse")    ? "ubs" :
-          "caixa"; // fallback (JPMorgan, etc.)
-
-        for (const { date, value } of series) {
-          if (!byDate[date]) byDate[date] = { total: 0, caixa: 0, ubs: 0, abel: 0, rv: 0, rf: 0 };
-          byDate[date].total += value;
-          byDate[date][gestorGroup] += value;
-          if (tipus === "RV") byDate[date].rv += value;
-          else               byDate[date].rf += value;
-        }
-      }
-    }
-
-    return Object.keys(byDate).sort().map(date => {
-      const d = byDate[date];
-      const monthKey = date.slice(0, 7);
-      const andbank = ANDBANK_BY_MONTH.get(monthKey) ?? andbankVal;
-      return {
-        label:   fmtMonth(date),
-        total:   d.total + andbank,
-        rv:      d.rv,
-        rf:      d.rf,
-        caixa:   d.caixa,
-        ubs:     d.ubs,
-        abel:    d.abel,
-        andbank,
-      };
-    });
-  }, []);
 
   // ── Evolution chart data ────────────────────────────────
   const chartData = useMemo(() => {
-    // Prefer PM_VALUES mark-to-market for total + gestor views.
-    // Actiu (RV/RF split) always uses PM_MONTHLY — UBS/Caixa positions lack individual ISIN
-    // type data in PM_VALUES, so their value would land in RF by default, inflating that bucket.
-    if (mvData && chartView !== "actiu") {
-      if (chartView === "total") return mvData.map(d => ({ label: d.label, total: d.total }));
-      return mvData.map(d => ({
-        label:   d.label,
-        caixa:   d.caixa,
-        ubs:     d.ubs,
-        abel:    d.abel,
-        andbank: d.andbank,
-      }));
+    const START_MONTH = "2019-01";
+    const firstPMMonth = PM_MONTHLY[0].date.slice(0, 7); // "2023-12"
+
+    // Pad from 2019-01 up to (not including) first PM_MONTHLY month
+    const padRows = [];
+    let cur = START_MONTH;
+    while (cur < firstPMMonth) {
+      padRows.push({ month: cur });
+      const [y, mo] = cur.split("-").map(Number);
+      cur = mo === 12
+        ? `${y + 1}-01`
+        : `${y}-${String(mo + 1).padStart(2, "0")}`;
     }
-    // PM_MONTHLY for actiu view (correct RV/RF split) and fallback for all views
-    return PM_MONTHLY.map(d => {
+
+    // Real data rows from PM_MONTHLY
+    const dataRows = PM_MONTHLY.map(d => {
+      const month = d.date.slice(0, 7);
       if (chartView === "total") return {
-        label: d.label,
+        month,
         total: d.caixaRV + d.caixaRF + d.ubsRV + d.ubsRF + (d.abelBK ?? 0) + d.andbank,
       };
       if (chartView === "actiu") return {
-        label: d.label,
+        month,
         rv: d.caixaRV + d.ubsRV + (d.abelBK != null ? d.abelBK * ABEL_RV_SPLIT : 0),
         rf: d.caixaRF + d.ubsRF + (d.abelBK != null ? d.abelBK * ABEL_RF_SPLIT : 0) + d.andbank,
       };
+      // gestor view
       return {
-        label:   d.label,
+        month,
         caixa:   d.caixaRV + d.caixaRF,
         ubs:     d.ubsRV + d.ubsRF,
         abel:    d.abelBK ?? 0,
         andbank: d.andbank,
       };
     });
-  }, [chartView, mvData]);
+
+    return [...padRows, ...dataRows];
+  }, [chartView]);
 
   const totalValueSeries = useMemo(
     () => PM_MONTHLY.map(m => ({
@@ -491,10 +452,18 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
               ))}
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-            <XAxis dataKey="label" tick={{ fontSize: 10, fill: tc.textLight }} interval={2} />
+            <XAxis
+              dataKey="month"
+              tickFormatter={fmtMonthKey}
+              tick={{ fontSize: 10, fill: tc.textLight }}
+              interval={11}
+              axisLine={false}
+              tickLine={false}
+            />
             <YAxis tickFormatter={fmtM} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
             <Tooltip
               {...tooltipStyle}
+              labelFormatter={fmtMonthKey}
               formatter={(v, name) => [fmtM(v), name.charAt(0).toUpperCase() + name.slice(1)]}
             />
             {chartView === "total" && (
@@ -523,10 +492,8 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
 
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
           {chartView === "gestor"
-            ? "CaixaBank, UBS, Bankinter i WAM–Andbank mostrats per separat. WAM–Andbank amb sèrie mensual interpolada (anchors anuals)."
-            : mvData
-              ? "WAM i Andbank inclosos amb interpolació lineal (anchors Dec 2023–Mar 2026). Posicions no confirmades excloses."
-              : "Dades de PM_MONTHLY (font manual). WAM i Andbank amb sèrie mensual interpolada."}
+            ? "CaixaBank, UBS, Bankinter i WAM–Andbank per separat. WAM–Andbank amb sèrie mensual interpolada."
+            : "Dades de PM_MONTHLY (font manual). Dades disponibles des del Desembre 2023."}
         </div>
       </div>
 
