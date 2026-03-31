@@ -126,7 +126,7 @@ export function CumulativeFlowsChart({
           ? pos.nom.replace(/\bUCITS ETF\b.*/, "ETF").replace(/\bUCITS\b.*/, "").trim()
           : isin;
       });
-      colorMap["altres"] = tc.border ?? "#C8D0D8";
+      colorMap["altres"] = "#BAB0AC";
       nameMap["altres"]  = "Altres";
     } else {
       colorMap["total"] = "#2B5070";
@@ -209,7 +209,9 @@ export function CumulativeFlowsChart({
             name={nameMap[k] ?? k}
             stackId={isStacked ? "s" : undefined}
             fill={colorMap[k] ?? "#BAB0AC"}
+            fillOpacity={0.72}
             maxBarSize={32}
+            radius={isStacked ? undefined : [3, 3, 0, 0]}
           />
         ))}
         {hasPortfolioValue && (
