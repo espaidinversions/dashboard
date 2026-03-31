@@ -277,7 +277,7 @@ export function PMTipusTab({ tipus }) {
             {[...PM_CLOSED.filter(p => p.tipus === tipus)]
               .sort((a, b) => a.nom.localeCompare(b.nom))
               .map(p => (
-                <tr key={p.isin} className="hoverable"
+                <tr key={`${p.isin}-${p.any ?? p.nom}`} className="hoverable"
                   style={{ borderBottom: `1px solid ${tc.border}`, opacity: 0.7 }}>
                   <td style={{ padding: "7px 10px" }}>
                     <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: tc.border }} />
