@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
 import {
-  ComposedChart, LineChart, Line, Bar, XAxis, YAxis, Tooltip,
+  LineChart, Line, Bar, XAxis, YAxis, Tooltip,
   ReferenceLine, ResponsiveContainer, Legend, CartesianGrid,
 } from "recharts";
 import { useParams, useNavigate } from "react-router-dom";
@@ -12,6 +12,7 @@ import { PM_CLOSED_VALUES } from "../data/pmClosedValues.js";
 import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
 import { PM_TER } from "../data/pmTer.js";
 import { loadPMOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
+import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
 
 const ISIN_RE = /([A-Z]{2}[A-Z0-9]{10})/;
 const cleanIsin = raw => (ISIN_RE.exec(String(raw ?? "").toUpperCase())?.[1]) ?? raw;
@@ -113,65 +114,25 @@ export function PMPositionDetail() {
       }));
   }, [p, isAbelFont]);
 
-  const valueData = useMemo(() => {
+  const positionTxs = useMemo(
+    () => PM_TRANSACTIONS.filter(t => t.isin === isin),
+    [isin]
+  );
+
+  const positionValues = useMemo(() => {
     const custodianData = PM_VALUES[isin] ?? (isClosed ? PM_CLOSED_VALUES[isin] : null);
-    const acqMonth = p.dataCompra ? p.dataCompra.slice(0, 7) : null;
-
-    // Buy inflows for this position
-    const txBuys = PM_TRANSACTIONS.filter(t => t.isin === isin && t.action === "buy" && t.date && t.valueEur);
-    const inflowByDate = {};
-    txBuys.forEach(t => { inflowByDate[t.date] = (inflowByDate[t.date] || 0) + t.valueEur; });
-    const inflowDates = Object.keys(inflowByDate).filter(d => !acqMonth || d >= acqMonth);
-
-    const hasCustodianData = custodianData && Object.values(custodianData).some(arr => arr.length > 0);
-    const custodians = hasCustodianData ? Object.keys(custodianData).filter(c => custodianData[c].length > 0) : [];
-
-    const dateSet = new Set();
-    custodians.forEach(c => custodianData[c].forEach(d => dateSet.add(d.date)));
-    inflowDates.forEach(d => dateSet.add(d));
-    const dates = [...dateSet].sort().filter(d => !acqMonth || d >= acqMonth);
-
-    if (dates.length === 0 && inflowDates.length === 0) return null;
-
-    // Cumulative units from all transactions (buy +, sell -)
-    const txAll = PM_TRANSACTIONS.filter(t => t.isin === isin && t.date && t.units != null);
-    const unitDeltaByDate = {};
-    txAll.forEach(t => {
-      const delta = t.action === "buy" ? t.units : -t.units;
-      unitDeltaByDate[t.date] = (unitDeltaByDate[t.date] ?? 0) + delta;
-    });
-    const sortedUnitDates = Object.keys(unitDeltaByDate).sort();
-    let runUnits = 0;
-    let unitIdx = 0;
-
-    // Cumulative buy cost step function: increases at each buy transaction date
-    const sortedBuyDates = [...inflowDates].sort();
-    let runCost = 0;
-    let buyIdx = 0;
-
-    const rows = dates.map(date => {
-      const row = { date };
-      custodians.forEach(c => {
-        row[c] = custodianData[c].find(d => d.date === date)?.value ?? null;
-      });
-      while (unitIdx < sortedUnitDates.length && sortedUnitDates[unitIdx] <= date) {
-        runUnits += unitDeltaByDate[sortedUnitDates[unitIdx]];
-        unitIdx++;
-      }
-      while (buyIdx < sortedBuyDates.length && sortedBuyDates[buyIdx] <= date) {
-        runCost += inflowByDate[sortedBuyDates[buyIdx]] ?? 0;
-        buyIdx++;
-      }
-      if (inflowByDate[date]) row.inflow = inflowByDate[date];
-      if (runUnits > 0) row.units = Math.round(runUnits);
-      if (runCost > 0) row.costLine = runCost;
-      return row;
-    });
-
-    const hasUnits = rows.some(r => r.units != null);
-
-    return { custodians, rows, inflowDates, inflowByDate, hasUnits };
-  }, [isin, p.dataCompra]);
+    if (!custodianData) return [];
+    const monthMap = new Map();
+    Object.values(custodianData).forEach(series =>
+      series.forEach(({ date, value }) => {
+        const month = date.slice(0, 7);
+        monthMap.set(month, (monthMap.get(month) ?? 0) + value);
+      })
+    );
+    return [...monthMap.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, value]) => ({ date: month, value }));
+  }, [isin, isClosed]);
 
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card        = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -253,81 +214,25 @@ export function PMPositionDetail() {
         )}
       </div>
 
-      {/* ── Market value over time + inflows ── */}
-      {valueData && (
-        <div style={card}>
-          <div style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 12 }}>
-            <div style={{ ...secLabel, marginBottom: 0, flex: 1 }}>Valor de mercat · des de la compra</div>
-            <div style={{ display: "flex", gap: 12 }}>
-              {valueData.inflowDates.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: tc.textLight }}>
-                  <svg width="12" height="12"><line x1="6" y1="0" x2="6" y2="12" stroke={tc.navy} strokeWidth="1.5" strokeDasharray="4 3" strokeOpacity={0.6}/></svg>
-                  {valueData.inflowDates.length} entrada{valueData.inflowDates.length > 1 ? "es" : ""} de capital
-                </div>
-              )}
-              {valueData.inflowDates.length > 0 && (
-                <div style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 10, color: "#E8A020" }}>
-                  <svg width="18" height="10"><line x1="0" y1="5" x2="18" y2="5" stroke="#E8A020" strokeWidth="1.5" strokeDasharray="5 3"/></svg>
-                  Cost acumulat
-                </div>
-              )}
-            </div>
-          </div>
-          <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart data={valueData.rows} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-              <XAxis
-                dataKey="date"
-                tickFormatter={fmtMonth}
-                tick={{ fontSize: 9, fill: tc.textLight }}
-                axisLine={false} tickLine={false}
-                interval="preserveStartEnd"
-              />
-              <YAxis
-                yAxisId="val"
-                tickFormatter={v => fmtM(v)}
-                tick={{ fontSize: 10, fill: tc.textLight }}
-                axisLine={false} tickLine={false} width={60}
-              />
-              <YAxis
-                yAxisId="units"
-                orientation="right"
-                tickFormatter={v => v >= 1000 ? (v / 1000).toFixed(1) + "K" : v.toLocaleString("ca-ES")}
-                tick={{ fontSize: 9, fill: tc.textLight }}
-                axisLine={false} tickLine={false} width={46}
-              />
-              <Tooltip
-                {...tooltipStyle}
-                formatter={(v, name) => {
-                  if (name === "units")  return v != null ? [v.toLocaleString("ca-ES"), "Participacions"] : null;
-                  return [v != null ? fmtM(v) : "—", name];
-                }}
-                labelFormatter={fmtMonth}
-              />
-              {valueData.rows.some(r => r.costLine != null) && (
-                <Line yAxisId="val" dataKey="costLine" name="Cost acumulat"
-                  stroke="#E8A020" strokeWidth={1.5} strokeDasharray="5 3"
-                  dot={false} connectNulls type="stepAfter" legendType="none" />
-              )}
-              {valueData.inflowDates.map(d => (
-                <ReferenceLine key={d} yAxisId="val" x={d}
-                  stroke={tc.navy} strokeDasharray="4 3" strokeOpacity={0.55} strokeWidth={1.5}
-                  label={{ value: `+${fmtM(valueData.inflowByDate[d])}`, position: "insideTopRight", fontSize: 8, fill: tc.navy, opacity: 0.75 }} />
-              ))}
-              {valueData.custodians.map((c, i) => (
-                <Line key={c} yAxisId="val" dataKey={c} name={c}
-                  stroke={["#4E79A7", "#F28E2B", "#E15759", "#76B7B2"][i % 4]}
-                  strokeWidth={2} dot={false} connectNulls={false} />
-              ))}
-              {valueData.hasUnits && (
-                <Line yAxisId="units" dataKey="units" name="units"
-                  stroke={tc.green} strokeWidth={1.5} strokeDasharray="3 2"
-                  dot={false} connectNulls type="stepAfter" legendType="none" />
-              )}
-            </ComposedChart>
-          </ResponsiveContainer>
+      {/* ── Fluxos acumulats i valor de cartera ── */}
+      <div style={card}>
+        <div style={{ fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase",
+          color: tc.textLight, fontWeight: 600, marginBottom: 12 }}>
+          Fluxos acumulats · valor de cartera
         </div>
-      )}
+        {positionValues.length > 0 || positionTxs.length > 0 ? (
+          <CumulativeFlowsChart
+            transactions={positionTxs}
+            valuesSeries={positionValues}
+            groupBy="total"
+            height={220}
+          />
+        ) : (
+          <p style={{ fontSize: 11, color: tc.textLight, fontStyle: "italic", padding: "8px 0" }}>
+            Sense dades de preus disponibles per a aquesta posició.
+          </p>
+        )}
+      </div>
 
       {/* ── Historial de transaccions ── */}
       <PositionTxHistory isin={isin} tc={tc} card={card} secLabel={secLabel} />
