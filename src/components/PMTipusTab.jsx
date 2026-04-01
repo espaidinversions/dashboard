@@ -1,8 +1,6 @@
 import React, { useMemo, useState } from "react";
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, ReferenceLine,
-} from "recharts";
+import ReactECharts from "echarts-for-react";
+import { ecTheme } from "../echartsTheme.js";
 import { Link } from "react-router-dom";
 import { PM_POSITIONS, PM_CLOSED, PM_MONTHLY } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
@@ -72,8 +70,6 @@ export function PMTipusTab({ tipus }) {
   const secLabel     = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
   const th           = { padding: "8px 10px", fontSize: 10, letterSpacing: "0.09em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
-  const tooltipStyle = { contentStyle: { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }, labelStyle: { color: tc.text, fontWeight: 600, fontSize: 11 } };
-
   const positions = useMemo(
     () => PM_POSITIONS.filter(p => p.tipus === tipus),
     [tipus]
@@ -186,30 +182,52 @@ export function PMTipusTab({ tipus }) {
       {/* ── Chart 1: portfolio weighted return over time ── */}
       <div style={card}>
         <div style={secLabel}>Rendiment ponderat per any · cartera visible</div>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={portfolioData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-            <XAxis dataKey="year" tick={{ fontSize: 11, fill: tc.textLight }} axisLine={false} tickLine={false} />
-            <YAxis
-              tickFormatter={v => v.toFixed(0) + "%"}
-              tick={{ fontSize: 10, fill: tc.textLight }}
-              axisLine={false} tickLine={false} width={40}
-            />
-            <ReferenceLine y={0} stroke={tc.border} strokeDasharray="4 2" />
-            <Tooltip
-              {...tooltipStyle}
-              formatter={v => [(v >= 0 ? "+" : "") + v.toFixed(2) + "%", "Cartera"]}
-            />
-            <Line
-              dataKey="portfolio"
-              name="Cartera"
-              stroke={tc.navy}
-              strokeWidth={2.5}
-              dot={{ r: 5, fill: tc.navy }}
-              connectNulls
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        {(() => {
+          const t = ecTheme(tc);
+          const option = {
+            grid: { top: 8, right: 8, bottom: 32, left: 0, containLabel: true },
+            tooltip: {
+              ...t.tooltip,
+              trigger: "axis",
+              formatter: (params) => {
+                const p = params[0];
+                if (!p || p.value == null) return "";
+                const sign = p.value >= 0 ? "+" : "";
+                return `<div style="font-weight:600">${p.axisValue}</div><div>${p.marker}Cartera: ${sign}${p.value.toFixed(2)}%</div>`;
+              },
+            },
+            xAxis: {
+              type: "category",
+              data: portfolioData.map(d => d.year),
+              axisLabel: { fontSize: 11, color: tc.textLight },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            yAxis: {
+              type: "value",
+              axisLabel: { fontSize: 10, color: tc.textLight, formatter: v => v.toFixed(0) + "%" },
+              splitLine: { lineStyle: { color: tc.border } },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            series: [{
+              name: "Cartera",
+              type: "line",
+              data: portfolioData.map(d => d.portfolio),
+              lineStyle: { color: tc.navy, width: 2 },
+              itemStyle: { color: tc.navy },
+              symbol: "circle", symbolSize: 8,
+              connectNulls: true,
+              markLine: {
+                data: [{ yAxis: 0 }],
+                lineStyle: { color: tc.border, type: "dashed", width: 1 },
+                symbol: "none",
+                label: { show: false },
+              },
+            }],
+          };
+          return <ReactECharts option={option} style={{ width: "100%", height: 200 }} opts={{ renderer: "canvas" }} />;
+        })()}
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 6, fontStyle: "italic" }}>
           {retMode === "net"
             ? "Ponderat per valor de mercat. Abel Font net de TER. Gestors sense dades del any exclosos."
