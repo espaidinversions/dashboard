@@ -96,7 +96,7 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280
           tooltip: {
             ...t.tooltip,
             trigger: "axis",
-            axisPointer: { type: "shadow" },
+            axisPointer: { type: "line" },
             formatter: (params) => {
               const label = fmtMonthKey(params[0]?.axisValue ?? "");
               let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
@@ -165,6 +165,7 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280
                 label: { show: true, formatter: "Compra", position: "insideEndTop", fontSize: 9, color: tc.green ?? "#59A14F" },
               },
               silent: true,
+              showInLegend: false,
             }] : []),
             ...(mode === "price" ? [
               {
@@ -204,6 +205,7 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280
         return (
           <ReactECharts
             option={option}
+            notMerge={true}
             style={{ width: "100%", height }}
             opts={{ renderer: "canvas" }}
           />
