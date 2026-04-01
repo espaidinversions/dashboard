@@ -67,10 +67,6 @@ function weightedReturn(field, tipus = null) {
 }
 
 // ── Module-level statics ────────────────────────────────────
-const andbankVal = PM_MANAGERS.find(m => m.id === "andbank")?.valorActual ?? 0;
-
-// Monthly Andbank lookup: "YYYY-MM" → andbank value
-const ANDBANK_BY_MONTH = new Map(PM_MONTHLY.map(d => [d.date, d.andbank]));
 
 // Map mgrId → default tipus filter for expand
 const DEFAULT_EXPAND_TIPUS = {
@@ -78,9 +74,7 @@ const DEFAULT_EXPAND_TIPUS = {
   "abel": "all", "andbank": null,
 };
 
-// Static lookups derived from PM_POSITIONS (imported data never changes at runtime)
-const ISIN_TIPUS = Object.fromEntries(PM_POSITIONS.map(p => [p.isin, p.tipus]));
-const ABEL_ISINS = new Set(PM_POSITIONS.filter(p => p.gestor === "Abel Font").map(p => p.isin));
+// Static lookup derived from PM_POSITIONS (imported data never changes at runtime)
 const ISIN_TO_ID  = Object.fromEntries(PM_POSITIONS.map(p => [p.isin, p.id]));
 
 // Get PM_POSITIONS for a manager row (only Bankinter/Abel has individual position tracking)
