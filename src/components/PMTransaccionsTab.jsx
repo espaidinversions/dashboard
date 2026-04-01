@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
-} from "recharts";
+import ReactECharts from "echarts-for-react";
+import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
@@ -102,22 +101,6 @@ export function PMTransaccionsTab() {
     borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap", userSelect: "none",
   };
 
-  const ChartTip = ({ active, payload, label }) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 7,
-        padding: "10px 14px", boxShadow: "0 4px 12px rgba(0,0,0,.18)", minWidth: 160 }}>
-        <p style={{ color: tc.navy, margin: "0 0 6px", fontWeight: 700, fontSize: 12 }}>{label}</p>
-        {payload.filter(p => p.value > 0).map((p, i) => (
-          <p key={i} style={{ color: p.fill, margin: "2px 0", fontSize: 12,
-            display: "flex", justifyContent: "space-between", gap: 16 }}>
-            <span>{p.name}</span><span style={{ fontWeight: 700 }}>{fmtM(p.value)}</span>
-          </p>
-        ))}
-      </div>
-    );
-  };
-
   const rowMain = dark ? tc.card  : "#fff";
   const rowAlt  = dark ? tc.bgAlt : "#FAFBFC";
 
@@ -130,16 +113,59 @@ export function PMTransaccionsTab() {
           textTransform: "uppercase", marginBottom: 14, fontWeight: 600 }}>
           Flux Mensual · Mercats Públics
         </div>
-        <ResponsiveContainer width="100%" height={220}>
-          <BarChart data={chartData} margin={{ left: 10, right: 10, top: 5, bottom: 30 }} barGap={3} barCategoryGap="28%">
-            <XAxis dataKey="label" tick={{ fill: tc.textMid, fontSize: 9 }} axisLine={false} tickLine={false} angle={-40} textAnchor="end" />
-            <YAxis tickFormatter={v => fmtM(v)} tick={{ fill: tc.textLight, fontSize: 10 }} axisLine={false} tickLine={false} width={72} />
-            <Tooltip content={<ChartTip />} />
-            <Legend formatter={v => <span style={{ color: tc.textMid, fontSize: 11 }}>{v}</span>} />
-            <Bar dataKey="Compres" fill={tc.navy}  radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Vendes"  fill={tc.green} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        {(() => {
+          const t = ecTheme(tc);
+          const option = {
+            grid: { top: 8, right: 8, bottom: 56, left: 0, containLabel: true },
+            tooltip: {
+              ...t.tooltip,
+              trigger: "axis",
+              axisPointer: { type: "shadow" },
+              formatter: (params) => {
+                const label = params[0]?.axisValue ?? "";
+                let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                params.forEach(p => {
+                  if (!p.value) return;
+                  html += `<div>${p.marker}${p.seriesName}: ${fmtM(p.value)}</div>`;
+                });
+                return html;
+              },
+            },
+            legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
+            xAxis: {
+              type: "category",
+              data: chartData.map(d => d.label),
+              axisLabel: { fontSize: 9, color: tc.textLight, rotate: -40 },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            yAxis: {
+              type: "value",
+              axisLabel: { fontSize: 10, color: tc.textLight, formatter: v => fmtM(v) },
+              splitLine: { lineStyle: { color: tc.border } },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            series: [
+              {
+                name: "Compres",
+                type: "bar",
+                data: chartData.map(d => d.Compres ?? null),
+                itemStyle: { color: tc.navy, borderRadius: [4, 4, 0, 0] },
+                barMaxWidth: 28,
+                barGap: "10%",
+              },
+              {
+                name: "Vendes",
+                type: "bar",
+                data: chartData.map(d => d.Vendes ?? null),
+                itemStyle: { color: tc.green, borderRadius: [4, 4, 0, 0] },
+                barMaxWidth: 28,
+              },
+            ],
+          };
+          return <ReactECharts option={option} style={{ width: "100%", height: 220 }} opts={{ renderer: "canvas" }} />;
+        })()}
       </div>
 
       {/* ── Accordion table ── */}
