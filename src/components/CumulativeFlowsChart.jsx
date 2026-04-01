@@ -74,17 +74,30 @@ export function CumulativeFlowsChart({
       monthMap[month][key] = (monthMap[month][key] ?? 0) + t.valueEur;
     });
 
-    const months = Object.keys(monthMap).sort();
-    if (months.length === 0) return { chartData: [], keys: [], colorMap: {}, nameMap: {} };
+    const txMonths = Object.keys(monthMap).sort();
+    if (txMonths.length === 0) return { chartData: [], keys: [], colorMap: {}, nameMap: {} };
 
-    // Build cumulative running totals
+    // Pad x-axis from 2019-01 to first transaction month for comparability
+    const START_MONTH = "2019-01";
+    const allMonths = [];
+    let cur = START_MONTH < txMonths[0] ? START_MONTH : txMonths[0];
+    const lastTxMonth = txMonths[txMonths.length - 1];
+    while (cur <= lastTxMonth) {
+      allMonths.push(cur);
+      const [y, mo] = cur.split("-").map(Number);
+      cur = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, "0")}`;
+    }
+
+    // Build cumulative running totals across full range
     const running = {};
-    const rows = months.map(month => {
+    const rows = allMonths.map(month => {
       const row = { month };
-      Object.entries(monthMap[month]).forEach(([k, v]) => {
-        running[k] = (running[k] ?? 0) + v;
-      });
-      // Emit current running total for every known key (forward-fill zeros)
+      if (monthMap[month]) {
+        Object.entries(monthMap[month]).forEach(([k, v]) => {
+          running[k] = (running[k] ?? 0) + v;
+        });
+      }
+      // Emit current running total for every known key (forward-fill)
       Object.entries(running).forEach(([k, v]) => { row[k] = v; });
       return row;
     });

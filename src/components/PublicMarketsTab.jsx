@@ -77,13 +77,13 @@ const DEFAULT_EXPAND_TIPUS = {
 // Static lookup derived from PM_POSITIONS (imported data never changes at runtime)
 const ISIN_TO_ID  = Object.fromEntries(PM_POSITIONS.map(p => [p.isin, p.id]));
 
-// Get PM_POSITIONS for a manager row — all four custodians are now expandable
+// Get PM_POSITIONS for a manager row — filtered by custodian bank
 function getMgrPositions(mgrId) {
   let rows;
   if (mgrId === "abel") {
-    rows = PM_POSITIONS.filter(p => p.gestor === "Abel Font");
+    rows = PM_POSITIONS.filter(p => p.custodian === "Bankinter");
   } else if (mgrId === "caixa") {
-    rows = PM_POSITIONS.filter(p => p.custodian === "CaixaBank" && p.gestor !== "Abel Font");
+    rows = PM_POSITIONS.filter(p => p.custodian === "CaixaBank");
   } else if (mgrId === "ubs") {
     rows = PM_POSITIONS.filter(p => p.custodian === "UBS" || p.custodian === "Credit Suisse");
   } else if (mgrId === "andbank") {
@@ -530,6 +530,9 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
           groupBy={flowGroupBy}
           height={240}
         />
+        <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+          Capital invertit: cobreix posicions Abel Font (CaixaBank + Bankinter). UBS i WAM–Andbank sense dades de transaccions individuals — per això el valor de cartera supera el capital registrat.
+        </div>
       </div>
 
       {/* ── ④ Manager table ── */}
