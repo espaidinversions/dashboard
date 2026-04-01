@@ -1,8 +1,6 @@
 import React, { useMemo } from "react";
-import {
-  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, Legend,
-} from "recharts";
+import ReactECharts from "echarts-for-react";
+import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonthKey } from "../utils.js";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
@@ -160,86 +158,79 @@ export function CumulativeFlowsChart({
   const isStacked        = groupBy !== "total";
   const hasPortfolioValue = chartData.some(r => r.portfolioValue != null);
 
+  const t = ecTheme(tc);
+
+  const option = {
+    grid: { top: 32, right: hasPortfolioValue ? 68 : 8, bottom: isStacked ? 48 : 32, left: 0, containLabel: true },
+    legend: isStacked
+      ? { bottom: 0, textStyle: { fontSize: 9, color: tc.textLight }, formatter: n => nameMap[n] ?? n }
+      : null,
+    tooltip: {
+      ...t.tooltip,
+      trigger: "axis",
+      axisPointer: { type: "shadow" },
+      formatter: (params) => {
+        const label = fmtMonthKey(params[0]?.axisValue ?? "");
+        let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+        params.forEach(p => {
+          if (p.value == null) return;
+          const name = p.seriesName === "Valor cartera" ? "Valor cartera" : nameMap[p.seriesName] ?? p.seriesName;
+          html += `<div>${p.marker}${name}: ${fmtM(p.value)}</div>`;
+        });
+        return html;
+      },
+    },
+    xAxis: {
+      type: "category",
+      data: chartData.map(r => r.month),
+      axisLabel: { ...t.axisLabel, formatter: fmtMonthKey, hideOverlap: true },
+      axisLine: t.axisLine,
+      axisTick: t.axisTick,
+    },
+    yAxis: [
+      {
+        type: "value",
+        axisLabel: { ...t.axisLabel, fontSize: 10, formatter: v => fmtM(v) },
+        splitLine: t.splitLine,
+        axisLine: t.axisLine,
+        axisTick: t.axisTick,
+      },
+      ...(hasPortfolioValue ? [{
+        type: "value",
+        position: "right",
+        axisLabel: { ...t.axisLabel, formatter: v => fmtM(v) },
+        splitLine: { show: false },
+        axisLine: t.axisLine,
+        axisTick: t.axisTick,
+      }] : []),
+    ],
+    series: [
+      ...keys.map(k => ({
+        name: nameMap[k] ?? k,
+        type: "bar",
+        stack: isStacked ? "total" : undefined,
+        data: chartData.map(r => r[k] ?? null),
+        itemStyle: { color: colorMap[k] ?? "#BAB0AC", opacity: 0.72 },
+        barMaxWidth: 32,
+      })),
+      ...(hasPortfolioValue ? [{
+        name: "Valor cartera",
+        type: "line",
+        yAxisIndex: 1,
+        data: chartData.map(r => r.portfolioValue ?? null),
+        lineStyle: { color: "#59A14F", width: 2, type: "dashed" },
+        itemStyle: { color: "#59A14F" },
+        symbol: "none",
+        connectNulls: true,
+      }] : []),
+    ],
+  };
+
   return (
-    <ResponsiveContainer width="100%" height={height}>
-      <ComposedChart
-        data={chartData}
-        margin={{ top: 8, right: hasPortfolioValue ? 64 : 8, bottom: 0, left: 0 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" stroke={tc.border ?? "#E5EAF0"} />
-        <XAxis
-          dataKey="month"
-          tickFormatter={fmtMonthKey}
-          tick={{ fontSize: 9, fill: tc.textLight ?? "#8A9BAC" }}
-          axisLine={false}
-          tickLine={false}
-          interval="preserveStartEnd"
-        />
-        <YAxis
-          yAxisId="left"
-          tickFormatter={v => fmtM(v)}
-          tick={{ fontSize: 10, fill: tc.textLight ?? "#8A9BAC" }}
-          axisLine={false}
-          tickLine={false}
-          width={60}
-        />
-        {hasPortfolioValue && (
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            tickFormatter={v => fmtM(v)}
-            tick={{ fontSize: 9, fill: tc.textLight ?? "#8A9BAC" }}
-            axisLine={false}
-            tickLine={false}
-            width={52}
-          />
-        )}
-        <Tooltip
-          contentStyle={{
-            background: tc.card ?? "#fff",
-            border: `1px solid ${tc.border ?? "#E5EAF0"}`,
-            borderRadius: 8,
-          }}
-          labelStyle={{ color: tc.text ?? "#1A2B3C", fontWeight: 600, fontSize: 11 }}
-          labelFormatter={v => fmtMonthKey(v)}
-          formatter={(v, name) =>
-            name === "portfolioValue"
-              ? [fmtM(v), "Valor cartera"]
-              : [fmtM(v), nameMap[name] ?? name]
-          }
-        />
-        {isStacked && (
-          <Legend
-            wrapperStyle={{ fontSize: 9, paddingTop: 8 }}
-            formatter={n => nameMap[n] ?? n}
-          />
-        )}
-        {keys.map(k => (
-          <Bar
-            key={k}
-            yAxisId="left"
-            dataKey={k}
-            name={nameMap[k] ?? k}
-            stackId={isStacked ? "s" : undefined}
-            fill={colorMap[k] ?? "#BAB0AC"}
-            fillOpacity={0.72}
-            maxBarSize={32}
-            radius={isStacked ? undefined : [3, 3, 0, 0]}
-          />
-        ))}
-        {hasPortfolioValue && (
-          <Line
-            yAxisId="right"
-            dataKey="portfolioValue"
-            name="portfolioValue"
-            stroke="#59A14F"
-            strokeWidth={2}
-            strokeDasharray="5 3"
-            dot={false}
-            connectNulls
-          />
-        )}
-      </ComposedChart>
-    </ResponsiveContainer>
+    <ReactECharts
+      option={option}
+      style={{ width: "100%", height }}
+      opts={{ renderer: "canvas" }}
+    />
   );
 }
