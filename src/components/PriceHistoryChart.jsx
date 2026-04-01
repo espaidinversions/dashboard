@@ -1,8 +1,6 @@
 import React, { useMemo, useState } from "react";
-import {
-  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, ReferenceLine,
-} from "recharts";
+import ReactECharts from "echarts-for-react";
+import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonthKey } from "../utils.js";
 import { FUND_PRICES } from "../data/fundPrices.js";
@@ -89,121 +87,128 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280
         <button style={btnStyle("value")} onClick={() => setMode("value")}>Valor cartera</button>
       </div>
 
-      <ResponsiveContainer width="100%" height={height}>
-        <ComposedChart
-          data={chartData}
-          margin={{ top: 8, right: 64, bottom: 0, left: 0 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" stroke={tc.border ?? "#E5EAF0"} />
-          <XAxis
-            dataKey="month"
-            tickFormatter={fmtMonthKey}
-            tick={{ fontSize: 9, fill: tc.textLight ?? "#8A9BAC" }}
-            axisLine={false}
-            tickLine={false}
-            interval="preserveStartEnd"
+      {(() => {
+        const t = ecTheme(tc);
+        const months = chartData.map(r => r.month);
+
+        const option = {
+          grid: { top: 8, right: 68, bottom: 40, left: 0, containLabel: true },
+          tooltip: {
+            ...t.tooltip,
+            trigger: "axis",
+            axisPointer: { type: "shadow" },
+            formatter: (params) => {
+              const label = fmtMonthKey(params[0]?.axisValue ?? "");
+              let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+              params.forEach(p => {
+                if (p.value == null) return;
+                let val, name;
+                if (p.seriesName === "cumInflow")      { val = fmtM(p.value);           name = "Capital invertit"; }
+                else if (p.seriesName === "preBuy")    { val = p.value.toFixed(4);      name = "Preu (sense posició)"; }
+                else if (p.seriesName === "postBuy")   { val = p.value.toFixed(4);      name = "Preu (en cartera)"; }
+                else if (p.seriesName === "portValue") { val = fmtM(p.value);           name = "Valor cartera teòric"; }
+                else                                   { val = p.value; name = p.seriesName; }
+                html += `<div>${p.marker}${name}: ${val}</div>`;
+              });
+              return html;
+            },
+          },
+          xAxis: {
+            type: "category",
+            data: months,
+            axisLabel: { ...t.axisLabel, formatter: fmtMonthKey, hideOverlap: true },
+            axisLine: t.axisLine,
+            axisTick: t.axisTick,
+          },
+          yAxis: [
+            {
+              type: "value",
+              name: "Capital (€)",
+              nameTextStyle: { fontSize: 9, color: tc.textLight },
+              axisLabel: { ...t.axisLabel, fontSize: 10, formatter: v => fmtM(v) },
+              splitLine: t.splitLine,
+              axisLine: t.axisLine,
+              axisTick: t.axisTick,
+            },
+            {
+              type: "value",
+              position: "right",
+              name: mode === "price" ? "Preu" : "Valor",
+              nameTextStyle: { fontSize: 9, color: tc.textLight },
+              axisLabel: {
+                ...t.axisLabel,
+                formatter: v => mode === "price" ? v.toFixed(2) : fmtM(v),
+              },
+              splitLine: { show: false },
+              axisLine: t.axisLine,
+              axisTick: t.axisTick,
+            },
+          ],
+          series: [
+            ...(hasBars ? [{
+              name: "cumInflow",
+              type: "bar",
+              yAxisIndex: 0,
+              data: chartData.map(r => r.cumInflow ?? null),
+              itemStyle: { color: "#4E79A7", opacity: 0.55, borderRadius: [3, 3, 0, 0] },
+              barMaxWidth: 32,
+            }] : []),
+            ...(acqMonth ? [{
+              name: "_acqMark",
+              type: "line",
+              yAxisIndex: 0,
+              data: months.map(() => null),
+              markLine: {
+                data: [{ xAxis: acqMonth }],
+                lineStyle: { color: tc.green ?? "#59A14F", type: "dashed", width: 1.5 },
+                symbol: "none",
+                label: { show: true, formatter: "Compra", position: "insideEndTop", fontSize: 9, color: tc.green ?? "#59A14F" },
+              },
+              silent: true,
+            }] : []),
+            ...(mode === "price" ? [
+              {
+                name: "preBuy",
+                type: "line",
+                yAxisIndex: 1,
+                data: chartData.map(r => r.preBuy ?? null),
+                lineStyle: { color: tc.navy ?? "#2B5070", width: 1.5, type: "dashed", opacity: 0.55 },
+                itemStyle: { color: tc.navy ?? "#2B5070" },
+                symbol: "none",
+                connectNulls: true,
+              },
+              {
+                name: "postBuy",
+                type: "line",
+                yAxisIndex: 1,
+                data: chartData.map(r => r.postBuy ?? null),
+                lineStyle: { color: tc.navy ?? "#2B5070", width: 2 },
+                itemStyle: { color: tc.navy ?? "#2B5070" },
+                symbol: "none",
+                connectNulls: true,
+              },
+            ] : []),
+            ...(mode === "value" ? [{
+              name: "portValue",
+              type: "line",
+              yAxisIndex: 1,
+              data: chartData.map(r => r.portfolioValue ?? null),
+              lineStyle: { color: tc.green ?? "#59A14F", width: 2 },
+              itemStyle: { color: tc.green ?? "#59A14F" },
+              symbol: "none",
+              connectNulls: true,
+            }] : []),
+          ],
+        };
+
+        return (
+          <ReactECharts
+            option={option}
+            style={{ width: "100%", height }}
+            opts={{ renderer: "canvas" }}
           />
-          {/* Left axis: cumulative inflows */}
-          <YAxis
-            yAxisId="left"
-            tickFormatter={v => fmtM(v)}
-            tick={{ fontSize: 10, fill: tc.textLight ?? "#8A9BAC" }}
-            axisLine={false}
-            tickLine={false}
-            width={60}
-          />
-          {/* Right axis: price or portfolio value */}
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            tickFormatter={v => mode === "price" ? v.toFixed(2) : fmtM(v)}
-            tick={{ fontSize: 9, fill: tc.textLight ?? "#8A9BAC" }}
-            axisLine={false}
-            tickLine={false}
-            width={60}
-          />
-
-          <Tooltip
-            contentStyle={{
-              background: tc.card ?? "#fff",
-              border: `1px solid ${tc.border ?? "#E5EAF0"}`,
-              borderRadius: 8,
-            }}
-            labelStyle={{ color: tc.text ?? "#1A2B3C", fontWeight: 600, fontSize: 11 }}
-            labelFormatter={fmtMonthKey}
-            formatter={(v, name) => {
-              if (name === "cumInflow")      return [fmtM(v),            "Capital invertit"];
-              if (name === "preBuy")         return [v.toFixed(4),       "Preu (sense posició)"];
-              if (name === "postBuy")        return [v.toFixed(4),       "Preu (en cartera)"];
-              if (name === "portfolioValue") return [fmtM(v),            "Valor cartera teòric"];
-              return [v, name];
-            }}
-          />
-
-          {/* Cumulative inflows bars — always shown */}
-          {hasBars && (
-            <Bar
-              yAxisId="left"
-              dataKey="cumInflow"
-              name="cumInflow"
-              fill="#4E79A7"
-              fillOpacity={0.55}
-              maxBarSize={32}
-            />
-          )}
-
-          {/* Acquisition date reference line */}
-          {acqMonth && (
-            <ReferenceLine
-              yAxisId="left"
-              x={acqMonth}
-              stroke={tc.green ?? "#59A14F"}
-              strokeDasharray="4 2"
-              strokeWidth={1.5}
-              label={{ value: "Compra", position: "insideTopRight", fontSize: 9, fill: tc.green ?? "#59A14F" }}
-            />
-          )}
-
-          {/* Price mode: two lines split at acquisition date */}
-          {mode === "price" && (
-            <>
-              <Line
-                yAxisId="right"
-                dataKey="preBuy"
-                name="preBuy"
-                stroke={tc.navy ?? "#2B5070"}
-                strokeWidth={1.5}
-                strokeDasharray="5 3"
-                strokeOpacity={0.55}
-                dot={false}
-                connectNulls
-              />
-              <Line
-                yAxisId="right"
-                dataKey="postBuy"
-                name="postBuy"
-                stroke={tc.navy ?? "#2B5070"}
-                strokeWidth={2}
-                dot={false}
-                connectNulls
-              />
-            </>
-          )}
-
-          {/* Value mode: single theoretical value line */}
-          {mode === "value" && (
-            <Line
-              yAxisId="right"
-              dataKey="portfolioValue"
-              name="portfolioValue"
-              stroke={tc.green ?? "#59A14F"}
-              strokeWidth={2}
-              dot={false}
-              connectNulls
-            />
-          )}
-        </ComposedChart>
-      </ResponsiveContainer>
+        );
+      })()}
 
       <div style={{ fontSize: 10, color: tc.textLight ?? "#8A9BAC", marginTop: 6, fontStyle: "italic" }}>
         {mode === "price"
