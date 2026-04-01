@@ -118,38 +118,95 @@ export async function loadAll() {
 
 export async function saveCapitalCalls(rows) {
   if (!supabase) return;
-  await supabase.from("capital_calls").delete().neq("id", 0);
-  if (rows.length) await supabase.from("capital_calls").insert(rows.map(r => ({
+  const { error: delError } = await supabase.from("capital_calls").delete().neq("id", 0);
+  if (delError) return { error: delError };
+  if (rows.length) {
+    const { error } = await supabase.from("capital_calls").insert(rows.map(r => ({
     fons:r.fons, tipus:r.tipus, cat:r.cat, data:r.data, mes:r.mes, year:r.any,
     fy:r.fy, vcpe:r.vcpe, est:r.est, eur:r.eur, divisa:r.divisa,
-  })));
+    })));
+    if (error) return { error };
+  }
+  return { error: null };
 }
 
 export async function saveFundMeta(rows) {
   if (!supabase) return;
-  await supabase.from("fund_meta").upsert(rows.map(r => ({ fons:r.fons, tvpi:r.tvpi ?? null })), { onConflict: "fons" });
+  const { error } = await supabase.from("fund_meta").upsert(rows.map(r => ({ fons:r.fons, tvpi:r.tvpi ?? null })), { onConflict: "fons" });
+  return { error };
 }
 
 export async function savePipeline(rows) {
   if (!supabase) return;
-  await supabase.from("pipeline").delete().neq("id", -1);
-  if (rows.length) await supabase.from("pipeline").insert(rows.map(r => ({
+  const { error: delError } = await supabase.from("pipeline").delete().neq("id", -1);
+  if (delError) return { error: delError };
+  if (rows.length) {
+    const { error } = await supabase.from("pipeline").insert(rows.map(r => ({
     id:r.id, name:r.name, amount:r.amount, currency:r.currency,
     geography:r.geography, strategy:r.strategy, sector:r.sector,
     status:r.status, canal:r.canal, active:r.active,
-  })));
+    })));
+    if (error) return { error };
+  }
+  return { error: null };
 }
 
 export async function saveCompanies(rows) {
   if (!supabase) return;
-  await supabase.from("portfolio_companies").delete().neq("id", 0);
-  if (rows.length) await supabase.from("portfolio_companies").insert(rows.map(companyToRow));
+  const { error: delError } = await supabase.from("portfolio_companies").delete().neq("id", 0);
+  if (delError) return { error: delError };
+  if (rows.length) {
+    const { error } = await supabase.from("portfolio_companies").insert(rows.map(companyToRow));
+    if (error) return { error };
+  }
+  return { error: null };
 }
 
 export async function saveSearchers(rows) {
   if (!supabase) return;
-  await supabase.from("searchers").delete().neq("id", 0);
-  if (rows.length) await supabase.from("searchers").insert(rows.map(searcherToRow));
+  const { error: delError } = await supabase.from("searchers").delete().neq("id", 0);
+  if (delError) return { error: delError };
+  if (rows.length) {
+    const { error } = await supabase.from("searchers").insert(rows.map(searcherToRow));
+    if (error) return { error };
+  }
+  return { error: null };
+}
+
+export async function saveDashboardBundle({ rawCC, funds0, companies, searchers, fundMeta }) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase.rpc("replace_dashboard_bundle", {
+    p_cc_rows: rawCC == null ? null : rawCC.map(r => ({
+      fons: r.fons,
+      tipus: r.tipus,
+      cat: r.cat,
+      data: r.data,
+      mes: r.mes,
+      year: r.any,
+      fy: r.fy,
+      vcpe: r.vcpe,
+      est: r.est,
+      eur: r.eur,
+      divisa: r.divisa,
+    })),
+    p_pl_rows: funds0 == null ? null : funds0.map(r => ({
+      id: r.id,
+      name: r.name,
+      amount: r.amount,
+      currency: r.currency,
+      geography: r.geography,
+      strategy: r.strategy,
+      sector: r.sector,
+      status: r.status,
+      canal: r.canal,
+      active: r.active,
+      estimated_closing: r.estimatedClosing ?? null,
+    })),
+    p_companies_rows: companies == null ? null : companies.map(companyToRow),
+    p_searchers_rows: searchers == null ? null : searchers.map(searcherToRow),
+    p_fund_meta_rows: fundMeta == null ? null : fundMeta.map(r => ({ fons: r.fons, tvpi: r.tvpi ?? null })),
+  });
+  return { error };
 }
 
 // ── Granular single-row upserts ───────────────────────────

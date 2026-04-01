@@ -1,15 +1,15 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import html2canvas from "html2canvas";
-import ReactECharts from "echarts-for-react";
+import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import {
   FY_LIST, MESOS, CAT_CFG, VCPE_CFG, EST_CFG,
   RAW_CC as RAW_CC_DEFAULT, FUNDS0 as FUNDS0_DEFAULT, FUND_META as FUND_META_DEFAULT,
 } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify, exportMultiXLSX } from "../utils.js";
+import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify, exportMultiXLSX, mapKpiRows } from "../utils.js";
 import { PORTFOLIO_COMPANIES, ALL_SEARCHERS } from "../data/searchers.js";
-import { loadAll, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta } from "../db.js";
+import { loadAll, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle } from "../db.js";
 import { Logo, Badge, EmptyState } from "./SharedComponents.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
@@ -187,40 +187,67 @@ function DashboardInner() {
     } finally { setExporting(false); }
   }, []);
 
-  const handleLoad = (key, rows) => {
+  const handleLoad = async (key, rows) => {
     const now = new Date().toLocaleDateString("ca-ES");
-    if (key === "cc") {
-      setRawCC(rows);
-      setExcluded(new Set());
-      try { localStorage.setItem(LS_CC, JSON.stringify(rows)); } catch {}
-      saveCapitalCalls(rows);
-    } else if (key === "pl") {
-      setFunds0(rows);
-      try { localStorage.setItem(LS_PL, JSON.stringify(rows)); } catch {}
-      savePipeline(rows);
-    } else if (key === "companies") {
-      try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(rows)); } catch {}
-      saveCompanies(rows);
-    } else if (key === "searchers") {
-      try { localStorage.setItem("tc_allSearchers", JSON.stringify(rows)); } catch {}
-      saveSearchers(rows);
-    } else if (key === "fundMeta") {
-      try { localStorage.setItem("tc_fundMeta", JSON.stringify(rows)); } catch {}
-      saveFundMeta(rows);
-    } else if (key === "kpiTrimestral") {
-      try {
-        const byNom = rows;
-        const existing = JSON.parse(localStorage.getItem("tc_portfolioCompanies") || "null") || PORTFOLIO_COMPANIES;
-        const updated = existing.map(c => {
+    try {
+      if (key === "xlsx") {
+        const byNom = rows.kpiTrimestral instanceof Map ? rows.kpiTrimestral : mapKpiRows(rows.kpiTrimestral || []);
+        const existingCompanies = rows.companies || (JSON.parse(localStorage.getItem("tc_portfolioCompanies") || "null") || PORTFOLIO_COMPANIES);
+        const mergedCompanies = existingCompanies.map(c => {
           const qs = byNom.get(c.nom);
           return qs ? { ...c, quarters: qs } : c;
         });
-        localStorage.setItem("tc_portfolioCompanies", JSON.stringify(updated));
-        saveCompanies(updated);
-      } catch {}
+        const bundle = {
+          rawCC: rows.cc ?? null,
+          funds0: rows.pl ?? null,
+          companies: mergedCompanies,
+          searchers: rows.searchers ?? null,
+          fundMeta: rows.fundMeta ?? null,
+        };
+        const { error } = await saveDashboardBundle(bundle);
+        if (error) throw error;
+        if (bundle.rawCC != null) {
+          setRawCC(bundle.rawCC);
+          try { localStorage.setItem(LS_CC, JSON.stringify(bundle.rawCC)); } catch {}
+        }
+        if (bundle.funds0 != null) {
+          setFunds0(bundle.funds0);
+          try { localStorage.setItem(LS_PL, JSON.stringify(bundle.funds0)); } catch {}
+        }
+        try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(bundle.companies)); } catch {}
+        if (bundle.searchers != null) try { localStorage.setItem("tc_allSearchers", JSON.stringify(bundle.searchers)); } catch {}
+        if (bundle.fundMeta != null) try { localStorage.setItem("tc_fundMeta", JSON.stringify(bundle.fundMeta)); } catch {}
+        setExcluded(new Set());
+      } else if (key === "cc") {
+        const { error } = await saveCapitalCalls(rows);
+        if (error) throw error;
+        setRawCC(rows);
+        setExcluded(new Set());
+        try { localStorage.setItem(LS_CC, JSON.stringify(rows)); } catch {}
+      } else if (key === "pl") {
+        const { error } = await savePipeline(rows);
+        if (error) throw error;
+        setFunds0(rows);
+        try { localStorage.setItem(LS_PL, JSON.stringify(rows)); } catch {}
+      } else if (key === "companies") {
+        const { error } = await saveCompanies(rows);
+        if (error) throw error;
+        try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(rows)); } catch {}
+      } else if (key === "searchers") {
+        const { error } = await saveSearchers(rows);
+        if (error) throw error;
+        try { localStorage.setItem("tc_allSearchers", JSON.stringify(rows)); } catch {}
+      } else if (key === "fundMeta") {
+        const { error } = await saveFundMeta(rows);
+        if (error) throw error;
+        try { localStorage.setItem("tc_fundMeta", JSON.stringify(rows)); } catch {}
+      }
+      setLoadedAt(now);
+      try { localStorage.setItem(LS_TS, now); } catch {}
+    } catch (err) {
+      console.error("Load failed:", err);
+      throw err;
     }
-    setLoadedAt(now);
-    try { localStorage.setItem(LS_TS, now); } catch {}
   };
 
   // Derivar TRANSACTIONS i COMPROMISOS del rawCC en estat

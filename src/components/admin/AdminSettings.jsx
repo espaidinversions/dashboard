@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabase.js";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
+import { sharedStyles } from "../SharedComponents.jsx";
 
 export default function AdminSettings() {
   const { tc } = useTheme();
@@ -17,7 +18,7 @@ export default function AdminSettings() {
         .from("app_settings")
         .select("value")
         .eq("key", "allowed_domains")
-        .single();
+        .maybeSingle();
       if (error) toast({ message: "Error carregant configuració.", type: "error" });
       else setDomains(data?.value ?? []);
       setLoading(false);
@@ -42,7 +43,7 @@ export default function AdminSettings() {
     setSaving(true);
     const { error } = await supabase
       .from("app_settings")
-      .upsert({ key: "allowed_domains", value: domains });
+      .upsert({ key: "allowed_domains", value: domains, updated_at: new Date().toISOString() }, { onConflict: "key" });
     setSaving(false);
     if (error) toast({ message: "Error desant: " + error.message, type: "error" });
     else toast({ message: "Configuració desada." });
@@ -52,7 +53,7 @@ export default function AdminSettings() {
     <div>
       <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700, color: tc.navy }}>Configuració</h2>
 
-      <section style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", maxWidth: 500 }}>
+      <section style={{ ...sharedStyles.cardPad(tc, "20px 24px"), maxWidth: 500 }}>
         <h3 style={{ margin: "0 0 6px", fontSize: 14, fontWeight: 700, color: tc.navy }}>Dominis permesos</h3>
         <p style={{ margin: "0 0 16px", fontSize: 13, color: tc.textMid }}>
           Només emails d'aquests dominis podran registrar-se. Si la llista és buida, qualsevol domini és permès.

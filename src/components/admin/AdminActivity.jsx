@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { supabase } from "../../supabase.js";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
+import { sharedStyles } from "../SharedComponents.jsx";
 
 const ACTION_COLORS = {
   insert: { color: "#1B5E20", bg: "#E8F5E9" },
@@ -58,7 +59,7 @@ export default function AdminActivity() {
   logs.forEach(l => { if (l.table_name) tableCounts[l.table_name] = (tableCounts[l.table_name] || 0) + 1; });
   const topTable = Object.entries(tableCounts).sort((a, b) => b[1] - a[1])[0];
 
-  const th = { padding: "9px 12px", fontSize: 10, letterSpacing: "0.09em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
+  const th = { ...sharedStyles.th(tc), padding: "9px 12px", letterSpacing: "0.09em", textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
   const td = { padding: "10px 12px", borderBottom: `1px solid ${tc.border}`, fontSize: 12 };
 
   return (
@@ -72,7 +73,7 @@ export default function AdminActivity() {
           { label: "Usuari més actiu",       value: topUser  ? `${topUser[0]} (${topUser[1]})`   : "—" },
           { label: "Taula més modificada",   value: topTable ? `${topTable[0]} (${topTable[1]})` : "—" },
         ].map((c, i) => (
-          <div key={i} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 18px", minWidth: 180, flex: 1 }}>
+          <div key={i} style={sharedStyles.cardPad(tc, "14px 18px")}>
             <div style={{ fontSize: 10, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{c.label}</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: tc.navy }}>{c.value}</div>
           </div>

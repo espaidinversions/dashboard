@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import ReactECharts from "echarts-for-react";
+import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonthKey } from "../utils.js";

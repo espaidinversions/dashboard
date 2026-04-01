@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import ReactECharts from "echarts-for-react";
+import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { Link } from "react-router-dom";
 import { PM_POSITIONS, PM_CLOSED, PM_MONTHLY } from "../data/publicMarkets.js";

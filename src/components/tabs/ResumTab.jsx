@@ -1,6 +1,6 @@
 import React from "react";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
-import { BarTip, PieTip, PL } from "../SharedComponents.jsx";
+import ReactECharts from "../../ReactECharts.jsx";
+import { ecTheme } from "../../echartsTheme.js";
 
 export function ResumTab({ tc, byFy, byVcpe, byEst, vcpeCfg }) {
   return (
@@ -9,17 +9,34 @@ export function ResumTab({ tc, byFy, byVcpe, byEst, vcpeCfg }) {
         <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight, textTransform: "uppercase", marginBottom: 16, fontWeight: 600 }}>
           Capital Cridat vs. Retornat per Any Fiscal
         </div>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={byFy} margin={{ left: 10, right: 10, top: 5, bottom: 5 }} barGap={4} barCategoryGap="30%">
-            <XAxis dataKey="fy" tick={{ fill: tc.textMid, fontSize: 12 }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={v => fmtS(v)} tick={{ fill: tc.textLight, fontSize: 10 }} axisLine={false} tickLine={false} width={72} />
-            <Tooltip content={<BarTip />} />
-            <Legend formatter={v => <span style={{ color: tc.textMid, fontSize: 11 }}>{v}</span>} />
-            <Bar dataKey="Capital Call" fill={tc.navy} radius={[5, 5, 0, 0]} />
-            <Bar dataKey="Distribució" fill={tc.green} radius={[5, 5, 0, 0]} />
-            <Bar dataKey="Retorn Capital" fill={tc.greenDark} radius={[5, 5, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        {(() => {
+          const t = ecTheme(tc);
+          const option = {
+            grid: { top: 8, right: 8, bottom: 40, left: 0, containLabel: true },
+            tooltip: { ...t.tooltip, trigger: "axis", axisPointer: { type: "shadow" } },
+            legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
+            xAxis: {
+              type: "category",
+              data: byFy.map(d => d.fy),
+              axisLabel: { ...t.axisLabel, fontSize: 12 },
+              axisLine: t.axisLine,
+              axisTick: t.axisTick,
+            },
+            yAxis: {
+              type: "value",
+              axisLabel: { ...t.axisLabel, formatter: v => fmtS(v) },
+              splitLine: t.splitLine,
+              axisLine: t.axisLine,
+              axisTick: t.axisTick,
+            },
+            series: [
+              { name: "Capital Call",   type: "bar", data: byFy.map(d => d["Capital Call"]),   itemStyle: { color: tc.navy,      borderRadius: [5,5,0,0] }, barMaxWidth: 32 },
+              { name: "Distribució",    type: "bar", data: byFy.map(d => d["Distribució"]),    itemStyle: { color: tc.green,     borderRadius: [5,5,0,0] }, barMaxWidth: 32 },
+              { name: "Retorn Capital", type: "bar", data: byFy.map(d => d["Retorn Capital"]), itemStyle: { color: tc.greenDark, borderRadius: [5,5,0,0] }, barMaxWidth: 32 },
+            ],
+          };
+          return <ReactECharts option={option} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;
+        })()}
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 18 }}>
         {[
@@ -28,15 +45,22 @@ export function ResumTab({ tc, byFy, byVcpe, byEst, vcpeCfg }) {
         ].map((ch, i) => (
           <div key={i} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px 22px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
             <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight, textTransform: "uppercase", marginBottom: 14, fontWeight: 600 }}>{ch.title}</div>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={ch.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={85} labelLine={false} label={PL}>
-                  {ch.data.map((e, j) => <Cell key={j} fill={ch.colorFn(e.name)} />)}
-                </Pie>
-                <Tooltip content={<PieTip />} />
-                <Legend formatter={v => <span style={{ color: tc.textMid, fontSize: 11 }}>{v}</span>} />
-              </PieChart>
-            </ResponsiveContainer>
+            {(() => {
+              const t = ecTheme(tc);
+              const option = {
+                tooltip: { ...t.tooltip, trigger: "item", formatter: (p) => `${p.marker}${p.name}: ${p.percent}%` },
+                legend: { orient: "vertical", right: 8, top: "center", textStyle: { fontSize: 10, color: tc.textLight } },
+                series: [{
+                  type: "pie",
+                  radius: ["38%", "68%"],
+                  center: ["38%", "50%"],
+                  data: ch.data.map(d => ({ name: d.name, value: d.value, itemStyle: { color: ch.colorFn(d.name) } })),
+                  label: { show: false },
+                  emphasis: { itemStyle: { shadowBlur: 8, shadowColor: "rgba(0,0,0,0.15)" } },
+                }],
+              };
+              return <ReactECharts option={option} style={{ width: "100%", height: 220 }} opts={{ renderer: "canvas" }} />;
+            })()}
           </div>
         ))}
       </div>

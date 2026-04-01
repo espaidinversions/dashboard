@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from "react";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend
-} from "recharts";
+import ReactECharts from "../ReactECharts.jsx";
+import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { VCPE_CFG } from "../config.js";
 import { fmtM, fmtS } from "../utils.js";
@@ -84,20 +83,6 @@ export function MensualTab({filtered, fFy}) {
     }));
   }, [byMes]);
 
-  const ChartTip = ({active,payload,label}) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:7,padding:"10px 14px",boxShadow:"0 4px 12px rgba(0,0,0,.18)",minWidth:160}}>
-        <p style={{color:TC.navy,margin:"0 0 6px",fontWeight:700,fontSize:12}}>{label}</p>
-        {payload.filter(p=>p.value>0).map((p,i)=>(
-          <p key={i} style={{color:p.fill,margin:"2px 0",fontSize:12,display:"flex",justifyContent:"space-between",gap:16}}>
-            <span>{p.name}</span><span style={{fontWeight:700}}>{fmtM(p.value)}</span>
-          </p>
-        ))}
-      </div>
-    );
-  };
-
   return (<>
     {/* ── Gràfic de barres mensual ── */}
     <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:10,
@@ -105,17 +90,34 @@ export function MensualTab({filtered, fFy}) {
       <div style={{fontSize:11,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:14,fontWeight:600}}>
         Flux Mensual {fFy!=="Tots"?fFy:"· 2023–2026"}
       </div>
-      <ResponsiveContainer width="100%" height={240}>
-        <BarChart data={chartData} margin={{left:10,right:10,top:5,bottom:30}} barGap={3} barCategoryGap="25%">
-          <XAxis dataKey="label" tick={{fill:TC.textMid,fontSize:9}} axisLine={false} tickLine={false} angle={-40} textAnchor="end"/>
-          <YAxis tickFormatter={v=>fmtM(v)} tick={{fill:TC.textLight,fontSize:10}} axisLine={false} tickLine={false} width={70}/>
-          <Tooltip content={<ChartTip/>}/>
-          <Legend formatter={v=><span style={{color:TC.textMid,fontSize:11}}>{v}</span>}/>
-          <Bar dataKey="Capital Call"    fill={TC.navy}      radius={[4,4,0,0]}/>
-          <Bar dataKey="Distribució"     fill={TC.green}     radius={[4,4,0,0]}/>
-          <Bar dataKey="Retorn Capital"  fill={TC.greenDark} radius={[4,4,0,0]}/>
-        </BarChart>
-      </ResponsiveContainer>
+      {(() => {
+        const t = ecTheme(TC);
+        const option = {
+          grid: { top: 8, right: 8, bottom: 60, left: 0, containLabel: true },
+          tooltip: { ...t.tooltip, trigger: "axis", axisPointer: { type: "shadow" } },
+          legend: { bottom: 0, textStyle: { fontSize: 10, color: TC.textLight } },
+          xAxis: {
+            type: "category",
+            data: chartData.map(d => d.label),
+            axisLabel: { ...t.axisLabel, rotate: -40, interval: 0 },
+            axisLine: t.axisLine,
+            axisTick: t.axisTick,
+          },
+          yAxis: {
+            type: "value",
+            axisLabel: { ...t.axisLabel, formatter: v => fmtM(v) },
+            splitLine: t.splitLine,
+            axisLine: t.axisLine,
+            axisTick: t.axisTick,
+          },
+          series: [
+            { name: "Capital Call",   type: "bar", data: chartData.map(d => d["Capital Call"]),   itemStyle: { color: TC.navy,      borderRadius: [4,4,0,0] }, barMaxWidth: 32 },
+            { name: "Distribució",    type: "bar", data: chartData.map(d => d["Distribució"]),    itemStyle: { color: TC.green,     borderRadius: [4,4,0,0] }, barMaxWidth: 32 },
+            { name: "Retorn Capital", type: "bar", data: chartData.map(d => d["Retorn Capital"]), itemStyle: { color: TC.greenDark, borderRadius: [4,4,0,0] }, barMaxWidth: 32 },
+          ],
+        };
+        return <ReactECharts option={option} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;
+      })()}
     </div>
 
     {/* ── Taula accordion ── */}

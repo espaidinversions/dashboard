@@ -35,19 +35,21 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
       };
 
       let loaded = 0;
+      const bundle = {};
       const ccRows = sheet("Capital Calls");
-      if (ccRows?.length) { onLoad("cc", mapCapitalCallsRows(ccRows)); loaded++; }
+      if (ccRows?.length) { bundle.cc = mapCapitalCallsRows(ccRows); loaded++; }
       const plRows = sheet("Pipeline");
-      if (plRows?.length) { onLoad("pl", mapPipelineRows(plRows)); loaded++; }
+      if (plRows?.length) { bundle.pl = mapPipelineRows(plRows); loaded++; }
       const coRows = sheet("Participades");
-      if (coRows?.length) { onLoad("companies", mapCompanyRows(coRows)); loaded++; }
+      if (coRows?.length) { bundle.companies = mapCompanyRows(coRows); loaded++; }
       const srRows = sheet("Searchers");
-      if (srRows?.length) { onLoad("searchers", mapSearcherRows(srRows)); loaded++; }
+      if (srRows?.length) { bundle.searchers = mapSearcherRows(srRows); loaded++; }
       const fmRows = sheet("Fund Meta");
-      if (fmRows?.length) { onLoad("fundMeta", mapFundMetaRows(fmRows)); loaded++; }
+      if (fmRows?.length) { bundle.fundMeta = mapFundMetaRows(fmRows); loaded++; }
       const kpiRows = sheet("KPIs Trimestral");
-      if (kpiRows?.length) { onLoad("kpiTrimestral", mapKpiRows(kpiRows)); loaded++; }
+      if (kpiRows?.length) { bundle.kpiTrimestral = mapKpiRows(kpiRows); loaded++; }
       if (!loaded) throw new Error("No s'ha trobat cap full reconegut (Capital Calls, Pipeline, Participades, Searchers, Fund Meta, KPIs Trimestral).");
+      await Promise.resolve(onLoad("xlsx", bundle));
       setXlsxStatus({ name: file.name, sheets: loaded });
       setError(null);
     } catch (err) {
@@ -60,14 +62,14 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
     if (!file) return;
     if (file.size > 10 * 1024 * 1024) { setError("El fitxer és massa gran (màxim 10 MB)."); return; }
     const reader = new FileReader();
-    reader.onload = e => {
+    reader.onload = async e => {
       try {
         const text = e.target.result;
         const rows = parser(text);
         if (!rows.length) throw new Error("El fitxer és buit o no té les columnes esperades.");
+        await Promise.resolve(onLoad(key, rows));
         setStatus({ rows: rows.length, name: file.name });
         setError(null);
-        onLoad(key, rows);
         if (key === "cc") {
           fetch("/api/capital-calls", {
             method: "POST",

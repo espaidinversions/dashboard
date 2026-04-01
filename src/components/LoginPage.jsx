@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 
-const ALLOWED_DOMAINS = ["solvicocean.com", "espaidinversions.com"];
+const DEFAULT_ALLOWED_DOMAINS = ["solvicocean.com", "espaidinversions.com"];
 
 export default function LoginPage() {
   const { signIn, signUp, resendConfirmation, resetPassword } = useAuth();
@@ -16,6 +16,20 @@ export default function LoginPage() {
   const [loading,    setLoading]    = useState(false);
   const [canResend,  setCanResend]  = useState(false);
   const [resendDone, setResendDone] = useState(false);
+  const [allowedDomains, setAllowedDomains] = useState(DEFAULT_ALLOWED_DOMAINS);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/auth-settings")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        if (cancelled) return;
+        const domains = Array.isArray(data?.allowed_domains) ? data.allowed_domains : [];
+        if (domains.length > 0) setAllowedDomains(domains);
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const switchMode = m => { setMode(m); setError(null); setInfo(null); setConfirm(""); setCanResend(false); setResendDone(false); };
 
@@ -39,7 +53,7 @@ export default function LoginPage() {
     }
 
     const domain = email.split("@")[1]?.toLowerCase();
-    if (!ALLOWED_DOMAINS.includes(domain)) {
+    if (allowedDomains.length > 0 && !allowedDomains.includes(domain)) {
       setError("Aquest domini no té accés al dashboard.");
       return;
     }

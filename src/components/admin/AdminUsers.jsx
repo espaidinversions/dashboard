@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
+import { sharedStyles } from "../SharedComponents.jsx";
 
 const ROLES = ["user", "superuser", "admin"];
 
@@ -20,6 +21,7 @@ export default function AdminUsers({ token }) {
   const [inviting, setInviting] = useState(false);
 
   const getAuthHeader = () => ({ "Authorization": `Bearer ${token}`, "Content-Type": "application/json" });
+  const getRole = (u) => u.app_metadata?.role ?? u.user_metadata?.role ?? "user";
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -44,7 +46,11 @@ export default function AdminUsers({ token }) {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
-      setUsers(prev => prev.map(u => u.id === id ? { ...u, user_metadata: { ...u.user_metadata, role } } : u));
+      setUsers(prev => prev.map(u => u.id === id ? {
+        ...u,
+        app_metadata: { ...u.app_metadata, role },
+        user_metadata: { ...u.user_metadata, role },
+      } : u));
       toast({ message: "Rol actualitzat." });
     } catch (e) {
       toast({ message: "Error: " + e.message, type: "error" });
@@ -103,7 +109,7 @@ export default function AdminUsers({ token }) {
   const active  = users.filter(u => u.email_confirmed_at);
   const pending = users.filter(u => !u.email_confirmed_at);
 
-  const th = { padding: "9px 12px", fontSize: 10, letterSpacing: "0.09em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
+  const th = { ...sharedStyles.th(tc), padding: "9px 12px", letterSpacing: "0.09em", textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
   const td = { padding: "10px 12px", borderBottom: `1px solid ${tc.border}` };
 
   return (
@@ -142,7 +148,7 @@ export default function AdminUsers({ token }) {
                 <tr key={u.id}>
                   <td style={td}>{u.email}</td>
                   <td style={td}>
-                    <select value={u.user_metadata?.role || "user"} onChange={e => changeRole(u.id, e.target.value)}
+                    <select value={getRole(u)} onChange={e => changeRole(u.id, e.target.value)}
                       style={{ padding: "4px 8px", borderRadius: 5, border: `1px solid ${tc.border}`, background: tc.bg, color: tc.text, fontFamily: "inherit", fontSize: 12 }}>
                       {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>

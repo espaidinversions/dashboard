@@ -1,8 +1,6 @@
 import React, { useMemo, useState, useRef } from "react";
-import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend, Label,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
-} from "recharts";
+import ReactECharts from "../ReactECharts.jsx";
+import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM, slugify, tvpiColor, tvpiBg, usePersistedState } from "../utils.js";
 import { GEO_NAME } from "../config.js";
@@ -22,22 +20,6 @@ const ORIG_COLORS = {
   "Direct PE":     "#6A4C8A",
 };
 const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D","#2563A8","#8A6400","#007A8A"];
-
-function CenterLabel({ viewBox, value, sub, tc }) {
-  const { cx, cy } = viewBox;
-  return (
-    <g>
-      <text x={cx} y={cy - 7} textAnchor="middle" dominantBaseline="middle"
-        style={{ fontSize: 13, fontWeight: 700, fill: tc.navy, fontFamily: "'DM Mono',monospace" }}>
-        {value}
-      </text>
-      <text x={cx} y={cy + 10} textAnchor="middle" dominantBaseline="middle"
-        style={{ fontSize: 9, fill: tc.textLight }}>
-        {sub}
-      </text>
-    </g>
-  );
-}
 
 export function PortfolioCompaniesTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
@@ -151,6 +133,10 @@ export function PortfolioCompaniesTab({ search = "" }) {
       .map(r => ({ name:r.nom, tvpi:r.tvpi, tipus:r.tipus }))
   , [search]);
 
+  const t = ecTheme(TC);
+  const geoTotal = byGeo.reduce((s, r) => s + r.value, 0);
+  const origenTotal = byOrigen.reduce((s, r) => s + r.value, 0);
+
   return (
     <div style={{ padding:"0 0 40px" }}>
 
@@ -218,95 +204,133 @@ export function PortfolioCompaniesTab({ search = "" }) {
       <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
         <div style={card}>
           <div style={sec}>Allocation Geogràfica</div>
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie data={byGeo} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={82} labelLine={false}
-                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, geo, name }) => {
-                  if (percent < 0.04) return null;
-                  const R = Math.PI / 180;
-                  const r = outerRadius + 18;
-                  const x = cx + r * Math.cos(-midAngle * R);
-                  const y = cy + r * Math.sin(-midAngle * R);
-                  // flag emoji from name (geo code)
-                  const flagMap = { ES:"🇪🇸", EN:"🇬🇧", IT:"🇮🇹", DE:"🇩🇪", FR:"🇫🇷", PT:"🇵🇹", NL:"🇳🇱", US:"🇺🇸", CH:"🇨🇭" };
-                  return (
-                    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={11}>
-                      {flagMap[name] || name} {`${(percent * 100).toFixed(0)}%`}
-                    </text>
-                  );
-                }}
-              >
-                {byGeo.map((_, i) => <Cell key={i} fill={GEO_COLORS[i % GEO_COLORS.length]}/>)}
-                <Label content={(props) => <CenterLabel {...props} value={fmtM(total)} sub="Total" tc={TC} />} />
-              </Pie>
-              <Tooltip content={({active,payload}) => active&&payload?.length ? (
-                <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"10px 14px", fontSize:11 }}>
-                  <b>{payload[0].payload.name}</b>
-                  <div style={{ color:TC.green, marginTop:4 }}>{fmtM(payload[0].value)} · {payload[0].payload.count} empresa{payload[0].payload.count>1?"s":""}</div>
-                </div>
-              ) : null}/>
-            </PieChart>
-          </ResponsiveContainer>
+          <ReactECharts
+            style={{ width: "100%", height: 260 }}
+            opts={{ renderer: "canvas" }}
+            option={{
+              tooltip: {
+                ...t.tooltip,
+                trigger: "item",
+                formatter: p => `<b>${p.name}</b><br/>${fmtM(p.value)} · ${p.percent.toFixed(0)}% · ${(byGeo.find(r => r.name === p.name)?.count ?? 0)} empresa${(byGeo.find(r => r.name === p.name)?.count ?? 0) === 1 ? "" : "s"}`,
+              },
+              legend: { show: false },
+              graphic: [{
+                type: "group",
+                left: "center",
+                top: "middle",
+                children: [
+                  { type: "text", style: { text: fmtM(geoTotal), x: 0, y: -8, textAlign: "center", fill: TC.navy, fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono',monospace" } },
+                  { type: "text", style: { text: "Total", x: 0, y: 10, textAlign: "center", fill: TC.textLight, fontSize: 9 } },
+                ],
+              }],
+              series: [{
+                type: "pie",
+                radius: ["45%", "72%"],
+                center: ["50%", "50%"],
+                avoidLabelOverlap: true,
+                labelLine: { show: false },
+                label: {
+                  show: true,
+                  formatter: p => (p.percent >= 4 ? `${p.name} ${p.percent.toFixed(0)}%` : ""),
+                  color: TC.textMid,
+                  fontSize: 11,
+                },
+                data: byGeo.map((d, i) => ({ name: d.name, value: d.value, itemStyle: { color: GEO_COLORS[i % GEO_COLORS.length] } })),
+              }],
+            }}
+          />
         </div>
 
         <div style={card}>
           <div style={sec}>Per Origen d'Entrada</div>
-          <ResponsiveContainer width="100%" height={260}>
-            <PieChart>
-              <Pie data={byOrigen} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={52} outerRadius={82} labelLine={false}
-                label={({ cx, cy, midAngle, outerRadius, percent, name }) => {
-                  if (percent < 0.04) return null;
-                  const R = Math.PI / 180;
-                  const r = outerRadius + 18;
-                  const x = cx + r * Math.cos(-midAngle * R);
-                  const y = cy + r * Math.sin(-midAngle * R);
-                  const short = name === "Search Capital" ? "Search Cap." : name;
-                  return (
-                    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={10}
-                      fill={ORIG_COLORS[name] || TC.navy} fontWeight="600">
-                      {short} {`${(percent * 100).toFixed(0)}%`}
-                    </text>
-                  );
-                }}
-              >
-                {byOrigen.map((e,i) => <Cell key={i} fill={ORIG_COLORS[e.name]||TC.navy}/>)}
-                <Label content={(props) => <CenterLabel {...props} value={fmtM(total)} sub="Total" tc={TC} />} />
-              </Pie>
-              <Tooltip content={({active,payload}) => active&&payload?.length ? (
-                <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"10px 14px", fontSize:11 }}>
-                  <b style={{color:TC.text}}>{payload[0].name}</b>
-                  <div style={{ color:ORIG_COLORS[payload[0].name]||TC.navy, marginTop:4, fontWeight:700 }}>{fmtM(payload[0].value)}</div>
-                  <div style={{ color:TC.textLight, fontSize:10, marginTop:2 }}>{((payload[0].value/totalAll)*100).toFixed(1)}%</div>
-                </div>
-              ) : null}/>
-            </PieChart>
-          </ResponsiveContainer>
+          <ReactECharts
+            style={{ width: "100%", height: 260 }}
+            opts={{ renderer: "canvas" }}
+            option={{
+              tooltip: {
+                ...t.tooltip,
+                trigger: "item",
+                formatter: p => `<b>${p.name}</b><br/>${fmtM(p.value)}<br/>${origenTotal > 0 ? ((p.value / origenTotal) * 100).toFixed(1) : "0.0"}%`,
+              },
+              legend: { show: false },
+              graphic: [{
+                type: "group",
+                left: "center",
+                top: "middle",
+                children: [
+                  { type: "text", style: { text: fmtM(total), x: 0, y: -8, textAlign: "center", fill: TC.navy, fontSize: 13, fontWeight: 700, fontFamily: "'DM Mono',monospace" } },
+                  { type: "text", style: { text: "Total", x: 0, y: 10, textAlign: "center", fill: TC.textLight, fontSize: 9 } },
+                ],
+              }],
+              series: [{
+                type: "pie",
+                radius: ["45%", "72%"],
+                center: ["50%", "50%"],
+                labelLine: { show: false },
+                label: {
+                  show: true,
+                  formatter: p => (p.percent >= 4 ? `${p.name === "Search Capital" ? "Search Cap." : p.name} ${p.percent.toFixed(0)}%` : ""),
+                  color: TC.textMid,
+                  fontSize: 10,
+                },
+                data: byOrigen.map(e => ({ name: e.name, value: e.value, itemStyle: { color: ORIG_COLORS[e.name] || TC.navy } })),
+              }],
+            }}
+          />
         </div>
       </div>
 
       {/* Chart row 2: TVPI per empresa */}
       <div style={{ ...card, marginBottom:14 }}>
         <div style={sec}>TVPI per Empresa <span style={{fontWeight:400, textTransform:"none", letterSpacing:0, color:TC.textMid, fontSize:10}}>— empreses valorades, ordenades per múltiple</span></div>
-        <ResponsiveContainer width="100%" height={Math.max(260, tvpiChartData.length * 26)}>
-          <BarChart data={tvpiChartData} layout="vertical" margin={{top:4, right:60, bottom:4, left:10}}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke={TC.border}/>
-            <XAxis type="number" domain={[0,'dataMax+0.3']} tickFormatter={v=>`${v.toFixed(1)}x`} tick={{fontSize:10, fill:TC.textLight}} axisLine={false} tickLine={false}/>
-            <YAxis type="category" dataKey="name" width={110} tick={{fontSize:10, fill:TC.text}} axisLine={false} tickLine={false}/>
-            <ReferenceLine x={1} stroke={TC.textLight} strokeDasharray="4 4" label={{value:"1×", position:"top", fontSize:9, fill:TC.textLight}}/>
-            <Tooltip content={({active,payload}) => active&&payload?.length ? (
-              <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"10px 14px", fontSize:11 }}>
-                <b style={{color:TC.text}}>{payload[0].payload.name}</b>
-                <div style={{ color:tvpiColor(payload[0].value), fontWeight:700, marginTop:4, fontSize:13 }}>{payload[0].value.toFixed(3)}×</div>
-                <div style={{ color:TC.textLight, fontSize:10, marginTop:2 }}>{payload[0].payload.tipus}</div>
-              </div>
-            ) : null}/>
-            <Bar dataKey="tvpi" radius={[0,3,3,0]} minPointSize={2}>
-              {tvpiChartData.map((e,i) => (
-                <Cell key={i} fill={tvpiColor(e.tvpi)}/>
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        <ReactECharts
+          style={{ width: "100%", height: Math.max(260, tvpiChartData.length * 26) }}
+          opts={{ renderer: "canvas" }}
+          option={{
+            grid: { top: 8, right: 60, bottom: 4, left: 10, containLabel: true },
+            tooltip: {
+              ...t.tooltip,
+              trigger: "axis",
+              axisPointer: { type: "shadow" },
+              formatter: params => {
+                const p = params?.[0];
+                if (!p) return "";
+                return `<b>${p.name}</b><br/>${p.value.toFixed(3)}×<br/>${tvpiChartData.find(d => d.name === p.name)?.tipus ?? ""}`;
+              },
+            },
+            xAxis: {
+              type: "value",
+              min: 0,
+              axisLabel: { ...t.axisLabel, formatter: v => `${v.toFixed(1)}x` },
+              splitLine: { show: false },
+              axisLine: t.axisLine,
+              axisTick: t.axisTick,
+            },
+            yAxis: {
+              type: "category",
+              data: tvpiChartData.map(d => d.name),
+              axisLabel: { ...t.axisLabel, color: TC.text, fontSize: 10 },
+              axisLine: t.axisLine,
+              axisTick: t.axisTick,
+            },
+            series: [{
+              name: "TVPI",
+              type: "bar",
+              data: tvpiChartData.map(d => d.tvpi),
+              barMaxWidth: 24,
+              itemStyle: {
+                color: params => tvpiColor(tvpiChartData[params.dataIndex].tvpi),
+                borderRadius: [0, 3, 3, 0],
+              },
+              markLine: {
+                symbol: "none",
+                label: { show: true, formatter: "1×", color: TC.textLight, fontSize: 9 },
+                lineStyle: { color: TC.textLight, type: "dashed", width: 1 },
+                data: [{ xAxis: 1 }],
+              },
+            }],
+          }}
+        />
       </div>
 
       {/* Table */}

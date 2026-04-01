@@ -1,32 +1,17 @@
-import { createClient } from "@supabase/supabase-js";
 import { isRateLimited } from "../_rateLimit.js";
 import { setCors } from "../_cors.js";
+import { getRequestIp, makeServiceClient, verifyAdmin } from "../_adminAuth.js";
 
 function serverError(res, error, context) {
   console.error(`[admin/users] ${context}:`, error);
   return res.status(500).json({ error: "Internal server error" });
 }
 
-function makeServiceClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-  );
-}
-
-async function verifyAdmin(req, serviceClient) {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  if (!token) return null;
-  const { data: { user }, error } = await serviceClient.auth.getUser(token);
-  if (error || user?.user_metadata?.role !== "admin") return null;
-  return user;
-}
-
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === "OPTIONS") return res.status(204).end();
 
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0] ?? req.socket?.remoteAddress ?? "unknown";
+  const ip = getRequestIp(req);
   if (isRateLimited(ip)) return res.status(429).json({ error: "Too many requests" });
 
   try {
@@ -49,7 +34,7 @@ export default async function handler(req, res) {
         .from("app_settings")
         .select("value")
         .eq("key", "allowed_domains")
-        .single();
+        .maybeSingle();
       const domains = setting?.value ?? [];
       if (domains.length > 0) {
         const domain = email.split("@")[1];
@@ -62,6 +47,13 @@ export default async function handler(req, res) {
         data: { role: role || "user" },
       });
       if (error) return serverError(res, error, "inviteUserByEmail");
+      if (data?.user?.id && role) {
+        const { error: roleError } = await supabase.auth.admin.updateUserById(data.user.id, {
+          app_metadata: { role },
+          user_metadata: { role },
+        });
+        if (roleError) return serverError(res, roleError, "updateUserById(role)");
+      }
       return res.json({ user: data?.user ?? null });
     }
 

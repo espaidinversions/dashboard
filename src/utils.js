@@ -30,21 +30,56 @@ export function fmtMonthKey(v) {
 
 // ── CSV Parsers ───────────────────────────────────────────
 function parseCSVRows(text) {
-  const lines = text.trim().split(/\r?\n/);
-  const headers = lines[0].split(",").map(h => h.trim());
-  return lines.slice(1).filter(l => l.trim()).map(line => {
-    // Handle quoted fields
-    const fields = [];
-    let cur = "", inQ = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i];
-      if (ch === '"') { inQ = !inQ; }
-      else if (ch === ',' && !inQ) { fields.push(cur); cur = ""; }
-      else { cur += ch; }
+  const s = String(text ?? "").trim();
+  if (!s) return [];
+
+  const rows = [];
+  let row = [];
+  let cur = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    const next = s[i + 1];
+
+    if (ch === '"') {
+      if (inQuotes && next === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
     }
-    fields.push(cur);
+
+    if (!inQuotes && (ch === ",")) {
+      row.push(cur);
+      cur = "";
+      continue;
+    }
+
+    if (!inQuotes && (ch === "\n" || ch === "\r")) {
+      if (ch === "\r" && next === "\n") i++;
+      row.push(cur);
+      rows.push(row);
+      row = [];
+      cur = "";
+      continue;
+    }
+
+    cur += ch;
+  }
+
+  row.push(cur);
+  rows.push(row);
+
+  const [headerRow, ...dataRows] = rows.filter(r => r.some(cell => String(cell ?? "").trim() !== ""));
+  if (!headerRow) return [];
+
+  const headers = headerRow.map(h => String(h ?? "").trim());
+  return dataRows.map(fields => {
     const obj = {};
-    headers.forEach((h, i) => { obj[h] = (fields[i] ?? "").trim(); });
+    headers.forEach((h, i) => { obj[h] = String(fields[i] ?? "").trim(); });
     return obj;
   });
 }
@@ -288,14 +323,7 @@ export function cagr(rendPct, yearsHeld) {
 }
 
 export function parseSearchersCSV(text) {
-  const lines = text.trim().split("\n");
-  const header = lines[0].split(",");
-  return lines.slice(1).map(line => {
-    const cols = line.split(",");
-    const obj = {};
-    header.forEach((h, i) => { obj[h.trim()] = (cols[i] || "").trim().replace(/^"|"$/g, ""); });
-    return obj;
-  });
+  return parseCSVRows(text);
 }
 
 // ── Turtle Capital LocalStorage keys ──────────────────────

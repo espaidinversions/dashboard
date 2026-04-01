@@ -1,7 +1,6 @@
 import React, { useMemo, useState, useRef } from "react";
-import {
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Label,
-} from "recharts";
+import ReactECharts from "../ReactECharts.jsx";
+import { ecTheme } from "../echartsTheme.js";
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
 import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState } from "../utils.js";
@@ -147,6 +146,8 @@ export function SearchersTab({ search = "" }) {
     });
     return Object.values(m).sort((a, b) => b.value - a.value);
   }, []);
+  const geoTotal = geoData.reduce((s, r) => s + r.value, 0);
+  const t = ecTheme(TC);
 
   // ── Historic table ─────────────────────────────────────────
   const filteredHistoric = useMemo(() => {
@@ -337,52 +338,44 @@ export function SearchersTab({ search = "" }) {
 
         <div style={card}>
           <div style={sec}>Allocation Geogràfica — Searchers (€)</div>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie data={geoData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={92} labelLine={false}
-                label={({ cx, cy, midAngle, outerRadius, percent, name }) => {
-                  if (percent < 0.04) return null;
-                  const R = Math.PI / 180;
-                  const r = outerRadius + 18;
-                  const x = cx + r * Math.cos(-midAngle * R);
-                  const y = cy + r * Math.sin(-midAngle * R);
-                  const flagMap = { ES:"🇪🇸", EN:"🇬🇧", IT:"🇮🇹", DE:"🇩🇪", FR:"🇫🇷", PT:"🇵🇹", NL:"🇳🇱", US:"🇺🇸", CH:"🇨🇭" };
-                  return (
-                    <text x={x} y={y} textAnchor="middle" dominantBaseline="middle" fontSize={11}>
-                      {flagMap[name] || name} {`${(percent * 100).toFixed(0)}%`}
-                    </text>
-                  );
-                }}
-              >
-                {geoData.map((_, i) => <Cell key={i} fill={GEO_COLORS[i % GEO_COLORS.length]}/>)}
-                <Label content={({ viewBox }) => {
-                  const { cx, cy } = viewBox;
-                  const geoTotal = geoData.reduce((s, r) => s + r.value, 0);
-                  return (
-                    <g>
-                      <text x={cx} y={cy - 7} textAnchor="middle" dominantBaseline="middle"
-                        style={{ fontSize: 12, fontWeight: 700, fill: TC.navy, fontFamily: "'DM Mono',monospace" }}>
-                        {fmtM(geoTotal)}
-                      </text>
-                      <text x={cx} y={cy + 9} textAnchor="middle" dominantBaseline="middle"
-                        style={{ fontSize: 9, fill: TC.textLight }}>
-                        Total
-                      </text>
-                    </g>
-                  );
-                }} />
-              </Pie>
-              <Tooltip content={({ active, payload }) =>
-                active && payload?.length ? (
-                  <div style={{ background:TC.card, border:`1px solid ${TC.border}`, borderRadius:7, padding:"10px 14px", fontSize:11 }}>
-                    <div style={{ fontWeight:700, marginBottom:4 }}>{payload[0].payload.name}</div>
-                    <div style={{ color:TC.navy, fontWeight:700 }}>{fmtM(payload[0].value)}</div>
-                    <div style={{ color:TC.textMid, marginTop:2, fontSize:10 }}>{payload[0].payload.count} searcher{payload[0].payload.count>1?"s":""}</div>
-                  </div>
-                ) : null
-              }/>
-            </PieChart>
-          </ResponsiveContainer>
+          <ReactECharts
+            style={{ width: "100%", height: 300 }}
+            opts={{ renderer: "canvas" }}
+            option={{
+              tooltip: {
+                ...t.tooltip,
+                trigger: "item",
+                formatter: p => `<b>${p.name}</b><br/>${fmtM(p.value)}<br/>${(geoTotal > 0 ? ((p.value / geoTotal) * 100).toFixed(1) : "0.0")}% · ${(geoData.find(r => r.name === p.name)?.count ?? 0)} searcher${(geoData.find(r => r.name === p.name)?.count ?? 0) === 1 ? "" : "s"}`,
+              },
+              legend: { show: false },
+              graphic: [{
+                type: "group",
+                left: "center",
+                top: "middle",
+                children: [
+                  { type: "text", style: { text: fmtM(geoTotal), x: 0, y: -7, textAlign: "center", fill: TC.navy, fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono',monospace" } },
+                  { type: "text", style: { text: "Total", x: 0, y: 9, textAlign: "center", fill: TC.textLight, fontSize: 9 } },
+                ],
+              }],
+              series: [{
+                type: "pie",
+                radius: ["48%", "76%"],
+                center: ["50%", "50%"],
+                labelLine: { show: false },
+                label: {
+                  show: true,
+                  formatter: p => {
+                    if (p.percent < 4) return "";
+                    const flagMap = { ES:"🇪🇸", EN:"🇬🇧", IT:"🇮🇹", DE:"🇩🇪", FR:"🇫🇷", PT:"🇵🇹", NL:"🇳🇱", US:"🇺🇸", CH:"🇨🇭" };
+                    return `${flagMap[p.name] || p.name} ${p.percent.toFixed(0)}%`;
+                  },
+                  fontSize: 11,
+                  color: TC.textMid,
+                },
+                data: geoData.map((d, i) => ({ name: d.name, value: d.value, itemStyle: { color: GEO_COLORS[i % GEO_COLORS.length] } })),
+              }],
+            }}
+          />
         </div>
       </div>
 

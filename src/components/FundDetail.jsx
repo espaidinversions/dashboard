@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import {
-  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, ReferenceLine, Cell
-} from "recharts";
+import ReactECharts from "../ReactECharts.jsx";
+import { ecTheme } from "../echartsTheme.js";
 import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT, CAT_CFG, VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify } from "../utils.js";
@@ -138,25 +137,74 @@ function FundDetailInner() {
           {jCurveData.length === 0
             ? <div style={{ textAlign: "center", color: tc.textLight, padding: "32px 0" }}>Encara no hi ha aportacions registrades.</div>
             : (
-              <ResponsiveContainer width="100%" height={260}>
-                <ComposedChart data={jCurveData} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap="30%" barGap={4}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-                  <ReferenceLine y={0} stroke={tc.border} strokeWidth={1.5} />
-                  <XAxis dataKey="period" tick={{ fontSize: 10, fill: tc.textLight }} />
-                  <YAxis tickFormatter={v => (v < 0 ? "−" : "") + fmtM(Math.abs(v))} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
-                  <Tooltip
-                    formatter={(v, name) => {
-                      const label = name === "calls" ? "Capital Cridat" : name === "dist" ? "Distribucions" : "Net Acumulat";
-                      return [(v < 0 ? "−" : "+") + fmtM(Math.abs(v)), label];
-                    }}
-                    labelStyle={{ color: tc.text }}
-                    contentStyle={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }}
-                  />
-                  <Bar dataKey="calls" name="calls" fill="#2B5070" fillOpacity={0.8} />
-                  <Bar dataKey="dist"  name="dist"  fill="#3DC83E" fillOpacity={0.8} />
-                  <Line dataKey="cumNet" name="cumNet" type="monotone" stroke="#E8A020" strokeWidth={2} dot={{ r: 3, fill: "#E8A020" }} />
-                </ComposedChart>
-              </ResponsiveContainer>
+              (() => {
+                const t = ecTheme(tc);
+                const option = {
+                  grid: { top: 8, right: 16, bottom: 32, left: 0, containLabel: true },
+                  tooltip: {
+                    ...t.tooltip,
+                    trigger: "axis",
+                    axisPointer: { type: "shadow" },
+                    formatter: params => {
+                      const label = params[0]?.axisValue ?? "";
+                      let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                      params.forEach(p => {
+                        if (p.value == null) return;
+                        const name = p.seriesName === "calls" ? "Capital Cridat" : p.seriesName === "dist" ? "Distribucions" : "Net Acumulat";
+                        html += `<div>${p.marker}${name}: ${(p.value < 0 ? "−" : "+") + fmtM(Math.abs(p.value))}</div>`;
+                      });
+                      return html;
+                    },
+                  },
+                  xAxis: {
+                    type: "category",
+                    data: jCurveData.map(d => d.period),
+                    axisLabel: { ...t.axisLabel, fontSize: 10 },
+                    axisLine: t.axisLine,
+                    axisTick: t.axisTick,
+                  },
+                  yAxis: {
+                    type: "value",
+                    axisLabel: { ...t.axisLabel, formatter: v => `${v < 0 ? "−" : ""}${fmtM(Math.abs(v))}` },
+                    splitLine: t.splitLine,
+                    axisLine: t.axisLine,
+                    axisTick: t.axisTick,
+                  },
+                  series: [
+                    {
+                      name: "calls",
+                      type: "bar",
+                      data: jCurveData.map(d => d.calls),
+                      itemStyle: { color: "#2B5070", opacity: 0.8 },
+                      barMaxWidth: 28,
+                    },
+                    {
+                      name: "dist",
+                      type: "bar",
+                      data: jCurveData.map(d => d.dist),
+                      itemStyle: { color: "#3DC83E", opacity: 0.8 },
+                      barMaxWidth: 28,
+                    },
+                    {
+                      name: "cumNet",
+                      type: "line",
+                      data: jCurveData.map(d => d.cumNet),
+                      lineStyle: { color: "#E8A020", width: 2 },
+                      itemStyle: { color: "#E8A020" },
+                      symbol: "circle",
+                      symbolSize: 6,
+                      connectNulls: true,
+                      markLine: {
+                        symbol: "none",
+                        data: [{ yAxis: 0 }],
+                        lineStyle: { color: tc.border, width: 1.5 },
+                        label: { show: false },
+                      },
+                    },
+                  ],
+                };
+                return <ReactECharts option={option} style={{ width: "100%", height: 260 }} opts={{ renderer: "canvas" }} />;
+              })()
             )
           }
         </div>

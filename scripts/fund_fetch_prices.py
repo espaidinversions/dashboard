@@ -110,6 +110,16 @@ ALL_ISINS = [
     "LU1433232698",   # Pictet TR - Atlas I EUR
     "DE000A1C5D13",   # Acatis Gane Value Event Fonds B
     "BE6246059354",   # DPAM B Real Estate E W EUR
+    # ── Closed Positions (historical data only) ────────────────────────────
+    "FR0013516028",   # Carmignac Credit 2025 F EUR Acc
+    "LU0366534344",   # Pictet-Nutrition P EUR
+    "LU0940007262",   # Robeco All Strategy Euro Bonds EurHdg
+    "LU1878469862",   # Threadneedle (Lux) American Smaller Companies 3EH
+    "LU2004795212",   # Schroder ISF QEP Global Emerging Markets K1 Acc EUR
+    "LU2110829848",   # Infusive Consumer Alpha Global AA Acc EUR
+    "LU2171257319",   # Vontobel Fund Emerging Markets Corporate Bond H EUR Hedged
+    "LU2183143846",   # Amundi Funds European Value R (EUR) A
+    "LU2257995980",   # Allianz Global Water RT11 EUR Acc
 ]
 
 # Remove duplicates while preserving order

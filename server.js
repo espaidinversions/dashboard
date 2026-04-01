@@ -3,6 +3,7 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync, statSync, watch } f
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
+import { makeServiceClient, verifyAdmin } from "./api/_adminAuth.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DATA  = join(__dirname, "src/data");
@@ -157,6 +158,28 @@ app.get("/api/eur-usd", async (req, res) => {
   }
 });
 
+// ── GET /api/auth-settings ────────────────────────────────
+// Returns app-wide auth settings such as the registration domain allowlist.
+
+app.get("/api/auth-settings", async (req, res) => {
+  try {
+    const supabase = createClient(
+      process.env.VITE_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+    );
+    const { data, error } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "allowed_domains")
+      .maybeSingle();
+    if (error) throw error;
+    res.json({ allowed_domains: Array.isArray(data?.value) ? data.value : [] });
+  } catch (e) {
+    console.error("/api/auth-settings error:", e);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── GET /api/data-version ─────────────────────────────────
 // Returns the most recent mtime of any file in src/data/.
 // Used by the prod reload watcher in the React app.
@@ -176,28 +199,11 @@ app.get("/api/data-version", (req, res) => {
   }
 });
 
-// ── Admin helpers ─────────────────────────────────────────
-
-function makeAdminClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-  );
-}
-
-async function verifyAdminToken(req, supabase) {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  if (!token) return null;
-  const { data: { user }, error } = await supabase.auth.getUser(token);
-  if (error || user?.user_metadata?.role !== "admin") return null;
-  return user;
-}
-
 // ── GET /api/admin/users ──────────────────────────────────
 app.get("/api/admin/users", async (req, res) => {
   try {
-    const supabase = makeAdminClient();
-    const admin = await verifyAdminToken(req, supabase);
+    const supabase = makeServiceClient();
+    const admin = await verifyAdmin(req, supabase);
     if (!admin) return res.status(403).json({ error: "Forbidden" });
     const { data, error } = await supabase.auth.admin.listUsers();
     if (error) throw error;
@@ -211,8 +217,8 @@ app.get("/api/admin/users", async (req, res) => {
 // ── POST /api/admin/users ─────────────────────────────────
 app.post("/api/admin/users", async (req, res) => {
   try {
-    const supabase = makeAdminClient();
-    const admin = await verifyAdminToken(req, supabase);
+    const supabase = makeServiceClient();
+    const admin = await verifyAdmin(req, supabase);
     if (!admin) return res.status(403).json({ error: "Forbidden" });
     const { email, role } = req.body ?? {};
     if (!email) return res.status(400).json({ error: "Email required" });
@@ -220,6 +226,13 @@ app.post("/api/admin/users", async (req, res) => {
       data: { role: role || "user" },
     });
     if (error) throw error;
+    if (data?.user?.id && role) {
+      const { error: roleError } = await supabase.auth.admin.updateUserById(data.user.id, {
+        app_metadata: { role },
+        user_metadata: { role },
+      });
+      if (roleError) throw roleError;
+    }
     res.json({ user: data?.user ?? null });
   } catch (e) {
     console.error("/api/admin/users POST error:", e);
@@ -230,13 +243,16 @@ app.post("/api/admin/users", async (req, res) => {
 // ── PATCH /api/admin/users/:id ────────────────────────────
 app.patch("/api/admin/users/:id", async (req, res) => {
   try {
-    const supabase = makeAdminClient();
-    const admin = await verifyAdminToken(req, supabase);
+    const supabase = makeServiceClient();
+    const admin = await verifyAdmin(req, supabase);
     if (!admin) return res.status(403).json({ error: "Forbidden" });
     const { id } = req.params;
     const { role, email_confirm } = req.body ?? {};
     const updates = {};
-    if (role !== undefined) updates.user_metadata = { role };
+    if (role !== undefined) {
+      updates.app_metadata = { role };
+      updates.user_metadata = { role };
+    }
     if (email_confirm) updates.email_confirm = true;
     const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
     if (error) throw error;
@@ -250,12 +266,12 @@ app.patch("/api/admin/users/:id", async (req, res) => {
 // ── DELETE /api/admin/users/:id ───────────────────────────
 app.delete("/api/admin/users/:id", async (req, res) => {
   try {
-    const supabase = makeAdminClient();
-    const admin = await verifyAdminToken(req, supabase);
+    const supabase = makeServiceClient();
+    const admin = await verifyAdmin(req, supabase);
     if (!admin) return res.status(403).json({ error: "Forbidden" });
     const { id } = req.params;
     const { data: allUsers } = await supabase.auth.admin.listUsers();
-    const admins = (allUsers?.users ?? []).filter(u => u.user_metadata?.role === "admin");
+    const admins = (allUsers?.users ?? []).filter(u => (u.app_metadata?.role ?? u.user_metadata?.role) === "admin");
     const target = admins.find(u => u.id === id);
     if (target && admins.length <= 1) {
       return res.status(409).json({ error: "Cannot delete the last admin" });

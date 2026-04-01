@@ -1,8 +1,6 @@
 import React, { useMemo, useState, useEffect } from "react";
-import {
-  LineChart, Line, Bar, XAxis, YAxis, Tooltip,
-  ReferenceLine, ResponsiveContainer, Legend, CartesianGrid,
-} from "recharts";
+import ReactECharts from "../ReactECharts.jsx";
+import { ecTheme } from "../echartsTheme.js";
 import { useParams, useNavigate } from "react-router-dom";
 import { PM_POSITIONS, PM_CLOSED } from "../data/publicMarkets.js";
 import { useTheme } from "../theme.js";
@@ -147,6 +145,7 @@ export function PMPositionDetail() {
   const cagrNet  = isAbelFont ? cagr(netInici, yh) : null;
   const cagrBrutColor = cagrBrut == null ? tc.textLight : cagrBrut > 0 ? tc.green : tc.red;
   const cagrNetColor  = cagrNet  == null ? tc.textLight : cagrNet  > 0 ? tc.green : tc.red;
+  const t = ecTheme(tc);
 
   return (
     <div style={{ padding: "28px 32px 60px", maxWidth: 960, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -272,21 +271,76 @@ export function PMPositionDetail() {
           {returnData.length > 0 && (
             <>
               <div style={secLabel}>Rendiments anuals {isAbelFont ? "· brut vs net TER" : ""}</div>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={returnData} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-                  <XAxis dataKey="year" tick={{ fontSize: 10, fill: tc.textLight }} axisLine={false} tickLine={false} />
-                  <YAxis tickFormatter={v => v.toFixed(1) + "%"} tick={{ fontSize: 10, fill: tc.textLight }} axisLine={false} tickLine={false} width={40} />
-                  <ReferenceLine y={0} stroke={tc.border} />
-                  <Tooltip {...tooltipStyle} formatter={(v, name) => [
-                    (v >= 0 ? "+" : "") + v.toFixed(2) + "%",
-                    name === "brut" ? "Brut" : "Net TER",
-                  ]} />
-                  {isAbelFont && <Legend formatter={n => n === "brut" ? "Brut" : "Net TER"} wrapperStyle={{ fontSize: 10 }} />}
-                  <Line dataKey="brut" name="brut" stroke={tc.navy} strokeWidth={2} dot={{ r: 4, fill: tc.navy }} connectNulls />
-                  {isAbelFont && <Line dataKey="net" name="net" stroke={tc.green} strokeWidth={2} dot={{ r: 4, fill: tc.green }} connectNulls />}
-                </LineChart>
-              </ResponsiveContainer>
+              <ReactECharts
+                style={{ width: "100%", height: 200 }}
+                opts={{ renderer: "canvas" }}
+                option={{
+                  grid: { top: 4, right: 16, bottom: 4, left: 0, containLabel: true },
+                  tooltip: {
+                    ...t.tooltip,
+                    trigger: "axis",
+                    formatter: params => {
+                      const label = params[0]?.axisValue ?? "";
+                      let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                      params.forEach(p => {
+                        if (p.value == null) return;
+                        html += `<div>${p.marker}${p.seriesName === "brut" ? "Brut" : "Net TER"}: ${(p.value >= 0 ? "+" : "") + p.value.toFixed(2)}%</div>`;
+                      });
+                      return html;
+                    },
+                  },
+                  xAxis: {
+                    type: "category",
+                    data: returnData.map(d => d.year),
+                    axisLabel: { ...t.axisLabel, fontSize: 10 },
+                    axisLine: t.axisLine,
+                    axisTick: t.axisTick,
+                  },
+                  yAxis: {
+                    type: "value",
+                    axisLabel: { ...t.axisLabel, formatter: v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%` },
+                    splitLine: t.splitLine,
+                    axisLine: t.axisLine,
+                    axisTick: t.axisTick,
+                  },
+                  series: [
+                    {
+                      name: "brut",
+                      type: "line",
+                      data: returnData.map(d => d.brut),
+                      lineStyle: { color: tc.navy, width: 2 },
+                      itemStyle: { color: tc.navy },
+                      symbol: "circle",
+                      symbolSize: 6,
+                      connectNulls: true,
+                    },
+                    ...(isAbelFont ? [{
+                      name: "net",
+                      type: "line",
+                      data: returnData.map(d => d.net),
+                      lineStyle: { color: tc.green, width: 2 },
+                      itemStyle: { color: tc.green },
+                      symbol: "circle",
+                      symbolSize: 6,
+                      connectNulls: true,
+                    }] : []),
+                    {
+                      name: "_zero",
+                      type: "line",
+                      data: returnData.map(() => 0),
+                      symbol: "none",
+                      silent: true,
+                      lineStyle: { opacity: 0 },
+                      markLine: {
+                        symbol: "none",
+                        data: [{ yAxis: 0 }],
+                        lineStyle: { color: tc.border, width: 1 },
+                        label: { show: false },
+                      },
+                    },
+                  ],
+                }}
+              />
             </>
           )}
         </div>

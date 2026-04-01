@@ -1,32 +1,17 @@
-import { createClient } from "@supabase/supabase-js";
 import { isRateLimited } from "../../_rateLimit.js";
 import { setCors } from "../../_cors.js";
+import { getRequestIp, makeServiceClient, verifyAdmin } from "../../_adminAuth.js";
 
 function serverError(res, error, context) {
   console.error(`[admin/users/[id]] ${context}:`, error);
   return res.status(500).json({ error: "Internal server error" });
 }
 
-function makeServiceClient() {
-  return createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY,
-  );
-}
-
-async function verifyAdmin(req, serviceClient) {
-  const token = req.headers.authorization?.replace("Bearer ", "");
-  if (!token) return null;
-  const { data: { user }, error } = await serviceClient.auth.getUser(token);
-  if (error || user?.user_metadata?.role !== "admin") return null;
-  return user;
-}
-
 export default async function handler(req, res) {
   setCors(res);
   if (req.method === "OPTIONS") return res.status(204).end();
 
-  const ip = req.headers["x-forwarded-for"]?.split(",")[0] ?? req.socket?.remoteAddress ?? "unknown";
+  const ip = getRequestIp(req);
   if (isRateLimited(ip)) return res.status(429).json({ error: "Too many requests" });
 
   try {
@@ -39,7 +24,10 @@ export default async function handler(req, res) {
     if (req.method === "PATCH") {
       const { role, email_confirm } = req.body ?? {};
       const updates = {};
-      if (role !== undefined) updates.user_metadata = { role };
+      if (role !== undefined) {
+        updates.app_metadata = { role };
+        updates.user_metadata = { role };
+      }
       if (email_confirm) updates.email_confirm = true;
       const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
       if (error) return serverError(res, error, "updateUserById");
@@ -50,7 +38,7 @@ export default async function handler(req, res) {
       // Guard: don't delete the last admin
       const { data: allUsers } = await supabase.auth.admin.listUsers();
       const admins = (allUsers?.users ?? []).filter(
-        u => u.user_metadata?.role === "admin",
+        u => (u.app_metadata?.role ?? u.user_metadata?.role) === "admin",
       );
       const target = admins.find(u => u.id === id);
       if (target && admins.length <= 1) {

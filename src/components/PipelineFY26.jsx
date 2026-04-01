@@ -1,10 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import * as XLSX from "xlsx";
+import ReactECharts from "../ReactECharts.jsx";
+import { ecTheme } from "../echartsTheme.js";
 import { usePersistedState } from "../utils.js";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  Cell, PieChart, Pie, Legend
-} from "recharts";
 import { useTheme } from "../theme.js";
 import { FUNDS0 as FUNDS0_DEFAULT, EUR_USD as EUR_USD_DEFAULT, STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE } from "../config.js";
 import { EmptyState, EditableCell } from "./SharedComponents.jsx";
@@ -141,53 +139,60 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = null }) {
     {label:"Global (EU/US)",    value:`${sym}${cv(byGeo.find(g=>g.name==="EU/US")?.value||0,"EUR").toFixed(1)}M`, sub:`${active.filter(f=>f.geography==="EU/US").length} fons`, accent:TC.navyLight},
   ];
 
-  const PipTip = ({active:a,payload}) => {
-    if (!a || !payload?.length) return null;
-    return (
-      <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:6,padding:"8px 14px",boxShadow:"0 4px 12px rgba(0,0,0,.18)"}}>
-        <p style={{color:TC.navy,margin:0,fontWeight:600,fontSize:13}}>{payload[0].name}</p>
-        <p style={{color:TC.green,margin:"3px 0 0",fontSize:13}}>€{payload[0].value.toFixed(2)}M</p>
-      </div>
-    );
-  };
-
-  const PipPL = ({cx,cy,midAngle,innerRadius,outerRadius,percent}) => {
-    if(percent<0.06)return null;
-    const R=Math.PI/180, r=innerRadius+(outerRadius-innerRadius)*0.5;
-    return <text x={cx+r*Math.cos(-midAngle*R)} y={cy+r*Math.sin(-midAngle*R)} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight="700">{`${(percent*100).toFixed(0)}%`}</text>;
-  };
-
   const greenBadgeBg = dark ? "#0A2010" : "#E8F8E8";
   const CPie = ({data,colors,type,title}) => (
     <div style={{background:TC.card,border:`1.5px solid ${chartF?.type===type?TC.green:TC.border}`,borderRadius:10,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.08)",transition:"border-color 0.2s"}}>
       <div style={{fontSize:10,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         {title}<span style={{fontSize:9,color:TC.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
       </div>
-      <ResponsiveContainer width="100%" height={165}>
-        <PieChart>
-          <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={62} labelLine={false} label={PipPL} isAnimationActive={false}>
-            {data.map((e,j)=>(
-              <Cell key={j} fill={colors[e.name]||TC.navyLight} opacity={isHl(type,e.name)?1:0.3}
-                stroke={chartF?.type===type&&chartF?.value===e.name?"#fff":"none"} strokeWidth={2}
-                style={{cursor:"pointer"}} onClick={()=>clickChart(type,e.name)}/>
-            ))}
-          </Pie>
-          <Tooltip content={<PipTip/>}/>
-          <Legend formatter={v=><span style={{color:TC.textMid,fontSize:10}}>{v}</span>}/>
-        </PieChart>
-      </ResponsiveContainer>
+      <ReactECharts
+        style={{ width: "100%", height: 165 }}
+        opts={{ renderer: "canvas" }}
+        onEvents={{ click: params => params?.name && clickChart(type, params.name) }}
+        option={{
+          tooltip: {
+            ...t.tooltip,
+            trigger: "item",
+            formatter: p => `<b>${p.name}</b><br/>${fmtM(p.value)} · ${p.percent.toFixed(1)}%`,
+          },
+          legend: { show: false },
+          graphic: [{
+            type: "group",
+            left: "center",
+            top: "middle",
+            children: [
+              { type: "text", style: { text: fmtM(data.reduce((s, r) => s + r.value, 0)), x: 0, y: -7, textAlign: "center", fill: TC.navy, fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono',monospace" } },
+              { type: "text", style: { text: "Total", x: 0, y: 9, textAlign: "center", fill: TC.textLight, fontSize: 9 } },
+            ],
+          }],
+          series: [{
+            type: "pie",
+            radius: ["46%", "72%"],
+            center: ["50%", "50%"],
+            labelLine: { show: false },
+            label: {
+              show: true,
+              formatter: p => (p.percent >= 6 ? `${p.name} ${p.percent.toFixed(0)}%` : ""),
+              color: TC.textMid,
+              fontSize: 10,
+            },
+            data: data.map(e => ({
+              name: e.name,
+              value: e.value,
+              itemStyle: {
+                color: colors[e.name] || TC.navyLight,
+                opacity: isHl(type, e.name) ? 1 : 0.3,
+                borderColor: chartF?.type === type && chartF?.value === e.name ? "#fff" : "transparent",
+                borderWidth: 2,
+              },
+            })),
+          }],
+        }}
+      />
     </div>
   );
 
-  const PipBarTip = ({active:a,payload,label}) => {
-    if (!a || !payload?.length) return null;
-    return (
-      <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:6,padding:"8px 14px",boxShadow:"0 4px 12px rgba(0,0,0,.18)"}}>
-        <p style={{color:TC.navy,margin:0,fontWeight:600,fontSize:13}}>{label}</p>
-        <p style={{color:TC.green,margin:"3px 0 0",fontSize:13}}>€{payload[0].value.toFixed(2)}M</p>
-      </div>
-    );
-  };
+  const t = ecTheme(TC);
 
   const exportExcel = () => {
     const rows = funds.map(f => ({
@@ -246,16 +251,46 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = null }) {
           <div style={{fontSize:10,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
             Per Sector<span style={{fontSize:9,color:TC.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
           </div>
-          <ResponsiveContainer width="100%" height={165}>
-            <BarChart data={bySec} layout="vertical" margin={{left:0,right:14}} onClick={d=>d?.activeLabel&&clickChart("sec",d.activeLabel)}>
-              <XAxis type="number" tick={{fill:TC.textLight,fontSize:10}} axisLine={false} tickLine={false}/>
-              <YAxis type="category" dataKey="name" width={90} tick={{fill:TC.textMid,fontSize:10}} axisLine={false} tickLine={false}/>
-              <Tooltip content={<PipBarTip/>}/>
-              <Bar dataKey="value" radius={[0,4,4,0]} cursor="pointer" isAnimationActive={false}>
-                {bySec.map((e,i)=><Cell key={i} fill={SECCOL[e.name]||TC.navy} opacity={isHl("sec",e.name)?1:0.3}/>)}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+          <ReactECharts
+            style={{ width: "100%", height: 165 }}
+            opts={{ renderer: "canvas" }}
+            onEvents={{ click: params => params?.name && clickChart("sec", params.name) }}
+            option={{
+              grid: { top: 8, right: 14, bottom: 8, left: 0, containLabel: true },
+              tooltip: {
+                ...t.tooltip,
+                trigger: "axis",
+                axisPointer: { type: "shadow" },
+                formatter: params => {
+                  const p = params?.[0];
+                  if (!p) return "";
+                  return `<b>${p.name}</b><br/>${fmtM(p.value)}`;
+                },
+              },
+              xAxis: {
+                type: "value",
+                axisLabel: { ...t.axisLabel, fontSize: 10 },
+                splitLine: { show: false },
+                axisLine: t.axisLine,
+                axisTick: t.axisTick,
+              },
+              yAxis: {
+                type: "category",
+                data: bySec.map(d => d.name),
+                axisLabel: { ...t.axisLabel, fontSize: 10 },
+                axisLine: t.axisLine,
+                axisTick: t.axisTick,
+              },
+              series: [{
+                type: "bar",
+                data: bySec.map(d => ({
+                  value: d.value,
+                  itemStyle: { color: SECCOL[d.name] || TC.navy, opacity: isHl("sec", d.name) ? 1 : 0.3, borderRadius: [0, 4, 4, 0] },
+                })),
+                barMaxWidth: 22,
+              }],
+            }}
+          />
         </div>
       </div>
 
