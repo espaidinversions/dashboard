@@ -381,7 +381,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
                 formatter={(v, name) => [v != null ? pctFmt(v) : "—", name]}
               />
               <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }} />
-              {activeMgrs.map(m => (
+              {displayManagers.map(m => (
                 <Bar
                   key={m.id}
                   dataKey={m.id}
@@ -394,7 +394,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
             </BarChart>
           </ResponsiveContainer>
           <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-            TWR reportat per cada gestor. UBS sense dades 2024–2025.
+            TWR reportat per cada gestor. UBS: sense dades 2024–2025 (YTD disponible: ~+0.25%). Les barres absents indiquen que el gestor no ha reportat rendiment per al període.
           </div>
         </div>
 
