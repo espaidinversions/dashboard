@@ -77,11 +77,20 @@ const DEFAULT_EXPAND_TIPUS = {
 // Static lookup derived from PM_POSITIONS (imported data never changes at runtime)
 const ISIN_TO_ID  = Object.fromEntries(PM_POSITIONS.map(p => [p.isin, p.id]));
 
-// Get PM_POSITIONS for a manager row (only Bankinter/Abel has individual position tracking)
-function getMgrPositions(mgrId, tipusFilter) {
-  if (mgrId !== "abel") return null;
-  let rows = PM_POSITIONS.filter(p => p.gestor === "Abel Font");
-  if (tipusFilter && tipusFilter !== "all") rows = rows.filter(p => p.tipus === tipusFilter);
+// Get PM_POSITIONS for a manager row — all four custodians are now expandable
+function getMgrPositions(mgrId) {
+  let rows;
+  if (mgrId === "abel") {
+    rows = PM_POSITIONS.filter(p => p.gestor === "Abel Font");
+  } else if (mgrId === "caixa") {
+    rows = PM_POSITIONS.filter(p => p.custodian === "CaixaBank" && p.gestor !== "Abel Font");
+  } else if (mgrId === "ubs") {
+    rows = PM_POSITIONS.filter(p => p.custodian === "UBS" || p.custodian === "Credit Suisse");
+  } else if (mgrId === "andbank") {
+    rows = PM_POSITIONS.filter(p => p.custodian === "Andbank");
+  } else {
+    return null;
+  }
   return rows.sort((a, b) => (b.valorMercat ?? 0) - (a.valorMercat ?? 0));
 }
 
@@ -555,7 +564,10 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
               const yrs = inceptionMonths / 12;
               const mgrCagr = m.rendPct != null ? cagr(m.rendPct, yrs) : null;
               const curTipus = expandTipus[m.id] ?? DEFAULT_EXPAND_TIPUS[m.id] ?? "all";
-              const subPositions = getMgrPositions(m.id, curTipus);
+              const allSubPositions = getMgrPositions(m.id);
+              const subPositions = m.id === "abel" && curTipus !== "all"
+                ? allSubPositions?.filter(p => p.tipus === curTipus)
+                : allSubPositions;
 
               const isExpandable = subPositions !== null;
               return (
@@ -590,8 +602,8 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
                       <td colSpan={8} style={{ padding: 0, background: dark ? "#0C1A28" : "#f0f4f8", borderBottom: `1px solid ${tc.border}` }}>
                         <div style={{ padding: "10px 16px 16px 32px" }}>
 
-                          {/* RV/RF toggle — only for managers with positions */}
-                          {subPositions !== null && (
+                          {/* RV/RF toggle — only for Abel Font (Bankinter) */}
+                          {m.id === "abel" && (
                             <div style={{ display: "flex", gap: 4, marginBottom: 10 }}>
                               {[["all","Tots"],["RV","RV"],["RF","RF"]].map(([id, label]) => (
                                 <button key={id}
@@ -612,7 +624,11 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
 
                           {/* Positions sub-table */}
                           {subPositions !== null && subPositions.length === 0 && (
-                            <div style={{ fontSize: 11, color: tc.textLight, fontStyle: "italic" }}>Cap posició per al filtre seleccionat.</div>
+                            <div style={{ fontSize: 11, color: tc.textLight, fontStyle: "italic" }}>
+                              {m.id === "andbank"
+                                ? "WAM–Andbank gestiona la cartera com a bloc consolidat sense posicions individuals registrades."
+                                : "Cap posició per al filtre seleccionat."}
+                            </div>
                           )}
 
                           {subPositions !== null && subPositions.length > 0 && (
