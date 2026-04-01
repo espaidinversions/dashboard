@@ -1,9 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
 import html2canvas from "html2canvas";
-import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  Cell, PieChart, Pie, Legend
-} from "recharts";
+import ReactECharts from "echarts-for-react";
+import { ecTheme } from "../echartsTheme.js";
 import {
   FY_LIST, MESOS, CAT_CFG, VCPE_CFG, EST_CFG,
   RAW_CC as RAW_CC_DEFAULT, FUNDS0 as FUNDS0_DEFAULT, FUND_META as FUND_META_DEFAULT,
@@ -12,7 +10,7 @@ import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify, exportMultiXLSX } from "../utils.js";
 import { PORTFOLIO_COMPANIES, ALL_SEARCHERS } from "../data/searchers.js";
 import { loadAll, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta } from "../db.js";
-import { Logo, Badge, BarTip, PieTip, PL, EmptyState } from "./SharedComponents.jsx";
+import { Logo, Badge, EmptyState } from "./SharedComponents.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
 import { MensualTab } from "./MensualTab.jsx";
@@ -791,20 +789,32 @@ function DashboardInner() {
                   Capital Cridat per Any Fiscal
                   <span style={{fontSize:9,color:tc.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
                 </div>
-                <ResponsiveContainer width="100%" height={160}>
-                  <BarChart data={ccByFy} margin={{left:0,right:5,top:0,bottom:0}} barGap={3} barCategoryGap="30%"
-                    onClick={d=>d?.activeLabel&&clickCcChart("fy",d.activeLabel)}>
-                    <XAxis dataKey="fy" tick={{fill:tc.textMid,fontSize:10}} axisLine={false} tickLine={false}/>
-                    <YAxis tickFormatter={v=>fmtS(v)} tick={{fill:tc.textLight,fontSize:9}} axisLine={false} tickLine={false} width={55}/>
-                    <Tooltip content={<BarTip/>}/>
-                    <Bar dataKey="Capital Call" fill={tc.navy} radius={[4,4,0,0]}>
-                      {ccByFy.map((e,i)=><Cell key={i} fill={tc.navy} opacity={isCcHl("fy",e.fy)?1:0.25} style={{cursor:"pointer"}}/>)}
-                    </Bar>
-                    <Bar dataKey="Retornat" fill={tc.green} radius={[4,4,0,0]}>
-                      {ccByFy.map((e,i)=><Cell key={i} fill={tc.green} opacity={isCcHl("fy",e.fy)?1:0.25} style={{cursor:"pointer"}}/>)}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                {(()=>{
+                  const t = ecTheme(tc);
+                  const option = {
+                    grid: { top: 8, right: 8, bottom: 32, left: 0, containLabel: true },
+                    tooltip: { ...t.tooltip, trigger: "axis", axisPointer: { type: "shadow" } },
+                    legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
+                    xAxis: { type: "category", data: ccByFy.map(d=>d.fy), axisLabel: { ...t.axisLabel, color: tc.textMid, fontSize: 10 }, axisLine: t.axisLine, axisTick: t.axisTick },
+                    yAxis: { type: "value", axisLabel: { ...t.axisLabel, formatter: v=>fmtS(v) }, splitLine: t.splitLine, axisLine: t.axisLine, axisTick: t.axisTick },
+                    series: [
+                      {
+                        name: "Capital Call",
+                        type: "bar",
+                        data: ccByFy.map(d=>({ value: d["Capital Call"], itemStyle: { color: tc.navy, opacity: isCcHl("fy",d.fy)?1:0.25, borderRadius: [4,4,0,0] } })),
+                        cursor: "pointer",
+                      },
+                      {
+                        name: "Retornat",
+                        type: "bar",
+                        data: ccByFy.map(d=>({ value: d["Retornat"], itemStyle: { color: tc.green, opacity: isCcHl("fy",d.fy)?1:0.25, borderRadius: [4,4,0,0] } })),
+                        cursor: "pointer",
+                      },
+                    ],
+                  };
+                  return <ReactECharts option={option} style={{ width: "100%", height: 160 }} opts={{ renderer: "canvas" }}
+                    onEvents={{ click: p => p?.name && clickCcChart("fy", p.name) }} />;
+                })()}
               </div>
               {/* Pastís VC/PE/RE */}
               {[
@@ -815,18 +825,24 @@ function DashboardInner() {
                   <div style={{fontSize:10,letterSpacing:"0.13em",color:tc.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                     {ch.title}<span style={{fontSize:9,color:tc.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
                   </div>
-                  <ResponsiveContainer width="100%" height={160}>
-                    <PieChart>
-                      <Pie data={ch.data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={60} labelLine={false} label={PL}>
-                        {ch.data.map((e,j)=>(
-                          <Cell key={j} fill={ch.colorFn(e.name)} opacity={isCcHl(ch.type,e.name)?1:0.25}
-                            style={{cursor:"pointer"}} onClick={()=>clickCcChart(ch.type,e.name)}/>
-                        ))}
-                      </Pie>
-                      <Tooltip content={<PieTip/>}/>
-                      <Legend formatter={v=><span style={{color:tc.textMid,fontSize:10}}>{v}</span>}/>
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {(()=>{
+                    const t = ecTheme(tc);
+                    const option = {
+                      tooltip: { ...t.tooltip, trigger: "item", formatter: p=>`${p.marker}${p.name}: ${fmtS(p.value)} (${p.percent}%)` },
+                      legend: { orient: "vertical", right: 8, top: "center", textStyle: { fontSize: 10, color: tc.textLight } },
+                      series: [{
+                        type: "pie",
+                        radius: ["38%", "68%"],
+                        center: ["38%", "50%"],
+                        data: ch.data.map(d=>({ name: d.name, value: d.value, itemStyle: { color: ch.colorFn(d.name), opacity: isCcHl(ch.type,d.name)?1:0.25 } })),
+                        label: { show: false },
+                        emphasis: { itemStyle: { shadowBlur: 8, shadowColor: "rgba(0,0,0,0.15)" } },
+                        cursor: "pointer",
+                      }],
+                    };
+                    return <ReactECharts option={option} style={{ width: "100%", height: 160 }} opts={{ renderer: "canvas" }}
+                      onEvents={{ click: p => clickCcChart(ch.type, p.name) }} />;
+                  })()}
                 </div>
               ))}
             </div>
