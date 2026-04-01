@@ -1,8 +1,6 @@
 import React, { useState, useMemo } from "react";
-import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, CartesianGrid, ReferenceLine, Legend,
-} from "recharts";
+import ReactECharts from "echarts-for-react";
+import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM, cagr, fmtMonth, fmtMonthKey, yearsHeld } from "../utils.js";
 import { Badge } from "./SharedComponents.jsx";
@@ -379,29 +377,54 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
         {/* Per provider */}
         <div style={{ ...card, flex: "1 1 58%" }}>
           <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment TWR per Proveïdor</div>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={providerData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} vertical={false} />
-              <XAxis dataKey="year" tick={{ fontSize: 11, fill: tc.textLight }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={v => v.toFixed(1) + "%"} tick={{ fontSize: 10, fill: tc.textLight }} axisLine={false} tickLine={false} width={44} />
-              <ReferenceLine y={0} stroke={tc.border} strokeDasharray="4 2" />
-              <Tooltip
-                {...tooltipStyle}
-                formatter={(v, name) => [v != null ? pctFmt(v) : "—", name]}
-              />
-              <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }} />
-              {displayManagers.map(m => (
-                <Bar
-                  key={m.id}
-                  dataKey={m.id}
-                  name={m.nom}
-                  fill={MGR_COLORS[m.id]}
-                  radius={[3, 3, 0, 0]}
-                  maxBarSize={28}
-                />
-              ))}
-            </BarChart>
-          </ResponsiveContainer>
+            {(() => {
+              const t = ecTheme(tc);
+              const option = {
+                grid: { top: 8, right: 16, bottom: 40, left: 0, containLabel: true },
+                tooltip: {
+                  ...t.tooltip,
+                  trigger: "axis",
+                  formatter: (params) => {
+                    const label = params[0]?.axisValue ?? "";
+                    let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                    params.forEach(p => {
+                      if (p.value == null) return;
+                      html += `<div>${p.marker}${p.seriesName}: ${pctFmt(p.value)}</div>`;
+                    });
+                    return html;
+                  },
+                },
+                legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
+                xAxis: {
+                  type: "category",
+                  data: providerData.map(d => d.year),
+                  axisLabel: { fontSize: 11, color: tc.textLight },
+                  axisLine: { show: false },
+                  axisTick: { show: false },
+                },
+                yAxis: {
+                  type: "value",
+                  axisLabel: { fontSize: 10, color: tc.textLight, formatter: v => v.toFixed(1) + "%" },
+                  splitLine: { lineStyle: { color: tc.border } },
+                  axisLine: { show: false },
+                  axisTick: { show: false },
+                },
+                series: displayManagers.map((m, i) => ({
+                  name: m.nom,
+                  type: "bar",
+                  data: providerData.map(d => d[m.id] ?? null),
+                  itemStyle: { color: MGR_COLORS[m.id], borderRadius: [3, 3, 0, 0] },
+                  barMaxWidth: 28,
+                  markLine: i === 0 ? {
+                    data: [{ yAxis: 0 }],
+                    lineStyle: { color: tc.border, type: "dashed", width: 1 },
+                    symbol: "none",
+                    label: { show: false },
+                  } : undefined,
+                })),
+              };
+              return <ReactECharts option={option} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />;
+            })()}
           <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
             TWR reportat per cada gestor. UBS: sense dades 2024–2025 (YTD disponible: ~+0.25%). Les barres absents indiquen que el gestor no ha reportat rendiment per al període.
           </div>
@@ -410,22 +433,70 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
         {/* Per strategy */}
         <div style={{ ...card, flex: "1 1 38%" }}>
           <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment ponderat per Estratègia</div>
-          <ResponsiveContainer width="100%" height={240}>
-            <LineChart data={strategyData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-              <XAxis dataKey="year" tick={{ fontSize: 11, fill: tc.textLight }} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={v => v.toFixed(1) + "%"} tick={{ fontSize: 10, fill: tc.textLight }} axisLine={false} tickLine={false} width={44} />
-              <ReferenceLine y={0} stroke={tc.border} strokeDasharray="4 2" />
-              <Tooltip
-                {...tooltipStyle}
-                formatter={(v, name) => [v != null ? pctFmt(v) : "—", name]}
-              />
-              <Legend wrapperStyle={{ fontSize: 10, paddingTop: 8 }} />
-              <Line dataKey="rv"    name="Renda Variable" stroke={tc.navy}  strokeWidth={2} dot={{ r: 5, fill: tc.navy }}  connectNulls />
-              <Line dataKey="rf"    name="Renda Fixa"     stroke="#E8A020"  strokeWidth={2} dot={{ r: 5, fill: "#E8A020" }} connectNulls />
-              <Line dataKey="total" name="Total"          stroke={tc.green} strokeWidth={2} dot={{ r: 5, fill: tc.green }} strokeDasharray="5 3" connectNulls />
-            </LineChart>
-          </ResponsiveContainer>
+            {(() => {
+              const t = ecTheme(tc);
+              const option = {
+                grid: { top: 8, right: 16, bottom: 40, left: 0, containLabel: true },
+                tooltip: {
+                  ...t.tooltip,
+                  trigger: "axis",
+                  formatter: (params) => {
+                    const label = params[0]?.axisValue ?? "";
+                    let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                    params.forEach(p => {
+                      if (p.value == null) return;
+                      html += `<div>${p.marker}${p.seriesName}: ${pctFmt(p.value)}</div>`;
+                    });
+                    return html;
+                  },
+                },
+                legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
+                xAxis: {
+                  type: "category",
+                  data: strategyData.map(d => d.year),
+                  axisLabel: { fontSize: 11, color: tc.textLight },
+                  axisLine: { show: false },
+                  axisTick: { show: false },
+                },
+                yAxis: {
+                  type: "value",
+                  axisLabel: { fontSize: 10, color: tc.textLight, formatter: v => v.toFixed(1) + "%" },
+                  splitLine: { lineStyle: { color: tc.border } },
+                  axisLine: { show: false },
+                  axisTick: { show: false },
+                },
+                series: [
+                  {
+                    name: "Renda Variable",
+                    type: "line",
+                    data: strategyData.map(d => d.rv),
+                    lineStyle: { color: tc.navy, width: 2 },
+                    itemStyle: { color: tc.navy },
+                    symbol: "circle", symbolSize: 8,
+                    connectNulls: true,
+                  },
+                  {
+                    name: "Renda Fixa",
+                    type: "line",
+                    data: strategyData.map(d => d.rf),
+                    lineStyle: { color: "#E8A020", width: 2 },
+                    itemStyle: { color: "#E8A020" },
+                    symbol: "circle", symbolSize: 8,
+                    connectNulls: true,
+                  },
+                  {
+                    name: "Total",
+                    type: "line",
+                    data: strategyData.map(d => d.total),
+                    lineStyle: { color: tc.green, width: 2, type: "dashed" },
+                    itemStyle: { color: tc.green },
+                    symbol: "circle", symbolSize: 8,
+                    connectNulls: true,
+                  },
+                ],
+              };
+              return <ReactECharts option={option} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />;
+            })()}
           <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
             Ponderat per AUM de cada gestor. Gestors sense dades del any exclosos del còmput.
           </div>
@@ -444,54 +515,106 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
           </div>
         </div>
 
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={chartData} stackOffset="none" margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-            <defs>
-              {Object.entries(AREA_COLORS).map(([id, color]) => (
-                <linearGradient key={id} id={`pm-grad-${id}`} x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor={color} stopOpacity={0.25} />
-                  <stop offset="95%" stopColor={color} stopOpacity={0.04} />
-                </linearGradient>
-              ))}
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke={tc.border} />
-            <XAxis
-              dataKey="month"
-              tickFormatter={fmtMonthKey}
-              tick={{ fontSize: 10, fill: tc.textLight }}
-              interval={11}
-              axisLine={false}
-              tickLine={false}
-            />
-            <YAxis tickFormatter={fmtM} tick={{ fontSize: 10, fill: tc.textLight }} width={70} />
-            <Tooltip
-              {...tooltipStyle}
-              labelFormatter={fmtMonthKey}
-              formatter={(v, name) => [fmtM(v), name.charAt(0).toUpperCase() + name.slice(1)]}
-            />
-            {chartView === "total" && (
-              <Area type="monotone" dataKey="total"
-                stroke={AREA_COLORS.total} fill={`url(#pm-grad-total)`}
-                strokeWidth={2} dot={false} name="Valor cartera" fillOpacity={0.7} />
-            )}
-            {chartView === "actiu" && <>
-              <Area type="monotone" dataKey="rv" stackId="a"
-                stroke={AREA_COLORS.rv}  fill={`url(#pm-grad-rv)`}
-                strokeWidth={1.5} dot={false} name="Renda Variable" />
-              <Area type="monotone" dataKey="rf" stackId="a"
-                stroke={AREA_COLORS.rf}  fill={`url(#pm-grad-rf)`}
-                strokeWidth={1.5} dot={false} name="Renda Fixa" />
-              <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
-            </>}
-            {chartView === "gestor" && <>
-              <Area type="monotone" dataKey="andbank" stackId="g" stroke={AREA_COLORS.andbank} fill={`url(#pm-grad-andbank)`} strokeWidth={1.5} dot={false} name="WAM–Andbank" />
-              <Area type="monotone" dataKey="abel"    stackId="g" stroke={AREA_COLORS.abel}    fill={`url(#pm-grad-abel)`}    strokeWidth={1.5} dot={false} name="Bankinter" />
-              <Area type="monotone" dataKey="ubs"     stackId="g" stroke={AREA_COLORS.ubs}     fill={`url(#pm-grad-ubs)`}     strokeWidth={1.5} dot={false} name="UBS" />
-              <Area type="monotone" dataKey="caixa"   stackId="g" stroke={AREA_COLORS.caixa}   fill={`url(#pm-grad-caixa)`}   strokeWidth={1.5} dot={false} name="CaixaBank" />
-              <Legend wrapperStyle={{ fontSize: 11, paddingTop: 4 }} />
-            </>}
-          </AreaChart>
-        </ResponsiveContainer>
+        {(() => {
+          const t = ecTheme(tc);
+
+          const gradArea = (color) => ({
+            color: {
+              type: "linear", x: 0, y: 0, x2: 0, y2: 1,
+              colorStops: [
+                { offset: 0, color: color + "40" },
+                { offset: 1, color: color + "0A" },
+              ],
+            },
+          });
+
+          let series = [];
+          if (chartView === "total") {
+            series = [{
+              name: "Valor cartera",
+              type: "line", smooth: false,
+              data: chartData.map(r => r.total ?? null),
+              lineStyle: { color: AREA_COLORS.total, width: 2 },
+              itemStyle: { color: AREA_COLORS.total },
+              areaStyle: gradArea(AREA_COLORS.total),
+              symbol: "none",
+              connectNulls: true,
+            }];
+          } else if (chartView === "actiu") {
+            series = [
+              {
+                name: "Renda Variable",
+                type: "line", smooth: false, stack: "a",
+                data: chartData.map(r => r.rv ?? null),
+                lineStyle: { color: AREA_COLORS.rv, width: 1.5 },
+                itemStyle: { color: AREA_COLORS.rv },
+                areaStyle: gradArea(AREA_COLORS.rv),
+                symbol: "none", connectNulls: true,
+              },
+              {
+                name: "Renda Fixa",
+                type: "line", smooth: false, stack: "a",
+                data: chartData.map(r => r.rf ?? null),
+                lineStyle: { color: AREA_COLORS.rf, width: 1.5 },
+                itemStyle: { color: AREA_COLORS.rf },
+                areaStyle: gradArea(AREA_COLORS.rf),
+                symbol: "none", connectNulls: true,
+              },
+            ];
+          } else {
+            series = [
+              { key: "andbank", name: "WAM–Andbank" },
+              { key: "abel",    name: "Bankinter" },
+              { key: "ubs",     name: "UBS" },
+              { key: "caixa",   name: "CaixaBank" },
+            ].map(({ key, name }) => ({
+              name,
+              type: "line", smooth: false, stack: "g",
+              data: chartData.map(r => r[key] ?? null),
+              lineStyle: { color: AREA_COLORS[key], width: 1.5 },
+              itemStyle: { color: AREA_COLORS[key] },
+              areaStyle: gradArea(AREA_COLORS[key]),
+              symbol: "none", connectNulls: true,
+            }));
+          }
+
+          const option = {
+            grid: { top: 8, right: 8, bottom: chartView !== "total" ? 48 : 32, left: 0, containLabel: true },
+            legend: chartView !== "total"
+              ? { bottom: 0, textStyle: { fontSize: 11, color: tc.textLight } }
+              : { show: false },
+            tooltip: {
+              ...t.tooltip,
+              trigger: "axis",
+              formatter: (params) => {
+                const label = fmtMonthKey(params[0]?.axisValue ?? "");
+                let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                params.forEach(p => {
+                  if (p.value == null) return;
+                  html += `<div>${p.marker}${p.seriesName}: ${fmtM(p.value)}</div>`;
+                });
+                return html;
+              },
+            },
+            xAxis: {
+              type: "category",
+              data: chartData.map(r => r.month),
+              axisLabel: { fontSize: 10, color: tc.textLight, formatter: fmtMonthKey, hideOverlap: true, interval: 11 },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            yAxis: {
+              type: "value",
+              axisLabel: { fontSize: 10, color: tc.textLight, formatter: fmtM },
+              splitLine: { lineStyle: { color: tc.border } },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            series,
+          };
+
+          return <ReactECharts option={option} notMerge={true} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;
+        })()}
 
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
           {chartView === "gestor"
