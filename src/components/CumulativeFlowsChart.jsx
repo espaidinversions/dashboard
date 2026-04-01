@@ -145,7 +145,7 @@ export function CumulativeFlowsChart({
     }
 
     return { chartData: rows, keys: allKeys, colorMap, nameMap };
-  }, [transactions, valuesSeries, groupBy, topN, tc.border]);
+  }, [transactions, valuesSeries, groupBy, topN]);
 
   if (chartData.length === 0) {
     return (
@@ -164,7 +164,7 @@ export function CumulativeFlowsChart({
     grid: { top: 32, right: hasPortfolioValue ? 68 : 8, bottom: isStacked ? 48 : 32, left: 0, containLabel: true },
     legend: isStacked
       ? { bottom: 0, textStyle: { fontSize: 9, color: tc.textLight }, formatter: n => nameMap[n] ?? n }
-      : null,
+      : { show: false },
     tooltip: {
       ...t.tooltip,
       trigger: "axis",
@@ -174,7 +174,7 @@ export function CumulativeFlowsChart({
         let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
         params.forEach(p => {
           if (p.value == null) return;
-          const name = p.seriesName === "Valor cartera" ? "Valor cartera" : nameMap[p.seriesName] ?? p.seriesName;
+          const name = nameMap[p.seriesName] ?? p.seriesName;
           html += `<div>${p.marker}${name}: ${fmtM(p.value)}</div>`;
         });
         return html;
@@ -210,7 +210,7 @@ export function CumulativeFlowsChart({
         type: "bar",
         stack: isStacked ? "total" : undefined,
         data: chartData.map(r => r[k] ?? null),
-        itemStyle: { color: colorMap[k] ?? "#BAB0AC", opacity: 0.72 },
+        itemStyle: { color: colorMap[k] ?? "#BAB0AC", opacity: 0.72, borderRadius: isStacked ? undefined : [3, 3, 0, 0] },
         barMaxWidth: 32,
       })),
       ...(hasPortfolioValue ? [{
