@@ -91,6 +91,22 @@ export function PMTipusTab({ tipus }) {
     [visible]
   );
 
+  const allPositions = useMemo(() => {
+    const active = visible.map(p => ({ ...p, _status: "active" }));
+    const closed = PM_CLOSED
+      .filter(p => p.tipus === tipus)
+      .filter(p => {
+        if (toggle === "all") return true;
+        if (!p.custodian) return false;
+        if (toggle === "caixabank") return p.custodian === "CaixaBank";
+        if (toggle === "bankinter") return p.custodian === "Bankinter";
+        return true;
+      })
+      .sort((a, b) => a.nom.localeCompare(b.nom, "ca", { sensitivity: "base" }))
+      .map(p => ({ ...p, _status: "closed" }));
+    return [...active, ...closed];
+  }, [visible, tipus, toggle]);
+
   // Transactions for this asset type
   const typeTxs = useMemo(
     () => PM_TRANSACTIONS.filter(t => t.tipus === tipus),
@@ -233,50 +249,48 @@ export function PMTipusTab({ tipus }) {
             </tr>
           </thead>
           <tbody>
-            {/* Active positions sorted by market value */}
-            {visible.map((p, i) => {
-              const rendInici = retMode === "net" ? netRendInici(p) : p.rendInici;
-              const yh        = yearsHeld(p.dataCompra);
-              const mwr       = cagr(rendInici, yh);
-              return (
-                <tr key={p.id} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}` }}>
-                  <td style={{ padding: "7px 10px" }}>
-                    <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: PM_COLORS[i % PM_COLORS.length] }} />
-                  </td>
-                  <td style={{ padding: "7px 10px" }}>
-                    <Link to={`/mercats-publics/${p.id}`}
-                      style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>
-                      {p.nom}
-                    </Link>
-                  </td>
-                  <td style={{ padding: "7px 10px", color: tc.textLight, fontSize: 11 }}>{p.custodian}</td>
-                  {YEAR_FIELDS.map(({ field }) => (
-                    <td key={field} style={{ padding: "7px 10px", textAlign: "right" }}>
-                      <PctChip v={retMode === "net" ? netRend(p, field) : p[field]} tc={tc} />
+            {allPositions.map((p, i) => {
+              const isActive = p._status === "active";
+              if (isActive) {
+                const rendInici = retMode === "net" ? netRendInici(p) : p.rendInici;
+                const yh        = yearsHeld(p.dataCompra);
+                const mwr       = cagr(rendInici, yh);
+                return (
+                  <tr key={p.id} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}` }}>
+                    <td style={{ padding: "7px 10px" }}>
+                      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: PM_COLORS[i % PM_COLORS.length] }} />
                     </td>
-                  ))}
-                  <td style={{ padding: "7px 10px", textAlign: "right" }}>
-                    <PctChip v={rendInici} tc={tc} />
-                  </td>
-                  <td style={{ padding: "7px 10px", textAlign: "right" }}>
-                    <PctChip v={mwr} tc={tc} />
-                  </td>
-                  <td style={{ padding: "7px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.navy, fontWeight: 600, fontSize: 11 }}>
-                    {fmtM(p.valorMercat)}
-                  </td>
-                  <td style={{ padding: "7px 10px", textAlign: "center" }}>
-                    <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, fontWeight: 700,
-                      background: "#E8F8E8", color: "#1C6B1D" }}>
-                      En cartera
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-            {/* Discontinued positions sorted by name */}
-            {[...PM_CLOSED.filter(p => p.tipus === tipus)]
-              .sort((a, b) => a.nom.localeCompare(b.nom))
-              .map(p => (
+                    <td style={{ padding: "7px 10px" }}>
+                      <Link to={`/mercats-publics/${p.id}`}
+                        style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>
+                        {p.nom}
+                      </Link>
+                    </td>
+                    <td style={{ padding: "7px 10px", color: tc.textLight, fontSize: 11 }}>{p.custodian}</td>
+                    {YEAR_FIELDS.map(({ field }) => (
+                      <td key={field} style={{ padding: "7px 10px", textAlign: "right" }}>
+                        <PctChip v={retMode === "net" ? netRend(p, field) : p[field]} tc={tc} />
+                      </td>
+                    ))}
+                    <td style={{ padding: "7px 10px", textAlign: "right" }}>
+                      <PctChip v={rendInici} tc={tc} />
+                    </td>
+                    <td style={{ padding: "7px 10px", textAlign: "right" }}>
+                      <PctChip v={mwr} tc={tc} />
+                    </td>
+                    <td style={{ padding: "7px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.navy, fontWeight: 600, fontSize: 11 }}>
+                      {fmtM(p.valorMercat)}
+                    </td>
+                    <td style={{ padding: "7px 10px", textAlign: "center" }}>
+                      <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, fontWeight: 700,
+                        background: "#E8F8E8", color: "#1C6B1D" }}>
+                        En cartera
+                      </span>
+                    </td>
+                  </tr>
+                );
+              }
+              return (
                 <tr key={`${p.isin}-${p.any ?? p.nom}`} className="hoverable"
                   style={{ borderBottom: `1px solid ${tc.border}`, opacity: 0.7 }}>
                   <td style={{ padding: "7px 10px" }}>
@@ -302,7 +316,8 @@ export function PMTipusTab({ tipus }) {
                     </span>
                   </td>
                 </tr>
-              ))}
+              );
+            })}
           </tbody>
         </table>
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
