@@ -2,7 +2,7 @@ import React, { useState, useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
-import { fmtM, cagr, fmtMonth, fmtMonthKey, yearsHeld } from "../utils.js";
+import { fmtM, cagr, fmtMonthKey, yearsHeld } from "../utils.js";
 import { Badge } from "./SharedComponents.jsx";
 import { PM_MONTHLY, PM_MANAGERS, PM_POSITIONS } from "../data/publicMarkets.js";
 import { Link } from "react-router-dom";
@@ -336,7 +336,6 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
   // ── Shared styles ────────────────────────────────────────
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
   const secLabel     = { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 };
-  const tooltipStyle = { contentStyle: { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }, labelStyle: { color: tc.text, fontWeight: 600 } };
 
   const toggleBtn = (id, label) => (
     <button key={id} onClick={() => setChartView(id)} style={{
