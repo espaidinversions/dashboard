@@ -1,6 +1,6 @@
 import { isRateLimited } from "../_rateLimit.js";
 import { setCors } from "../_cors.js";
-import { getRequestIp, makeServiceClient, verifyAdmin } from "../_adminAuth.js";
+import { getRequestIp, isAllowedRole, isValidEmail, makeServiceClient, verifyAdmin } from "../_adminAuth.js";
 
 function serverError(res, error, context) {
   console.error(`[admin/users] ${context}:`, error);
@@ -28,6 +28,10 @@ export default async function handler(req, res) {
     if (req.method === "POST") {
       const { email, role } = req.body ?? {};
       if (!email) return res.status(400).json({ error: "Email required" });
+      if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email" });
+      if (role !== undefined && !isAllowedRole(role)) {
+        return res.status(400).json({ error: "Invalid role" });
+      }
 
       // Check domain allowlist
       const { data: setting } = await supabase

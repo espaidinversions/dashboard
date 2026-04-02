@@ -4,8 +4,7 @@ import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonthKey } from "../utils.js";
 import { FUND_PRICES } from "../data/fundPrices.js";
-
-const toMonth = d => (d ?? "").slice(0, 7);
+import { START_MONTH_2019, buildMonthGrid, toMonthKey } from "../chartSeries.js";
 
 /**
  * PriceHistoryChart
@@ -14,62 +13,79 @@ const toMonth = d => (d ?? "").slice(0, 7);
  *   isin        — fund ISIN (used to look up FUND_PRICES)
  *   dataCompra  — acquisition date "YYYY-MM-DD" (splits dotted/solid line)
  *   transactions — PM_TRANSACTIONS rows filtered to this ISIN
+ *   valueSeries  — optional { date, value } rows from portfolio history
  *   height      — chart height px (default 280)
  *
  * Returns null if no price data exists for this ISIN (caller renders fallback).
  */
-export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280 }) {
+export function PriceHistoryChart({ isin, dataCompra, transactions, valueSeries = [], height = 280 }) {
   const { tc, dark } = useTheme();
-  const [mode, setMode] = useState("price"); // "price" | "value"
-
-  const priceSeries = FUND_PRICES[isin]; // [["YYYY-MM", price], ...]
+  const [mode, setMode] = useState(() => (FUND_PRICES[isin]?.length > 0 ? "price" : "value"));
+  const priceSeries = FUND_PRICES[isin];
 
   const { chartData, acqMonth } = useMemo(() => {
-    if (!priceSeries || priceSeries.length === 0) return { chartData: null, acqMonth: null };
+    if (
+      (!priceSeries || priceSeries.length === 0) &&
+      (!transactions || transactions.length === 0) &&
+      (!valueSeries || valueSeries.length === 0)
+    ) {
+      return { chartData: null, acqMonth: null };
+    }
 
-    const acqMonth = dataCompra ? toMonth(dataCompra) : null;
+    const acqMonth = dataCompra ? toMonthKey(dataCompra) : null;
+    const priceByMonth = Object.fromEntries((priceSeries ?? []).map(([month, value]) => [month, value]));
+    const valueByMonth = Object.fromEntries(
+      (valueSeries ?? [])
+        .map(r => [toMonthKey(r.date), r.value])
+        .filter(([month]) => Boolean(month)),
+    );
 
-    // Monthly cumulative inflows from buy transactions
-    const inflowByMonth = {};
+    const flowByMonth = {};
     (transactions ?? [])
-      .filter(t => t.action === "buy" && (t.valueEur ?? 0) > 0)
+      .filter(t => (t.valueEur ?? 0) > 0)
       .forEach(t => {
-        const m = toMonth(t.date);
-        if (m) inflowByMonth[m] = (inflowByMonth[m] ?? 0) + t.valueEur;
+        const month = toMonthKey(t.date);
+        if (!month) return;
+        const signed = t.action === "sell" ? -t.valueEur : t.valueEur;
+        flowByMonth[month] = (flowByMonth[month] ?? 0) + signed;
       });
 
-    // Monthly unit changes (buy = +units, sell = −units)
     const unitDeltaByMonth = {};
     (transactions ?? []).forEach(t => {
-      const m = toMonth(t.date);
-      if (!m) return;
+      const month = toMonthKey(t.date);
+      if (!month) return;
       const delta = t.action === "buy" ? (t.units ?? 0) : -(t.units ?? 0);
-      unitDeltaByMonth[m] = (unitDeltaByMonth[m] ?? 0) + delta;
-    });
+      unitDeltaByMonth[month] = (unitDeltaByMonth[month] ?? 0) + delta;
+      });
+
+    const monthSet = new Set([
+      ...(priceSeries ?? []).map(([month]) => month),
+      ...Object.keys(flowByMonth),
+      ...Object.keys(unitDeltaByMonth),
+      ...Object.keys(valueByMonth),
+    ]);
 
     let cumInflow = 0;
     let cumUnits = 0;
-
-    const rows = priceSeries.map(([month, price]) => {
-      cumInflow += inflowByMonth[month] ?? 0;
-      cumUnits  += unitDeltaByMonth[month] ?? 0;
-      const isAfterAcq = acqMonth != null && month >= acqMonth;
+    const rows = buildMonthGrid({ startMonth: START_MONTH_2019, months: [...monthSet] }).map(month => {
+      const price = priceByMonth[month] ?? null;
+      const historicalValue = valueByMonth[month] ?? null;
+      cumInflow += flowByMonth[month] ?? 0;
+      cumUnits += unitDeltaByMonth[month] ?? 0;
       return {
         month,
-        preBuy:         !isAfterAcq ? price : null,
-        postBuy:        isAfterAcq  ? price : null,
-        portfolioValue: cumUnits > 0 ? Math.round(cumUnits * price) : null,
-        cumInflow:      cumInflow > 0 ? cumInflow : null,
+        navPrice: price,
+        portfolioValue: historicalValue ?? (cumUnits > 0 && price != null ? Math.round(cumUnits * price) : null),
+        cumInflow: cumInflow !== 0 ? cumInflow : null,
       };
     });
 
     return { chartData: rows, acqMonth };
-  }, [priceSeries, dataCompra, transactions]);
+  }, [priceSeries, dataCompra, transactions, valueSeries]);
 
   if (!chartData) return null;
 
   const hasBars = chartData.some(r => r.cumInflow != null);
-
   const btnStyle = (id) => ({
     padding: "3px 10px", borderRadius: 5, fontSize: 11,
     cursor: "pointer", fontFamily: "inherit",
@@ -81,7 +97,6 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280
 
   return (
     <div>
-      {/* Mode toggle */}
       <div style={{ display: "flex", gap: 4, marginBottom: 12 }}>
         <button style={btnStyle("price")} onClick={() => setMode("price")}>Preu unitari</button>
         <button style={btnStyle("value")} onClick={() => setMode("value")}>Valor cartera</button>
@@ -103,11 +118,10 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280
               params.forEach(p => {
                 if (p.value == null) return;
                 let val, name;
-                if (p.seriesName === "cumInflow")      { val = fmtM(p.value);           name = "Capital invertit"; }
-                else if (p.seriesName === "preBuy")    { val = p.value.toFixed(4);      name = "Preu (sense posició)"; }
-                else if (p.seriesName === "postBuy")   { val = p.value.toFixed(4);      name = "Preu (en cartera)"; }
-                else if (p.seriesName === "portValue") { val = fmtM(p.value);           name = "Valor cartera teòric"; }
-                else                                   { val = p.value; name = p.seriesName; }
+                if (p.seriesName === "cumInflow")      { val = fmtM(p.value);      name = "Flux net acumulat"; }
+                else if (p.seriesName === "navPrice")   { val = p.value.toFixed(4); name = "Preu unitari importat"; }
+                else if (p.seriesName === "portValue")  { val = fmtM(p.value);      name = "Valor cartera teòric"; }
+                else                                    { val = p.value;            name = p.seriesName; }
                 html += `<div>${p.marker}${name}: ${val}</div>`;
               });
               return html;
@@ -135,10 +149,7 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280
               position: "right",
               name: mode === "price" ? "Preu" : "Valor",
               nameTextStyle: { fontSize: 9, color: tc.textLight },
-              axisLabel: {
-                ...t.axisLabel,
-                formatter: v => mode === "price" ? v.toFixed(2) : fmtM(v),
-              },
+              axisLabel: { ...t.axisLabel, formatter: v => mode === "price" ? v.toFixed(2) : fmtM(v) },
               splitLine: { show: false },
               axisLine: t.axisLine,
               axisTick: t.axisTick,
@@ -167,28 +178,16 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280
               silent: true,
               showInLegend: false,
             }] : []),
-            ...(mode === "price" ? [
-              {
-                name: "preBuy",
-                type: "line",
-                yAxisIndex: 1,
-                data: chartData.map(r => r.preBuy ?? null),
-                lineStyle: { color: tc.navy ?? "#2B5070", width: 1.5, type: "dashed", opacity: 0.55 },
-                itemStyle: { color: tc.navy ?? "#2B5070" },
-                symbol: "none",
-                connectNulls: true,
-              },
-              {
-                name: "postBuy",
-                type: "line",
-                yAxisIndex: 1,
-                data: chartData.map(r => r.postBuy ?? null),
-                lineStyle: { color: tc.navy ?? "#2B5070", width: 2 },
-                itemStyle: { color: tc.navy ?? "#2B5070" },
-                symbol: "none",
-                connectNulls: true,
-              },
-            ] : []),
+            ...(mode === "price" ? [{
+              name: "navPrice",
+              type: "line",
+              yAxisIndex: 1,
+              data: chartData.map(r => r.navPrice ?? null),
+              lineStyle: { color: tc.navy ?? "#2B5070", width: 2 },
+              itemStyle: { color: tc.navy ?? "#2B5070" },
+              symbol: "none",
+              connectNulls: true,
+            }] : []),
             ...(mode === "value" ? [{
               name: "portValue",
               type: "line",
@@ -202,20 +201,13 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, height = 280
           ],
         };
 
-        return (
-          <ReactECharts
-            option={option}
-            notMerge={true}
-            style={{ width: "100%", height }}
-            opts={{ renderer: "canvas" }}
-          />
-        );
+        return <ReactECharts option={option} notMerge={true} style={{ width: "100%", height }} opts={{ renderer: "canvas" }} />;
       })()}
 
       <div style={{ fontSize: 10, color: tc.textLight ?? "#8A9BAC", marginTop: 6, fontStyle: "italic" }}>
         {mode === "price"
-          ? `Preu unitari del fons des de 2019. Línia discontínua: sense posició (fins ${acqMonth ?? "—"}). Línia contínua: posició activa.`
-          : "Valor teòric = unitats acumulades × preu unitari. Calculat des de la primera transacció registrada."}
+          ? `Preu unitari importat des del script de descàrrega. La línia mostra la sèrie NAV mensual completa; la compra queda marcada a ${acqMonth ?? "—"}.`
+          : "Valor cartera = flux net acumulat i, si existeix, valor històric importat o unitats acumulades × preu."}
       </div>
     </div>
   );

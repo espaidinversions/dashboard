@@ -1,6 +1,6 @@
 import { isRateLimited } from "../../_rateLimit.js";
 import { setCors } from "../../_cors.js";
-import { getRequestIp, makeServiceClient, verifyAdmin } from "../../_adminAuth.js";
+import { getRequestIp, isAllowedRole, makeServiceClient, verifyAdmin } from "../../_adminAuth.js";
 
 function serverError(res, error, context) {
   console.error(`[admin/users/[id]] ${context}:`, error);
@@ -25,6 +25,9 @@ export default async function handler(req, res) {
       const { role, email_confirm } = req.body ?? {};
       const updates = {};
       if (role !== undefined) {
+        if (!isAllowedRole(role)) {
+          return res.status(400).json({ error: "Invalid role" });
+        }
         updates.app_metadata = { role };
         updates.user_metadata = { role };
       }

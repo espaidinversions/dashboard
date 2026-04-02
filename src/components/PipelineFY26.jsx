@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import * as XLSX from "xlsx";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
-import { usePersistedState } from "../utils.js";
+import { fmtM, usePersistedState } from "../utils.js";
 import { useTheme } from "../theme.js";
 import { FUNDS0 as FUNDS0_DEFAULT, EUR_USD as EUR_USD_DEFAULT, STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE } from "../config.js";
 import { EmptyState, EditableCell } from "./SharedComponents.jsx";

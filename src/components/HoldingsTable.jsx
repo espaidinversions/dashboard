@@ -39,7 +39,7 @@ function PnlCell({ v, tc }) {
 export function HoldingsTable() {
   const { tc, dark } = useTheme();
 
-  const [gestorFilter, setGestorFilter] = useState("all");
+  const [custodianFilter, setCustodianFilter] = useState("all");
   const [tipusFilter,  setTipusFilter]  = useState("all");
   const [sortCol, setSortCol] = useState("valorMercat");
   const [sortDir, setSortDir] = useState("desc");
@@ -51,7 +51,7 @@ export function HoldingsTable() {
 
   const rows = useMemo(() => {
     let all = [...PM_POSITIONS];
-    if (gestorFilter !== "all") all = all.filter(p => p.gestor === gestorFilter);
+    if (custodianFilter !== "all") all = all.filter(p => p.custodian === custodianFilter);
     if (tipusFilter  !== "all") all = all.filter(p => p.tipus  === tipusFilter);
     all.sort((a, b) => {
       const va = a[sortCol] ?? (sortDir === "desc" ? -Infinity : Infinity);
@@ -60,7 +60,7 @@ export function HoldingsTable() {
       return sortDir === "desc" ? vb - va : va - vb;
     });
     return all;
-  }, [gestorFilter, tipusFilter, sortCol, sortDir]);
+  }, [custodianFilter, tipusFilter, sortCol, sortDir]);
 
   const th = {
     padding: "8px 10px", fontSize: 10, letterSpacing: "0.09em",
@@ -102,9 +102,10 @@ export function HoldingsTable() {
         </div>
         <div style={{ width: 1, height: 20, background: tc.border }} />
         <div style={{ display: "flex", gap: 4 }}>
-          {pillBtn(gestorFilter === "all",             () => setGestorFilter("all"),             "Tots els gestors")}
-          {pillBtn(gestorFilter === "CaixaBank / UBS", () => setGestorFilter("CaixaBank / UBS"), "Caixa / UBS")}
-          {pillBtn(gestorFilter === "Abel Font",       () => setGestorFilter("Abel Font"),       "Abel Font")}
+          {pillBtn(custodianFilter === "all",             () => setCustodianFilter("all"),             "Tots els custodians")}
+          {pillBtn(custodianFilter === "CaixaBank",       () => setCustodianFilter("CaixaBank"),       "CaixaBank")}
+          {pillBtn(custodianFilter === "Bankinter",       () => setCustodianFilter("Bankinter"),       "Bankinter")}
+          {pillBtn(custodianFilter === "UBS",             () => setCustodianFilter("UBS"),             "UBS")}
         </div>
         <div style={{ fontSize: 11, color: tc.textLight, marginLeft: "auto" }}>
           {rows.length} posicions · {fmtM(rows.reduce((s, p) => s + (p.valorMercat || 0), 0))}
@@ -119,8 +120,8 @@ export function HoldingsTable() {
               <th style={{ ...th, textAlign: "left"  }} onClick={() => handleSort("nom")}>
                 Nom{sortIcon("nom")}
               </th>
-              <th style={{ ...th, textAlign: "left"  }} onClick={() => handleSort("gestor")}>
-                Gestor{sortIcon("gestor")}
+              <th style={{ ...th, textAlign: "left"  }} onClick={() => handleSort("custodian")}>
+                Custodi{sortIcon("custodian")}
               </th>
               <th style={{ ...th, textAlign: "left"  }}>Tipus</th>
               <th style={{ ...th, textAlign: "left"  }}>ISIN</th>
@@ -164,7 +165,7 @@ export function HoldingsTable() {
                       {p.nom}
                     </Link>
                   </td>
-                  <td style={{ padding: "6px 10px", fontSize: 11, color: tc.textLight }}>{p.gestor}</td>
+                  <td style={{ padding: "6px 10px", fontSize: 11, color: tc.textLight }}>{p.custodian}</td>
                   <td style={{ padding: "6px 10px" }}>
                     <span style={{ fontSize: 10, fontWeight: 700, color: typColor, background: typBg, borderRadius: 4, padding: "1px 6px" }}>
                       {p.tipus}

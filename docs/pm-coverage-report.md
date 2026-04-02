@@ -1,49 +1,50 @@
-# PM Vehicle Price Data Coverage Report
+# PM Vehicle Data Coverage Report
 
-**Generated:** 2026-03-31
-**Script source:** `Mercats Públics/` Python scripts (Morningstar via `mstarpy`)
+**Updated:** 2026-04-02
+**Scope:** current public-market vehicle rows, historical closed rows, price series, current value coverage, one-pager coverage, and custodian/strategy attribution.
 
 ## Summary
 
-| Category | Total vehicles | With price data | Missing price data |
-|----------|---------------|-----------------|-------------------|
-| Active positions | 30 | 27 | **3** |
-| Closed/discontinued | 139 | 128 | **11** |
-| **Total** | **169** | **155** | **14** |
+- Raw source rows: 59 active tranches, 206 closed rows
+- Deduped report rows: 33 active instrument keys, 202 closed historical rows
+- One-pagers: available for all active and closed rows via the shared detail route
 
----
+| Bucket | Rows | Price series | Current value | Custodian attribution | Strategy attribution |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| Active rows | 33 | 33/33 | 33/33 | 33/33 | 33/33 |
+| Closed rows | 202 | 197/202 | 52/202 | 190/202 | 202/202 |
+| Total | 235 | 230/235 | 85/235 | 223/235 | 235/235 |
 
-## Active Positions Without Price Data (3)
+## Data Strategy Coverage
 
-| ISIN | Name | Reason |
-|------|------|--------|
-| `IE00B3ZW0K19` | iShares S&P 500 EUR Hedged UCITS ETF (Acc) | Purchased 2026-03-19 — too new, Morningstar not yet indexed |
-| `LU1681043600` | Amundi MSCI World UCITS ETF - EUR (C) | Morningstar coverage gap |
-| `LU1834988519` | Amundi Stoxx Europe 600 Technology UCITS ETF Acc | Morningstar coverage gap |
+| Source strategy | Active rows | Closed rows | Notes |
+| :--- | :---: | :---: | :--- |
+| ETF / market | 33 | 5 | Fully covered |
+| Morningstar | 0 | 165 | Fully covered |
+| WAM PDF | 0 | 27 | Fully covered |
+| Manual / static | 0 | 5 | Legacy rows without a public price feed |
 
----
+## Custodian Attribution
 
-## Closed Positions Without Price Data (11)
+- Active rows with direct custodian attribution: 33/33
+- Closed rows with direct custodian attribution: 52/202
+- Closed rows with custodian derived from the transaction ledger: 138/202
+- Closed rows still missing a deterministic custodian: 12/202
 
-| ISIN | Name |
-|------|------|
-| `FR0013516028` | Carmignac Credit 2025 F EUR Acc |
-| `IE00BQN1K787` | iShares Edge MSCI Europe Momentum Factor UCITS ETF |
-| `IE00BQN1K788` | iShares Edge MSCI Europe Momentum Factor UCITS ETF (dup) |
-| `LU0366534344` | Pictet-Nutrition P EUR |
-| `LU0940007262` | Robeco All Strategy Euro Bonds EurHdg |
-| `LU1878469862` | Threadneedle (Lux) American Smaller Companies 3EH |
-| `LU2004795212` | Schroder ISF QEP Global Emerging Markets K1 Acc EUR |
-| `LU2110829848` | Infusive Consumer Alpha Global AA Acc EUR |
-| `LU2171257319` | Vontobel Fund Emerging Markets Corporate Bond H EUR Hedged |
-| `LU2183143846` | Amundi Funds European Value R (EUR) A |
-| `LU2257995980` | Allianz Global Water RT11 EUR Acc |
+## Unresolved Price-Series Gaps
 
----
+These are the closed rows that still have no public price history and remain on manual/static valuation paths.
 
-## How to Fix
+| Year | Vehicle | ISIN | Custodian | Strategy | Source path |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| 2022 | `INFUSIVE CONSUMER ALPHA GLOBAL _AA ACC EUR` | `LU2110829848` | Credit Suisse | RV | manual / static |
+| 2022 | `Schroder International Selection Fund QEP Global Emerging Markets K1 Accumulation EUR` | `LU2004795212` | Credit Suisse | RV | manual / static |
+| 2024 | `Carmignac Credit 2025 F EUR Acc` | `FR0013516028` | Credit Suisse | RF | manual / static |
+| — | `Unicredit 3.875% VTO 03/06/2027` | `XS2121441856` | Andbank | RF | manual / static |
+| — | `SACE SPA 5.511% CALL 10/02/2027` | `XS1182150950` | Andbank | RF | manual / static |
 
-Add missing ISINs to the Morningstar fetch list in the Python scripts under `Mercats Públics/`.
-Re-run the script to populate `fund_prices_combined.csv` and regenerate `portfolioValues.js`.
+## Notes
 
-For `IE00B3ZW0K19`: wait ~1 month for Morningstar to index the new position, then re-run.
+- `price series` means an external historical CSV exists in `Mercats Públics/prices`, `Mercats Públics/fund_prices`, or `Mercats Públics/wam_prices` and is imported into `src/data/fundPrices.js`.
+- `current value` means the vehicle has a current valuation in the public-market data model, even when there is no public history feed.
+- The closed ledger still has legacy rows where custodian attribution cannot be reconstructed from the transaction history alone.

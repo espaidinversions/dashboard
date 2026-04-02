@@ -4,6 +4,7 @@
   "framework": "vite",
   "rewrites": [
     { "source": "/api/eur-usd", "destination": "/api/eur-usd" },
+    { "source": "/assets/(.*)", "destination": "/assets/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ],
   "headers": [

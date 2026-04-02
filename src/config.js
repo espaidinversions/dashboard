@@ -49,8 +49,10 @@ export const FY_LIST = ["FY 2019","FY 2020","FY 2021","FY 2022","FY 2023","FY 20
 export const MESOS   = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
 
 // ── Data imports ─────────────────────────────────────────
-export { RAW_CC } from "./data/capital-calls.js";
-export { FUNDS0 } from "./data/pipeline.js";
+import { RAW_CC as RAW_CC_DATA } from "./data/capital-calls.js";
+import { FUNDS0 as FUNDS0_DATA } from "./data/pipeline.js";
+export { RAW_CC_DATA as RAW_CC };
+export { FUNDS0_DATA as FUNDS0 };
 
 export const EUR_USD = 1.08;
 export const toEUR = (a,c) => c==="USD" ? a/EUR_USD : a;
@@ -64,9 +66,9 @@ export const SBADGE= {"Fons primari":{bg:"#E8EFF5",color:TC.navy},"Coinversions"
 export const GBADGE= {EU:{bg:"#E8F4EE",color:TC.greenDark},US:{bg:"#E8EFF5",color:TC.navyDark},"EU/US":{bg:"#EAF0F6",color:TC.navyLight}};
 
 // ── Precompute ────────────────────────────────────────────
-export const COMPROMISOS  = RAW_CC.filter(r=>r.cat==="Compromís");
-export const TRANSACTIONS = RAW_CC.filter(r=>r.cat!=="Compromís");
-export const ALL_FONS = [...new Set(RAW_CC.map(r=>r.fons))].sort();
+export const COMPROMISOS  = RAW_CC_DATA.filter(r=>r.cat==="Compromís");
+export const TRANSACTIONS = RAW_CC_DATA.filter(r=>r.cat!=="Compromís");
+export const ALL_FONS = [...new Set(RAW_CC_DATA.map(r=>r.fons))].sort();
 
 // Fund-level metadata — set tvpi manually from fund manager reports
 export const FUND_META = ALL_FONS.map(fons => ({ fons, tvpi: null }));

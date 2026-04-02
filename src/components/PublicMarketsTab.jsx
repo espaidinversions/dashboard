@@ -73,7 +73,7 @@ const DEFAULT_EXPAND_TIPUS = {
 };
 
 // Static lookup derived from PM_POSITIONS (imported data never changes at runtime)
-const ISIN_TO_ID  = Object.fromEntries(PM_POSITIONS.map(p => [p.isin, p.id]));
+const ISIN_TO_ID  = Object.fromEntries(PM_POSITIONS.filter(p => p.isin).map(p => [p.isin, p.id]));
 
 // Get PM_POSITIONS for a manager row — filtered by custodian bank
 function getMgrPositions(mgrId) {
@@ -510,7 +510,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
           <div style={{ display: "flex", gap: 4 }}>
             {toggleBtn("total",  "Total")}
             {toggleBtn("actiu",  "Per Actiu")}
-            {toggleBtn("gestor", "Per Gestor")}
+            {toggleBtn("gestor", "Per Custodi")}
           </div>
         </div>
 
@@ -626,12 +626,12 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
         <div style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 8 }}>
           <div style={{ fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, flex: 1 }}>
-            Fluxos acumulats · entrades de capital
+            Fluxos acumulats · entrades i sortides de capital
           </div>
           {[
             { id: "total",     label: "Total" },
             { id: "assetType", label: "Per Actiu" },
-            { id: "manager",   label: "Per Gestor" },
+            { id: "manager",   label: "Per Custodi" },
           ].map(opt => (
             <button key={opt.id} onClick={() => setFlowGroupBy(opt.id)}
               style={{
@@ -653,7 +653,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
           height={240}
         />
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-          Capital invertit: cobreix posicions Abel Font (CaixaBank + Bankinter). UBS i WAM–Andbank sense dades de transaccions individuals — per això el valor de cartera supera el capital registrat.
+          Capital invertit net: inclou compres i vendes. UBS i WAM–Andbank mostren les posicions dels PDFs, però no els moviments individuals.
         </div>
       </div>
 
@@ -751,7 +751,7 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
                           {subPositions !== null && subPositions.length === 0 && (
                             <div style={{ fontSize: 11, color: tc.textLight, fontStyle: "italic" }}>
                               {m.id === "andbank"
-                                ? "WAM–Andbank gestiona la cartera com a bloc consolidat sense posicions individuals registrades."
+                                ? "No hi ha posicions visibles per al filtre seleccionat."
                                 : "Cap posició per al filtre seleccionat."}
                             </div>
                           )}

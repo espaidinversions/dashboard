@@ -103,6 +103,16 @@ ALL_ISINS = [
     "LU2386637925",   # Franklin Euro Short Duration Bond AC
     "IE00B81TMV64",   # Algebris Financial Credit Fund I EUR Acc
     "IE00BD0NC698",   # iShares Euro Credit Bond Index (duplicate — kept for completeness)
+    "IE00B70B9H10",   # BNY Mellon Global Real Return Fund (EUR) W Acc
+    "IE00BD5HXD05",   # Comgest Growth Europe EUR Z Acc
+    "IE00BJQ2XG97",   # Man Alpha Select Alternative IN H EUR
+    "IE00BNK9T448",   # Amundi Tiedemann Arbitrage Strategy Fund SI EUR
+    "LU0079555370",   # JPMorgan Investment Funds - Global Balanced Fund C (acc) - EUR
+    "LU0095623541",   # JPMorgan Investment Funds - Global Macro Opportunities Fund C (acc) - EUR
+    "LU1442549884",   # MFS Meridian Funds - Prudent Capital Fund WH1 EUR
+    "LU1625225666",   # Invesco Funds - Invesco Pan European High Income Fund Z EUR Accumulation
+    "LU1748854947",   # Flossbach von Storch - Multiple Opportunities II HT
+    "LU2367665606",   # Lumyna-MW TOPS (Market Neutral) UCITS Fund - EUR F (acc)
     # ── Alt ────────────────────────────────────────────────────────────────
     "IE00B8BS6228",   # Amundi Tiedemann Arbitrage Strat I EUR
     "LU0966752916",   # Janus Henderson Absolute Return Fund G2 HEUR
@@ -120,11 +130,28 @@ ALL_ISINS = [
     "LU2171257319",   # Vontobel Fund Emerging Markets Corporate Bond H EUR Hedged
     "LU2183143846",   # Amundi Funds European Value R (EUR) A
     "LU2257995980",   # Allianz Global Water RT11 EUR Acc
+    # ── WAM Andbank Bonds ──────────────────────────────────────────────────
+    "ES0280907025", "ES0840609020", "ES0844251019", "FR0013461795",
+    "FR0013533999", "FR0014003S56", "PTBCPGOM0067", "US89356BAB45",
+    "USF1067PAB25", "XS1172951508", "XS1182150950", "XS1629774230",
+    "XS1693822634", "XS2010028343", "XS2010036874", "XS2050933972",
+    "XS2056371334", "XS2077670342", "XS2108494837", "XS2121441856",
+    "XS2193661324", "XS2224439385", "XS2282606578", "XS2312744217",
+    "XS2321520525", "XS2332590632", "XS2342620924", "XS2454874285",
+    "XS2463450408"
 ]
 
 # Remove duplicates while preserving order
 _seen: set[str] = set()
 ALL_ISINS = [x for x in ALL_ISINS if x not in _seen and not _seen.add(x)]
+
+# Some funds were re-registered or exposed under a different share class in
+# Morningstar. When the exact ISIN is unavailable, try these fallbacks and
+# keep writing the series under the original portfolio ISIN.
+FALLBACK_ISINS: dict[str, list[str]] = {
+    "LU1878469862": ["LU1878470019"],  # Threadneedle (Lux) American Smaller Companies 9EH
+    "LU2257995980": ["LU1890834598"],   # Allianz Global Water AT EUR Acc
+}
 
 
 def fetch_mstarpy(isin: str, start: date | None, end: date | None) -> pd.DataFrame | None:
@@ -154,6 +181,16 @@ def fetch_mstarpy(isin: str, start: date | None, end: date | None) -> pd.DataFra
     except Exception as e:
         print(f"  mstarpy fail {isin}: {e}")
         return None
+
+
+def fetch_fund_series(isin: str, start_dt: date | None, end_dt: date | None) -> tuple[pd.DataFrame | None, str | None]:
+    """Fetch a fund series, trying the exact ISIN first and known share-class fallbacks."""
+    candidates = [isin] + FALLBACK_ISINS.get(isin, [])
+    for candidate in candidates:
+        df = fetch_mstarpy(candidate, start_dt, end_dt)
+        if df is not None and len(df) > 0:
+            return df, candidate
+    return None, None
 
 
 def main():
@@ -188,10 +225,11 @@ def main():
     for isin in isins:
         print(f"  {isin} ...", end=" ", flush=True)
 
-        df = fetch_mstarpy(isin, start_dt, end_dt)
+        df, resolved_isin = fetch_fund_series(isin, start_dt, end_dt)
         if df is not None and len(df) > 0:
             ok.append(isin)
-            print(f"OK  {len(df):5d} rows  {df['date'].min().date()} -> {df['date'].max().date()}"
+            suffix = f" via {resolved_isin}" if resolved_isin and resolved_isin != isin else ""
+            print(f"OK{suffix}  {len(df):5d} rows  {df['date'].min().date()} -> {df['date'].max().date()}"
                   f"  {df['name'].iloc[0][:40]}")
         else:
             failed.append(isin)
@@ -199,6 +237,8 @@ def main():
             continue
 
         df["isin"] = isin
+        if resolved_isin and resolved_isin != isin:
+            df["source"] = df["source"] + f":alias:{resolved_isin}"
 
         out = FUND_DIR / f"{isin}.csv"
         df[["date", "isin", "name", "close", "source"]].sort_values("date").to_csv(out, index=False)

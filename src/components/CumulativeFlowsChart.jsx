@@ -4,6 +4,7 @@ import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonthKey } from "../utils.js";
 import { PM_POSITIONS } from "../data/publicMarkets.js";
+import { START_MONTH_2019, buildMonthGrid, forwardFillMonthValues, toMonthKey } from "../chartSeries.js";
 
 // Manager routing — mirrors PublicMarketsTab mvData logic
 const ABEL_ISINS = new Set(
@@ -22,9 +23,6 @@ const MGR_NAMES  = { caixa: "CaixaBank", ubs: "UBS", abel: "Bankinter", andbank:
 const ASSET_COLORS = { RV: "#2B5070", RF: "#F28E2B" };
 const ASSET_NAMES  = { RV: "Renda Variable", RF: "Renda Fixa" };
 const TOP5_COLORS  = ["#4E79A7", "#F28E2B", "#E15759", "#76B7B2", "#59A14F"];
-
-// Normalise any date string to "YYYY-MM" month key
-const toMonth = d => (typeof d === "string" ? d : "").slice(0, 7);
 
 /**
  * CumulativeFlowsChart
@@ -59,32 +57,26 @@ export function CumulativeFlowsChart({
       .map(([k]) => k);
     const topIsinSet = new Set(topIsins);
 
-    // Accumulate monthly inflows per group key
+    // Accumulate monthly net flows per group key
     const monthMap = {};
-    buys.forEach(t => {
-      const month = toMonth(t.date);
+    (transactions ?? []).forEach(t => {
+      if (!t.date || !(t.valueEur > 0)) return;
+      const month = toMonthKey(t.date);
       if (!monthMap[month]) monthMap[month] = {};
       let key;
       if      (groupBy === "assetType") key = t.tipus ?? "—";
       else if (groupBy === "manager")   key = custodianToMgr(t.custodian, t.isin);
       else if (groupBy === "position")  key = topIsinSet.has(t.isin) ? t.isin : "altres";
       else                               key = "total";
-      monthMap[month][key] = (monthMap[month][key] ?? 0) + t.valueEur;
+      monthMap[month][key] = (monthMap[month][key] ?? 0) + (t.action === "sell" ? -t.valueEur : t.valueEur);
     });
 
     const txMonths = Object.keys(monthMap).sort();
-    if (txMonths.length === 0) return { chartData: [], keys: [], colorMap: {}, nameMap: {} };
+    const valMonths = (valuesSeries ?? []).map(({ date }) => toMonthKey(date)).filter(Boolean).sort();
+    const lastMonth = [txMonths.at(-1), valMonths.at(-1), START_MONTH_2019].filter(Boolean).sort().at(-1);
+    if (!lastMonth) return { chartData: [], keys: [], colorMap: {}, nameMap: {} };
 
-    // Pad x-axis from 2019-01 to first transaction month for comparability
-    const START_MONTH = "2019-01";
-    const allMonths = [];
-    let cur = START_MONTH < txMonths[0] ? START_MONTH : txMonths[0];
-    const lastTxMonth = txMonths[txMonths.length - 1];
-    while (cur <= lastTxMonth) {
-      allMonths.push(cur);
-      const [y, mo] = cur.split("-").map(Number);
-      cur = mo === 12 ? `${y + 1}-01` : `${y}-${String(mo + 1).padStart(2, "0")}`;
-    }
+    const allMonths = buildMonthGrid({ startMonth: START_MONTH_2019, months: [lastMonth] });
 
     // Build cumulative running totals across full range
     const running = {};
@@ -103,13 +95,10 @@ export function CumulativeFlowsChart({
     // Merge portfolio value (forward-fill missing months)
     const valByMonth = {};
     (valuesSeries ?? []).forEach(({ date, value }) => {
-      valByMonth[toMonth(date)] = value;
+      const month = toMonthKey(date);
+      if (month) valByMonth[month] = value;
     });
-    let lastVal = null;
-    rows.forEach(row => {
-      const v = valByMonth[row.month] ?? lastVal;
-      if (v != null) { row.portfolioValue = v; lastVal = v; }
-    });
+    forwardFillMonthValues(rows, valByMonth, "portfolioValue");
 
     // Derive all data keys (exclude axis/value keys)
     const allKeys = [...new Set(

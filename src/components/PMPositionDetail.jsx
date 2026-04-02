@@ -226,6 +226,7 @@ export function PMPositionDetail() {
             isin={isin}
             dataCompra={p.dataCompra}
             transactions={positionTxs}
+            valueSeries={positionValues}
             height={280}
           />
         ) : positionValues.length > 0 || positionTxs.length > 0 ? (
@@ -438,6 +439,8 @@ export function PMPositionDetail() {
     </div>
   );
 }
+
+export default PMPositionDetail;
 
 function PositionTxHistory({ isin, tc, card, secLabel }) {
   const [sortDesc, setSortDesc] = useState(true);

@@ -42,6 +42,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 ROOT          = Path(__file__).parent.parent
 PRICES_DIR    = ROOT / "Mercats Públics" / "prices"
 FUND_DIR      = ROOT / "Mercats Públics" / "fund_prices"
+WAM_DIR       = ROOT / "Mercats Públics" / "wam_prices"
 OUT_CSV       = ROOT / "Mercats Públics" / "portfolio_value.csv"
 PROVIDERS_MAP = ROOT / "Mercats Públics" / "providers_map.json"
 
@@ -207,9 +208,87 @@ def load_tranches_master(wb, include_closed: bool = False) -> list[dict]:
     return tranches
 
 
+def load_tranches_ubs() -> list[dict]:
+    """Parse UBS positions from src/data/ubsPositions.js."""
+    path = ROOT / "src" / "data" / "ubsPositions.js"
+    if not path.exists():
+        return []
+    
+    content = path.read_text(encoding="utf-8")
+    # Using regex to find ISIN, nom, unitats, dataCompra
+    # Matches ubs({ ... isin: "...", nom: "...", unitats: ..., dataCompra: "..." })
+    # We'll split by 'ubs({' and process each block
+    blocks = re.split(r'ubs\(\{', content)[1:]
+    tranches = []
+    for block in blocks:
+        isin_m = re.search(r'isin:\s*"([A-Z0-9]{12})"', block)
+        if not isin_m: continue
+        isin = isin_m.group(1)
+        
+        nom_m = re.search(r'nom:\s*"([^"]+)"', block)
+        nom = nom_m.group(1) if nom_m else ""
+        
+        units_m = re.search(r'unitats:\s*([0-9.]+)', block)
+        units = float(units_m.group(1)) if units_m else 0
+        
+        pdate_m = re.search(r'dataCompra:\s*"([^"]+)"', block)
+        pdate = parse_date(pdate_m.group(1)) if pdate_m else date(2020, 1, 1)
+        
+        if units > 0:
+            tranches.append({
+                "isin": isin,
+                "nom": nom,
+                "custodian": "UBS",
+                "purchase_date": pdate,
+                "n_titols": units,
+                "source_sheet": "ubsPositions.js"
+            })
+    return tranches
+
+
+def load_tranches_wam() -> list[dict]:
+    """Parse WAM positions from src/data/wamPositions.js."""
+    path = ROOT / "src" / "data" / "wamPositions.js"
+    if not path.exists():
+        return []
+    
+    content = path.read_text(encoding="utf-8")
+    # Very simple regex-based parser for the JS objects
+    blocks = re.split(r'\{', content)[1:]
+    tranches = []
+    for block in blocks:
+        isin_m = re.search(r'isin:\s*"([A-Z0-9]{12})"', block)
+        if not isin_m: continue
+        isin = isin_m.group(1)
+        
+        nom_m = re.search(r'nom:\s*"([^"]+)"', block)
+        nom = nom_m.group(1) if nom_m else ""
+        
+        units_m = re.search(r'unitats:\s*([0-9.]+)', block)
+        units = float(units_m.group(1)) if units_m else 0
+        
+        custodian_m = re.search(r'custodian:\s*"([^"]+)"', block)
+        custodian = custodian_m.group(1) if custodian_m else "Andbank"
+        
+        # Default purchase date if missing
+        pdate_m = re.search(r'dataCompra:\s*"([^"]+)"', block)
+        pdate = parse_date(pdate_m.group(1)) if pdate_m else date(2020, 1, 1)
+        
+        if units > 0:
+            tranches.append({
+                "isin": isin,
+                "nom": nom,
+                "custodian": custodian,
+                "purchase_date": pdate,
+                "n_titols": units,
+                "source_sheet": "wamPositions.js"
+            })
+    return tranches
+
+
 def load_nav_series(isin: str) -> pd.Series | None:
     """Load daily NAV/price series for an ISIN. Returns pd.Series(index=date, values=price) or None."""
-    for d in [PRICES_DIR, FUND_DIR]:
+    for d in [PRICES_DIR, FUND_DIR, WAM_DIR]:
         p = d / f"{isin}.csv"
         if p.exists():
             df = pd.read_csv(p, parse_dates=["date"])
@@ -295,11 +374,20 @@ def main():
     master_closed   = load_tranches_master(wb, include_closed=True)
     # master_closed includes both active and closed rows; keep only closed ones
     master_closed   = [t for t in master_closed if t.get("closed")]
-    all_tranches    = etf_tranches + master_active + master_closed
+    
+    print("Loading WAM positions from JS…")
+    wam_tranches    = load_tranches_wam()
+    
+    print("Loading UBS positions from JS…")
+    ubs_tranches    = load_tranches_ubs()
+    
+    all_tranches    = etf_tranches + master_active + master_closed + wam_tranches + ubs_tranches
 
     print(f"  ETF sheet tranches:     {len(etf_tranches)}")
     print(f"  Master active tranches: {len(master_active)}")
     print(f"  Master closed tranches: {len(master_closed)}")
+    print(f"  WAM tranches:           {len(wam_tranches)}")
+    print(f"  UBS tranches:           {len(ubs_tranches)}")
     print(f"  Total:                  {len(all_tranches)}")
     print()
 

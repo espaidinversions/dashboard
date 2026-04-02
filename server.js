@@ -3,7 +3,7 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync, statSync, watch } f
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
-import { makeServiceClient, verifyAdmin } from "./api/_adminAuth.js";
+import { isAllowedRole, isValidEmail, makeServiceClient, verifyAdmin } from "./api/_adminAuth.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DATA  = join(__dirname, "src/data");
@@ -13,7 +13,14 @@ const CANVAS_FILE = join(__dirname, "Dashboard.canvas");
 const PORT      = 3001;
 
 const app = express();
+app.disable("x-powered-by");
 app.use(express.json({ limit: "20mb" }));
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "DENY");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  next();
+});
 
 // ── CORS ─────────────────────────────────────────────────
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || "http://localhost:5173";
@@ -222,6 +229,10 @@ app.post("/api/admin/users", async (req, res) => {
     if (!admin) return res.status(403).json({ error: "Forbidden" });
     const { email, role } = req.body ?? {};
     if (!email) return res.status(400).json({ error: "Email required" });
+    if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email" });
+    if (role !== undefined && !isAllowedRole(role)) {
+      return res.status(400).json({ error: "Invalid role" });
+    }
     const { data, error } = await supabase.auth.admin.inviteUserByEmail(email, {
       data: { role: role || "user" },
     });
@@ -250,6 +261,7 @@ app.patch("/api/admin/users/:id", async (req, res) => {
     const { role, email_confirm } = req.body ?? {};
     const updates = {};
     if (role !== undefined) {
+      if (!isAllowedRole(role)) return res.status(400).json({ error: "Invalid role" });
       updates.app_metadata = { role };
       updates.user_metadata = { role };
     }

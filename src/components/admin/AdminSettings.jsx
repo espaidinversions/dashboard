@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../../supabase.js";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
+import { loadAllowedDomains, saveAllowedDomains } from "./adminApi.js";
 
 export default function AdminSettings() {
   const { tc } = useTheme();
@@ -14,14 +14,13 @@ export default function AdminSettings() {
 
   useEffect(() => {
     async function load() {
-      const { data, error } = await supabase
-        .from("app_settings")
-        .select("value")
-        .eq("key", "allowed_domains")
-        .maybeSingle();
-      if (error) toast({ message: "Error carregant configuració.", type: "error" });
-      else setDomains(data?.value ?? []);
-      setLoading(false);
+      try {
+        setDomains(await loadAllowedDomains());
+      } catch (error) {
+        toast({ message: "Error carregant configuració.", type: "error" });
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);
@@ -41,12 +40,14 @@ export default function AdminSettings() {
 
   const handleSave = async () => {
     setSaving(true);
-    const { error } = await supabase
-      .from("app_settings")
-      .upsert({ key: "allowed_domains", value: domains, updated_at: new Date().toISOString() }, { onConflict: "key" });
-    setSaving(false);
-    if (error) toast({ message: "Error desant: " + error.message, type: "error" });
-    else toast({ message: "Configuració desada." });
+    try {
+      await saveAllowedDomains(domains);
+      toast({ message: "Configuració desada." });
+    } catch (error) {
+      toast({ message: "Error desant: " + error.message, type: "error" });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (

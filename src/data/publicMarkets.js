@@ -1,5 +1,8 @@
+import { WAM_POSITIONS } from "./wamPositions.js";
+import { UBS_POSITIONS } from "./ubsPositions.js";
+
 // Public Markets static data — extracted from Resum Financer Espai 2026_vClaudeRoberto.xlsx
-// and Bankinter/Andbank reports (Mar 2026).
+// and Bankinter/Andbank reports plus the password-protected UBS March 2026 PDF.
 //
 // DATA PROVENANCE
 // caixaRV  — confirmed monthly from TWR sheets, Dec 2023–Mar 2026, zero interpolation
@@ -53,6 +56,18 @@ export const PM_MONTHLY = [
   { date:"2026-03", label:"Mar '26", caixaRV:8_037_347, caixaRF:3_990_758, ubsRV:10_704_128, ubsRF:2_220_845, abelBK:16_676_391, andbank:6_088_661 },
 ];
 
+const PM_MONTHLY_BY_DATE = Object.fromEntries(PM_MONTHLY.map(m => [m.date, m]));
+const ubsValue = d => {
+  const row = PM_MONTHLY_BY_DATE[d];
+  return row ? row.ubsRV + row.ubsRF : null;
+};
+const pctChange = (startDate, endDate, getter) => {
+  const start = getter(startDate);
+  const end   = getter(endDate);
+  if (start == null || end == null || start === 0) return null;
+  return ((end / start) - 1) * 100;
+};
+
 // Current manager snapshots — as of Mar 2026
 // rendPct: since-inception TWR for WAM/Andbank; YTD for UBS; null for Abel (multi-sleeve)
 //          Not rendered in this version — reserved for future "des de creació" display
@@ -61,8 +76,8 @@ export const PM_MONTHLY = [
 export const PM_MANAGERS = [
   { id:"caixa-rv", nom:"Caixa RV",     gestor:"CaixaBank", tipus:"RV",    valorActual:8_037_347,  rendPct:7.44,  ytd:-1.20,  r2025:9.51,  r2024:17.02 },
   { id:"caixa-rf", nom:"Caixa RF",     gestor:"CaixaBank", tipus:"RF",    valorActual:3_990_758,  rendPct:-0.04, ytd:-0.004, r2025:4.96,  r2024:4.96  },
-  { id:"ubs-rv",   nom:"UBS RV",       gestor:"UBS",       tipus:"RV",    valorActual:10_704_128, rendPct:0.37,  ytd:0.37,   r2025:null,  r2024:null  },
-  { id:"ubs-rf",   nom:"UBS RF",       gestor:"UBS",       tipus:"RF",    valorActual:2_220_845,  rendPct:-0.35, ytd:-0.35,  r2025:null,  r2024:null  },
+  { id:"ubs-rv",   nom:"UBS RV",       gestor:"UBS",       tipus:"RV",    valorActual:10_704_128, rendPct:pctChange("2023-12", "2026-03", ubsValue), ytd:pctChange("2025-12", "2026-03", ubsValue), r2025:pctChange("2024-12", "2025-12", ubsValue), r2024:pctChange("2023-12", "2024-12", ubsValue) },
+  { id:"ubs-rf",   nom:"UBS RF",       gestor:"UBS",       tipus:"RF",    valorActual:2_220_845,  rendPct:pctChange("2023-12", "2026-03", ubsValue), ytd:pctChange("2025-12", "2026-03", ubsValue), r2025:pctChange("2024-12", "2025-12", ubsValue), r2024:pctChange("2023-12", "2024-12", ubsValue) },
   { id:"abel",     nom:"Abel (BK+IB)",       gestor:"Abel Font", tipus:"RV+RF", valorActual:20_933_017, rendPct:null,  ytd:-2.68,  r2025:-8.05, r2024:11.44 },
   { id:"andbank",  nom:"WAM–Andbank (Goyo)", gestor:"WAM",       tipus:"RF",    valorActual:6_088_661,  rendPct:17.76, ytd:0.60,   r2025:4.18,  r2024:6.32  },
 ];
@@ -1519,4 +1534,6 @@ export const PM_CLOSED = [
   { any: 2025, nom: "Vanguard Global Stock Index Fund EUR Hedged Acc", isin: "IE00B03HD316", tipus: "RV" },
   { any: 2025, nom: "FundSmtih Equity Income", isin: "LU0690374029", tipus: "RV" },
   { any: 2026, nom: "BROWN ADVISORY GLOBAL LEAD B USD", isin: "IE00BVVHP563", tipus: "RV" },
+  ...UBS_POSITIONS,
+  ...WAM_POSITIONS,
 ];

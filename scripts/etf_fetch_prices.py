@@ -71,10 +71,21 @@ ALL_ISINS = [
     "IE000F6G1DE0", "IE00B3VWM098", "IE00B3XXRP09", "IE00B3ZW0K18",
     "IE00B441G979", "IE00B9M6SJ31", "IE00BDBRDM35", "IE00BFMXXD54",
     "IE00BFXR7900", "IE00BGPP6473", "IE00BJGWQN72", "IE00BKM4GZ66",
-    "IE00BKT6FV49", "IE00BQN1K786", "IE00BQN1K901", "IE00BYVQ9F29",
+    "IE00BKT6FV49", "IE00BQN1K786", "IE00BQN1K901", "IE00BYVQ9F29", "IE00BF4RFH31",
     "LU1407888137", "LU1681043599", "LU1681044647", "LU1834988518",
     "US4642871507", "US4642876555", "US78464A8392", "US9220428588", "US92206C7065",
 ]
+
+# Some positions in the source data contain typo ISINs or stale internal codes.
+# Fetch the canonical underlying series and write it under the portfolio ISIN so
+# downstream consumers do not need to understand these aliases.
+FALLBACK_ISINS = {
+    "IE00B3ZW0K19": ["IE00B3ZW0K18"],
+    "IE00BQN1K787": ["IE00BQN1K786"],
+    "IE00BQN1K788": ["IE00BQN1K786"],
+    "LU1681043600": ["LU1681043599"],
+    "LU1834988519": ["LU1834988518"],
+}
 
 
 # ── justETF source ────────────────────────────────────────────────────────────
@@ -102,6 +113,15 @@ def fetch_justetf(isin: str, start: str | None, end: str | None) -> pd.DataFrame
     except Exception as e:
         print(f"  justETF fail {isin}: {e}")
         return None
+
+
+def fetch_justetf_with_aliases(isin: str, start: str | None, end: str | None) -> tuple[pd.DataFrame | None, str | None]:
+    candidates = [isin] + FALLBACK_ISINS.get(isin, [])
+    for candidate in candidates:
+        df = fetch_justetf(candidate, start, end)
+        if df is not None and len(df) > 0:
+            return df, candidate
+    return None, None
 
 
 # ── yfinance fallback ─────────────────────────────────────────────────────────
@@ -166,13 +186,14 @@ def main():
         print(f"  {isin} ...", end=" ", flush=True)
 
         # ── Step 1: try justETF ──
-        df = fetch_justetf(isin, args.start, args.end)
+        df, resolved_isin = fetch_justetf_with_aliases(isin, args.start, args.end)
         if df is not None and len(df) > 0:
             justetf_ok.append(isin)
-            print(f"justETF  {len(df):5d} rows  {df['date'].min().date()} -> {df['date'].max().date()}")
+            suffix = f" via {resolved_isin}" if resolved_isin and resolved_isin != isin else ""
+            print(f"justETF{suffix}  {len(df):5d} rows  {df['date'].min().date()} -> {df['date'].max().date()}")
         else:
             # ── Step 2: yfinance fallback ──
-            info = ticker_map.get(isin, {})
+            info = ticker_map.get(resolved_isin or isin, {})
             ticker = info.get("yf_ticker") if info else None
             if ticker:
                 df = fetch_yfinance(isin, ticker, args.start, args.end)
@@ -189,7 +210,7 @@ def main():
                 continue
 
         df["isin"] = isin
-        df["name"] = ticker_map.get(isin, {}).get("name", "") if ticker_map else ""
+        df["name"] = ticker_map.get(resolved_isin or isin, {}).get("name", "") if ticker_map else ""
 
         # Save per-ISIN CSV
         out = PRICES_DIR / f"{isin}.csv"

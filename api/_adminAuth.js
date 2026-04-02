@@ -1,5 +1,8 @@
 import { createClient } from "@supabase/supabase-js";
 
+export const ALLOWED_ROLES = new Set(["user", "superuser", "admin"]);
+export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function makeServiceClient() {
   return createClient(
     process.env.VITE_SUPABASE_URL,
@@ -25,4 +28,12 @@ export async function verifyAdmin(req, serviceClient) {
   const role = user?.app_metadata?.role ?? user?.user_metadata?.role;
   if (error || role !== "admin") return null;
   return user;
+}
+
+export function isAllowedRole(role) {
+  return ALLOWED_ROLES.has(String(role ?? ""));
+}
+
+export function isValidEmail(email) {
+  return EMAIL_RE.test(String(email ?? "").trim());
 }

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../../supabase.js";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
+import { loadAuditLog } from "./adminApi.js";
 
 const ACTION_COLORS = {
   insert: { color: "#1B5E20", bg: "#E8F5E9" },
@@ -28,14 +28,13 @@ export default function AdminActivity() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("audit_log")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (error) toast({ message: "Error carregant activitat: " + error.message, type: "error" });
-      else setLogs(data ?? []);
-      setLoading(false);
+      try {
+        setLogs(await loadAuditLog({ limit: 500 }));
+      } catch (error) {
+        toast({ message: "Error carregant activitat: " + error.message, type: "error" });
+      } finally {
+        setLoading(false);
+      }
     }
     load();
   }, []);
