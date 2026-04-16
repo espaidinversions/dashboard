@@ -9,20 +9,35 @@ const ACTIVITY_EVENTS = ["mousemove", "keydown", "mousedown", "touchstart", "scr
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
+  const [role, setRole] = useState("user");
   const idleTimerRef = useRef(null);
 
   useEffect(() => {
-    if (!supabase) { setSession(null); return; }
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        supabase.auth.refreshSession().then(({ data: r }) => setSession(r.session ?? data.session));
-      } else {
-        setSession(data.session);
-      }
+    if (!supabase) {
+      setSession(null);
+      setRole("user");
+      return;
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s ?? null);
+      setRole(s?.user?.app_metadata?.role ?? "user");
     });
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, s) => setSession(s));
+
     return () => subscription.unsubscribe();
   }, []);
+
+  // After session is established, fetch the server-side user to get the current
+  // app_metadata.role — the cached JWT may predate when the role was assigned.
+  // getUser() makes a real network call and never triggers auth events (no loop).
+  useEffect(() => {
+    if (!session || !supabase) return;
+    supabase.auth.getUser()
+      .then(({ data: { user } }) => {
+        if (user?.app_metadata?.role) setRole(user.app_metadata.role);
+      })
+      .catch(() => {});
+  }, [session]);
 
   // Session inactivity timeout — sign out after 30 min of no activity
   useEffect(() => {
@@ -32,7 +47,7 @@ export function AuthProvider({ children }) {
       clearTimeout(idleTimerRef.current);
       idleTimerRef.current = setTimeout(() => {
         clearTurtleCapitalLS();
-        supabase.auth.signOut();
+        supabase.auth.signOut({ scope: "global" });
       }, IDLE_TIMEOUT_MS);
     };
 
@@ -48,19 +63,19 @@ export function AuthProvider({ children }) {
   const signUp  = (email, password) => supabase.auth.signUp({ email, password });
   const signOut = () => {
     clearTurtleCapitalLS();
-    return supabase.auth.signOut();
+    return supabase.auth.signOut({ scope: "global" });
   };
   const resendConfirmation = (email) => supabase.auth.resend({ type: "signup", email });
   const resetPassword = (email) => supabase.auth.resetPasswordForEmail(email, {
     redirectTo: window.location.origin + "/reset-password",
   });
 
-  const role = session?.user?.app_metadata?.role ?? session?.user?.user_metadata?.role;
   const isAdmin = role === "admin";
-  const isSuperuser = isAdmin || role === "superuser";
+  const isSuperuser = role === "superuser";
+  const canEdit = role === "admin" || role === "superuser";
 
   return (
-    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, isSuperuser, isAdmin }}>
+    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, role, isSuperuser, isAdmin, canEdit }}>
       {children}
     </AuthContext.Provider>
   );

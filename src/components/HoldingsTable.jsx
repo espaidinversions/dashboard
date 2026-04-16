@@ -1,8 +1,13 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { PM_POSITIONS } from "../data/publicMarkets.js";
+import { PM_MODEL } from "../data/publicMarketsModel.js";
+import { WAM_POSITIONS } from "../data/wamPositions.js";
 import { useTheme } from "../theme.js";
-import { fmtM, cagr, yearsHeld } from "../utils.js";
+import { fmtM } from "../utils.js";
+import { useAuth } from "../auth.jsx";
+import { loadPMPositionOverrides, upsertPMPositionOverride } from "../db.js";
+
+const PM_STATIC = [...PM_MODEL.holdings.active, ...WAM_POSITIONS];
 
 function SectionHeader({ tipus, count, total, tc }) {
   const isRV  = tipus === "RV";
@@ -36,23 +41,112 @@ function PnlCell({ v, tc }) {
   );
 }
 
+/** Inline editable cell — shows value normally, becomes an input on click when canEdit=true. */
+function EditableCell({ value, canEdit, onSave, renderValue, td }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft]     = useState("");
+
+  const startEdit = () => { setDraft(value != null ? String(value) : ""); setEditing(true); };
+  const commit = () => {
+    const n = parseFloat(draft);
+    if (!isNaN(n)) onSave(n);
+    setEditing(false);
+  };
+  const cancel = () => setEditing(false);
+
+  if (editing) {
+    return (
+      <td style={{ ...td, padding: "2px 6px" }}>
+        <input
+          autoFocus
+          value={draft}
+          onChange={e => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit(); } if (e.key === "Escape") cancel(); }}
+          style={{
+            width: "100%", fontSize: 11, fontFamily: "'DM Mono',monospace",
+            border: "1.5px solid #4A90D9", borderRadius: 3, padding: "3px 5px",
+            background: "transparent", color: "inherit", outline: "none",
+          }}
+        />
+      </td>
+    );
+  }
+  return (
+    <td
+      style={{ ...td, cursor: canEdit ? "pointer" : "default", position: "relative" }}
+      onClick={canEdit ? startEdit : undefined}
+      title={canEdit ? "Clica per editar" : undefined}
+    >
+      {renderValue()}
+      {canEdit && (
+        <span className="edit-pencil" style={{
+          position: "absolute", right: 4, top: "50%", transform: "translateY(-50%)",
+          fontSize: 9, opacity: 0, transition: "opacity 0.15s", color: "#4A90D9",
+          pointerEvents: "none",
+        }}>✏</span>
+      )}
+    </td>
+  );
+}
+
 export function HoldingsTable() {
   const { tc, dark } = useTheme();
+  const { canEdit }  = useAuth();
 
   const [custodianFilter, setCustodianFilter] = useState("all");
-  const [tipusFilter,  setTipusFilter]  = useState("all");
+  const [tipusFilter,     setTipusFilter]     = useState("all");
   const [sortCol, setSortCol] = useState("valorMercat");
   const [sortDir, setSortDir] = useState("desc");
+  const [overrides, setOverrides] = useState(new Map()); // isin → {valorMercat, rendInici, ...}
+
+  // Load overrides from Supabase on mount
+  useEffect(() => {
+    loadPMPositionOverrides().then(map => { if (map) setOverrides(map); });
+  }, []);
+
+  const handleSave = useCallback(async (isin, field, value) => {
+    // Optimistic update
+    setOverrides(prev => {
+      const next = new Map(prev);
+      const existing = next.get(isin) ?? {};
+      next.set(isin, { ...existing, [field]: value });
+      return next;
+    });
+    await upsertPMPositionOverride(isin, { [field]: value });
+  }, []);
 
   const handleSort = (col) => {
     if (sortCol === col) setSortDir(d => d === "desc" ? "asc" : "desc");
     else { setSortCol(col); setSortDir("desc"); }
   };
 
+  // Merge static data with overrides, then recompute pes
+  const mergedPositions = useMemo(() => {
+    const merged = PM_STATIC.map(p => {
+      const ov = overrides.get(p.isin);
+      if (!ov) return p;
+      const out = { ...p };
+      if (ov.valorMercat != null) out.valorMercat = ov.valorMercat;
+      if (ov.rendInici   != null) out.rendInici   = ov.rendInici;
+      if (ov.rend2026    != null) out.rend2026    = ov.rend2026;
+      if (ov.rend2025    != null) out.rend2025    = ov.rend2025;
+      if (ov.rend2024    != null) out.rend2024    = ov.rend2024;
+      if (ov.rend2023    != null) out.rend2023    = ov.rend2023;
+      if (ov.costAnual   != null) out.costAnual   = ov.costAnual;
+      return out;
+    });
+    const totalVM = merged.reduce((s, p) => s + (p.valorMercat || 0), 0);
+    if (totalVM > 0) {
+      return merged.map(p => ({ ...p, pes: p.valorMercat != null ? (p.valorMercat / totalVM) * 100 : p.pes }));
+    }
+    return merged;
+  }, [overrides]);
+
   const rows = useMemo(() => {
-    let all = [...PM_POSITIONS];
+    let all = [...mergedPositions];
     if (custodianFilter !== "all") all = all.filter(p => p.custodian === custodianFilter);
-    if (tipusFilter  !== "all") all = all.filter(p => p.tipus  === tipusFilter);
+    if (tipusFilter     !== "all") all = all.filter(p => p.tipus     === tipusFilter);
     all.sort((a, b) => {
       const va = a[sortCol] ?? (sortDir === "desc" ? -Infinity : Infinity);
       const vb = b[sortCol] ?? (sortDir === "desc" ? -Infinity : Infinity);
@@ -60,7 +154,7 @@ export function HoldingsTable() {
       return sortDir === "desc" ? vb - va : va - vb;
     });
     return all;
-  }, [custodianFilter, tipusFilter, sortCol, sortDir]);
+  }, [mergedPositions, custodianFilter, tipusFilter, sortCol, sortDir]);
 
   const th = {
     padding: "8px 10px", fontSize: 10, letterSpacing: "0.09em",
@@ -92,6 +186,7 @@ export function HoldingsTable() {
       padding: "20px 24px",
       boxShadow: "0 2px 8px rgba(0,0,0,.06)",
     }}>
+      <style>{`.hoverable:hover .edit-pencil { opacity: 1 !important; }`}</style>
 
       {/* ── Filter pills ── */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
@@ -105,7 +200,11 @@ export function HoldingsTable() {
           {pillBtn(custodianFilter === "all",             () => setCustodianFilter("all"),             "Tots els custodians")}
           {pillBtn(custodianFilter === "CaixaBank",       () => setCustodianFilter("CaixaBank"),       "CaixaBank")}
           {pillBtn(custodianFilter === "Bankinter",       () => setCustodianFilter("Bankinter"),       "Bankinter")}
+          {pillBtn(custodianFilter === "Interactive Brokers", () => setCustodianFilter("Interactive Brokers"), "Interactive Brokers")}
+          {pillBtn(custodianFilter === "JPMorgan",        () => setCustodianFilter("JPMorgan"),        "JPMorgan")}
           {pillBtn(custodianFilter === "UBS",             () => setCustodianFilter("UBS"),             "UBS")}
+          {pillBtn(custodianFilter === "Credit Suisse",  () => setCustodianFilter("Credit Suisse"),   "Credit Suisse")}
+          {pillBtn(custodianFilter === "Andbank",         () => setCustodianFilter("Andbank"),         "Andbank")}
         </div>
         <div style={{ fontSize: 11, color: tc.textLight, marginLeft: "auto" }}>
           {rows.length} posicions · {fmtM(rows.reduce((s, p) => s + (p.valorMercat || 0), 0))}
@@ -129,22 +228,22 @@ export function HoldingsTable() {
                 Data compra{sortIcon("dataCompra")}
               </th>
               <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("valorMercat")}>
-                Valor mercat{sortIcon("valorMercat")}
+                Valor mercat{sortIcon("valorMercat")}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
               </th>
               <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("rendInici")}>
-                P&amp;L{sortIcon("rendInici")}
+                P&amp;L{sortIcon("rendInici")}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
               </th>
               <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("pes")}>
                 Pes %{sortIcon("pes")}
               </th>
               <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("rend2026")}>
-                YTD{sortIcon("rend2026")}
+                YTD{sortIcon("rend2026")}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
               </th>
               <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("rend2025")}>
-                2025{sortIcon("rend2025")}
+                2025{sortIcon("rend2025")}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
               </th>
               <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("costAnual")}>
-                TER{sortIcon("costAnual")}
+                TER{sortIcon("costAnual")}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
               </th>
               <th style={{ ...th, textAlign: "center" }}>MS</th>
             </tr>
@@ -173,18 +272,82 @@ export function HoldingsTable() {
                   </td>
                   <td style={{ padding: "6px 10px", fontFamily: "'DM Mono',monospace", fontSize: 10, color: tc.textLight }}>{p.isin}</td>
                   <td style={{ padding: "6px 10px", textAlign: "right", fontSize: 10, color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>{p.dataCompra}</td>
-                  <td style={{ padding: "6px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>
-                    {p.valorMercat != null ? fmtM(p.valorMercat) : "—"}
-                  </td>
-                  <PnlCell v={p.rendInici} tc={tc} />
+
+                  {/* Editable: valorMercat */}
+                  <EditableCell
+                    value={p.valorMercat}
+                    canEdit={canEdit}
+                    onSave={v => handleSave(p.isin, "valorMercat", v)}
+                    renderValue={() => (
+                      <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>
+                        {p.valorMercat != null ? fmtM(p.valorMercat) : "—"}
+                      </span>
+                    )}
+                    td={{ padding: "6px 10px", textAlign: "right" }}
+                  />
+
+                  {/* Editable: rendInici — wraps PnlCell inline */}
+                  <EditableCell
+                    value={p.rendInici}
+                    canEdit={canEdit}
+                    onSave={v => handleSave(p.isin, "rendInici", v)}
+                    renderValue={() => {
+                      const v = p.rendInici;
+                      if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
+                      const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
+                      const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
+                      return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>{(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}</span>;
+                    }}
+                    td={{ padding: "6px 10px", textAlign: "right" }}
+                  />
+
                   <td style={{ padding: "6px 10px", textAlign: "right", fontSize: 11, fontFamily: "'DM Mono',monospace", color: tc.textLight }}>
                     {p.pes != null ? p.pes.toFixed(1) + "%" : "—"}
                   </td>
-                  <PnlCell v={p.rend2026} tc={tc} />
-                  <PnlCell v={p.rend2025} tc={tc} />
-                  <td style={{ padding: "6px 10px", textAlign: "right", fontSize: 10, fontFamily: "'DM Mono',monospace", color: tc.textLight }}>
-                    {p.costAnual != null ? p.costAnual.toFixed(2) + "%" : "—"}
-                  </td>
+
+                  {/* Editable: rend2026 */}
+                  <EditableCell
+                    value={p.rend2026}
+                    canEdit={canEdit}
+                    onSave={v => handleSave(p.isin, "rend2026", v)}
+                    renderValue={() => {
+                      const v = p.rend2026;
+                      if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
+                      const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
+                      const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
+                      return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>{(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}</span>;
+                    }}
+                    td={{ padding: "6px 10px", textAlign: "right" }}
+                  />
+
+                  {/* Editable: rend2025 */}
+                  <EditableCell
+                    value={p.rend2025}
+                    canEdit={canEdit}
+                    onSave={v => handleSave(p.isin, "rend2025", v)}
+                    renderValue={() => {
+                      const v = p.rend2025;
+                      if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
+                      const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
+                      const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
+                      return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>{(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}</span>;
+                    }}
+                    td={{ padding: "6px 10px", textAlign: "right" }}
+                  />
+
+                  {/* Editable: costAnual (TER) */}
+                  <EditableCell
+                    value={p.costAnual}
+                    canEdit={canEdit}
+                    onSave={v => handleSave(p.isin, "costAnual", v)}
+                    renderValue={() => (
+                      <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: tc.textLight }}>
+                        {p.costAnual != null ? p.costAnual.toFixed(2) + "%" : "—"}
+                      </span>
+                    )}
+                    td={{ padding: "6px 10px", textAlign: "right" }}
+                  />
+
                   <td style={{ padding: "6px 10px", textAlign: "center" }}>
                     {p.isin ? (
                       <a href={msUrl} target="_blank" rel="noreferrer"
@@ -199,7 +362,7 @@ export function HoldingsTable() {
       </div>
 
       <div style={{ fontSize: 10, color: tc.textLight, marginTop: 12, fontStyle: "italic" }}>
-        WAM (€6.1M) i Andbank (€6.1M) gestionats directament — posicions individuals no disponibles.
+        UBS, WAM i Andbank inclosos quan hi ha posicions individuals; la vista consolidada també conserva els mandats de custòdia.
       </div>
     </div>
   );

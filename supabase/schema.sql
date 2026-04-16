@@ -1,5 +1,6 @@
 -- Turtle Capital Dashboard — Supabase schema
 -- Run this in the Supabase SQL editor
+-- Then apply the migrations in supabase/migrations/.
 
 -- ── Capital Calls ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS capital_calls (
@@ -34,7 +35,8 @@ CREATE TABLE IF NOT EXISTS pipeline (
   sector      TEXT,
   status      TEXT,
   canal       TEXT,
-  active      BOOLEAN DEFAULT true
+  active      BOOLEAN DEFAULT true,
+  estimated_closing TEXT
 );
 
 -- ── Portfolio companies ───────────────────────────────────
@@ -55,7 +57,7 @@ CREATE TABLE IF NOT EXISTS portfolio_companies (
   dfn            NUMERIC,
   gross_ev       NUMERIC,
   mult_entry     NUMERIC,
-  data_compr     TEXT,
+  data_compr     DATE,
   mesos_operant  INTEGER,
   is_mock        BOOLEAN DEFAULT false,
   quarters       JSONB DEFAULT '[]'
@@ -64,7 +66,7 @@ CREATE TABLE IF NOT EXISTS portfolio_companies (
 -- ── Searchers ─────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS searchers (
   id                BIGSERIAL PRIMARY KEY,
-  nom               TEXT,
+  nom               TEXT NOT NULL,
   tipus             TEXT,
   modalitat         TEXT,
   geo               TEXT,
@@ -76,8 +78,8 @@ CREATE TABLE IF NOT EXISTS searchers (
   escola1           TEXT,
   escola2           TEXT,
   ticket            NUMERIC,
-  data_inici        TEXT,
-  data_compr        TEXT,
+  data_inici        DATE,
+  data_compr        DATE,
   mesos_cercant     INTEGER,
   equity_stake      NUMERIC,
   is_mock           BOOLEAN DEFAULT false
@@ -115,6 +117,19 @@ CREATE TABLE IF NOT EXISTS pm_position_meta (
   updated_at  TIMESTAMPTZ DEFAULT now()
 );
 
+-- ── Public Markets — financial data overrides ─────────────
+CREATE TABLE IF NOT EXISTS pm_position_overrides (
+  isin          TEXT PRIMARY KEY,
+  valor_mercat  NUMERIC,
+  rend_inici    NUMERIC,
+  rend2026      NUMERIC,
+  rend2025      NUMERIC,
+  rend2024      NUMERIC,
+  rend2023      NUMERIC,
+  cost_anual    NUMERIC,
+  updated_at    TIMESTAMPTZ DEFAULT now()
+);
+
 -- ── App settings ───────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS app_settings (
   key         TEXT PRIMARY KEY,
@@ -134,17 +149,56 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at  TIMESTAMPTZ DEFAULT now()
 );
 
--- ── Disable RLS (single-user personal dashboard) ──────────
-ALTER TABLE capital_calls       DISABLE ROW LEVEL SECURITY;
-ALTER TABLE fund_meta           DISABLE ROW LEVEL SECURITY;
-ALTER TABLE pipeline            DISABLE ROW LEVEL SECURITY;
-ALTER TABLE portfolio_companies DISABLE ROW LEVEL SECURITY;
-ALTER TABLE searchers           DISABLE ROW LEVEL SECURITY;
-ALTER TABLE pm_transactions     DISABLE ROW LEVEL SECURITY;
-ALTER TABLE pm_ter_overrides    DISABLE ROW LEVEL SECURITY;
-ALTER TABLE pm_position_meta    DISABLE ROW LEVEL SECURITY;
-ALTER TABLE app_settings        DISABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_log            DISABLE ROW LEVEL SECURITY;
+-- ── Shared API rate limiting ──────────────────────────────
+CREATE TABLE IF NOT EXISTS api_rate_limits (
+  bucket    TEXT NOT NULL,
+  subject   TEXT NOT NULL,
+  count     INTEGER NOT NULL DEFAULT 0,
+  reset_at  TIMESTAMPTZ NOT NULL,
+  PRIMARY KEY (bucket, subject)
+);
+
+-- ── Security helpers ──────────────────────────────────────
+CREATE OR REPLACE FUNCTION public.current_app_role()
+RETURNS TEXT
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT COALESCE(
+    auth.jwt() -> 'app_metadata' ->> 'role',
+    'user'
+  )
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_superuser()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT public.current_app_role() IN ('superuser', 'admin')
+$$;
+
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+AS $$
+  SELECT public.current_app_role() = 'admin'
+$$;
+
+-- ── Enable RLS by default ─────────────────────────────────
+ALTER TABLE capital_calls       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE fund_meta           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pipeline            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE portfolio_companies ENABLE ROW LEVEL SECURITY;
+ALTER TABLE searchers           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pm_transactions     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pm_ter_overrides    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pm_position_meta         ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pm_position_overrides    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE app_settings        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE audit_log           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE api_rate_limits     ENABLE ROW LEVEL SECURITY;
 
 -- ── Bulk replace helper ───────────────────────────────────
 CREATE OR REPLACE FUNCTION replace_dashboard_bundle(
@@ -157,8 +211,13 @@ CREATE OR REPLACE FUNCTION replace_dashboard_bundle(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
+  IF NOT public.is_superuser() THEN
+    RAISE EXCEPTION 'Forbidden';
+  END IF;
+
   IF p_cc_rows IS NOT NULL THEN
     DELETE FROM capital_calls;
   END IF;
@@ -229,3 +288,72 @@ BEGIN
   END IF;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION public.take_rate_limit(
+  p_bucket TEXT,
+  p_subject TEXT,
+  p_window_ms INTEGER,
+  p_max_requests INTEGER
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_now TIMESTAMPTZ := now();
+  v_reset_at TIMESTAMPTZ;
+  v_count INTEGER;
+BEGIN
+  IF auth.role() <> 'service_role' THEN
+    RAISE EXCEPTION 'Forbidden';
+  END IF;
+
+  IF COALESCE(length(trim(p_bucket)), 0) = 0 THEN
+    RAISE EXCEPTION 'Bucket required';
+  END IF;
+  IF COALESCE(length(trim(p_subject)), 0) = 0 THEN
+    RAISE EXCEPTION 'Subject required';
+  END IF;
+  IF p_window_ms < 1000 THEN
+    RAISE EXCEPTION 'Invalid window';
+  END IF;
+  IF p_max_requests < 1 THEN
+    RAISE EXCEPTION 'Invalid max requests';
+  END IF;
+
+  DELETE FROM public.api_rate_limits
+  WHERE reset_at <= v_now
+    AND bucket = p_bucket
+    AND subject = p_subject;
+
+  INSERT INTO public.api_rate_limits (bucket, subject, count, reset_at)
+  VALUES (
+    p_bucket,
+    p_subject,
+    1,
+    v_now + make_interval(secs => p_window_ms / 1000.0)
+  )
+  ON CONFLICT (bucket, subject) DO UPDATE
+  SET count = CASE
+        WHEN public.api_rate_limits.reset_at <= v_now THEN 1
+        ELSE public.api_rate_limits.count + 1
+      END,
+      reset_at = CASE
+        WHEN public.api_rate_limits.reset_at <= v_now THEN v_now + make_interval(secs => p_window_ms / 1000.0)
+        ELSE public.api_rate_limits.reset_at
+      END
+  RETURNING count, reset_at INTO v_count, v_reset_at;
+
+  RETURN jsonb_build_object(
+    'limited', v_count > p_max_requests,
+    'limit', p_max_requests,
+    'remaining', greatest(p_max_requests - least(v_count, p_max_requests), 0),
+    'retry_after_sec', greatest(ceil(extract(epoch FROM (v_reset_at - v_now)))::INTEGER, 1),
+    'reset_at', v_reset_at
+  );
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.take_rate_limit(TEXT, TEXT, INTEGER, INTEGER) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.take_rate_limit(TEXT, TEXT, INTEGER, INTEGER) TO service_role;

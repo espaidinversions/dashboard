@@ -1,9 +1,26 @@
 import { supabase } from "./supabase.js";
 import { MESOS } from "./config.js";
 
+/** @typedef {import("./data/dashboardTypes.js").CapitalCallRow} CapitalCallRow */
+/** @typedef {import("./data/dashboardTypes.js").DashboardBundle} DashboardBundle */
+/** @typedef {import("./data/dashboardTypes.js").FundMetaRow} FundMetaRow */
+/** @typedef {import("./data/dashboardTypes.js").PipelineDeal} PipelineDeal */
+/** @typedef {import("./data/dashboardTypes.js").PipelineDealRow} PipelineDealRow */
+/** @typedef {import("./data/dashboardTypes.js").PortfolioCompany} PortfolioCompany */
+/** @typedef {import("./data/dashboardTypes.js").PortfolioCompanyRow} PortfolioCompanyRow */
+/** @typedef {import("./data/dashboardTypes.js").Searcher} Searcher */
+/** @typedef {import("./data/dashboardTypes.js").SearcherRow} SearcherRow */
+/** @typedef {import("./data/publicMarketsTypes.js").PMOverrides} PMOverrides */
+/** @typedef {import("./data/publicMarketsTypes.js").PMPositionMeta} PMPositionMeta */
+/** @typedef {import("./data/publicMarketsTypes.js").PMTransactionDraft} PMTransactionDraft */
+
 // ── Helpers ───────────────────────────────────────────────
 
 // Map camelCase app fields ↔ snake_case DB columns for portfolio_companies
+/**
+ * @param {PortfolioCompany} c
+ * @returns {PortfolioCompanyRow}
+ */
 function companyToRow(c) {
   return {
     nom: c.nom, tipus: c.tipus, segment: c.segment || null,
@@ -18,6 +35,10 @@ function companyToRow(c) {
   };
 }
 
+/**
+ * @param {PortfolioCompanyRow} r
+ * @returns {PortfolioCompany}
+ */
 function rowToCompany(r) {
   return {
     id: r.id, nom: r.nom, tipus: r.tipus, segment: r.segment,
@@ -32,6 +53,10 @@ function rowToCompany(r) {
   };
 }
 
+/**
+ * @param {Searcher} s
+ * @returns {SearcherRow}
+ */
 function searcherToRow(s) {
   return {
     nom: s.nom, tipus: s.tipus, modalitat: s.modalitat, geo: s.geo,
@@ -44,6 +69,10 @@ function searcherToRow(s) {
   };
 }
 
+/**
+ * @param {SearcherRow} r
+ * @returns {Searcher}
+ */
 function rowToSearcher(r) {
   return {
     id: r.id, nom: r.nom, tipus: r.tipus, modalitat: r.modalitat, geo: r.geo,
@@ -56,6 +85,10 @@ function rowToSearcher(r) {
   };
 }
 
+/**
+ * @param {PipelineDeal} d
+ * @returns {PipelineDealRow}
+ */
 function dealToRow(d) {
   return {
     name: d.name, amount: d.amount, currency: d.currency,
@@ -65,6 +98,10 @@ function dealToRow(d) {
   };
 }
 
+/**
+ * @param {PipelineDealRow} r
+ * @returns {PipelineDeal}
+ */
 function rowToDeal(r) {
   return {
     id: r.id, name: r.name, amount: r.amount, currency: r.currency,
@@ -76,6 +113,12 @@ function rowToDeal(r) {
 
 // ── Audit log ─────────────────────────────────────────────
 
+/**
+ * @param {string} action
+ * @param {string} tableName
+ * @param {string | number | null | undefined} recordId
+ * @param {Record<string, unknown> | null} changes
+ */
 async function logAudit(action, tableName, recordId, changes) {
   if (!supabase) return;
   try {
@@ -95,6 +138,7 @@ async function logAudit(action, tableName, recordId, changes) {
 
 // ── Load all ──────────────────────────────────────────────
 
+/** @returns {Promise<DashboardBundle | null>} */
 export async function loadAll() {
   if (!supabase) return null;
   const [cc, fm, pl, co, sr] = await Promise.all([
@@ -114,8 +158,25 @@ export async function loadAll() {
   };
 }
 
+/** @returns {Promise<PortfolioCompany[] | null>} */
+export async function loadCompanies() {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("portfolio_companies").select("*").order("nom");
+  if (error) return null;
+  return data.map(rowToCompany);
+}
+
+/** @returns {Promise<Searcher[] | null>} */
+export async function loadSearchers() {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("searchers").select("*").order("nom");
+  if (error) return null;
+  return data.map(rowToSearcher);
+}
+
 // ── Save individual tables ────────────────────────────────
 
+/** @param {CapitalCallRow[]} rows */
 export async function saveCapitalCalls(rows) {
   if (!supabase) return;
   const { error: delError } = await supabase.from("capital_calls").delete().neq("id", 0);
@@ -130,12 +191,14 @@ export async function saveCapitalCalls(rows) {
   return { error: null };
 }
 
+/** @param {FundMetaRow[]} rows */
 export async function saveFundMeta(rows) {
   if (!supabase) return;
   const { error } = await supabase.from("fund_meta").upsert(rows.map(r => ({ fons:r.fons, tvpi:r.tvpi ?? null })), { onConflict: "fons" });
   return { error };
 }
 
+/** @param {PipelineDeal[]} rows */
 export async function savePipeline(rows) {
   if (!supabase) return;
   const { error: delError } = await supabase.from("pipeline").delete().neq("id", -1);
@@ -145,12 +208,14 @@ export async function savePipeline(rows) {
     id:r.id, name:r.name, amount:r.amount, currency:r.currency,
     geography:r.geography, strategy:r.strategy, sector:r.sector,
     status:r.status, canal:r.canal, active:r.active,
+    estimated_closing: r.estimatedClosing ?? null,
     })));
     if (error) return { error };
   }
   return { error: null };
 }
 
+/** @param {PortfolioCompany[]} rows */
 export async function saveCompanies(rows) {
   if (!supabase) return;
   const { error: delError } = await supabase.from("portfolio_companies").delete().neq("id", 0);
@@ -162,6 +227,7 @@ export async function saveCompanies(rows) {
   return { error: null };
 }
 
+/** @param {Searcher[]} rows */
 export async function saveSearchers(rows) {
   if (!supabase) return;
   const { error: delError } = await supabase.from("searchers").delete().neq("id", 0);
@@ -173,7 +239,11 @@ export async function saveSearchers(rows) {
   return { error: null };
 }
 
-export async function saveDashboardBundle({ rawCC, funds0, companies, searchers, fundMeta }) {
+/**
+ * @param {DashboardBundle} [bundle]
+ */
+export async function saveDashboardBundle(bundle) {
+  const { rawCC, funds0, companies, searchers, fundMeta } = bundle ?? {};
   if (!supabase) return { error: null };
   const { error } = await supabase.rpc("replace_dashboard_bundle", {
     p_cc_rows: rawCC == null ? null : rawCC.map(r => ({
@@ -211,6 +281,10 @@ export async function saveDashboardBundle({ rawCC, funds0, companies, searchers,
 
 // ── Granular single-row upserts ───────────────────────────
 
+/**
+ * @param {string} fons
+ * @param {number | null | undefined} tvpi
+ */
 export async function upsertFundMeta(fons, tvpi) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("fund_meta").upsert({ fons, tvpi: tvpi ?? null }, { onConflict: "fons" });
@@ -218,25 +292,40 @@ export async function upsertFundMeta(fons, tvpi) {
   return { error };
 }
 
+/**
+ * @param {PortfolioCompany} company
+ */
 export async function upsertCompany(company) {
-  if (!supabase) return { error: null };
-  const { error } = await supabase.from("portfolio_companies")
-    .upsert(companyToRow(company), { onConflict: "nom" });
-  if (!error) logAudit("update", "portfolio_companies", company.nom, { nom: company.nom });
-  return { error };
+  if (!supabase) return { data: company, error: null };
+  const row = companyToRow(company);
+  const query = supabase.from("portfolio_companies");
+  const { data, error } = company.id
+    ? await query.update(row).eq("id", company.id).select().single()
+    : await query.upsert(row, { onConflict: "nom" }).select().single();
+  if (!error) logAudit("update", "portfolio_companies", data?.id ?? company.nom, { nom: company.nom });
+  return { data: data ? rowToCompany(data) : null, error };
 }
 
+/**
+ * @param {Searcher} searcher
+ */
 export async function upsertSearcher(searcher) {
-  if (!supabase) return { error: null };
-  const { error } = await supabase.from("searchers")
-    .update(searcherToRow(searcher))
-    .eq("id", searcher.id);
-  if (!error) logAudit("update", "searchers", searcher.id, { nom: searcher.nom });
-  return { error };
+  if (!supabase) return { data: searcher, error: null };
+  const row = searcherToRow(searcher);
+  const query = supabase.from("searchers");
+  const { data, error } = searcher.id
+    ? await query.update(row).eq("id", searcher.id).select().single()
+    : await query.insert(row).select().single();
+  if (!error) logAudit("update", "searchers", data?.id ?? searcher.nom, { nom: searcher.nom });
+  return { data: data ? rowToSearcher(data) : null, error };
 }
 
 // ── Insert (single-row, returns row with DB-assigned id) ──
 
+/**
+ * @param {PortfolioCompany} company
+ * @returns {Promise<PortfolioCompany | null>}
+ */
 export async function insertCompany(company) {
   if (!supabase) return null;
   const { data, error } = await supabase
@@ -245,9 +334,14 @@ export async function insertCompany(company) {
     .select()
     .single();
   if (error) { console.error(error); return null; }
+  logAudit("insert", "portfolio_companies", data.id, { nom: data.nom });
   return rowToCompany(data);
 }
 
+/**
+ * @param {Searcher} searcher
+ * @returns {Promise<Searcher | null>}
+ */
 export async function insertSearcher(searcher) {
   if (!supabase) return null;
   const { data, error } = await supabase
@@ -256,9 +350,14 @@ export async function insertSearcher(searcher) {
     .select()
     .single();
   if (error) { console.error(error); return null; }
+  logAudit("insert", "searchers", data.id, { nom: data.nom });
   return rowToSearcher(data);
 }
 
+/**
+ * @param {PipelineDeal} deal
+ * @returns {Promise<PipelineDeal | null>}
+ */
 export async function insertPipelineDeal(deal) {
   if (!supabase) return null;
   const { data, error } = await supabase
@@ -270,6 +369,14 @@ export async function insertPipelineDeal(deal) {
   return rowToDeal(data);
 }
 
+/**
+ * @param {string} fons
+ * @param {string} vcpe
+ * @param {string} est
+ * @param {number} compromisEur
+ * @param {string} divisa
+ * @returns {Promise<CapitalCallRow | null>}
+ */
 export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
   if (!supabase) return null;
   const now  = new Date();
@@ -294,6 +401,7 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
 
 // ── Delete ────────────────────────────────────────────────
 
+/** @param {number} id */
 export async function deleteCompany(id) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("portfolio_companies").delete().eq("id", id);
@@ -301,6 +409,7 @@ export async function deleteCompany(id) {
   return { error };
 }
 
+/** @param {number} id */
 export async function deleteSearcher(id) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("searchers").delete().eq("id", id);
@@ -308,6 +417,7 @@ export async function deleteSearcher(id) {
   return { error };
 }
 
+/** @param {number} id */
 export async function deletePipelineDeal(id) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("pipeline").delete().eq("id", id);
@@ -315,6 +425,7 @@ export async function deletePipelineDeal(id) {
   return { error };
 }
 
+/** @param {string} fons */
 export async function deleteFund(fons) {
   if (!supabase) return null;
   const { error: e1 } = await supabase.from("capital_calls").delete().eq("fons", fons);
@@ -326,6 +437,9 @@ export async function deleteFund(fons) {
 
 // ── Upsert (pipeline) ─────────────────────────────────────
 
+/**
+ * @param {PipelineDeal} deal
+ */
 export async function upsertPipelineDeal(deal) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("pipeline")
@@ -336,6 +450,7 @@ export async function upsertPipelineDeal(deal) {
 
 // ── Public Markets overrides ──────────────────────────────
 
+/** @returns {Promise<PMOverrides | null>} */
 export async function loadPMOverrides() {
   if (!supabase) return null;
   const [tx, ter, meta] = await Promise.all([
@@ -367,6 +482,9 @@ export async function loadPMOverrides() {
   };
 }
 
+/**
+ * @param {PMTransactionDraft & { id?: string | null }} tx
+ */
 export async function upsertTransaction(tx) {
   if (!supabase) return { error: null };
   const row = {
@@ -396,10 +514,52 @@ export async function upsertTerOverride(isin, ter) {
   return { error };
 }
 
+/**
+ * @param {string} isin
+ * @param {PMPositionMeta} fields
+ */
 export async function upsertPositionMeta(isin, fields) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("pm_position_meta")
     .upsert({ isin, ...fields, updated_at: new Date().toISOString() }, { onConflict: "isin" });
+  return { error };
+}
+
+// ── Public Markets — position financial overrides ─────────
+
+/** @returns {Promise<Map<string, object> | null>} */
+export async function loadPMPositionOverrides() {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("pm_position_overrides").select("*");
+  if (error) return null;
+  return new Map(data.map(r => [r.isin, {
+    valorMercat: r.valor_mercat,
+    rendInici:   r.rend_inici,
+    rend2026:    r.rend2026,
+    rend2025:    r.rend2025,
+    rend2024:    r.rend2024,
+    rend2023:    r.rend2023,
+    costAnual:   r.cost_anual,
+  }]));
+}
+
+/**
+ * @param {string} isin
+ * @param {object} fields  camelCase keys matching position fields
+ */
+export async function upsertPMPositionOverride(isin, fields) {
+  if (!supabase) return { error: null };
+  const row = { isin, updated_at: new Date().toISOString() };
+  if (fields.valorMercat != null) row.valor_mercat = fields.valorMercat;
+  if (fields.rendInici   != null) row.rend_inici   = fields.rendInici;
+  if (fields.rend2026    != null) row.rend2026      = fields.rend2026;
+  if (fields.rend2025    != null) row.rend2025      = fields.rend2025;
+  if (fields.rend2024    != null) row.rend2024      = fields.rend2024;
+  if (fields.rend2023    != null) row.rend2023      = fields.rend2023;
+  if (fields.costAnual   != null) row.cost_anual    = fields.costAnual;
+  const { error } = await supabase.from("pm_position_overrides")
+    .upsert(row, { onConflict: "isin" });
+  if (!error) logAudit("update", "pm_position_overrides", isin, fields);
   return { error };
 }
 
