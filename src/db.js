@@ -1,11 +1,17 @@
 import { supabase } from "./supabase.js";
 import { MESOS } from "./config.js";
+import {
+  buildPrivateEntitiesFromDashboardBundle,
+  getPrivateEntityName,
+  resolvePrivateEntity,
+} from "./data/privateEntities.js";
 
 /** @typedef {import("./data/dashboardTypes.js").CapitalCallRow} CapitalCallRow */
 /** @typedef {import("./data/dashboardTypes.js").DashboardBundle} DashboardBundle */
 /** @typedef {import("./data/dashboardTypes.js").FundMetaRow} FundMetaRow */
 /** @typedef {import("./data/dashboardTypes.js").PipelineDeal} PipelineDeal */
 /** @typedef {import("./data/dashboardTypes.js").PipelineDealRow} PipelineDealRow */
+/** @typedef {import("./data/dashboardTypes.js").PrivateEntity} PrivateEntity */
 /** @typedef {import("./data/dashboardTypes.js").PortfolioCompany} PortfolioCompany */
 /** @typedef {import("./data/dashboardTypes.js").PortfolioCompanyRow} PortfolioCompanyRow */
 /** @typedef {import("./data/dashboardTypes.js").Searcher} Searcher */
@@ -16,13 +22,34 @@ import { MESOS } from "./config.js";
 
 // ── Helpers ───────────────────────────────────────────────
 
-// Map camelCase app fields ↔ snake_case DB columns for portfolio_companies
+/**
+ * @param {PrivateEntity} entity
+ */
+function privateEntityToRow(entity) {
+  return {
+    id: entity.id,
+    kind: entity.kind,
+    canonical_name: entity.canonicalName,
+    source_name: entity.sourceName ?? entity.canonicalName,
+    workbook_name: entity.workbookName ?? null,
+    match_type: entity.matchType ?? null,
+    isin: entity.isin ?? null,
+    country: entity.country ?? null,
+    first_investment_date: entity.firstInvestmentDate ?? null,
+    active: entity.active ?? true,
+    notes: entity.notes ?? null,
+    updated_at: new Date().toISOString(),
+  };
+}
+
 /**
  * @param {PortfolioCompany} c
  * @returns {PortfolioCompanyRow}
  */
 function companyToRow(c) {
+  const resolved = resolvePrivateEntity("company", c.nom, c.id ?? null);
   return {
+    entity_id: resolved.id,
     nom: c.nom, tipus: c.tipus, segment: c.segment || null,
     entrepreneurs: c.entrepreneurs || null, origen: c.origen || null, geo: c.geo || null,
     ticket: c.ticket ?? null, tvpi: c.tvpi ?? null,
@@ -36,12 +63,16 @@ function companyToRow(c) {
 }
 
 /**
- * @param {PortfolioCompanyRow} r
+ * @param {PortfolioCompanyRow & { id?: number }} r
+ * @param {Map<string, object>} entityMap
  * @returns {PortfolioCompany}
  */
-function rowToCompany(r) {
+function rowToCompany(r, entityMap) {
+  const entityId = r.entity_id ?? String(r.id ?? "");
+  const name = getPrivateEntityName(entityMap, entityId, r.nom);
+  const entity = entityMap.get(entityId);
   return {
-    id: r.id, nom: r.nom, tipus: r.tipus, segment: r.segment,
+    id: entityId, nom: name, tipus: r.tipus, segment: r.segment,
     entrepreneurs: r.entrepreneurs, origen: r.origen, geo: r.geo,
     ticket: r.ticket, tvpi: r.tvpi,
     rvpiEur: r.rvpi_eur, dpiEur: r.dpi_eur,
@@ -50,6 +81,79 @@ function rowToCompany(r) {
     dataCompr: r.data_compr, mesosOperant: r.mesos_operant,
     isMock: r.is_mock,
     quarters: r.quarters ?? [],
+    sourceName: r.nom,
+    workbookName: entity?.workbook_name ?? null,
+    matchType: entity?.match_type ?? null,
+  };
+}
+
+/**
+ * @param {CapitalCallRow} row
+ */
+function capitalCallToRow(row) {
+  const resolved = resolvePrivateEntity("vehicle", row.fons, row.id ?? null);
+  return {
+    vehicle_id: resolved.id,
+    fons: row.fons,
+    tipus: row.tipus,
+    cat: row.cat,
+    data: row.data,
+    mes: row.mes,
+    year: row.any,
+    fy: row.fy,
+    vcpe: row.vcpe,
+    est: row.est,
+    eur: row.eur,
+    divisa: row.divisa,
+  };
+}
+
+/**
+ * @param {object} row
+ * @param {Map<string, object>} entityMap
+ * @returns {CapitalCallRow}
+ */
+function rowToCapitalCall(row, entityMap) {
+  const entityId = row.vehicle_id ?? null;
+  return {
+    id: entityId ?? undefined,
+    fons: getPrivateEntityName(entityMap, entityId, row.fons),
+    tipus: row.tipus,
+    cat: row.cat,
+    data: row.data,
+    mes: row.mes,
+    any: row.year,
+    fy: row.fy,
+    vcpe: row.vcpe,
+    est: row.est,
+    eur: row.eur,
+    divisa: row.divisa,
+  };
+}
+
+/**
+ * @param {FundMetaRow} row
+ */
+function fundMetaToRow(row) {
+  const resolved = resolvePrivateEntity("vehicle", row.fons, row.id ?? null);
+  return {
+    vehicle_id: resolved.id,
+    fons: row.fons,
+    tvpi: row.tvpi ?? null,
+  };
+}
+
+/**
+ * @param {object} row
+ * @param {Map<string, object>} entityMap
+ * @returns {FundMetaRow}
+ */
+function rowToFundMeta(row, entityMap) {
+  const entityId = row.vehicle_id ?? null;
+  return {
+    id: entityId ?? undefined,
+    fons: getPrivateEntityName(entityMap, entityId, row.fons),
+    tvpi: row.tvpi,
   };
 }
 
@@ -111,6 +215,24 @@ function rowToDeal(r) {
   };
 }
 
+async function loadPrivateEntityMap() {
+  if (!supabase) return new Map();
+  const { data, error } = await supabase.from("private_entities").select("*");
+  if (error || !Array.isArray(data)) return new Map();
+  return new Map(data.map((row) => [row.id, row]));
+}
+
+/**
+ * @param {PrivateEntity[]} rows
+ */
+async function upsertPrivateEntities(rows) {
+  if (!supabase || !rows.length) return { error: null };
+  const { error } = await supabase
+    .from("private_entities")
+    .upsert(rows.map(privateEntityToRow), { onConflict: "id" });
+  return { error };
+}
+
 // ── Audit log ─────────────────────────────────────────────
 
 /**
@@ -141,29 +263,43 @@ async function logAudit(action, tableName, recordId, changes) {
 /** @returns {Promise<DashboardBundle | null>} */
 export async function loadAll() {
   if (!supabase) return null;
-  const [cc, fm, pl, co, sr] = await Promise.all([
+  const [cc, fm, pl, co, sr, pe] = await Promise.all([
     supabase.from("capital_calls").select("*").order("data"),
     supabase.from("fund_meta").select("*"),
     supabase.from("pipeline").select("*").order("id"),
     supabase.from("portfolio_companies").select("*").order("nom"),
     supabase.from("searchers").select("*").order("nom"),
+    supabase.from("private_entities").select("*"),
   ]);
   if (cc.error || fm.error || pl.error || co.error || sr.error) return null;
+  const privateEntities = pe.error || !Array.isArray(pe.data) ? [] : pe.data;
+  const entityMap = new Map(privateEntities.map((row) => [row.id, row]));
   return {
-    rawCC:      cc.data.map(r => ({ fons:r.fons, tipus:r.tipus, cat:r.cat, data:r.data, mes:r.mes, any:r.year, fy:r.fy, vcpe:r.vcpe, est:r.est, eur:r.eur, divisa:r.divisa })),
-    fundMeta:   fm.data.map(r => ({ fons:r.fons, tvpi:r.tvpi })),
+    rawCC:      cc.data.map((row) => rowToCapitalCall(row, entityMap)),
+    fundMeta:   fm.data.map((row) => rowToFundMeta(row, entityMap)),
     funds0:     pl.data.map(r => ({ id:r.id, name:r.name, amount:r.amount, currency:r.currency, geography:r.geography, strategy:r.strategy, sector:r.sector, status:r.status, canal:r.canal, active:r.active, estimatedClosing: r.estimated_closing ?? null })),
-    companies:  co.data.map(rowToCompany),
+    companies:  co.data.map((row) => rowToCompany(row, entityMap)),
     searchers:  sr.data.map(rowToSearcher),
+    privateEntities: privateEntities.map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      canonicalName: row.canonical_name,
+      sourceName: row.source_name,
+      workbookName: row.workbook_name,
+      matchType: row.match_type,
+    })),
   };
 }
 
 /** @returns {Promise<PortfolioCompany[] | null>} */
 export async function loadCompanies() {
   if (!supabase) return null;
-  const { data, error } = await supabase.from("portfolio_companies").select("*").order("nom");
-  if (error) return null;
-  return data.map(rowToCompany);
+  const [companies, entityMap] = await Promise.all([
+    supabase.from("portfolio_companies").select("*").order("nom"),
+    loadPrivateEntityMap(),
+  ]);
+  if (companies.error) return null;
+  return companies.data.map((row) => rowToCompany(row, entityMap));
 }
 
 /** @returns {Promise<Searcher[] | null>} */
@@ -179,13 +315,13 @@ export async function loadSearchers() {
 /** @param {CapitalCallRow[]} rows */
 export async function saveCapitalCalls(rows) {
   if (!supabase) return;
+  const entities = buildPrivateEntitiesFromDashboardBundle({ rawCC: rows });
+  const { error: entitiesError } = await upsertPrivateEntities(entities);
+  if (entitiesError) return { error: entitiesError };
   const { error: delError } = await supabase.from("capital_calls").delete().neq("id", 0);
   if (delError) return { error: delError };
   if (rows.length) {
-    const { error } = await supabase.from("capital_calls").insert(rows.map(r => ({
-    fons:r.fons, tipus:r.tipus, cat:r.cat, data:r.data, mes:r.mes, year:r.any,
-    fy:r.fy, vcpe:r.vcpe, est:r.est, eur:r.eur, divisa:r.divisa,
-    })));
+    const { error } = await supabase.from("capital_calls").insert(rows.map(capitalCallToRow));
     if (error) return { error };
   }
   return { error: null };
@@ -194,7 +330,12 @@ export async function saveCapitalCalls(rows) {
 /** @param {FundMetaRow[]} rows */
 export async function saveFundMeta(rows) {
   if (!supabase) return;
-  const { error } = await supabase.from("fund_meta").upsert(rows.map(r => ({ fons:r.fons, tvpi:r.tvpi ?? null })), { onConflict: "fons" });
+  const entities = buildPrivateEntitiesFromDashboardBundle({ fundMeta: rows });
+  const { error: entitiesError } = await upsertPrivateEntities(entities);
+  if (entitiesError) return { error: entitiesError };
+  const { error } = await supabase
+    .from("fund_meta")
+    .upsert(rows.map(fundMetaToRow), { onConflict: "vehicle_id" });
   return { error };
 }
 
@@ -218,6 +359,9 @@ export async function savePipeline(rows) {
 /** @param {PortfolioCompany[]} rows */
 export async function saveCompanies(rows) {
   if (!supabase) return;
+  const entities = buildPrivateEntitiesFromDashboardBundle({ companies: rows });
+  const { error: entitiesError } = await upsertPrivateEntities(entities);
+  if (entitiesError) return { error: entitiesError };
   const { error: delError } = await supabase.from("portfolio_companies").delete().neq("id", 0);
   if (delError) return { error: delError };
   if (rows.length) {
@@ -245,8 +389,11 @@ export async function saveSearchers(rows) {
 export async function saveDashboardBundle(bundle) {
   const { rawCC, funds0, companies, searchers, fundMeta } = bundle ?? {};
   if (!supabase) return { error: null };
+  const privateEntities = bundle?.privateEntities ?? buildPrivateEntitiesFromDashboardBundle({ companies, rawCC, fundMeta });
   const { error } = await supabase.rpc("replace_dashboard_bundle", {
+    p_private_entities_rows: privateEntities == null ? null : privateEntities.map(privateEntityToRow),
     p_cc_rows: rawCC == null ? null : rawCC.map(r => ({
+      vehicle_id: capitalCallToRow(r).vehicle_id,
       fons: r.fons,
       tipus: r.tipus,
       cat: r.cat,
@@ -274,7 +421,7 @@ export async function saveDashboardBundle(bundle) {
     })),
     p_companies_rows: companies == null ? null : companies.map(companyToRow),
     p_searchers_rows: searchers == null ? null : searchers.map(searcherToRow),
-    p_fund_meta_rows: fundMeta == null ? null : fundMeta.map(r => ({ fons: r.fons, tvpi: r.tvpi ?? null })),
+    p_fund_meta_rows: fundMeta == null ? null : fundMeta.map(fundMetaToRow),
   });
   return { error };
 }
@@ -282,13 +429,19 @@ export async function saveDashboardBundle(bundle) {
 // ── Granular single-row upserts ───────────────────────────
 
 /**
- * @param {string} fons
+ * @param {string | { id?: string | null, fons?: string | null, nom?: string | null }} fund
  * @param {number | null | undefined} tvpi
  */
-export async function upsertFundMeta(fons, tvpi) {
+export async function upsertFundMeta(fund, tvpi) {
   if (!supabase) return { error: null };
-  const { error } = await supabase.from("fund_meta").upsert({ fons, tvpi: tvpi ?? null }, { onConflict: "fons" });
-  if (!error) logAudit("update", "fund_meta", fons, { fons, tvpi });
+  const name = typeof fund === "string" ? fund : fund?.fons ?? fund?.nom ?? "";
+  const resolved = resolvePrivateEntity("vehicle", name, typeof fund === "string" ? null : fund?.id ?? null);
+  const { error: entityError } = await upsertPrivateEntities([resolved]);
+  if (entityError) return { error: entityError };
+  const { error } = await supabase
+    .from("fund_meta")
+    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: tvpi ?? null }, { onConflict: "vehicle_id" });
+  if (!error) logAudit("update", "fund_meta", resolved.id, { fons: resolved.canonicalName, tvpi });
   return { error };
 }
 
@@ -297,13 +450,17 @@ export async function upsertFundMeta(fons, tvpi) {
  */
 export async function upsertCompany(company) {
   if (!supabase) return { data: company, error: null };
+  const resolved = resolvePrivateEntity("company", company.nom, company.id ?? null);
+  const { error: entityError } = await upsertPrivateEntities([resolved]);
+  if (entityError) return { data: null, error: entityError };
+  const renameResult = await renamePrivateEntity(resolved.id, company.nom);
+  if (renameResult.error) return { data: null, error: renameResult.error };
   const row = companyToRow(company);
   const query = supabase.from("portfolio_companies");
-  const { data, error } = company.id
-    ? await query.update(row).eq("id", company.id).select().single()
-    : await query.upsert(row, { onConflict: "nom" }).select().single();
-  if (!error) logAudit("update", "portfolio_companies", data?.id ?? company.nom, { nom: company.nom });
-  return { data: data ? rowToCompany(data) : null, error };
+  const { data, error } = await query.upsert(row, { onConflict: "entity_id" }).select().single();
+  if (!error) logAudit("update", "portfolio_companies", resolved.id, { nom: company.nom });
+  const entityMap = await loadPrivateEntityMap();
+  return { data: data ? rowToCompany(data, entityMap) : null, error };
 }
 
 /**
@@ -328,14 +485,21 @@ export async function upsertSearcher(searcher) {
  */
 export async function insertCompany(company) {
   if (!supabase) return null;
+  const resolved = resolvePrivateEntity("company", company.nom, company.id ?? null);
+  const { error: entityError } = await upsertPrivateEntities([resolved]);
+  if (entityError) {
+    console.error(entityError);
+    return null;
+  }
   const { data, error } = await supabase
     .from("portfolio_companies")
     .insert(companyToRow(company))
     .select()
     .single();
   if (error) { console.error(error); return null; }
-  logAudit("insert", "portfolio_companies", data.id, { nom: data.nom });
-  return rowToCompany(data);
+  logAudit("insert", "portfolio_companies", resolved.id, { nom: data.nom });
+  const entityMap = await loadPrivateEntityMap();
+  return rowToCompany(data, entityMap);
 }
 
 /**
@@ -379,6 +543,9 @@ export async function insertPipelineDeal(deal) {
  */
 export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
   if (!supabase) return null;
+  const resolved = resolvePrivateEntity("vehicle", fons);
+  const { error: entityError } = await upsertPrivateEntities([resolved]);
+  if (entityError) { console.error(entityError); return null; }
   const now  = new Date();
   const mes  = MESOS[now.getMonth() + 1]; // MESOS is 1-indexed; index 0 = ""
   const year = now.getFullYear();
@@ -386,25 +553,55 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
   const data_iso = now.toISOString().slice(0, 10);
 
   const { error: ccErr } = await supabase.from("capital_calls").insert({
-    fons, vcpe, est, cat: "Compromís", eur: compromisEur, divisa,
+    vehicle_id: resolved.id,
+    fons: resolved.canonicalName,
+    vcpe, est, cat: "Compromís", eur: compromisEur, divisa,
     mes, year, fy, tipus: vcpe, data: data_iso,
   });
   if (ccErr) { console.error(ccErr); return null; }
 
   await supabase.from("fund_meta")
-    .upsert({ fons, tvpi: null }, { onConflict: "fons" });
+    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: null }, { onConflict: "vehicle_id" });
 
-  logAudit("insert", "capital_calls", fons, { fons, vcpe, est });
+  logAudit("insert", "capital_calls", resolved.id, { fons: resolved.canonicalName, vcpe, est });
   // Return in rawCC shape (key `any`, not `year`)
-  return { fons, vcpe, est, cat: "Compromís", eur: compromisEur, divisa, mes, any: year, fy, tipus: vcpe, data: data_iso };
+  return { id: resolved.id, fons: resolved.canonicalName, vcpe, est, cat: "Compromís", eur: compromisEur, divisa, mes, any: year, fy, tipus: vcpe, data: data_iso };
+}
+
+export async function loadPrivateEntities() {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("private_entities")
+    .select("*")
+    .order("canonical_name");
+  if (error || !Array.isArray(data)) return [];
+  return data;
+}
+
+/**
+ * @param {string} entityId
+ * @param {string} canonicalName
+ */
+export async function renamePrivateEntity(entityId, canonicalName) {
+  if (!supabase) return { error: null };
+  const trimmedName = String(canonicalName ?? "").trim();
+  if (!trimmedName) return { error: new Error("Name is required") };
+  const { error } = await supabase.rpc("rename_private_entity", {
+    p_id: entityId,
+    p_name: trimmedName,
+  });
+  if (!error) {
+    logAudit("update", "private_entities", entityId, { canonicalName: trimmedName });
+  }
+  return { error };
 }
 
 // ── Delete ────────────────────────────────────────────────
 
-/** @param {number} id */
+/** @param {string} id */
 export async function deleteCompany(id) {
   if (!supabase) return { error: null };
-  const { error } = await supabase.from("portfolio_companies").delete().eq("id", id);
+  const { error } = await supabase.from("portfolio_companies").delete().eq("entity_id", id);
   if (!error) logAudit("delete", "portfolio_companies", id, null);
   return { error };
 }
@@ -425,13 +622,15 @@ export async function deletePipelineDeal(id) {
   return { error };
 }
 
-/** @param {string} fons */
-export async function deleteFund(fons) {
+/** @param {string | { id?: string | null, fons?: string | null }} fund */
+export async function deleteFund(fund) {
   if (!supabase) return null;
-  const { error: e1 } = await supabase.from("capital_calls").delete().eq("fons", fons);
+  const name = typeof fund === "string" ? fund : fund?.fons ?? "";
+  const resolved = resolvePrivateEntity("vehicle", name, typeof fund === "string" && fund.includes(":") ? fund : fund?.id ?? null);
+  const { error: e1 } = await supabase.from("capital_calls").delete().eq("vehicle_id", resolved.id);
   if (e1) return e1;
-  const { error: e2 } = await supabase.from("fund_meta").delete().eq("fons", fons);
-  if (!e2) logAudit("delete", "capital_calls", fons, { fons });
+  const { error: e2 } = await supabase.from("fund_meta").delete().eq("vehicle_id", resolved.id);
+  if (!e2) logAudit("delete", "capital_calls", resolved.id, { fons: resolved.canonicalName });
   return e2 ?? null;
 }
 

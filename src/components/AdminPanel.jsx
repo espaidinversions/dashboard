@@ -1,25 +1,24 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { useAuth } from "../auth.jsx";
+import { readStoredFlag } from "../utils.js";
 import AdminUsers from "./admin/AdminUsers.jsx";
 import AdminActivity from "./admin/AdminActivity.jsx";
 import AdminData from "./admin/AdminData.jsx";
 import AdminSettings from "./admin/AdminSettings.jsx";
+import AdminEntities from "./admin/AdminEntities.jsx";
 
 const NAV = [
   { id: "users",    label: "Usuaris",      icon: "👥" },
   { id: "activity", label: "Activitat",    icon: "📋" },
   { id: "data",     label: "Dades",        icon: "🗄️" },
+  { id: "entities", label: "Entitats",     icon: "🏢" },
   { id: "settings", label: "Configuració", icon: "⚙️" },
 ];
 
 function AdminPanelInner() {
   const { tc } = useTheme();
-  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState("users");
-
-  const token = session?.access_token;
 
   return (
     <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14, display: "flex", flexDirection: "column" }}>
@@ -50,9 +49,10 @@ function AdminPanelInner() {
 
         {/* Content */}
         <div style={{ flex: 1, padding: "32px", overflowY: "auto" }}>
-          {activeTab === "users"    && <AdminUsers token={token} />}
+          {activeTab === "users"    && <AdminUsers />}
           {activeTab === "activity" && <AdminActivity />}
           {activeTab === "data"     && <AdminData />}
+          {activeTab === "entities" && <AdminEntities />}
           {activeTab === "settings" && <AdminSettings />}
         </div>
       </div>
@@ -61,7 +61,7 @@ function AdminPanelInner() {
 }
 
 export default function AdminPanel() {
-  const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1");
+  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
   const tc = dark ? TC_DARK : TC_LIGHT;
   return (
     <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
