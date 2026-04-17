@@ -27,6 +27,62 @@
 ---
 -->
 
+## Data Integrity & Editable Surfaces — 2026-04-16
+
+**Goal:** Full implementation of the "only edit inputs and overrides, never derived models" principle across Alternatives and Public Markets.
+
+### Step 1 — Verify no active data-loading regression ✓
+- [x] Confirmed no regression (audit finding: canEdit already gated in all 7 components)
+
+### Step 2 — Formalize canEdit ✓
+- [x] Audit confirmed existing guards are correct — no action needed
+
+### Step 3 — Enum selects + DB constraints ✓
+- [x] 10 option arrays added to `src/config.js`
+- [x] `SearchersTab`, `PortfolioCompaniesTab`, `PipelineFY26` updated to import + use them
+- [x] Migration written: `supabase/migrations/202604162100_enum_constraints_and_date_types.sql`
+- [x] Migration applied in Supabase SQL editor (2026-04-17)
+
+### Step 4 — Computed date/month fields ✓ (capital_calls only)
+- [x] `parseDateParts()` in db.js derives `mes`/`year`/`fy` from `data`
+- [x] `capitalCallToRow` + `rowToCapitalCall` updated; `_rowId` added
+- [x] Migration written (same file as Step 3: `ALTER COLUMN data TYPE date`)
+- [x] Migration applied (same as above)
+- [ ] Deferred: `mesos_cercant` / `mesos_operant` computed from dates (not yet done)
+
+### Step 5 — Capital calls CRUD ✓
+- [x] `insertCapitalCall`, `updateCapitalCall`, `deleteCapitalCall`, `loadCapitalCalls` in db.js
+- [x] Add/edit/delete UI wired into Dashboard.jsx inline fons tab (expanded moviments section)
+- [x] `tabs/FonsTab.jsx` also enhanced with same CRUD (for future use)
+
+### Step 6 — PM Operations admin area ✓
+- [x] `src/components/admin/AdminPMOperations.jsx` — 4 tabs: Transaccions, Metadades, TER, Overrides
+- [x] Wired into `AdminPanel.jsx` as "PM Operacions" nav item
+- [x] Load helpers added to db.js: `loadPMTransactions`, `deletePMTransaction`, `loadPMTerOverridesTable`, `loadPMPositionMetaTable`, `loadPMPositionOverridesTable`
+
+### Step 7 — Provenance badges + override notes ✓
+- [x] `notes` column added to `pm_position_overrides` + `pm_ter_overrides` (migration)
+- [x] TER + Overrides admin tabs show notes field
+- [x] `HoldingsTable`: orange OV badge on valorMercat, rendInici, rend2026, rend2025, costAnual
+- [x] `PMPositionDetail`: OV badge on overridden nom, custodian, TER
+
+---
+
+**Verification:**
+- [ ] Apply migration then confirm app loads cleanly
+- [ ] Enum CHECK constraints reject invalid values at DB level
+- [ ] Capital calls CRUD: add/edit/delete works, mes/year/fy auto-derive from date
+- [ ] PM Operations: all 4 tabs load, edit, and persist correctly
+- [ ] OV badges appear on positions with manual overrides
+
+**Remaining deferred:**
+- `mesos_cercant` / `mesos_operant` computed from dates (Step 4 partial)
+
+**Review:**
+> Steps 3–7 fully implemented. Migration file covers both DATE column change and all 7 CHECK constraints. Capital calls CRUD added inline to Dashboard fons tab. AdminPMOperations is a new admin section with 4 sub-tabs. OV badges use orange #E65100 background to distinguish manual overrides from model data.
+
+---
+
 ## Karpathy Practices Setup — 2026-03-17
 
 **Goal:** Implement Karpathy workflow orchestration practices for the project.

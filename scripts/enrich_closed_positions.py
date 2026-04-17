@@ -1,12 +1,11 @@
 """
 enrich_closed_positions.py
 ──────────────────────────
-Enriches PM_CLOSED entries with computed fields derived from pmTransactions.js
+Enriches PM_CLOSED entries with computed fields derived from the canonical PM transactions model
 and fetches historic price series for each closed ISIN via Morningstar (mstarpy).
 
 Inputs:
-  src/data/pmTransactions.js  — transaction ledger
-  src/data/publicMarkets.js   — existing PM_CLOSED array
+  src/generated/publicMarkets/publicMarketsModel.generated.js  — canonical PM model
 
 Per-ISIN computed fields (from transactions):
   gestor      — gestor from the first (oldest) buy transaction for this ISIN
@@ -28,8 +27,8 @@ Outputs (in scripts/out/ — review before merging):
   scripts/out/pm_closed_values.js    — PM_CLOSED_VALUES export (same shape as PM_VALUES)
 
 Usage:
-    python scripts/enrich_closed_positions.py
-    python scripts/enrich_closed_positions.py --skip-prices   # skip Morningstar fetch
+    python -m scripts.enrich_closed_positions
+    python -m scripts.enrich_closed_positions --skip-prices   # skip Morningstar fetch
 
 Requirements:
     pip install mstarpy pandas
@@ -40,18 +39,20 @@ import io
 import json
 import re
 import sys
+from functools import lru_cache
 from datetime import date
 from pathlib import Path
+
+from scripts.pm_model_types import PMClosedRow, PMTransactionRow, PMValuePoint
 
 # ── UTF-8 output on Windows ───────────────────────────────────────────────────
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-ROOT       = Path(__file__).parent.parent
-SCRIPTS    = Path(__file__).parent
-OUT_DIR    = SCRIPTS / "out"
-TX_FILE    = ROOT / "src" / "data" / "pmTransactions.js"
-PM_FILE    = ROOT / "src" / "data" / "publicMarkets.js"
+ROOT          = Path(__file__).parent.parent
+SCRIPTS       = Path(__file__).parent
+OUT_DIR       = SCRIPTS / "out"
+PM_MODEL_FILE = ROOT / "src" / "generated" / "publicMarkets" / "publicMarketsModel.generated.js"
 
 
 # ── Parse JavaScript data files ──────────────────────────────────────────────
@@ -64,32 +65,35 @@ def _strip_js(text: str) -> str:
     text = re.sub(r"//[^\n]*", "", text)
     # Remove trailing commas before } or ]
     text = re.sub(r",(\s*[}\]])", r"\1", text)
+    # Add double quotes to unquoted property names
+    text = re.sub(r'([{,]\s*)([a-zA-Z0-9_]+)(\s*:)', r'\1"\2"\3', text)
     return text
 
 
-def load_transactions() -> list[dict]:
-    """Parse PM_TRANSACTIONS from pmTransactions.js."""
-    raw = TX_FILE.read_text(encoding="utf-8")
+@lru_cache(maxsize=1)
+def load_pm_model() -> dict:
+    """Parse PM_MODEL_GENERATED from the generated canonical PM model export."""
+    raw = PM_MODEL_FILE.read_text(encoding="utf-8")
     raw = _strip_js(raw)
-    m = re.search(r"export\s+const\s+PM_TRANSACTIONS\s*=\s*(\[.*?\]);", raw, re.DOTALL)
+    m = re.search(r"export\s+const\s+PM_MODEL_GENERATED\s*=\s*(\{.*\});", raw, re.DOTALL)
     if not m:
-        raise ValueError(f"Could not parse PM_TRANSACTIONS from {TX_FILE}")
+        raise ValueError(f"Could not parse PM_MODEL_GENERATED from {PM_MODEL_FILE}")
     return json.loads(m.group(1))
 
 
-def load_pm_closed() -> list[dict]:
-    """Parse PM_CLOSED from publicMarkets.js."""
-    raw = PM_FILE.read_text(encoding="utf-8")
-    raw = _strip_js(raw)
-    m = re.search(r"export\s+const\s+PM_CLOSED\s*=\s*(\[.*?\]);", raw, re.DOTALL)
-    if not m:
-        raise ValueError(f"Could not parse PM_CLOSED from {PM_FILE}")
-    return json.loads(m.group(1))
+def load_transactions() -> list[PMTransactionRow]:
+    """Load PM transactions from the canonical generated PM model."""
+    return load_pm_model().get("activity", {}).get("transactions", [])
+
+
+def load_pm_closed() -> list[PMClosedRow]:
+    """Load PM_CLOSED from the canonical generated PM model."""
+    return load_pm_model().get("holdings", {}).get("closed", [])
 
 
 # ── Compute enriched fields ───────────────────────────────────────────────────
 
-def enrich_from_transactions(closed: list[dict], txs: list[dict]) -> list[dict]:
+def enrich_from_transactions(closed: list[PMClosedRow], txs: list[PMTransactionRow]) -> list[PMClosedRow]:
     """Add computed fields to each PM_CLOSED entry from the transaction ledger."""
     # Group transactions by ISIN
     by_isin: dict[str, list[dict]] = {}
@@ -168,7 +172,7 @@ def enrich_from_transactions(closed: list[dict], txs: list[dict]) -> list[dict]:
 
 # ── Price fetch ───────────────────────────────────────────────────────────────
 
-def fetch_prices_for_closed(enriched: list[dict]) -> dict:
+def fetch_prices_for_closed(enriched: list[PMClosedRow]) -> dict[str, dict[str, list[PMValuePoint]]]:
     """
     Fetch Morningstar NAV series for each closed ISIN and multiply by units
     to get a market-value series.
@@ -253,7 +257,7 @@ def _obj_to_js(obj: dict, indent: int = 2) -> str:
     return "{ " + ", ".join(lines) + " }"
 
 
-def write_enriched_js(enriched: list[dict], path: Path) -> None:
+def write_enriched_js(enriched: list[PMClosedRow], path: Path) -> None:
     lines = [
         "// Auto-generated by scripts/enrich_closed_positions.py",
         "// Review before merging into src/data/publicMarkets.js",

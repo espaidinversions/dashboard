@@ -1,38 +1,42 @@
 """
 portfolio_build_values.py
 ─────────────────────────
-Builds a time-series of portfolio values for every fund / ETF position.
+Builds a snapshot-based time series of portfolio values for active PM positions.
 
 Logic:
-  value(date) = Σ tranche_i.n_titols × NAV(date)
-                for all tranches where date ≥ tranche.purchase_date
+  value(date) = current_market_value × historical_price(date) / latest_price
 
 Sources:
-  - ETF sheets ("ETf's Espai RV/RF"): clean purchase dates, per-tranche units
-  - Master sheet: bank-managed fund tranches, messier dates (uses year-end
-    value columns to infer approximate start when purchase date is missing)
-  - NAV prices: ../Mercats Públics/prices/<ISIN>.csv  (ETFs, from justETF)
-                ../Mercats Públics/fund_prices/<ISIN>.csv  (funds, from Morningstar)
+  - src/generated/publicMarkets/publicMarketsRawWorkbook.js
+      trusted active snapshot exported from the workbook overlay
+  - Mercats Públics/prices/<ISIN>.csv
+  - Mercats Públics/fund_prices/<ISIN>.csv
+  - Mercats Públics/wam_prices/<ISIN>.csv
+  - src/generated/publicMarkets/portfolioValues.js
+      fallback series when a live price file is missing
 
 Output:
   ../Mercats Públics/portfolio_value.csv
       date, isin, nom, custodian, units, nav, value_eur
 
 Usage:
-    python scripts/portfolio_build_values.py
+    python -m scripts.portfolio_build_values
 """
 
 import io
 import json
-import os
 import re
-import shutil
+import subprocess
 import sys
 from collections import defaultdict
 from datetime import date, datetime, timedelta
+from functools import lru_cache
 from pathlib import Path
+from typing import Mapping, Sequence, TypeVar, cast
 
 import pandas as pd
+
+from scripts.pm_model_types import PMTotalMismatch, PMValuePoint, PMValuesByIsin, PMSnapshotPosition, PMWorkbookRow
 
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
@@ -44,42 +48,23 @@ PRICES_DIR    = ROOT / "Mercats Públics" / "prices"
 FUND_DIR      = ROOT / "Mercats Públics" / "fund_prices"
 WAM_DIR       = ROOT / "Mercats Públics" / "wam_prices"
 OUT_CSV       = ROOT / "Mercats Públics" / "portfolio_value.csv"
-PROVIDERS_MAP = ROOT / "Mercats Públics" / "providers_map.json"
-
-# Year-end anchor dates (col index → date)
-YEAREND_COLS = {
-    27: date(2018, 12, 31),
-    26: date(2019, 12, 31),
-    25: date(2020, 12, 31),
-    24: date(2021, 12, 31),
-    23: date(2022, 12, 31),
-    22: date(2023, 12, 31),
-    21: date(2024, 12, 31),
-    20: date(2025, 12, 31),
-}
-
-CLOSED_LABELS = {"TANCAT", "Tancada", "Tancat", "TANCADA", "Estruct", "Autocancel", "Autocancel "}
-
-# Year the TANCATS row appears under → last date we held it (Dec 31 of that year)
-TANCATS_YEAR_RE = re.compile(r"TANCATS\s+(\d{4})", re.IGNORECASE)
-
-CUSTODIAN_CODES = {
-    "CAIXA": "CaixaBank", "CAIXA*": "CaixaBank",
-    "CS": "Credit Suisse", "UBS": "UBS",
-    "JPM": "JPMorgan", "Abel": "Abel Font", "ABEL": "Abel Font",
-    "Bankinter": "Bankinter", "BANKINTER": "Bankinter",
-}
-
-
-def clean_isin(raw: str) -> str | None:
-    m = re.search(r"([A-Z]{2}[A-Z0-9]{10})", raw.upper())
-    return m.group(1) if m else None
+PM_RAW_WORKBOOK = ROOT / "src" / "generated" / "publicMarkets" / "publicMarketsRawWorkbook.js"
+PM_VALUES_JS  = ROOT / "src" / "generated" / "publicMarkets" / "portfolioValues.js"
+PRICE_BRIDGES_JSON = ROOT / "raw-data" / "price-bridges.json"
+SERIES_START = date(2019, 1, 1)
+LATEST_TOTAL_TOLERANCE = 0.005
+T = TypeVar("T")
 
 
 def parse_date(val) -> date | None:
     """Convert various Excel date formats to a date object."""
     if val is None:
         return None
+    if isinstance(val, str):
+        try:
+            return date.fromisoformat(val[:10])
+        except ValueError:
+            return None
     if isinstance(val, datetime):
         return val.date()
     if isinstance(val, date):
@@ -89,314 +74,376 @@ def parse_date(val) -> date | None:
         if val > 1000:   # plausible Excel serial
             try:
                 return (datetime(1899, 12, 30) + timedelta(days=int(val))).date()
-            except Exception:
-                pass
+            except (OverflowError, ValueError, TypeError):
+                return None
     return None
-
-
-def load_tranches_etf(wb) -> list[dict]:
-    """Read per-tranche data from ETF RV and RF sheets."""
-    tranches = []
-    for sheet_name, isin_col, nom_col, date_col, units_col in [
-        ("ETf's Espai RV", 6, 3, 4, 8),
-        ("ETf's Espai RF", 6, 2, 3, 8),
-    ]:
-        ws = wb[sheet_name]
-        # Determine custodian col (col 0 in RV = bank, RF doesn't have it)
-        banc_col = 0 if sheet_name == "ETf's Espai RV" else None
-
-        for row in ws.iter_rows(min_row=3, values_only=True):
-            isin_raw = row[isin_col]
-            if not isin_raw or not isinstance(isin_raw, str):
-                continue
-            isin = clean_isin(isin_raw)
-            if not isin:
-                continue
-
-            nom        = str(row[nom_col]).strip() if row[nom_col] else ""
-            pdate      = parse_date(row[date_col])
-            n_titols   = row[units_col]
-            banc_raw   = str(row[banc_col]).strip() if banc_col is not None and row[banc_col] else None
-            custodian  = CUSTODIAN_CODES.get(banc_raw, "Bankinter") if banc_raw else "Abel Font"
-
-            if not n_titols or not isinstance(n_titols, (int, float)) or n_titols <= 0:
-                continue
-
-            tranches.append({
-                "isin":       isin,
-                "nom":        nom,
-                "custodian":  custodian,
-                "purchase_date": pdate,
-                "n_titols":   float(n_titols),
-                "source_sheet": sheet_name,
-            })
-    return tranches
-
-
-def load_tranches_master(wb, include_closed: bool = False) -> list[dict]:
-    """Read per-tranche data from Master sheet.
-
-    When include_closed=True, also reads TANCATS rows and attaches an
-    end_date = Dec 31 of the TANCATS year so the value series stops then.
-    """
-    ws = wb["Master"]
-
-    # Find header row
-    gestor_col = None
-    for row in ws.iter_rows(min_row=1, max_row=5, values_only=True):
-        if row[1] == "Tipus":
-            gestor_col = next((i for i, v in enumerate(row) if v == "Gestor"), None)
-            break
-
-    tranches = []
-    current_tancats_year = None   # tracked while scanning rows
-
-    for row in ws.iter_rows(min_row=4, values_only=True):
-        row_str = " ".join(str(c) for c in row if c is not None)
-
-        # Track which TANCATS year we're inside
-        m = TANCATS_YEAR_RE.search(row_str)
-        if m:
-            current_tancats_year = int(m.group(1))
-
-        tipus      = str(row[1]).strip() if row[1] else ""
-        nom        = str(row[2]).strip() if row[2] else ""
-        isin_raw   = row[5]
-        n_titols   = row[9]
-        gestor_raw = row[gestor_col] if gestor_col and len(row) > gestor_col else None
-
-        # A row is closed if we are inside a TANCATS section (tracked via header rows)
-        is_closed = current_tancats_year is not None
-
-        if is_closed and not include_closed:
-            continue
-        if not is_closed and include_closed:
-            continue  # skip active rows when collecting closed-only
-        if not isin_raw or not isinstance(isin_raw, str):
-            continue
-        isin = clean_isin(isin_raw)
-        if not isin:
-            continue
-        if not isinstance(gestor_raw, str) or not gestor_raw.strip():
-            continue
-        if not n_titols or not isinstance(n_titols, (int, float)) or n_titols <= 0:
-            continue
-
-        custodian  = CUSTODIAN_CODES.get(gestor_raw.strip(), gestor_raw.strip())
-        pdate      = parse_date(row[3])
-
-        # Infer approximate purchase date from earliest year-end value if date missing
-        if pdate is None:
-            for col_idx in sorted(YEAREND_COLS.keys(), reverse=True):  # oldest first
-                if col_idx < len(row) and isinstance(row[col_idx], (int, float)) and row[col_idx] > 0:
-                    pdate = YEAREND_COLS[col_idx]
-                    break
-
-        # For closed positions, cap the series at Dec 31 of the TANCATS year
-        end_date = date(current_tancats_year, 12, 31) if is_closed else None
-
-        tranches.append({
-            "isin":          isin,
-            "nom":           nom,
-            "custodian":     custodian,
-            "purchase_date": pdate,
-            "end_date":      end_date,
-            "n_titols":      float(n_titols),
-            "source_sheet":  "Master",
-            "closed":        is_closed,
-        })
-    return tranches
-
-
-def load_tranches_ubs() -> list[dict]:
-    """Parse UBS positions from src/data/ubsPositions.js."""
-    path = ROOT / "src" / "data" / "ubsPositions.js"
-    if not path.exists():
-        return []
-    
-    content = path.read_text(encoding="utf-8")
-    # Using regex to find ISIN, nom, unitats, dataCompra
-    # Matches ubs({ ... isin: "...", nom: "...", unitats: ..., dataCompra: "..." })
-    # We'll split by 'ubs({' and process each block
-    blocks = re.split(r'ubs\(\{', content)[1:]
-    tranches = []
-    for block in blocks:
-        isin_m = re.search(r'isin:\s*"([A-Z0-9]{12})"', block)
-        if not isin_m: continue
-        isin = isin_m.group(1)
-        
-        nom_m = re.search(r'nom:\s*"([^"]+)"', block)
-        nom = nom_m.group(1) if nom_m else ""
-        
-        units_m = re.search(r'unitats:\s*([0-9.]+)', block)
-        units = float(units_m.group(1)) if units_m else 0
-        
-        pdate_m = re.search(r'dataCompra:\s*"([^"]+)"', block)
-        pdate = parse_date(pdate_m.group(1)) if pdate_m else date(2020, 1, 1)
-        
-        if units > 0:
-            tranches.append({
-                "isin": isin,
-                "nom": nom,
-                "custodian": "UBS",
-                "purchase_date": pdate,
-                "n_titols": units,
-                "source_sheet": "ubsPositions.js"
-            })
-    return tranches
-
-
-def load_tranches_wam() -> list[dict]:
-    """Parse WAM positions from src/data/wamPositions.js."""
-    path = ROOT / "src" / "data" / "wamPositions.js"
-    if not path.exists():
-        return []
-    
-    content = path.read_text(encoding="utf-8")
-    # Very simple regex-based parser for the JS objects
-    blocks = re.split(r'\{', content)[1:]
-    tranches = []
-    for block in blocks:
-        isin_m = re.search(r'isin:\s*"([A-Z0-9]{12})"', block)
-        if not isin_m: continue
-        isin = isin_m.group(1)
-        
-        nom_m = re.search(r'nom:\s*"([^"]+)"', block)
-        nom = nom_m.group(1) if nom_m else ""
-        
-        units_m = re.search(r'unitats:\s*([0-9.]+)', block)
-        units = float(units_m.group(1)) if units_m else 0
-        
-        custodian_m = re.search(r'custodian:\s*"([^"]+)"', block)
-        custodian = custodian_m.group(1) if custodian_m else "Andbank"
-        
-        # Default purchase date if missing
-        pdate_m = re.search(r'dataCompra:\s*"([^"]+)"', block)
-        pdate = parse_date(pdate_m.group(1)) if pdate_m else date(2020, 1, 1)
-        
-        if units > 0:
-            tranches.append({
-                "isin": isin,
-                "nom": nom,
-                "custodian": custodian,
-                "purchase_date": pdate,
-                "n_titols": units,
-                "source_sheet": "wamPositions.js"
-            })
-    return tranches
 
 
 def load_nav_series(isin: str) -> pd.Series | None:
     """Load daily NAV/price series for an ISIN. Returns pd.Series(index=date, values=price) or None."""
+    bridges = load_price_bridges().get(isin, [])
+    series_parts: list[pd.Series] = []
     for d in [PRICES_DIR, FUND_DIR, WAM_DIR]:
         p = d / f"{isin}.csv"
         if p.exists():
             df = pd.read_csv(p, parse_dates=["date"])
             df = df.dropna(subset=["close"]).set_index("date")["close"].sort_index()
-            return df
-    return None
+            series_parts.append(df)
+
+    if bridges:
+        bridge_index = pd.to_datetime([f"{month}-01" for month, _ in bridges])
+        bridge_values = [float(value) for _, value in bridges]
+        series_parts.append(pd.Series(bridge_values, index=bridge_index, dtype="float64").sort_index())
+
+    if not series_parts:
+        return None
+
+    combined = pd.concat(series_parts).sort_index()
+    combined = combined[~combined.index.duplicated(keep="first")]
+    return combined
 
 
-def build_portfolio_values(tranches: list[dict]) -> pd.DataFrame:
-    """
-    For each (isin, custodian) group: accumulate units tranche by tranche,
-    then multiply by daily NAV → value time series.
-    """
-    # Group tranches by (isin, custodian)
-    groups: dict[tuple, list[dict]] = defaultdict(list)
-    for t in tranches:
-        groups[(t["isin"], t["custodian"])].append(t)
+@lru_cache(maxsize=1)
+def load_price_bridges() -> dict[str, list[tuple[str, float]]]:
+    if not PRICE_BRIDGES_JSON.exists():
+        return {}
+    raw = json.loads(PRICE_BRIDGES_JSON.read_text(encoding="utf-8"))
+    bridges: dict[str, list[tuple[str, float]]] = {}
+    for isin, series in raw.items():
+        rows: list[tuple[str, float]] = []
+        for row in series or []:
+            if not isinstance(row, list) or len(row) != 2:
+                continue
+            month, value = row
+            try:
+                rows.append((str(month), float(value)))
+            except (TypeError, ValueError):
+                continue
+        if rows:
+            bridges[str(isin).upper()] = rows
+    return bridges
 
-    all_rows = []
 
-    for (isin, custodian), tranche_list in sorted(groups.items()):
-        nav = load_nav_series(isin)
-        if nav is None:
-            print(f"  SKIP  {isin} ({custodian}) — no price data")
+def load_js_export(path: Path, export_name: str) -> T:
+    """Import a JS module via Node and return the named export as Python data."""
+    script = (
+        "import { pathToFileURL } from 'url';\n"
+        "const mod = await import(pathToFileURL(process.argv[1]).href);\n"
+        f"console.log(JSON.stringify(mod.{export_name}));\n"
+    )
+    proc = subprocess.run(
+        ["node", "--input-type=module", "-e", script, str(path.resolve())],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            f"Failed to import {export_name} from {path}: {proc.stderr.strip() or proc.stdout.strip()}"
+        )
+    return cast(T, json.loads(proc.stdout))
+
+
+def merge_defined_row(prev: Mapping[str, object], next_row: Mapping[str, object]) -> dict[str, object]:
+    merged = {**dict(prev or {})}
+    for key, value in (next_row or {}).items():
+        if value in (None, ""):
+            continue
+        merged[key] = value
+    return merged
+
+
+def normalize_isin(value: object) -> str | None:
+    raw = str(value or "").strip().upper()
+    match = re.search(r"([A-Z]{2}[A-Z0-9]{10})", raw)
+    return match.group(1) if match else (raw or None)
+
+
+def row_dedupe_key(row: Mapping[str, object]) -> str | None:
+    isin = normalize_isin(row.get("isin"))
+    if not isin:
+        return None
+    purchase_date = row.get("dataCompra") or row.get("startDate") or ""
+    units = row.get("unitats")
+    if units is None:
+        units = row.get("n_titols")
+    try:
+        units_key = f"{float(units or 0):.6f}"
+    except (TypeError, ValueError):
+        units_key = str(units or 0)
+    return "||".join([
+        isin,
+        str(row.get("custodian") or "").strip(),
+        str(purchase_date)[:10],
+        units_key,
+    ])
+
+
+def dedupe_rows(rows: Sequence[PMWorkbookRow]) -> list[PMWorkbookRow]:
+    seen: dict[str, PMWorkbookRow] = {}
+    order: list[str] = []
+    for row in rows or []:
+        key = row_dedupe_key(row)
+        if not key:
+            continue
+        prev = seen.get(key)
+        if prev is None:
+            order.append(key)
+            seen[key] = cast(PMWorkbookRow, {**row, "isin": normalize_isin(row.get("isin"))})
+        else:
+            seen[key] = cast(PMWorkbookRow, merge_defined_row(prev, {**row, "isin": normalize_isin(row.get("isin"))}))
+    return [seen[key] for key in order]
+
+
+def merge_raw_rows(*sources: Sequence[PMWorkbookRow]) -> list[PMWorkbookRow]:
+    seen: dict[str, PMWorkbookRow] = {}
+    order: list[str] = []
+    for source in sources:
+        for row in source or []:
+            key = row_dedupe_key(row)
+            if not key:
+                continue
+            prev = seen.get(key)
+            normalized = cast(PMWorkbookRow, {**row, "isin": normalize_isin(row.get("isin"))})
+            if prev is None:
+                order.append(key)
+                seen[key] = normalized
+            else:
+                seen[key] = cast(PMWorkbookRow, merge_defined_row(prev, normalized))
+    return [seen[key] for key in order]
+
+
+def aggregate_snapshot_positions(rows: Sequence[PMWorkbookRow]) -> list[PMSnapshotPosition]:
+    groups: dict[tuple[str, str], list[PMWorkbookRow]] = defaultdict(list)
+    for row in rows or []:
+        isin = normalize_isin(row.get("isin"))
+        if not isin:
+            continue
+        custodian = str(row.get("custodian") or "").strip()
+        groups[(isin, custodian)].append(cast(PMWorkbookRow, {**row, "isin": isin, "custodian": custodian}))
+
+    positions: list[PMSnapshotPosition] = []
+    for (isin, custodian), group in sorted(groups.items()):
+        ordered = sorted(group, key=lambda r: str(r.get("dataCompra") or r.get("startDate") or ""))
+        first = ordered[0]
+        nom = first.get("nom") or isin
+        data_compra = None
+        for row in ordered:
+            data_compra = parse_date(row.get("dataCompra") or row.get("startDate"))
+            if data_compra:
+                break
+        unitats = sum(float(r.get("unitats") or r.get("n_titols") or 0) for r in group)
+        valor_mercat = sum(float(r.get("valorMercat") or 0) for r in group)
+        positions.append({
+            "isin": isin,
+            "nom": nom,
+            "custodian": custodian or "Unknown",
+            "dataCompra": data_compra.isoformat() if data_compra else None,
+            "startDate": data_compra.isoformat() if data_compra else None,
+            "endDate": None,
+            "unitats": unitats,
+            "valorMercat": valor_mercat,
+        })
+    return positions
+
+
+def load_snapshot_positions() -> list[PMSnapshotPosition]:
+    """Load the trusted active snapshot the dashboard uses."""
+    workbook: list[PMWorkbookRow] = load_js_export(PM_RAW_WORKBOOK, "PM_POSITIONS_RAW_WORKBOOK")
+    workbook = dedupe_rows(workbook)
+    return aggregate_snapshot_positions(workbook)
+
+
+def load_existing_pm_values() -> PMValuesByIsin:
+    """Load the checked-in PM_VALUES module as a fallback for price-missing rows."""
+    if not PM_VALUES_JS.exists():
+        return {}
+    return load_js_export(PM_VALUES_JS, "PM_VALUES")
+
+
+def load_workbook_total_active() -> float | None:
+    return float(load_js_export(PM_RAW_WORKBOOK, "PM_WORKBOOK_TOTAL_ACTIVE"))
+
+
+def load_pm_values_end_date(fallback_values: PMValuesByIsin | None = None) -> date | None:
+    latest = None
+    for by_custodian in (fallback_values or {}).values():
+        for series in (by_custodian or {}).values():
+            for point in series or []:
+                cur = parse_date(point.get("date"))
+                if cur and (latest is None or cur > latest):
+                    latest = cur
+    return latest
+
+
+def biweekly_bucket(dt: date) -> date:
+    return date(dt.year, dt.month, 1 if dt.day < 15 else 15)
+
+
+def next_biweekly_bucket(dt: date) -> date:
+    if dt.day == 1:
+        return date(dt.year, dt.month, 15)
+    if dt.month == 12:
+        return date(dt.year + 1, 1, 1)
+    return date(dt.year, dt.month + 1, 1)
+
+
+def iter_biweekly_buckets(start: date, end: date):
+    cur = start
+    while cur <= end:
+        yield cur
+        cur = next_biweekly_bucket(cur)
+
+
+def build_snapshot_value_rows(
+    positions: Sequence[PMSnapshotPosition],
+    fallback_values: PMValuesByIsin | None = None,
+    global_end: date | None = None,
+) -> pd.DataFrame:
+    rows = []
+    fallback_values = fallback_values or {}
+
+    for pos in positions:
+        isin = normalize_isin(pos.get("isin"))
+        if not isin:
+            continue
+        units = float(pos.get("unitats") or 0)
+        current_value = float(pos.get("valorMercat") or 0)
+        if units <= 0:
             continue
 
-        nom = tranche_list[0]["nom"]
+        nav = load_nav_series(isin)
+        fallback_series: list[PMValuePoint] = (fallback_values.get(isin) or {}).get(pos.get("custodian")) or []
 
-        # Sort tranches by purchase date (None last)
-        tranche_list.sort(key=lambda t: t["purchase_date"] or date(2099, 1, 1))
+        start_date = parse_date(pos.get("dataCompra")) or None
+        if nav is not None and start_date is None and len(nav.index) > 0:
+            start_date = nav.index.min().date()
+        if start_date is None:
+            start_date = SERIES_START
+        if start_date < SERIES_START:
+            start_date = SERIES_START
 
-        # For each date in NAV series, sum up units from all tranches purchased ≤ date
-        nav_dates = nav.index.date
-
-        rows = []
-        for nav_dt, price in nav.items():
-            nav_date = nav_dt.date() if hasattr(nav_dt, "date") else nav_dt
-            units = sum(
-                t["n_titols"]
-                for t in tranche_list
-                if t["purchase_date"] is not None and t["purchase_date"] <= nav_date
-                and (t.get("end_date") is None or nav_date <= t["end_date"])
-            )
-            if units > 0:
+        if nav is not None and len(nav.index) > 0:
+            current_price = float(nav.iloc[-1])
+            if pd.isna(current_price) or current_price == 0:
+                current_price = None
+            series_end = global_end or nav.index.max().date()
+            for bucket in iter_biweekly_buckets(biweekly_bucket(start_date), biweekly_bucket(series_end)):
+                if bucket < start_date:
+                    continue
+                price = nav.asof(pd.Timestamp(bucket))
+                if pd.isna(price):
+                    price = nav.iloc[0]
+                if price is None or current_price in (None, 0):
+                    continue
+                if current_value > 0:
+                    value_eur = current_value * (float(price) / current_price)
+                else:
+                    value_eur = units * float(price)
                 rows.append({
-                    "date":       nav_date,
-                    "isin":       isin,
-                    "nom":        nom,
-                    "custodian":  custodian,
-                    "units":      units,
-                    "nav":        round(price, 4),
-                    "value_eur":  round(units * price, 2),
+                    "date": bucket,
+                    "isin": isin,
+                    "nom": pos.get("nom") or isin,
+                    "custodian": pos.get("custodian") or "Unknown",
+                    "units": units,
+                    "nav": round(float(price), 4),
+                    "value_eur": round(float(value_eur), 2),
                 })
+            continue
 
-        if rows:
-            all_rows.extend(rows)
-            start = rows[0]["date"]
-            end   = rows[-1]["date"]
-            last_val = rows[-1]["value_eur"]
-            total_units = sum(t["n_titols"] for t in tranche_list if t["purchase_date"] is not None)
-            print(f"  OK    {isin} | {custodian:<22} | {len(rows):5d} rows | "
-                  f"{start} → {end} | units={total_units:,.0f} | last={last_val:>12,.0f} €")
-        else:
-            print(f"  EMPTY {isin} ({custodian}) — no dated tranches or no NAV overlap")
+        # Fallback to the checked-in PM_VALUES series when we do not have a live price file.
+        if fallback_series:
+            for point in fallback_series:
+                bucket = parse_date(point.get("date"))
+                value = point.get("value")
+                if bucket is None or value is None or bucket < SERIES_START:
+                    continue
+                rows.append({
+                    "date": bucket,
+                    "isin": isin,
+                    "nom": pos.get("nom") or isin,
+                    "custodian": pos.get("custodian") or "Unknown",
+                    "units": units,
+                    "nav": round(float(value) / units, 4) if units else None,
+                    "value_eur": round(float(value), 2),
+                })
+            continue
 
-    return pd.DataFrame(all_rows)
+        # Last resort: keep the current market value flat from the purchase date forward.
+        series_end = global_end or date.today()
+        for bucket in iter_biweekly_buckets(biweekly_bucket(start_date), biweekly_bucket(series_end)):
+            if bucket < start_date or bucket < SERIES_START:
+                continue
+            rows.append({
+                "date": bucket,
+                "isin": isin,
+                "nom": pos.get("nom") or isin,
+                "custodian": pos.get("custodian") or "Unknown",
+                "units": units,
+                "nav": round(current_value / units, 4) if units else None,
+                "value_eur": round(current_value, 2),
+            })
+
+    return pd.DataFrame(rows)
+
+
+def latest_total_mismatch(
+    df: pd.DataFrame,
+    workbook_total: float | None,
+    tolerance: float = LATEST_TOTAL_TOLERANCE,
+) -> PMTotalMismatch | None:
+    if workbook_total is None or df.empty:
+        return None
+
+    latest_date = df["date"].max()
+    latest_total = float(df.loc[df["date"] == latest_date, "value_eur"].sum())
+    if latest_total <= 0:
+        return {
+            "latest_date": latest_date,
+            "latest_total": latest_total,
+            "workbook_total": workbook_total,
+            "ratio": None,
+            "delta": workbook_total - latest_total,
+        }
+
+    ratio = workbook_total / latest_total
+    if abs(1 - ratio) <= tolerance:
+        return None
+
+    return {
+        "latest_date": latest_date,
+        "latest_total": latest_total,
+        "workbook_total": workbook_total,
+        "ratio": ratio,
+        "delta": workbook_total - latest_total,
+    }
 
 
 def main():
-    import openpyxl
-    xlsx_files = list(ROOT.glob("Mercats Públics/*.xlsx"))
-    if not xlsx_files:
-        print("ERROR: no .xlsx in Mercats Públics/")
-        sys.exit(1)
+    print("Loading active snapshot from JS…")
+    positions = load_snapshot_positions()
+    fallback_values = load_existing_pm_values()
+    global_end = load_pm_values_end_date(fallback_values)
+    workbook_total = load_workbook_total_active()
 
-    tmp = Path(os.environ.get("TEMP", "C:/tmp")) / "espai_pv_tmp.xlsx"
-    shutil.copy2(xlsx_files[0], tmp)
-    wb = openpyxl.load_workbook(tmp, data_only=True)
-
-    print("Loading tranches from Excel…")
-    etf_tranches    = load_tranches_etf(wb)
-    master_active   = load_tranches_master(wb, include_closed=False)
-    master_closed   = load_tranches_master(wb, include_closed=True)
-    # master_closed includes both active and closed rows; keep only closed ones
-    master_closed   = [t for t in master_closed if t.get("closed")]
-    
-    print("Loading WAM positions from JS…")
-    wam_tranches    = load_tranches_wam()
-    
-    print("Loading UBS positions from JS…")
-    ubs_tranches    = load_tranches_ubs()
-    
-    all_tranches    = etf_tranches + master_active + master_closed + wam_tranches + ubs_tranches
-
-    print(f"  ETF sheet tranches:     {len(etf_tranches)}")
-    print(f"  Master active tranches: {len(master_active)}")
-    print(f"  Master closed tranches: {len(master_closed)}")
-    print(f"  WAM tranches:           {len(wam_tranches)}")
-    print(f"  UBS tranches:           {len(ubs_tranches)}")
-    print(f"  Total:                  {len(all_tranches)}")
+    print(f"  Active positions:       {len(positions)}")
     print()
 
-    print("Building portfolio value time series…")
-    df = build_portfolio_values(all_tranches)
+    print("Building portfolio value time series from price history…")
+    df = build_snapshot_value_rows(positions, fallback_values, global_end)
 
     if df.empty:
         print("No data produced.")
         return
+
+    mismatch = latest_total_mismatch(df, workbook_total)
+    if mismatch is not None:
+        raise SystemExit(
+            "Latest total does not reconcile with workbook total. "
+            f"date={mismatch['latest_date']} latest={mismatch['latest_total']:.2f} "
+            f"workbook={mismatch['workbook_total']:.2f} ratio={mismatch['ratio']:.6f} "
+            "Fix the source positions or price coverage instead of scaling the whole history."
+        )
 
     df = df.sort_values(["isin", "custodian", "date"])
     df.to_csv(OUT_CSV, index=False)
@@ -405,7 +452,6 @@ def main():
     print(f"Positions processed: {df.groupby(['isin','custodian']).ngroups}")
     print(f"Total rows:          {len(df):,}")
     print(f"Date range:          {df['date'].min()} → {df['date'].max()}")
-    latest = df.groupby(["isin","custodian"])["date"].max()
     last_day = df[df["date"] == df["date"].max()]
     total = last_day["value_eur"].sum()
     print(f"Latest total value:  {total:>15,.0f} €")

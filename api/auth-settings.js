@@ -1,5 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
-import { setCors } from "./_cors.js";
+import {
+  applySecurityHeaders,
+  enforceCors,
+  enforceHttps,
+  enforceRateLimit,
+  handlePreflight,
+  sanitizeDomain,
+} from "./_security.js";
 
 function makeServiceClient() {
   return createClient(
@@ -9,9 +16,12 @@ function makeServiceClient() {
 }
 
 export default async function handler(req, res) {
-  setCors(res);
-  if (req.method === "OPTIONS") return res.status(204).end();
+  applySecurityHeaders(res);
+  if (!enforceHttps(req, res)) return;
+  if (!enforceCors(req, res)) return;
+  if (handlePreflight(req, res)) return;
   if (req.method !== "GET") return res.status(405).json({ error: "Method not allowed" });
+  if (!await enforceRateLimit(req, res, "auth")) return;
 
   try {
     const supabase = makeServiceClient();
@@ -21,7 +31,9 @@ export default async function handler(req, res) {
       .eq("key", "allowed_domains")
       .maybeSingle();
     if (error) throw error;
-    const allowed_domains = Array.isArray(data?.value) ? data.value : [];
+    const allowed_domains = Array.isArray(data?.value)
+      ? data.value.map(domain => sanitizeDomain(domain))
+      : [];
     return res.json({ allowed_domains });
   } catch (e) {
     console.error("[auth-settings] error:", e);

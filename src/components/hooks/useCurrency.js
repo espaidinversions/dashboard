@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
 import { EUR_USD as DEFAULT_EUR_USD } from "../../config.js";
+import { apiFetchJson } from "../../apiClient.js";
 
 export function useCurrency(initialRate = null) {
   const [eurUsd, setEurUsd] = useState(initialRate);
 
   useEffect(() => {
-    fetch("/api/eur-usd")
-      .then(r => r.json())
+    apiFetchJson("/api/eur-usd")
       .then(({ rate }) => setEurUsd(rate))
       .catch(() => {});
   }, []);

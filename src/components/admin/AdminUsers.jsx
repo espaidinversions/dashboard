@@ -2,15 +2,12 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
+import { apiFetchJson } from "../../apiClient.js";
+import { formatIsoDate } from "../../utils.js";
 
 const ROLES = ["user", "superuser", "admin"];
 
-function formatDate(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("ca-ES", { day: "2-digit", month: "short", year: "numeric" });
-}
-
-export default function AdminUsers({ token }) {
+export default function AdminUsers() {
   const { tc } = useTheme();
   const { toast } = useToast();
   const [users, setUsers] = useState([]);
@@ -19,37 +16,36 @@ export default function AdminUsers({ token }) {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
   const [inviting, setInviting] = useState(false);
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 1 });
 
-  const getAuthHeader = () => ({ "Authorization": `Bearer ${token}`, "Content-Type": "application/json" });
-  const getRole = (u) => u.app_metadata?.role ?? u.user_metadata?.role ?? "user";
+  const getRole = (u) => u.app_metadata?.role ?? "user";
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/users", { headers: getAuthHeader() });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
-      setUsers(json.users);
+      const json = await apiFetchJson(`/api/admin/users?page=${page}&pageSize=25`);
+      setUsers(json.users ?? []);
+      setPagination(json.pagination ?? { page, pageSize: 25, total: json.users?.length ?? 0, totalPages: 1 });
     } catch (e) {
       toast({ message: "Error carregant usuaris: " + e.message, type: "error" });
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [page, toast]);
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const changeRole = async (id, role) => {
     try {
-      const res = await fetch(`/api/admin/users/${id}`, {
-        method: "PATCH", headers: getAuthHeader(), body: JSON.stringify({ role }),
+      await apiFetchJson(`/api/admin/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
       setUsers(prev => prev.map(u => u.id === id ? {
         ...u,
         app_metadata: { ...u.app_metadata, role },
-        user_metadata: { ...u.user_metadata, role },
       } : u));
       toast({ message: "Rol actualitzat." });
     } catch (e) {
@@ -60,10 +56,9 @@ export default function AdminUsers({ token }) {
   const deleteUser = async (id, email) => {
     if (!confirm(`Eliminar l'usuari ${email}?`)) return;
     try {
-      const res = await fetch(`/api/admin/users/${id}`, { method: "DELETE", headers: getAuthHeader() });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
+      await apiFetchJson(`/api/admin/users/${id}`, { method: "DELETE" });
       setUsers(prev => prev.filter(u => u.id !== id));
+      setPagination(prev => ({ ...prev, total: Math.max(prev.total - 1, 0) }));
       toast({ message: `Usuari ${email} eliminat.` });
     } catch (e) {
       toast({ message: "Error: " + e.message, type: "error" });
@@ -72,12 +67,11 @@ export default function AdminUsers({ token }) {
 
   const approveUser = async (id) => {
     try {
-      const res = await fetch(`/api/admin/users/${id}`, {
-        method: "PATCH", headers: getAuthHeader(),
+      await apiFetchJson(`/api/admin/users/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email_confirm: true }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
       await loadUsers();
       toast({ message: "Usuari aprovat." });
     } catch (e) {
@@ -90,15 +84,16 @@ export default function AdminUsers({ token }) {
     if (!inviteEmail.trim()) return;
     setInviting(true);
     try {
-      const res = await fetch("/api/admin/users", {
-        method: "POST", headers: getAuthHeader(),
+      await apiFetchJson("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: inviteEmail.trim(), role: inviteRole }),
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error);
       toast({ message: `Invitació enviada a ${inviteEmail.trim()}.` });
       setInviteEmail("");
       setInviteRole("user");
+      if (page !== 1) setPage(1);
+      else await loadUsers();
     } catch (e) {
       toast({ message: "Error: " + e.message, type: "error" });
     } finally {
@@ -153,8 +148,8 @@ export default function AdminUsers({ token }) {
                       {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                     </select>
                   </td>
-                  <td style={{ ...td, fontSize: 12, color: tc.textMid }}>{formatDate(u.last_sign_in_at)}</td>
-                  <td style={{ ...td, fontSize: 12, color: tc.textMid }}>{formatDate(u.created_at)}</td>
+                  <td style={{ ...td, fontSize: 12, color: tc.textMid }}>{formatIsoDate(u.last_sign_in_at)}</td>
+                  <td style={{ ...td, fontSize: 12, color: tc.textMid }}>{formatIsoDate(u.created_at)}</td>
                   <td style={td}>
                     <button onClick={() => deleteUser(u.id, u.email)}
                       style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 11, color: "#C62828", fontFamily: "inherit" }}>
@@ -165,6 +160,26 @@ export default function AdminUsers({ token }) {
               ))}
             </tbody>
           </table>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, color: tc.textLight, fontSize: 12 }}>
+            <span>{pagination.total} usuaris</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                disabled={pagination.page <= 1}
+                style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${tc.border}`, background: "transparent", color: tc.text, cursor: pagination.page <= 1 ? "not-allowed" : "pointer", opacity: pagination.page <= 1 ? 0.5 : 1, fontFamily: "inherit", fontSize: 12 }}
+              >
+                Anterior
+              </button>
+              <span style={{ alignSelf: "center" }}>Pàgina {pagination.page} / {pagination.totalPages}</span>
+              <button
+                onClick={() => setPage(prev => Math.min(prev + 1, pagination.totalPages))}
+                disabled={pagination.page >= pagination.totalPages}
+                style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${tc.border}`, background: "transparent", color: tc.text, cursor: pagination.page >= pagination.totalPages ? "not-allowed" : "pointer", opacity: pagination.page >= pagination.totalPages ? 0.5 : 1, fontFamily: "inherit", fontSize: 12 }}
+              >
+                Següent
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
@@ -184,7 +199,7 @@ export default function AdminUsers({ token }) {
                   {pending.map(u => (
                     <tr key={u.id}>
                       <td style={td}>{u.email}</td>
-                      <td style={{ ...td, fontSize: 12, color: tc.textMid }}>{formatDate(u.created_at)}</td>
+                      <td style={{ ...td, fontSize: 12, color: tc.textMid }}>{formatIsoDate(u.created_at)}</td>
                       <td style={td}>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button onClick={() => approveUser(u.id)}

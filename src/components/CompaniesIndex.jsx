@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, slugify } from "../utils.js";
+import { fmtM, formatMultiple, multipleColor, readStoredFlag, usePersistedState } from "../utils.js";
 import { Badge } from "./SharedComponents.jsx";
+import { loadCompanies } from "../db.js";
 
 const TIPUS_CFG = {
   "SF": { color: "#28A029", bg: "#E8F8E8" },
@@ -16,15 +16,23 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [sortKey, setSortKey] = useState("ticket");
   const [sortDir, setSortDir] = useState("desc");
+  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
+
+  useEffect(() => {
+    loadCompanies().then((data) => {
+      if (Array.isArray(data)) setCompanies(data);
+    }).catch((error) => {
+      console.error("Companies index refresh failed:", error);
+    });
+  }, [setCompanies]);
 
   const rows = useMemo(() =>
-    PORTFOLIO_COMPANIES.map(c => ({
+    companies.map(c => ({
       ...c,
-      slug: slugify(c.nom),
       dpiMultiple: c.ticket > 0 && c.dpiEur != null ? c.dpiEur / c.ticket : null,
       rvpiMultiple: c.ticket > 0 && c.rvpiEur != null ? c.rvpiEur / c.ticket : null,
     })),
-  []);
+  [companies]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -39,6 +47,7 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
       else if (sortKey === "tvpi") { av = a.tvpi ?? -1; bv = b.tvpi ?? -1; }
       else if (sortKey === "dpi") { av = a.dpiMultiple ?? -1; bv = b.dpiMultiple ?? -1; }
       else if (sortKey === "rvpi") { av = a.rvpiMultiple ?? -1; bv = b.rvpiMultiple ?? -1; }
+      else if (sortKey === "id") { av = a.id; bv = b.id; }
       else { av = a.nom.toLowerCase(); bv = b.nom.toLowerCase(); }
       if (av < bv) return sortDir === "asc" ? -1 : 1;
       if (av > bv) return sortDir === "asc" ? 1 : -1;
@@ -57,17 +66,9 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
     </span>
   );
 
-  const multipleColor = v => {
-    if (v == null) return tc.textLight;
-    if (v < 1) return tc.red;
-    if (v < 1.5) return tc.warning;
-    return tc.green;
-  };
-
-  const fmtX = v => v != null ? `${v.toFixed(2)}×` : "—";
-
   const COLS = [
     { k: "nom",    label: "Nom",    align: "left" },
+    { k: "id",     label: "ID",     align: "left" },
     { k: "tipus",  label: "Tipus",  align: "left" },
     { k: "ticket", label: "Ticket", align: "right" },
     { k: "tvpi",   label: "TVPI",   align: "right" },
@@ -109,13 +110,16 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
               </thead>
               <tbody>
                 {sorted.map((r, i) => (
-                  <tr key={r.slug} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
+                  <tr key={r.id} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                      <Link to={`/company/${r.slug}`} style={{ color: tc.navy, textDecoration: "none" }}
+                      <Link to={`/company/${encodeURIComponent(r.id)}`} style={{ color: tc.navy, textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
                         onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>
                         {r.nom}
                       </Link>
+                    </td>
+                    <td style={{ padding: "10px 12px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight }}>
+                      {r.id}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
@@ -126,14 +130,14 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: tc.navyLight }}>
                       {fmtM(r.ticket)}
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.tvpi) }}>
-                      {fmtX(r.tvpi)}
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.tvpi, tc) }}>
+                      {formatMultiple(r.tvpi)}
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.dpiMultiple) }}>
-                      {fmtX(r.dpiMultiple)}
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.dpiMultiple, tc) }}>
+                      {formatMultiple(r.dpiMultiple)}
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.rvpiMultiple) }}>
-                      {fmtX(r.rvpiMultiple)}
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.rvpiMultiple, tc) }}>
+                      {formatMultiple(r.rvpiMultiple)}
                     </td>
                   </tr>
                 ))}
@@ -147,7 +151,7 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
 }
 
 export default function CompaniesIndex() {
-  const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1");
+  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
   const tc = dark ? TC_DARK : TC_LIGHT;
   return (
     <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>

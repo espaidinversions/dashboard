@@ -7,13 +7,15 @@ import AdminActivity from "./admin/AdminActivity.jsx";
 import AdminData from "./admin/AdminData.jsx";
 import AdminSettings from "./admin/AdminSettings.jsx";
 import AdminEntities from "./admin/AdminEntities.jsx";
+import AdminPMOperations from "./admin/AdminPMOperations.jsx";
 
 const NAV = [
-  { id: "users",    label: "Usuaris",      icon: "👥" },
-  { id: "activity", label: "Activitat",    icon: "📋" },
-  { id: "data",     label: "Dades",        icon: "🗄️" },
-  { id: "entities", label: "Entitats",     icon: "🏢" },
-  { id: "settings", label: "Configuració", icon: "⚙️" },
+  { id: "users",     label: "Usuaris",      icon: "👥" },
+  { id: "activity",  label: "Activitat",    icon: "📋" },
+  { id: "data",      label: "Dades",        icon: "🗄️" },
+  { id: "entities",  label: "Entitats",     icon: "🏢" },
+  { id: "pm",        label: "PM Operacions",icon: "📈" },
+  { id: "settings",  label: "Configuració", icon: "⚙️" },
 ];
 
 function AdminPanelInner() {
@@ -53,6 +55,7 @@ function AdminPanelInner() {
           {activeTab === "activity" && <AdminActivity />}
           {activeTab === "data"     && <AdminData />}
           {activeTab === "entities" && <AdminEntities />}
+          {activeTab === "pm"       && <AdminPMOperations />}
           {activeTab === "settings" && <AdminSettings />}
         </div>
       </div>

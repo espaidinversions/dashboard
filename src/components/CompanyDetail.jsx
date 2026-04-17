@@ -1,13 +1,12 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useAuth } from "../auth.jsx";
-import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
-import { upsertCompany } from "../db.js";
+import { loadCompanies, upsertCompany } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, slugify, usePersistedState } from "../utils.js";
+import { fmtM, slugify, usePersistedState, formatMultiple, multipleColor, readStoredFlag } from "../utils.js";
 import { EditableCell, FlagImg, Logo, KpiCard } from "./SharedComponents.jsx";
 
 function MetricChart({ title, data, actualKey, budgetKey, ltmKey, color, view, tc, withMargin }) {
@@ -120,14 +119,27 @@ function MetricChart({ title, data, actualKey, budgetKey, ltmKey, color, view, t
 function CompanyDetailInner() {
   const { id } = useParams();
   const { tc, dark, toggle } = useTheme();
-  const { isSuperuser } = useAuth();
+  const { canEdit } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [chartView, setChartView] = useState("quarterly");
 
-  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", PORTFOLIO_COMPANIES);
+  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
 
-  const company = companies.find(c => slugify(c.nom) === id);
+  useEffect(() => {
+    loadCompanies()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setCompanies(data);
+        }
+      })
+      .catch((error) => {
+        console.error("Company detail refresh failed:", error);
+      });
+  }, [setCompanies]);
+
+  const decodedId = decodeURIComponent(id ?? "");
+  const company = companies.find(c => c.id === decodedId || slugify(c.nom) === decodedId);
 
   const saveQuarterField = async (qLabel, field, value) => {
     if (!company) return;
@@ -135,10 +147,16 @@ function CompanyDetailInner() {
       q.q === qLabel ? { ...q, [field]: value === null ? null : parseFloat(value) || null } : q
     );
     const updatedCompany = { ...company, quarters: updatedQuarters };
-    const updatedCompanies = companies.map(c => c.nom === company.nom ? updatedCompany : c);
+    const updatedCompanies = companies.map(c => c.id === company.id ? updatedCompany : c);
     setCompanies(updatedCompanies);
-    const { error } = await upsertCompany(updatedCompany);
-    if (error) toast({ message: "Error desant KPI: " + error.message, type: "error" });
+    const { data, error } = await upsertCompany(updatedCompany);
+    if (error) {
+      toast({ message: "Error desant KPI: " + error.message, type: "error" });
+      return;
+    }
+    if (data) {
+      setCompanies((current) => current.map((row) => (row.id === company.id ? data : row)));
+    }
   };
 
   const [addingQuarter, setAddingQuarter] = useState(false);
@@ -150,10 +168,16 @@ function CompanyDetailInner() {
     if (company.quarters.some(q => q.q === label)) return;
     const blank = { q: label, rev: null, ebitda: null, dfn: null, revBudget: null, ebitdaBudget: null, dfnBudget: null };
     const updatedCompany = { ...company, quarters: [...company.quarters, blank] };
-    const updatedCompanies = companies.map(c => c.nom === company.nom ? updatedCompany : c);
+    const updatedCompanies = companies.map(c => c.id === company.id ? updatedCompany : c);
     setCompanies(updatedCompanies);
-    const { error } = await upsertCompany(updatedCompany);
-    if (error) toast({ message: "Error desant trimestre: " + error.message, type: "error" });
+    const { data, error } = await upsertCompany(updatedCompany);
+    if (error) {
+      toast({ message: "Error desant trimestre: " + error.message, type: "error" });
+      return;
+    }
+    if (data) {
+      setCompanies((current) => current.map((row) => (row.id === company.id ? data : row)));
+    }
     setAddingQuarter(false);
     setNewQ({ q: "1", year: String(new Date().getFullYear()) });
   };
@@ -171,7 +195,7 @@ function CompanyDetailInner() {
           tvpi, rvpiEur, dpiEur, mesosOperant,
           dataCompr, multEntry, quarters = [] } = company;
 
-  const tvpiColor = tvpi == null ? tc.textLight : tvpi < 1 ? tc.red : tvpi < 1.5 ? tc.warning : tc.green;
+  const tvpiColor = multipleColor(tvpi, tc);
 
   // LTM: last 4 actual quarters
   const ltm = useMemo(() => {
@@ -273,6 +297,7 @@ function CompanyDetailInner() {
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexShrink: 0 }}>
           <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)", borderRadius: 4, padding: "2px 8px", fontWeight: 600, letterSpacing: "0.04em" }}>{tipus}</span>
           <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)", borderRadius: 4, padding: "2px 8px", fontWeight: 600 }}>{segment}</span>
+          <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.8)", borderRadius: 4, padding: "2px 8px", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{company.id}</span>
           {geo && <FlagImg geo={geo} size={18} />}
         </div>
       </div>
@@ -282,7 +307,7 @@ function CompanyDetailInner() {
         {/* Row 1 — Investment KPIs */}
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
           <KpiCard label="Ticket"        value={fmtM(ticket)} tc={tc} />
-          <KpiCard label="TVPI"          value={tvpi != null ? `${tvpi.toFixed(2)}×` : "—"} valueColor={tvpiColor} tc={tc} />
+          <KpiCard label="TVPI"          value={formatMultiple(tvpi)} valueColor={tvpiColor} tc={tc} />
           <KpiCard label="RVPI"          value={fmtM(rvpiEur ?? 0)} tc={tc} />
           <KpiCard label="DPI"           value={fmtM(dpiEur ?? 0)} tc={tc} />
           <KpiCard label="Mesos operant" value={mesosOperant ?? "—"} tc={tc} />
@@ -354,28 +379,28 @@ function CompanyDetailInner() {
                   <tr key={q.q} style={{ borderTop: `1px solid ${tc.border}` }}>
                     <td style={{ padding: "6px 8px", fontSize: 12, fontWeight: 600, color: tc.text, whiteSpace: "nowrap" }}>{q.q}</td>
                     <td style={{ padding: "2px 4px" }}>
-                      <EditableCell value={q.rev} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "rev", v)} disabled={!isSuperuser} />
+                      <EditableCell value={q.rev} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "rev", v)} disabled={!canEdit} />
                     </td>
                     <td style={{ padding: "2px 4px" }}>
-                      <EditableCell value={q.ebitda} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "ebitda", v)} disabled={!isSuperuser} />
+                      <EditableCell value={q.ebitda} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "ebitda", v)} disabled={!canEdit} />
                     </td>
                     <td style={{ padding: "2px 4px" }}>
-                      <EditableCell value={q.dfn} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "dfn", v)} disabled={!isSuperuser} />
+                      <EditableCell value={q.dfn} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "dfn", v)} disabled={!canEdit} />
                     </td>
                     <td style={{ padding: "2px 4px" }}>
-                      <EditableCell value={q.revBudget} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "revBudget", v)} disabled={!isSuperuser} />
+                      <EditableCell value={q.revBudget} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "revBudget", v)} disabled={!canEdit} />
                     </td>
                     <td style={{ padding: "2px 4px" }}>
-                      <EditableCell value={q.ebitdaBudget} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "ebitdaBudget", v)} disabled={!isSuperuser} />
+                      <EditableCell value={q.ebitdaBudget} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "ebitdaBudget", v)} disabled={!canEdit} />
                     </td>
                     <td style={{ padding: "2px 4px" }}>
-                      <EditableCell value={q.dfnBudget} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "dfnBudget", v)} disabled={!isSuperuser} />
+                      <EditableCell value={q.dfnBudget} type="number" align="right" fmt={v => v != null ? fmtM(v) : "—"} onSave={v => saveQuarterField(q.q, "dfnBudget", v)} disabled={!canEdit} />
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
-            {isSuperuser && (
+            {canEdit && (
               <div style={{ marginTop: 12 }}>
                 {!addingQuarter ? (
                   <button onClick={() => setAddingQuarter(true)}
@@ -414,7 +439,7 @@ function CompanyDetailInner() {
         )}
 
         {/* "Nou trimestre" button when no quarters exist yet */}
-        {quarters.length === 0 && isSuperuser && (
+        {quarters.length === 0 && canEdit && (
           <div style={{ marginTop: 8 }}>
             {!addingQuarter ? (
               <button onClick={() => setAddingQuarter(true)}
@@ -476,7 +501,7 @@ function CompanyDetailInner() {
 }
 
 export default function CompanyDetail() {
-  const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1");
+  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
   const tc = dark ? TC_DARK : TC_LIGHT;
   return (
     <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>

@@ -1,15 +1,15 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT, VCPE_CFG, EST_CFG } from "../config.js";
+import { VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, slugify } from "../utils.js";
+import { fmtM, readStoredJSON, writeStoredJSON, readStoredFlag, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, EditableCell, DeleteRowButton } from "./SharedComponents.jsx";
-import { upsertFundMeta, insertFund, deleteFund, loadAll } from "../db.js";
+import { upsertFundMeta, insertFund, deleteFund, loadAll, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 
 export function FundsIndexInner({ inline = false, searchOverride }) {
-  const { isSuperuser } = useAuth();
+  const { canEdit } = useAuth();
   const { toast } = useToast();
   const { tc } = useTheme();
   const [searchLocal, setSearchLocal] = useState("");
@@ -17,49 +17,58 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
   const [sortKey, setSortKey] = useState("compromis");
   const [sortDir, setSortDir] = useState("desc");
 
-  const [rawCC, setRawCC] = useState(() => {
-    try { const s = localStorage.getItem("tc_rawCC"); return s ? JSON.parse(s) : RAW_CC_DEFAULT; }
-    catch { return RAW_CC_DEFAULT; }
-  });
+  const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
 
   const persistRawCC = (updated) => {
     setRawCC(updated);
-    try { localStorage.setItem("tc_rawCC", JSON.stringify(updated)); } catch {}
+    writeStoredJSON("tc_rawCC", updated);
   };
 
-  const [fundMeta, setFundMeta] = useState(() => {
-    try { const s = localStorage.getItem("tc_fundMeta"); return s ? JSON.parse(s) : FUND_META_DEFAULT; }
-    catch { return FUND_META_DEFAULT; }
-  });
+  const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
+
+  useEffect(() => {
+    loadAll().then((data) => {
+      if (!data) return;
+      if (Array.isArray(data.rawCC)) persistRawCC(data.rawCC);
+      if (Array.isArray(data.fundMeta)) {
+        setFundMeta(data.fundMeta);
+        writeStoredJSON("tc_fundMeta", data.fundMeta);
+      }
+    }).catch((error) => {
+      console.error("Funds index refresh failed:", error);
+    });
+  }, []);
 
   const saveTvpi = async (fons, tvpi) => {
     const updated = fundMeta.some(m => m.fons === fons)
       ? fundMeta.map(m => m.fons === fons ? { ...m, tvpi } : m)
       : [...fundMeta, { fons, tvpi }];
     setFundMeta(updated);
-    try { localStorage.setItem("tc_fundMeta", JSON.stringify(updated)); } catch {}
+    writeStoredJSON("tc_fundMeta", updated);
     const { error } = await upsertFundMeta(fons, tvpi);
     if (error) toast({ message: "Error desant TVPI: " + error.message, type: "error" });
   };
 
-  const handleDeleteFund = async (fons) => {
-    const err = await deleteFund(fons);
+  const handleDeleteFund = async (fund) => {
+    const err = await deleteFund(fund);
     if (err) {
       toast({ message: "Error eliminant fons: " + err.message, type: "error" });
       const data = await loadAll();
       if (data) {
         persistRawCC(data.rawCC);
         setFundMeta(data.fundMeta);
-        try { localStorage.setItem("tc_fundMeta", JSON.stringify(data.fundMeta)); } catch {}
+        writeStoredJSON("tc_fundMeta", data.fundMeta);
       }
       return;
     }
-    const updatedCC = rawCC.filter(r => r.fons !== fons);
+    const fundId = fund?.id ?? null;
+    const fundName = fund?.fons ?? "";
+    const updatedCC = rawCC.filter(r => (fundId ? r.id !== fundId : r.fons !== fundName));
     persistRawCC(updatedCC);
-    const updatedMeta = fundMeta.filter(m => m.fons !== fons);
+    const updatedMeta = fundMeta.filter(m => (fundId ? m.id !== fundId : m.fons !== fundName));
     setFundMeta(updatedMeta);
-    try { localStorage.setItem("tc_fundMeta", JSON.stringify(updatedMeta)); } catch {}
-    toast({ message: `Fons "${fons}" eliminat.` });
+    writeStoredJSON("tc_fundMeta", updatedMeta);
+    toast({ message: `Fons "${fundName}" eliminat.` });
   };
 
   const [addingFund, setAddingFund] = useState(false);
@@ -85,20 +94,20 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
   const rows = useMemo(() => {
     const map = new Map();
     for (const r of rawCC) {
-      if (!map.has(r.fons)) map.set(r.fons, { fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, isMock: !!r.isMock });
-      const f = map.get(r.fons);
+      const key = r.id ?? r.fons;
+      if (!map.has(key)) map.set(key, { id: r.id ?? null, fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, isMock: !!r.isMock });
+      const f = map.get(key);
       if (r.cat === "Compromís") f.compromis += r.eur;
       if (r.cat === "Capital Call") f.calls += r.eur;
       if (r.cat === "Distribució" || r.cat === "Retorn Capital") f.dist += Math.abs(r.eur);
     }
     return Array.from(map.values()).map(f => {
-      const meta = fundMeta.find(m => m.fons === f.fons);
+      const meta = fundMeta.find(m => (m.id ?? m.fons) === (f.id ?? f.fons));
       const tvpi = meta?.tvpi ?? null;
       const dpi = f.calls > 0 ? f.dist / f.calls : 0;
       const rvpi = tvpi != null ? tvpi - dpi : null;
       return {
         ...f,
-        slug: slugify(f.fons),
         utilizat: f.compromis > 0 ? (f.calls / f.compromis) * 100 : null,
         tvpi,
         dpi,
@@ -119,6 +128,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
       if (sortKey === "compromis") { av = a.compromis ?? 0; bv = b.compromis ?? 0; }
       else if (sortKey === "cridat") { av = a.calls ?? 0; bv = b.calls ?? 0; }
       else if (sortKey === "utilizat") { av = a.utilizat ?? -1; bv = b.utilizat ?? -1; }
+      else if (sortKey === "id") { av = a.id ?? ""; bv = b.id ?? ""; }
       else if (sortKey === "tvpi") { av = a.tvpi ?? -1; bv = b.tvpi ?? -1; }
       else if (sortKey === "dpi") { av = a.dpi ?? -1; bv = b.dpi ?? -1; }
       else if (sortKey === "rvpi") { av = a.rvpi ?? -1; bv = b.rvpi ?? -1; }
@@ -147,17 +157,9 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
     return tc.green;
   };
 
-  const multipleColor = v => {
-    if (v == null) return tc.textLight;
-    if (v < 1) return tc.red;
-    if (v < 1.5) return tc.warning;
-    return tc.green;
-  };
-
-  const fmtX = v => v != null ? `${v.toFixed(2)}×` : "—";
-
   const COLS = [
     { k: "nom",       label: "Nom",      align: "left" },
+    { k: "id",        label: "ID",       align: "left" },
     { k: "tipus",     label: "Tipus",    align: "left" },
     { k: "compromis", label: "Compromís",align: "right" },
     { k: "cridat",    label: "Cridat",   align: "right" },
@@ -198,18 +200,37 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                       {label}<SortArrow k={k} />
                     </th>
                   ))}
-                  {isSuperuser && <th style={{ width: 40 }} />}
+                  {canEdit && <th style={{ width: 40 }} />}
                 </tr>
               </thead>
               <tbody>
                 {sorted.map((r, i) => (
-                  <tr key={r.slug} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
+                  <tr key={r.id ?? r.fons} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                      <Link to={`/fund/${r.slug}`} style={{ color: tc.navy, textDecoration: "none" }}
+                      <Link to={`/fund/${encodeURIComponent(r.id ?? r.fons)}`} style={{ color: tc.navy, textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
                         onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>
-                        {r.fons}
+                        <EditableCell value={r.fons} type="text"
+                          onSave={async (value) => {
+                            const nextName = value?.trim();
+                            if (!nextName || !r.id) return;
+                            const { error } = await renamePrivateEntity(r.id, nextName);
+                            if (error) {
+                              toast({ message: "Error canviant el nom del vehicle: " + error.message, type: "error" });
+                              return;
+                            }
+                            const refreshed = await loadAll();
+                            if (refreshed?.rawCC) persistRawCC(refreshed.rawCC);
+                            if (refreshed?.fundMeta) {
+                              setFundMeta(refreshed.fundMeta);
+                              writeStoredJSON("tc_fundMeta", refreshed.fundMeta);
+                            }
+                          }}
+                          disabled={!canEdit || !r.id} />
                       </Link>
+                    </td>
+                    <td style={{ padding: "10px 12px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight }}>
+                      {r.id ?? "—"}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
@@ -226,20 +247,20 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                     <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, fontWeight: 700, color: utilizatColor(r.utilizat) }}>
                       {r.utilizat != null ? `${r.utilizat.toFixed(1)}%` : "—"}
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.tvpi) }}>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.tvpi, tc) }}>
                       <EditableCell value={r.tvpi} type="number" align="right"
-                        fmt={fmtX} onSave={v => saveTvpi(r.fons, v)}
-                        disabled={!isSuperuser} />
+                        fmt={formatMultiple} onSave={v => saveTvpi(r, v)}
+                        disabled={!canEdit} />
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.dpi) }}>
-                      {fmtX(r.dpi)}
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.dpi, tc) }}>
+                      {formatMultiple(r.dpi)}
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.rvpi) }}>
-                      {fmtX(r.rvpi)}
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.rvpi, tc) }}>
+                      {formatMultiple(r.rvpi)}
                     </td>
-                    {isSuperuser && (
+                    {canEdit && (
                       <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                        <DeleteRowButton onDelete={() => handleDeleteFund(r.fons)} />
+                        <DeleteRowButton onDelete={() => handleDeleteFund(r)} />
                       </td>
                     )}
                   </tr>
@@ -249,7 +270,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
           </div>
           )
         }
-      {isSuperuser && (
+      {canEdit && (
         <div style={{ marginTop: 16 }}>
           {!addingFund ? (
             <button onClick={() => setAddingFund(true)}
@@ -305,7 +326,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
 }
 
 export default function FundsIndex() {
-  const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1");
+  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
   const tc = dark ? TC_DARK : TC_LIGHT;
   return (
     <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>

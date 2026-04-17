@@ -1,19 +1,20 @@
 ---
 name: autoresearch
-description: Meta-skill that auto-improves any skill via a scored quality loop (Karpathy autoresearch method)
+description: Meta-skill for tightening a weak skill or workflow via a scored quality loop
 type: project
 ---
 
 # Autoresearch
 
-**Trigger:** Use when a skill feels weak, vague, or incomplete. Use after creating a new skill to sharpen it.
+**Trigger:** Use when a skill, script, or workflow feels weak, vague, incomplete, or hard to trust. Use after creating or changing a workflow to sharpen it.
 
-**Invocation:** `/autoresearch <skill-name>`
+**Invocation:** `/autoresearch <target>`
 
 Examples:
 - `/autoresearch verify-dashboard`
 - `/autoresearch update-capital-calls`
 - `/autoresearch superpowers:brainstorming`
+- `/autoresearch public-markets`
 
 ## Quality Checklist
 
@@ -41,12 +42,32 @@ Score the target skill on each item (yes = 1, no = 0):
 8. Commit
 ```
 
+## Repo Workflow
+
+For this dashboard, autoresearch is used to keep the public-markets workbook and the app data in sync.
+
+- Run `npm run pm:autoresearch` to:
+  - read the latest `Mercats Públics/*.xlsx` workbook
+  - generate `src/data/publicMarketsRawWorkbook.js`
+  - write `docs/pm-autoresearch.md` and `docs/pm-autoresearch.json`
+  - compare the workbook against the committed raw data overlays
+- Treat the workbook as the source of truth for current holdings and totals.
+- Regenerate downstream reports after the overlay changes:
+  - `npm run pm:value-report`
+  - `npm run build`
+
+## Repo Gotchas
+
+- Do not overwrite curated metadata fields with empty workbook cells.
+- Keep the overlay merge additive: workbook values should win, but only for fields the workbook actually supplies.
+- If the workbook parser starts pulling in proposal or allocation tables, tighten the row filters before trusting the report.
+
 ## Loading Skills
 
 - **Project skills** (`.claude/skills/`): use `Read` tool, edit with `Edit` tool
 - **Superpowers plugin skills**: use `Skill` tool to load content; the skill output header shows "Base directory" — use `Edit` tool on the skill file at that path
 
-## Gotchas
+## Meta Gotchas
 
 - **Don't chase style** — only fix structural gaps (missing trigger, missing verification, etc.). Rewording a sentence that already works is not an improvement.
 - **Identical rewrites = stop** — if two consecutive iterations produce the same change or no net score gain, the skill needs user context, not more looping.

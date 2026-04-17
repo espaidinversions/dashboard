@@ -41,3 +41,6 @@ supabase/.temp/
 
 # Script output artifacts (review before merging into src/)
 scripts/out/
+.test-artifacts/
+.tmp-test-fund-prices/
+scripts/__pycache__/

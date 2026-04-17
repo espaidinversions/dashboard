@@ -1,6 +1,6 @@
 // ── Paleta ────────────────────────────────────────────────
 import { TC_LIGHT } from "./theme.js";
-export const TC = TC_LIGHT;
+const TC = TC_LIGHT;
 
 // ── Configs ───────────────────────────────────────────────
 export const CAT_CFG = {
@@ -48,15 +48,25 @@ export const SEARCHER_STATUS_CFG = {
 export const FY_LIST = ["FY 2019","FY 2020","FY 2021","FY 2022","FY 2023","FY 2024","FY 2025","FY 2026","FY 2027"];
 export const MESOS   = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
 
+// ── Enum option arrays (single source of truth for selects + DB constraints) ─
+export const PIPELINE_STATUS_OPTIONS    = Object.keys(STATUS_CFG);
+export const PIPELINE_CANAL_OPTIONS     = Object.keys(CANAL_CFG);
+export const SEARCHER_STATUS_OPTIONS    = Object.keys(SEARCHER_STATUS_CFG);
+export const SEARCHER_MODALITAT_OPTIONS = ["Solo", "Duo", "Trio", "Partnership"];
+export const SEARCHER_FORM_ENTRADA_OPTIONS = ["Search Capital", "Equity Gap"];
+export const COMPANY_TIPUS_OPTIONS      = ["SF", "PE"];
+export const COMPANY_ORIGEN_OPTIONS     = ["Search Capital", "Equity Gap", "Direct PE"];
+export const CAPITAL_CALL_CAT_OPTIONS   = Object.keys(CAT_CFG).filter(k => k !== "Compromís");
+export const CAPITAL_CALL_VCPE_OPTIONS  = Object.keys(VCPE_CFG);
+export const CAPITAL_CALL_EST_OPTIONS   = Object.keys(EST_CFG);
+
 // ── Data imports ─────────────────────────────────────────
 import { RAW_CC as RAW_CC_DATA } from "./data/capital-calls.js";
 import { FUNDS0 as FUNDS0_DATA } from "./data/pipeline.js";
-export { RAW_CC_DATA as RAW_CC };
-export { FUNDS0_DATA as FUNDS0 };
 
 export const EUR_USD = 1.08;
-export const toEUR = (a,c) => c==="USD" ? a/EUR_USD : a;
-export const toUSD = (a,c) => c==="EUR" ? a*EUR_USD : a;
+const toEUR = (a,c) => c==="USD" ? a/EUR_USD : a;
+const toUSD = (a,c) => c==="EUR" ? a*EUR_USD : a;
 export const SCOL  = {"Fons primari":TC.navy,"Coinversions":TC.green,"Fons secundaris":TC.navyLight,"Fons de fons":TC.greenDark};
 export const GCOL  = {EU:TC.green,US:TC.navy,"EU/US":TC.navyLight};
 export const SECCOL= {Software:TC.navy,Generalista:TC.green,"B2B Services":TC.greenDark,Healthcare:"#7A5A8A","Software / B2B":TC.greenLight};
@@ -66,9 +76,7 @@ export const SBADGE= {"Fons primari":{bg:"#E8EFF5",color:TC.navy},"Coinversions"
 export const GBADGE= {EU:{bg:"#E8F4EE",color:TC.greenDark},US:{bg:"#E8EFF5",color:TC.navyDark},"EU/US":{bg:"#EAF0F6",color:TC.navyLight}};
 
 // ── Precompute ────────────────────────────────────────────
-export const COMPROMISOS  = RAW_CC_DATA.filter(r=>r.cat==="Compromís");
-export const TRANSACTIONS = RAW_CC_DATA.filter(r=>r.cat!=="Compromís");
-export const ALL_FONS = [...new Set(RAW_CC_DATA.map(r=>r.fons))].sort();
+const COMPROMISOS  = RAW_CC_DATA.filter(r=>r.cat==="Compromís");
+const TRANSACTIONS = RAW_CC_DATA.filter(r=>r.cat!=="Compromís");
+const ALL_FONS = [...new Set(RAW_CC_DATA.map(r=>r.fons))].sort();
 
-// Fund-level metadata — set tvpi manually from fund manager reports
-export const FUND_META = ALL_FONS.map(fons => ({ fons, tvpi: null }));

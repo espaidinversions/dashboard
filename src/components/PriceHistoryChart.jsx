@@ -3,8 +3,11 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonthKey } from "../utils.js";
-import { FUND_PRICES } from "../data/fundPrices.js";
-import { START_MONTH_2019, buildMonthGrid, toMonthKey } from "../chartSeries.js";
+import { PM_MODEL } from "../data/publicMarketsModel.js";
+import { ALL_PRICE_SERIES, ESTIMATED_PRICE_ISINS } from "../data/allPrices.js";
+import { START_MONTH_2019, buildMonthGrid, getPriceScale, toMonthKey } from "../chartSeries.js";
+
+const PM_POSITIONS = PM_MODEL.holdings.active;
 
 /**
  * PriceHistoryChart
@@ -20,8 +23,13 @@ import { START_MONTH_2019, buildMonthGrid, toMonthKey } from "../chartSeries.js"
  */
 export function PriceHistoryChart({ isin, dataCompra, transactions, valueSeries = [], height = 280 }) {
   const { tc, dark } = useTheme();
-  const [mode, setMode] = useState(() => (FUND_PRICES[isin]?.length > 0 ? "price" : "value"));
-  const priceSeries = FUND_PRICES[isin];
+  const [mode, setMode] = useState(() => (ALL_PRICE_SERIES[isin]?.length > 0 ? "price" : "value"));
+  const priceSeries = ALL_PRICE_SERIES[isin];
+  const estimated = ESTIMATED_PRICE_ISINS.has(isin);
+  const priceScale = useMemo(
+    () => getPriceScale(PM_POSITIONS.find(p => p.isin === isin) ?? null),
+    [isin]
+  );
 
   const { chartData, acqMonth } = useMemo(() => {
     if (
@@ -39,6 +47,29 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, valueSeries 
         .map(r => [toMonthKey(r.date), r.value])
         .filter(([month]) => Boolean(month)),
     );
+
+    const priceMonths = [...new Set([
+      ...(priceSeries ?? []).map(([month]) => month).filter(Boolean),
+      ...Object.keys(valueByMonth),
+    ])].sort();
+    const filledPrice = (() => {
+      const forward = {};
+      let last = null;
+      for (const month of priceMonths) {
+        const current = priceByMonth[month];
+        if (current != null) last = current;
+        forward[month] = last;
+      }
+      const backward = {};
+      let next = null;
+      for (let i = priceMonths.length - 1; i >= 0; i--) {
+        const month = priceMonths[i];
+        const current = priceByMonth[month];
+        if (current != null) next = current;
+        backward[month] = next;
+      }
+      return month => forward[month] ?? backward[month] ?? null;
+    })();
 
     const flowByMonth = {};
     (transactions ?? [])
@@ -68,14 +99,14 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, valueSeries 
     let cumInflow = 0;
     let cumUnits = 0;
     const rows = buildMonthGrid({ startMonth: START_MONTH_2019, months: [...monthSet] }).map(month => {
-      const price = priceByMonth[month] ?? null;
+      const price = filledPrice(month);
       const historicalValue = valueByMonth[month] ?? null;
       cumInflow += flowByMonth[month] ?? 0;
       cumUnits += unitDeltaByMonth[month] ?? 0;
       return {
         month,
         navPrice: price,
-        portfolioValue: historicalValue ?? (cumUnits > 0 && price != null ? Math.round(cumUnits * price) : null),
+        portfolioValue: historicalValue ?? (cumUnits > 0 && price != null ? Math.round((cumUnits * price) / priceScale) : null),
         cumInflow: cumInflow !== 0 ? cumInflow : null,
       };
     });
@@ -119,7 +150,7 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, valueSeries 
                 if (p.value == null) return;
                 let val, name;
                 if (p.seriesName === "cumInflow")      { val = fmtM(p.value);      name = "Flux net acumulat"; }
-                else if (p.seriesName === "navPrice")   { val = p.value.toFixed(4); name = "Preu unitari importat"; }
+                else if (p.seriesName === "navPrice")   { val = p.value.toFixed(4); name = estimated ? "Preu unitari estimat" : "Preu unitari importat"; }
                 else if (p.seriesName === "portValue")  { val = fmtM(p.value);      name = "Valor cartera teòric"; }
                 else                                    { val = p.value;            name = p.seriesName; }
                 html += `<div>${p.marker}${name}: ${val}</div>`;
@@ -206,7 +237,7 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, valueSeries 
 
       <div style={{ fontSize: 10, color: tc.textLight ?? "#8A9BAC", marginTop: 6, fontStyle: "italic" }}>
         {mode === "price"
-          ? `Preu unitari importat des del script de descàrrega. La línia mostra la sèrie NAV mensual completa; la compra queda marcada a ${acqMonth ?? "—"}.`
+          ? `${estimated ? "Preu unitari estimat" : "Preu unitari importat"} des del script de descàrrega. La línia mostra la sèrie NAV mensual completa; la compra queda marcada a ${acqMonth ?? "—"}.`
           : "Valor cartera = flux net acumulat i, si existeix, valor històric importat o unitats acumulades × preu."}
       </div>
     </div>

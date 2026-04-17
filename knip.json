@@ -1,0 +1,19 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema-json",
+  "entry": [
+    "api/**/*.js",
+    "scripts/*.mjs",
+    ".claude/hooks/*.cjs",
+    "kanvas/**/*.cjs"
+  ],
+  "project": [
+    "src/**/*.{js,jsx}",
+    "!src/generated/**",
+    "api/**/*.js",
+    "scripts/**/*.{js,mjs,cjs}",
+    "!scripts/out/**"
+  ],
+  "ignoreBinaries": [
+    "python"
+  ]
+}

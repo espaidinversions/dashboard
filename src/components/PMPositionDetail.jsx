@@ -2,17 +2,22 @@ import React, { useMemo, useState, useEffect } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useParams, useNavigate } from "react-router-dom";
-import { PM_POSITIONS, PM_CLOSED } from "../data/publicMarkets.js";
+import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtMonth, yearsHeld, cagr } from "../utils.js";
-import { PM_VALUES } from "../data/portfolioValues.js";
-import { PM_CLOSED_VALUES } from "../data/pmClosedValues.js";
-import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
-import { PM_TER } from "../data/pmTer.js";
+import { PM_TER } from "../generated/publicMarkets/pmTer.js";
 import { loadPMOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
 import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
 import { PriceHistoryChart } from "./PriceHistoryChart.jsx";
-import { FUND_PRICES } from "../data/fundPrices.js";
+import { ALL_PRICE_SERIES } from "../data/allPrices.js";
+import { buildClosedTransactionSummaryByIsin, enrichClosedPosition } from "../data/pmClosedUtils.js";
+
+const PM_POSITIONS = PM_MODEL.holdings.active;
+const PM_CLOSED = PM_MODEL.holdings.closed;
+const PM_VALUES = PM_MODEL.series.values;
+const PM_CLOSED_VALUES = PM_MODEL.series.closedValues;
+const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
+const PM_POSITION_ID_ALIASES = PM_MODEL.metadata.positionIdAliases;
 
 const ISIN_RE = /([A-Z]{2}[A-Z0-9]{10})/;
 const cleanIsin = raw => (ISIN_RE.exec(String(raw ?? "").toUpperCase())?.[1]) ?? raw;
@@ -40,16 +45,20 @@ function InfoRow({ label, value, tc }) {
   );
 }
 
-export function PMPositionDetail() {
+function PMPositionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { tc, dark } = useTheme();
+  const closedSummaryByIsin = useMemo(() => buildClosedTransactionSummaryByIsin(), []);
 
   let p = PM_POSITIONS.find(pos => pos.id === id);
+  if (!p && PM_POSITION_ID_ALIASES[id]) {
+    p = PM_POSITIONS.find(pos => pos.id === PM_POSITION_ID_ALIASES[id]);
+  }
   let isClosed = false;
   if (!p) {
     const closed = PM_CLOSED.find(pos => pos.isin === id);
-    if (closed) { p = closed; isClosed = true; }
+    if (closed) { p = enrichClosedPosition(closed, closedSummaryByIsin); isClosed = true; }
   }
 
   // Supabase overrides for this position
@@ -88,7 +97,7 @@ export function PMPositionDetail() {
   const pnl         = p.costEur != null ? (p.valorMercat ?? 0) - p.costEur : null;
   const pnlColor    = pnl == null ? tc.textLight : pnl > 0 ? tc.green : pnl < 0 ? tc.red : tc.textLight;
   const msUrl       = isin ? `https://www.morningstar.es/es/search/results.aspx?keyword=${isin}` : null;
-  const yh          = yearsHeld(p.dataCompra);
+  const yh          = yearsHeld(p.dataCompra, isClosed && p.any ? `${p.any}-12-31` : undefined);
   const ter         = terOverride ?? PM_TER[isin] ?? p.costAnual ?? 0;
   const netInici    = p.rendInici != null
     ? (isAbelFont ? p.rendInici - ter * yh : p.rendInici)
@@ -159,7 +168,12 @@ export function PMPositionDetail() {
                      letterSpacing: "0.04em", textTransform: "uppercase", fontWeight: 600 }}>
             ← Mercats Públics
           </button>
-          <div style={{ fontSize: 22, fontWeight: 700, color: tc.navy, marginBottom: 8 }}>{displayNom}</div>
+          <div style={{ fontSize: 22, fontWeight: 700, color: tc.navy, marginBottom: 8 }}>
+            {displayNom}
+            {metaOverride.nom && (
+              <span title="Nom manual (override)" style={{ fontSize: 9, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 3, padding: "2px 5px", marginLeft: 8, verticalAlign: "middle" }}>OV</span>
+            )}
+          </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {isClosed && (
               <span style={{ fontSize: 10, background: "#FFF3CD", color: "#7B5800",
@@ -179,6 +193,7 @@ export function PMPositionDetail() {
                              padding: "3px 8px", borderRadius: 4, fontWeight: 700,
                              letterSpacing: "0.06em", textTransform: "uppercase" }}>
                 {displayCustodian}
+                {metaOverride.custodian && <span title="Custodi manual (override)" style={{ fontSize: 8, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 3, padding: "1px 4px", marginLeft: 5 }}>OV</span>}
               </span>
             )}
             {p.tipus && (
@@ -221,7 +236,7 @@ export function PMPositionDetail() {
           color: tc.textLight, fontWeight: 600, marginBottom: 12 }}>
           Historial de preus · fluxos acumulats
         </div>
-        {isin && FUND_PRICES[isin]?.length > 0 ? (
+        {isin && ALL_PRICE_SERIES[isin]?.length > 0 ? (
           <PriceHistoryChart
             isin={isin}
             dataCompra={p.dataCompra}
@@ -409,7 +424,11 @@ export function PMPositionDetail() {
                 <InfoRow label="Unitats"           value={p.unitats != null ? p.unitats.toLocaleString("ca-ES") : null} tc={tc} />
                 <InfoRow label="Preu d'entrada"    value={p.costInici != null ? p.costInici.toFixed(4) : null} tc={tc} />
                 <InfoRow label="Cost total"        value={p.costEur != null ? fmtM(p.costEur) : null} tc={tc} />
-                <InfoRow label="TER anual"         value={ter > 0 ? ter.toFixed(2) + "%" : null} tc={tc} />
+                <InfoRow label="TER anual"
+                  value={ter > 0 ? (
+                    <span>{ter.toFixed(2)}%{terOverride != null && <span title="TER manual (override)" style={{ fontSize: 8, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 3, padding: "1px 4px", marginLeft: 5 }}>OV</span>}</span>
+                  ) : null}
+                  tc={tc} />
                 <InfoRow label="Cost anual"
                   value={ter > 0 && p.costEur != null
                     ? fmtM(p.costEur * ter / 100) + "/any" : null}
@@ -505,7 +524,7 @@ function PositionTxHistory({ isin, tc, card, secLabel }) {
 }
 
 // ── Position metadata editor ──────────────────────────────────
-const CUSTODIAN_OPTIONS = ["CaixaBank", "Bankinter", "UBS", "Credit Suisse", "Abel Font", "WAM", "Andbank", "Altre"];
+const CUSTODIAN_OPTIONS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Credit Suisse", "Abel Font", "WAM", "Andbank", "Altre"];
 
 function PositionMetaEditor({ p, isin, tc, dark, card, secLabel, metaOverride, terOverride, onSaveMeta, onSaveTer }) {
   const [open, setOpen] = useState(false);

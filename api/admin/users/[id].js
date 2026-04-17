@@ -1,49 +1,57 @@
-import { isRateLimited } from "../../_rateLimit.js";
-import { setCors } from "../../_cors.js";
-import { getRequestIp, isAllowedRole, makeServiceClient, verifyAdmin } from "../../_adminAuth.js";
+import { getUserRole, isAllowedRole, makeServiceClient, verifyAdmin } from "../../_adminAuth.js";
+import {
+  applySecurityHeaders,
+  enforceCors,
+  enforceHttps,
+  enforceRateLimit,
+  handlePreflight,
+  normalizeBoolean,
+  sanitizeText,
+  ValidationError,
+} from "../../_security.js";
 
 function serverError(res, error, context) {
+  if (error instanceof ValidationError) {
+    return res.status(400).json({ error: error.message });
+  }
   console.error(`[admin/users/[id]] ${context}:`, error);
   return res.status(500).json({ error: "Internal server error" });
 }
 
 export default async function handler(req, res) {
-  setCors(res);
-  if (req.method === "OPTIONS") return res.status(204).end();
-
-  const ip = getRequestIp(req);
-  if (isRateLimited(ip)) return res.status(429).json({ error: "Too many requests" });
+  applySecurityHeaders(res);
+  if (!enforceHttps(req, res)) return;
+  if (!enforceCors(req, res)) return;
+  if (handlePreflight(req, res)) return;
+  if (!await enforceRateLimit(req, res, "admin")) return;
 
   try {
     const supabase = makeServiceClient();
     const admin = await verifyAdmin(req, supabase);
     if (!admin) return res.status(403).json({ error: "Forbidden" });
 
-    const { id } = req.query;
+    const id = sanitizeText(req.query.id, { maxLength: 128 });
 
     if (req.method === "PATCH") {
-      const { role, email_confirm } = req.body ?? {};
+      const role = req.body?.role !== undefined ? sanitizeText(req.body.role, { maxLength: 20 }) : undefined;
+      const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
       const updates = {};
       if (role !== undefined) {
         if (!isAllowedRole(role)) {
           return res.status(400).json({ error: "Invalid role" });
         }
         updates.app_metadata = { role };
-        updates.user_metadata = { role };
       }
-      if (email_confirm) updates.email_confirm = true;
+      if (emailConfirm) updates.email_confirm = true;
       const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
       if (error) return serverError(res, error, "updateUserById");
       return res.json({ user: data?.user ?? null });
     }
 
     if (req.method === "DELETE") {
-      // Guard: don't delete the last admin
       const { data: allUsers } = await supabase.auth.admin.listUsers();
-      const admins = (allUsers?.users ?? []).filter(
-        u => (u.app_metadata?.role ?? u.user_metadata?.role) === "admin",
-      );
-      const target = admins.find(u => u.id === id);
+      const admins = (allUsers?.users ?? []).filter(user => getUserRole(user) === "admin");
+      const target = admins.find(user => user.id === id);
       if (target && admins.length <= 1) {
         return res.status(409).json({ error: "Cannot delete the last admin" });
       }

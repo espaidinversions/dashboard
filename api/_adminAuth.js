@@ -1,7 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 
-export const ALLOWED_ROLES = new Set(["user", "superuser", "admin"]);
-export const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const ALLOWED_ROLES = new Set(["user", "superuser", "admin"]);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function makeServiceClient() {
   return createClient(
@@ -14,6 +14,7 @@ export function getRequestIp(req) {
   const candidates = [
     req.headers["cf-connecting-ip"],
     req.headers["x-vercel-forwarded-for"],
+    req.headers["x-forwarded-for"],
     req.headers["x-real-ip"],
     req.socket?.remoteAddress,
   ];
@@ -21,13 +22,28 @@ export function getRequestIp(req) {
   return String(ip ?? "unknown").split(",")[0].trim();
 }
 
-export async function verifyAdmin(req, serviceClient) {
-  const token = req.headers.authorization?.replace("Bearer ", "");
+function getBearerToken(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) return null;
+  return authHeader.slice("Bearer ".length).trim() || null;
+}
+
+export function getUserRole(user) {
+  return user?.app_metadata?.role ?? "user";
+}
+
+export async function verifyUser(req, serviceClient) {
+  const token = getBearerToken(req);
   if (!token) return null;
   const { data: { user }, error } = await serviceClient.auth.getUser(token);
-  const role = user?.app_metadata?.role ?? user?.user_metadata?.role;
-  if (error || role !== "admin") return null;
+  if (error || !user) return null;
   return user;
+}
+
+export async function verifyAdmin(req, serviceClient) {
+  const user = await verifyUser(req, serviceClient);
+  if (!user) return null;
+  return getUserRole(user) === "admin" ? user : null;
 }
 
 export function isAllowedRole(role) {

@@ -1,44 +1,29 @@
-import { supabase } from "../../supabase.js";
+import { apiFetchJson } from "../../apiClient.js";
 
-function assertSupabase() {
-  if (!supabase) throw new Error("Supabase client not configured");
-  return supabase;
-}
-
-async function readSettingValue(key) {
-  const client = assertSupabase();
-  const { data, error } = await client
-    .from("app_settings")
-    .select("value")
-    .eq("key", key)
-    .maybeSingle();
-  if (error) throw error;
-  return data?.value ?? [];
+function toQuery(params = {}) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    search.set(key, String(value));
+  });
+  const suffix = search.toString();
+  return suffix ? `?${suffix}` : "";
 }
 
 export async function loadAllowedDomains() {
-  const value = await readSettingValue("allowed_domains");
-  return Array.isArray(value) ? value : [];
+  const data = await apiFetchJson("/api/admin/settings/allowed-domains");
+  return Array.isArray(data?.domains) ? data.domains : [];
 }
 
 export async function saveAllowedDomains(domains) {
-  const client = assertSupabase();
-  const { error } = await client
-    .from("app_settings")
-    .upsert(
-      { key: "allowed_domains", value: domains, updated_at: new Date().toISOString() },
-      { onConflict: "key" },
-    );
-  if (error) throw error;
+  const data = await apiFetchJson("/api/admin/settings/allowed-domains", {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ domains }),
+  });
+  return Array.isArray(data?.domains) ? data.domains : [];
 }
 
-export async function loadAuditLog({ limit = 500 } = {}) {
-  const client = assertSupabase();
-  const { data, error } = await client
-    .from("audit_log")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return data ?? [];
+export async function loadAuditLog(params = {}) {
+  return apiFetchJson(`/api/admin/audit-log${toQuery(params)}`);
 }

@@ -1,14 +1,52 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { fmtM, slugify } from "../../utils.js";
-import { Badge } from "../SharedComponents.jsx";
-import { FY_LIST, VCPE_CFG, EST_CFG } from "../../config.js";
+import { Badge, AddRowModal, DeleteRowButton } from "../SharedComponents.jsx";
+import { FY_LIST, VCPE_CFG, EST_CFG, CAPITAL_CALL_CAT_OPTIONS, CAPITAL_CALL_VCPE_OPTIONS, CAPITAL_CALL_EST_OPTIONS } from "../../config.js";
 
-export function FonsTab({ tc, dark, FONS_MAP2, baseTx, vcpeCfg, estCfg, catCfg }) {
+const DIVISA_OPTIONS = ["EUR", "USD"];
+
+function ccFields(fonsList, defaultFons = "") {
+  return [
+    { key: "fons", label: "Fons", type: "select", options: fonsList, defaultValue: defaultFons },
+    { key: "cat", label: "Categoria", type: "select", options: CAPITAL_CALL_CAT_OPTIONS, defaultValue: CAPITAL_CALL_CAT_OPTIONS[0] },
+    { key: "data", label: "Data (YYYY-MM-DD)", type: "text", placeholder: "2024-03-15" },
+    { key: "eur", label: "Import EUR", type: "number" },
+    { key: "divisa", label: "Divisa", type: "select", options: DIVISA_OPTIONS, defaultValue: "EUR" },
+    { key: "vcpe", label: "VC/PE/RE", type: "select", options: CAPITAL_CALL_VCPE_OPTIONS, defaultValue: CAPITAL_CALL_VCPE_OPTIONS[0] },
+    { key: "est", label: "Estratègia", type: "select", options: CAPITAL_CALL_EST_OPTIONS, defaultValue: CAPITAL_CALL_EST_OPTIONS[0] },
+    { key: "tipus", label: "Tipus", type: "text" },
+  ];
+}
+
+export function FonsTab({ tc, dark, FONS_MAP2, baseTx, vcpeCfg, estCfg, catCfg, canEdit, onInsertCC, onUpdateCC, onDeleteCC }) {
   const [expandedFons, setExpandedFons] = useState(new Set());
   const [sortFons, setSortFons] = useState("fons");
   const [sortFonsDir, setSortFonsDir] = useState("desc");
   const [ccChartF, setCcChartF] = useState(null);
+  const [addModalFons, setAddModalFons] = useState(null); // fons name → open add modal
+  const [editModalRow, setEditModalRow] = useState(null); // rawCC row → open edit modal
+
+  const fonsList = FONS_MAP2.map(f => f.fons);
+
+  async function handleAddCC(values, setError) {
+    if (!values.fons || !values.data || !values.eur) { setError("Fons, data i import són obligatoris."); return; }
+    const { error } = await onInsertCC({ ...values, eur: parseFloat(values.eur) });
+    if (error) { setError(error.message); return; }
+    setAddModalFons(null);
+  }
+
+  async function handleEditCC(values, setError) {
+    if (!values.data || !values.eur) { setError("Data i import són obligatoris."); return; }
+    const { error } = await onUpdateCC(editModalRow._rowId, { ...values, eur: parseFloat(values.eur) });
+    if (error) { setError(error.message); return; }
+    setEditModalRow(null);
+  }
+
+  async function handleDeleteCC(r) {
+    if (!r._rowId) return;
+    await onDeleteCC(r._rowId);
+  }
 
   const rowExpandBg = dark ? "#0A1810" : "#F0FAF2";
   const rowExpandHeader = dark ? "#0A2010" : "#E0F4E8";
@@ -147,7 +185,7 @@ export function FonsTab({ tc, dark, FONS_MAP2, baseTx, vcpeCfg, estCfg, catCfg }
                       <td style={{ padding: "10px 10px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ color: tc.textMid, fontSize: 12 }}>{isExp ? "▼" : "▶"}</span>
-                          <Link to={`/fund/${slugify(f.fons)}`} onClick={e => e.stopPropagation()}
+                          <Link to={`/fund/${encodeURIComponent(f.id ?? slugify(f.fons))}`} onClick={e => e.stopPropagation()}
                             style={{ color: tc.navy, fontWeight: 600, fontSize: 13, textDecoration: "none" }}>
                             {f.fons}
                           </Link>
@@ -175,7 +213,7 @@ export function FonsTab({ tc, dark, FONS_MAP2, baseTx, vcpeCfg, estCfg, catCfg }
                               : <table style={{ width: "100%", borderCollapse: "collapse" }}>
                                   <thead>
                                     <tr style={{ background: rowExpandHeader }}>
-                                      {["Data", "Tipus", "Categoria", "FY", "Import EUR"].map(h => (
+                                      {["Data", "Tipus", "Categoria", "FY", "Import EUR", ...(canEdit ? [""] : [])].map(h => (
                                         <th key={h} style={{ padding: "6px 10px", fontSize: 10, letterSpacing: "0.08em", color: tc.greenDark, textTransform: "uppercase", fontWeight: 600, textAlign: h === "Import EUR" ? "right" : "left", whiteSpace: "nowrap", borderBottom: `1px solid ${rowExpandBorder}` }}>{h}</th>
                                       ))}
                                     </tr>
@@ -195,12 +233,33 @@ export function FonsTab({ tc, dark, FONS_MAP2, baseTx, vcpeCfg, estCfg, catCfg }
                                           <td style={{ padding: "6px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: isIn ? tc.navy : tc.green }}>
                                             {!isIn && "+ "}{fmtM(Math.abs(r.eur))}
                                           </td>
+                                          {canEdit && (
+                                            <td style={{ padding: "4px 8px", whiteSpace: "nowrap" }}>
+                                              {r._rowId && (
+                                                <span style={{ display: "flex", gap: 4 }}>
+                                                  <button onClick={() => setEditModalRow(r)}
+                                                    style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${rowExpandBorder}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 10, fontFamily: "inherit" }}>
+                                                    Edita
+                                                  </button>
+                                                  <DeleteRowButton onDelete={() => handleDeleteCC(r)} />
+                                                </span>
+                                              )}
+                                            </td>
+                                          )}
                                         </tr>
                                       );
                                     })}
                                   </tbody>
                                 </table>
                             }
+                            {canEdit && (
+                              <div style={{ paddingTop: 8 }}>
+                                <button onClick={() => setAddModalFons(f.fons)}
+                                  style={{ padding: "4px 12px", borderRadius: 5, border: `1px solid ${rowExpandBorder}`, background: "transparent", color: tc.green, cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600 }}>
+                                  ＋ Afegeix moviment
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -225,6 +284,26 @@ export function FonsTab({ tc, dark, FONS_MAP2, baseTx, vcpeCfg, estCfg, catCfg }
           </table>
         </div>
       </div>
+      {addModalFons && (
+        <AddRowModal
+          title={`Nou moviment · ${addModalFons}`}
+          fields={ccFields(fonsList, addModalFons)}
+          onSave={handleAddCC}
+          onClose={() => setAddModalFons(null)}
+        />
+      )}
+
+      {editModalRow && (
+        <AddRowModal
+          title={`Edita moviment · ${editModalRow.fons}`}
+          fields={ccFields(fonsList, editModalRow.fons).map(f => ({
+            ...f,
+            defaultValue: editModalRow[f.key] ?? f.defaultValue ?? "",
+          }))}
+          onSave={handleEditCC}
+          onClose={() => setEditModalRow(null)}
+        />
+      )}
     </div>
   );
 }

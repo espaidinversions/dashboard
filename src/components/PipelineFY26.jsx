@@ -4,7 +4,7 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { fmtM, usePersistedState } from "../utils.js";
 import { useTheme } from "../theme.js";
-import { FUNDS0 as FUNDS0_DEFAULT, EUR_USD as EUR_USD_DEFAULT, STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE } from "../config.js";
+import { STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE, PIPELINE_STATUS_OPTIONS, PIPELINE_CANAL_OPTIONS } from "../config.js";
 import { EmptyState, EditableCell } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { insertPipelineDeal, deletePipelineDeal, upsertPipelineDeal } from "../db.js";
@@ -24,10 +24,10 @@ function genMonthOpts(months = 36) {
 const MONTHS_OPTS = genMonthOpts(36);
 
 // ══════════════════════════════════════════════════════════
-export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = null }) {
+export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
   const { rate, toEUR, toUSD } = useCurrency(eurUsd);
   const { tc: TC, dark } = useTheme();
-  const { isSuperuser } = useAuth();
+  const { canEdit } = useAuth();
   const { toast } = useToast();
   const [funds,setFunds]   = useState(initialFunds);
   useEffect(()=>{ setFunds(initialFunds); },[initialFunds]);
@@ -314,10 +314,10 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = null }) {
               </div>
             ))}
             <button onClick={exportExcel} style={{background:"transparent",border:`1.5px solid ${TC.border}`,color:TC.textMid,borderRadius:5,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit"}}>↓ Excel</button>
-            {isSuperuser && <button onClick={()=>setForm(!form)} style={{background:TC.green,border:"none",color:"#fff",borderRadius:5,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>+ Afegir Fons</button>}
+            {canEdit && <button onClick={()=>setForm(!form)} style={{background:TC.green,border:"none",color:"#fff",borderRadius:5,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>+ Afegir Fons</button>}
           </div>
         </div>
-        {form&&(
+        {form&& canEdit &&(
           <div style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:8,padding:"12px",marginBottom:12}}>
             <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto",gap:7,alignItems:"end"}}>
               {[
@@ -327,8 +327,8 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = null }) {
                 {label:"Geo",key:"geography",type:"sel",opts:["EU","US","EU/US"]},
                 {label:"Estratègia",key:"strategy",type:"sel",opts:["Fons primari","Coinversions","Fons secundaris","Fons de fons"]},
                 {label:"Sector",key:"sector",type:"sel",opts:["Software","Generalista","B2B Services","Healthcare","Software / B2B"]},
-                {label:"Status",key:"status",type:"sel",opts:["En estudi","Aprovat","Descartat"]},
-                {label:"Canal",key:"canal",type:"sel",opts:["Arcano","Placement Agent","Propietari","Altres"]},
+                {label:"Status",key:"status",type:"sel",opts:PIPELINE_STATUS_OPTIONS},
+                {label:"Canal",key:"canal",type:"sel",opts:PIPELINE_CANAL_OPTIONS},
                 {label:"Tancament Est.",key:"estimatedClosing",type:"sel",opts:MONTHS_OPTS},
               ].map(f=>(
                 <div key={f.key}>
@@ -384,11 +384,11 @@ export function PipelineFY26({ initialFunds = FUNDS0_DEFAULT, eurUsd = null }) {
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>
                   <td style={{padding:"9px 10px",fontSize:12,color:TC.textMid,whiteSpace:"nowrap"}}>{f.sector}</td>
-                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditableCell value={f.status} options={["En estudi","Aprovat","Descartat"]} badgeCfg={STATUS_CFG} onSave={v=>upd(f.id,"status",v)}/> : <span style={{display:"block"}}>{f.status}</span>}</td>
-                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditableCell value={f.canal} options={["Arcano","Placement Agent","Propietari","Altres"]} badgeCfg={CANAL_CFG} onSave={v=>upd(f.id,"canal",v)}/> : <span style={{display:"block"}}>{f.canal}</span>}</td>
-                  <td style={{padding:"9px 10px"}}>{isSuperuser ? <EditableCell value={f.estimatedClosing} options={MONTHS_OPTS} emptyDisplay="— sense data" onSave={v=>upd(f.id,"estimatedClosing",v)}/> : <span>{f.estimatedClosing||""}</span>}</td>
+                  <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.status} options={PIPELINE_STATUS_OPTIONS} badgeCfg={STATUS_CFG} onSave={v=>upd(f.id,"status",v)}/> : <span style={{display:"block"}}>{f.status}</span>}</td>
+                  <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.canal} options={PIPELINE_CANAL_OPTIONS} badgeCfg={CANAL_CFG} onSave={v=>upd(f.id,"canal",v)}/> : <span style={{display:"block"}}>{f.canal}</span>}</td>
+                  <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.estimatedClosing} options={MONTHS_OPTS} emptyDisplay="— sense data" onSave={v=>upd(f.id,"estimatedClosing",v)}/> : <span>{f.estimatedClosing||""}</span>}</td>
                   <td style={{padding:"9px 10px"}}>
-                    {isSuperuser && <button onClick={()=>del(f.id)} style={{background:"transparent",border:"none",color:TC.border,cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}
+                    {canEdit && <button onClick={()=>del(f.id)} style={{background:"transparent",border:"none",color:TC.border,cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}
                       onMouseEnter={e=>e.target.style.color="#C0392B"} onMouseLeave={e=>e.target.style.color=TC.border}>×</button>}
                   </td>
                 </tr>

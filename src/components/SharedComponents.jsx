@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../theme.js";
-import { fmtM } from "../utils.js";
 
 // ── Shared style helpers ──────────────────────────────────
 export const sharedStyles = {
@@ -74,39 +73,6 @@ export function Badge({label,cfg}) {
   const s=cfg||{color:TC.textMid,bg:TC.bgAlt};
   return <span style={{fontSize:11,background:s.bg,color:s.color,borderRadius:5,padding:"2px 8px",fontWeight:600,whiteSpace:"nowrap",display:"inline-block"}}>{label}</span>;
 }
-
-export const BarTip = ({active,payload,label}) => {
-  const { tc: TC } = useTheme();
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:7,padding:"10px 14px",boxShadow:"0 4px 12px rgba(0,0,0,.18)",minWidth:160}}>
-      <p style={{color:TC.navy,margin:"0 0 6px",fontWeight:700,fontSize:12}}>{label}</p>
-      {payload.map((p,i)=>(
-        <p key={i} style={{color:p.fill||TC.navy,margin:"2px 0",fontSize:12,display:"flex",justifyContent:"space-between",gap:16}}>
-          <span>{p.name}</span><span style={{fontWeight:700}}>{fmtM(p.value)}</span>
-        </p>
-      ))}
-    </div>
-  );
-};
-
-export const PieTip = ({active,payload}) => {
-  const { tc: TC } = useTheme();
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:7,padding:"10px 14px",boxShadow:"0 4px 12px rgba(0,0,0,.18)"}}>
-      <p style={{color:TC.navy,margin:0,fontWeight:700,fontSize:12}}>{payload[0].name}</p>
-      <p style={{color:TC.green,margin:"4px 0 0",fontSize:13,fontWeight:700}}>{fmtM(payload[0].value)}</p>
-      <p style={{color:TC.textLight,margin:"2px 0 0",fontSize:11}}>{payload[0].payload.pct}%</p>
-    </div>
-  );
-};
-
-export const PL = ({cx,cy,midAngle,innerRadius,outerRadius,percent}) => {
-  if(percent<0.06)return null;
-  const R=Math.PI/180, r=innerRadius+(outerRadius-innerRadius)*0.58;
-  return <text x={cx+r*Math.cos(-midAngle*R)} y={cy+r*Math.sin(-midAngle*R)} fill="#fff" textAnchor="middle" dominantBaseline="central" fontSize={10} fontWeight="700">{`${(percent*100).toFixed(0)}%`}</text>;
-};
 
 // ── EditableCell ──────────────────────────────────────────
 // Click-to-edit cell. type: "text" | "number" | "select"

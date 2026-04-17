@@ -1,6 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useTheme } from "../theme.js";
 import { parseCapitalCallsCSV, parsePipelineCSV, mapCapitalCallsRows, mapPipelineRows, mapCompanyRows, mapSearcherRows, mapFundMetaRows, mapKpiRows } from "../utils.js";
+import { apiFetchJson } from "../apiClient.js";
 
 function DataLoader({ onLoad, onClose, dataInfo }) {
   const { tc: TC } = useTheme();
@@ -71,7 +72,7 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
         setStatus({ rows: rows.length, name: file.name });
         setError(null);
         if (key === "cc") {
-          fetch("/api/capital-calls", {
+          apiFetchJson("/api/capital-calls", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ csv: text }),

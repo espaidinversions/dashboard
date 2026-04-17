@@ -7,10 +7,10 @@ portfolio values as a JavaScript module for use in the dashboard.
 Each date is bucketed to the nearest prior 1st or 15th of the month.
 Date keys are ISO "YYYY-MM-DD" strings (e.g. "2024-01-01", "2024-01-15").
 
-Output: src/data/portfolioValues.js
+Output: src/generated/publicMarkets/portfolioValues.js
 
 Usage:
-    python scripts/portfolio_export_js.py
+    python -m scripts.portfolio_export_js
 
 Run after portfolio_build_values.py.
 """
@@ -21,12 +21,14 @@ from pathlib import Path
 
 import pandas as pd
 
+from scripts.pm_model_types import PMValuePoint, PMValuesByIsin
+
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 ROOT   = Path(__file__).parent.parent
 IN_CSV = ROOT / "Mercats Públics" / "portfolio_value.csv"
-OUT_JS = ROOT / "src" / "data" / "portfolioValues.js"
+OUT_JS = ROOT / "src" / "generated" / "publicMarkets" / "portfolioValues.js"
 
 
 def biweekly_bucket(dt) -> str:
@@ -53,17 +55,15 @@ def main():
     )
 
     # Build nested dict: { isin: { custodian: [{date, value}] } }
-    result = {}
+    result: PMValuesByIsin = {}
     for (isin, custodian), grp in bucketed.groupby(["isin", "custodian"]):
-        rows = (
-            grp.sort_values("bucket")[["bucket", "value_eur"]]
-            .rename(columns={"bucket": "date", "value_eur": "value"})
-        )
-        rows = rows.copy()
-        rows["value"] = rows["value"].round(0).astype(int)
+        series: list[PMValuePoint] = []
+        rows = grp.sort_values("bucket")[["bucket", "value_eur"]]
+        for bucket, value in rows.itertuples(index=False):
+            series.append({"date": str(bucket)[:10], "value": int(round(float(value), 0))})
         if isin not in result:
             result[isin] = {}
-        result[isin][custodian] = rows.to_dict(orient="records")
+        result[isin][custodian] = series
 
     payload = json.dumps(result, ensure_ascii=False, separators=(",", ":"))
     out = (
@@ -71,6 +71,7 @@ def main():
         "// Run scripts/portfolio_export_js.py to populate with real data\n"
         f"export const PM_VALUES = {payload};\n"
     )
+    OUT_JS.parent.mkdir(parents=True, exist_ok=True)
     OUT_JS.write_text(out, encoding="utf-8")
 
     total_rows = sum(

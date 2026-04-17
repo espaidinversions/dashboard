@@ -1,0 +1,25 @@
+// Auto-generated estimated bond price series for instruments without a
+// recoverable public history feed in the local workspace.
+//
+// Each series is a linear interpolation between acquisition cost per unit and
+// current mark-to-market per unit, monthly from acquisition month to today.
+
+export const ESTIMATED_BOND_PRICES = {
+  "XS1182150950": [["2025-01",104.275],["2025-02",104.0537],["2025-03",103.8324],["2025-04",103.611],["2025-05",103.3897],["2025-06",103.1684],["2025-07",102.9471],["2025-08",102.7257],["2025-09",102.5044],["2025-10",102.2831],["2025-11",102.0618],["2025-12",101.8405],["2026-01",101.6191],["2026-02",101.3978],["2026-03",101.1765],["2026-04",100.9552]],
+  "XS2121441856": [["2024-04",90.7164],["2024-05",91.0933],["2024-06",91.4703],["2024-07",91.8472],["2024-08",92.2242],["2024-09",92.6011],["2024-10",92.9781],["2024-11",93.355],["2024-12",93.732],["2025-01",94.1089],["2025-02",94.4859],["2025-03",94.8628],["2025-04",95.2398],["2025-05",95.6167],["2025-06",95.9937],["2025-07",96.3706],["2025-08",96.7476],["2025-09",97.1245],["2025-10",97.5015],["2025-11",97.8784],["2025-12",98.2554],["2026-01",98.6324],["2026-02",99.0093],["2026-03",99.3863],["2026-04",99.7632]],
+};
+
+const ESTIMATED_BOND_PRICE_META = {
+  "XS1182150950": {
+    source: "linear interpolation between acquisition cost and current MTM",
+    acquisitionMonth: "2025-01",
+    acquisitionPrice: 104.275,
+    currentPrice: 100.9552,
+  },
+  "XS2121441856": {
+    source: "linear interpolation between acquisition cost and current MTM",
+    acquisitionMonth: "2024-04",
+    acquisitionPrice: 90.7164,
+    currentPrice: 99.7632,
+  },
+};

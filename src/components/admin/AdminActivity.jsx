@@ -3,17 +3,13 @@ import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
 import { loadAuditLog } from "./adminApi.js";
+import { formatIsoDateTime } from "../../utils.js";
 
 const ACTION_COLORS = {
   insert: { color: "#1B5E20", bg: "#E8F5E9" },
   update: { color: "#1A237E", bg: "#E8EAF6" },
   delete: { color: "#B71C1C", bg: "#FFEBEE" },
 };
-
-function formatDate(iso) {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleString("ca-ES", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
-}
 
 export default function AdminActivity() {
   const { tc } = useTheme();
@@ -24,12 +20,22 @@ export default function AdminActivity() {
   const [filterUser, setFilterUser] = useState("");
   const [filterTable, setFilterTable] = useState("");
   const [filterAction, setFilterAction] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ page: 1, pageSize: 50, total: 0, totalPages: 1 });
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       try {
-        setLogs(await loadAuditLog({ limit: 500 }));
+        const result = await loadAuditLog({
+          page,
+          pageSize: 50,
+          user: filterUser,
+          table: filterTable,
+          action: filterAction,
+        });
+        setLogs(result.logs ?? []);
+        setPagination(result.pagination ?? { page, pageSize: 50, total: result.logs?.length ?? 0, totalPages: 1 });
       } catch (error) {
         toast({ message: "Error carregant activitat: " + error.message, type: "error" });
       } finally {
@@ -37,14 +43,7 @@ export default function AdminActivity() {
       }
     }
     load();
-  }, []);
-
-  const filtered = logs.filter(l => {
-    if (filterUser  && !l.user_email?.includes(filterUser)) return false;
-    if (filterTable && l.table_name !== filterTable) return false;
-    if (filterAction && l.action !== filterAction) return false;
-    return true;
-  });
+  }, [page, filterAction, filterTable, filterUser, toast]);
 
   const tables = [...new Set(logs.map(l => l.table_name).filter(Boolean))];
 
@@ -81,14 +80,14 @@ export default function AdminActivity() {
 
       {/* Filters */}
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-        <input placeholder="Filtrar per usuari…" value={filterUser} onChange={e => setFilterUser(e.target.value)}
+        <input placeholder="Filtrar per usuari…" value={filterUser} onChange={e => { setPage(1); setFilterUser(e.target.value); }}
           style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit", width: 200 }} />
-        <select value={filterTable} onChange={e => setFilterTable(e.target.value)}
+        <select value={filterTable} onChange={e => { setPage(1); setFilterTable(e.target.value); }}
           style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit" }}>
           <option value="">Totes les taules</option>
           {tables.map(t => <option key={t} value={t}>{t}</option>)}
         </select>
-        <select value={filterAction} onChange={e => setFilterAction(e.target.value)}
+        <select value={filterAction} onChange={e => { setPage(1); setFilterAction(e.target.value); }}
           style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit" }}>
           <option value="">Totes les accions</option>
           <option value="insert">Insert</option>
@@ -110,16 +109,16 @@ export default function AdminActivity() {
               <th style={th}>Registre</th>
             </tr></thead>
             <tbody>
-              {filtered.length === 0 && (
+              {logs.length === 0 && (
                 <tr><td colSpan={5} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap resultat</td></tr>
               )}
-              {filtered.map(l => {
+              {logs.map(l => {
                 const cfg = ACTION_COLORS[l.action] || {};
                 const isExp = expanded === l.id;
                 return (
                   <React.Fragment key={l.id}>
                     <tr onClick={() => setExpanded(isExp ? null : l.id)} style={{ cursor: "pointer", background: isExp ? tc.bgAlt : "transparent" }}>
-                      <td style={td}>{formatDate(l.created_at)}</td>
+                      <td style={td}>{formatIsoDateTime(l.created_at)}</td>
                       <td style={{ ...td, color: tc.textMid }}>{l.user_email || "—"}</td>
                       <td style={td}>
                         <span style={{ fontSize: 11, borderRadius: 4, padding: "2px 8px", fontWeight: 600, background: cfg.bg, color: cfg.color }}>{l.action}</span>
@@ -141,6 +140,26 @@ export default function AdminActivity() {
               })}
             </tbody>
           </table>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, color: tc.textLight, fontSize: 12 }}>
+            <span>{pagination.total} registres</span>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() => setPage(prev => Math.max(prev - 1, 1))}
+                disabled={pagination.page <= 1}
+                style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${tc.border}`, background: "transparent", color: tc.text, cursor: pagination.page <= 1 ? "not-allowed" : "pointer", opacity: pagination.page <= 1 ? 0.5 : 1, fontFamily: "inherit", fontSize: 12 }}
+              >
+                Anterior
+              </button>
+              <span style={{ alignSelf: "center" }}>Pàgina {pagination.page} / {pagination.totalPages}</span>
+              <button
+                onClick={() => setPage(prev => Math.min(prev + 1, pagination.totalPages))}
+                disabled={pagination.page >= pagination.totalPages}
+                style={{ padding: "5px 10px", borderRadius: 6, border: `1px solid ${tc.border}`, background: "transparent", color: tc.text, cursor: pagination.page >= pagination.totalPages ? "not-allowed" : "pointer", opacity: pagination.page >= pagination.totalPages ? 0.5 : 1, fontFamily: "inherit", fontSize: 12 }}
+              >
+                Següent
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

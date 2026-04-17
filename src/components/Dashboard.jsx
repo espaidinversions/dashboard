@@ -4,13 +4,13 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import {
   FY_LIST, MESOS, CAT_CFG, VCPE_CFG, EST_CFG,
-  RAW_CC as RAW_CC_DEFAULT, FUNDS0 as FUNDS0_DEFAULT, FUND_META as FUND_META_DEFAULT,
+  CAPITAL_CALL_CAT_OPTIONS, CAPITAL_CALL_VCPE_OPTIONS, CAPITAL_CALL_EST_OPTIONS,
 } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify, exportMultiXLSX, mapKpiRows } from "../utils.js";
-import { PORTFOLIO_COMPANIES, ALL_SEARCHERS } from "../data/searchers.js";
-import { loadAll, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle } from "../db.js";
-import { Logo, Badge, EmptyState } from "./SharedComponents.jsx";
+import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify, exportMultiXLSX, mapKpiRows, readStoredJSON, writeStoredJSON, readStoredFlag, writeStoredFlag } from "../utils.js";
+import { loadAll, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls } from "../db.js";
+import { apiFetchJson } from "../apiClient.js";
+import { Logo, Badge, EmptyState, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
 import { MensualTab } from "./MensualTab.jsx";
@@ -27,17 +27,9 @@ import { PMTipusTab } from "./PMTipusTab.jsx";
 import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
 import { ResumTab, FonsTab, TxLogTab } from "./tabs/index.js";
 
-// ── Helpers localStorage ──────────────────────────────────
 const LS_CC = "tc_rawCC";
 const LS_PL = "tc_funds0";
 const LS_TS = "tc_loadedAt";
-
-function loadFromLS(key, fallback) {
-  try {
-    const s = localStorage.getItem(key);
-    return s ? JSON.parse(s) : fallback;
-  } catch { return fallback; }
-}
 
 // ══════════════════════════════════════════════════════════
 function DashboardInner() {
@@ -51,31 +43,73 @@ function DashboardInner() {
   const [inversionsSubTab, setInversionsSubTab] = useState("fons");
   const [realEstateTab, setRealEstateTab] = useState("directe");
   const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
+  const [ccAddModalFons, setCcAddModalFons] = useState(null);
+  const [ccEditModalRow, setCcEditModalRow] = useState(null);
 
-  // Dades dinàmiques (localStorage → static fallback)
-  const [rawCC,   setRawCC]   = useState(()=>loadFromLS(LS_CC, RAW_CC_DEFAULT));
-  const [funds0,  setFunds0]  = useState(()=>loadFromLS(LS_PL, FUNDS0_DEFAULT));
-  const [loadedAt,setLoadedAt]= useState(()=>localStorage.getItem(LS_TS));
+  const canEdit = isAdmin;
+
+  // Editable app state starts from localStorage.
+  const [rawCC,   setRawCC]   = useState(()=>readStoredJSON(LS_CC, []));
+  const [funds0,  setFunds0]  = useState(()=>readStoredJSON(LS_PL, []));
+  const [loadedAt,setLoadedAt]= useState(()=>readStoredJSON(LS_TS, null));
   const [eurUsd,  setEurUsd]  = useState(null);
 
   useEffect(() => {
-    fetch("/api/eur-usd").then(r => r.json()).then(({ rate }) => setEurUsd(rate)).catch(() => {});
+    apiFetchJson("/api/eur-usd")
+      .then(({ rate }) => setEurUsd(rate))
+      .catch(() => {});
   }, []);
 
-  // Load from Supabase on mount (overrides localStorage if data exists)
+  // Refresh persisted state from Supabase on mount.
   useEffect(() => {
-    loadAll().then(data => {
-      if (!data) return;
-      const now = new Date().toLocaleDateString("ca-ES");
-      if (data.rawCC?.length)    { setRawCC(data.rawCC);   try { localStorage.setItem(LS_CC, JSON.stringify(data.rawCC)); } catch {} }
-      if (data.funds0?.length)   { setFunds0(data.funds0); try { localStorage.setItem(LS_PL, JSON.stringify(data.funds0)); } catch {} }
-      if (data.companies?.length) try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(data.companies)); } catch {}
-      if (data.searchers?.length) try { localStorage.setItem("tc_allSearchers",        JSON.stringify(data.searchers)); } catch {}
-      if (data.fundMeta?.length)  try { localStorage.setItem("tc_fundMeta",            JSON.stringify(data.fundMeta)); } catch {}
-      setLoadedAt(now);
-      try { localStorage.setItem(LS_TS, now); } catch {}
-    });
+    loadAll()
+      .then(data => {
+        if (!data) return;
+        const now = new Date().toLocaleDateString("ca-ES");
+        if (Array.isArray(data.rawCC)) {
+          setRawCC(data.rawCC);
+          writeStoredJSON(LS_CC, data.rawCC);
+        }
+        if (Array.isArray(data.funds0)) {
+          setFunds0(data.funds0);
+          writeStoredJSON(LS_PL, data.funds0);
+        }
+        if (Array.isArray(data.companies)) writeStoredJSON("tc_portfolioCompanies", data.companies);
+        if (Array.isArray(data.searchers)) writeStoredJSON("tc_allSearchers", data.searchers);
+        if (Array.isArray(data.fundMeta)) writeStoredJSON("tc_fundMeta", data.fundMeta);
+        setLoadedAt(now);
+        writeStoredJSON(LS_TS, now);
+      })
+      .catch(err => {
+        console.error("Initial dashboard load failed:", err);
+      });
   }, []);
+
+  // ── Capital call row CRUD ─────────────────────────────────
+  async function handleCCInsert(values, setError) {
+    if (!values.fons || !values.data || !values.eur) { setError("Fons, data i import són obligatoris."); return; }
+    const { data, error } = await insertCapitalCall({ ...values, eur: parseFloat(values.eur) });
+    if (error) { setError(error.message); return; }
+    const fresh = await loadCapitalCalls();
+    if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
+    setCcAddModalFons(null);
+  }
+
+  async function handleCCUpdate(values, setError) {
+    if (!values.data || !values.eur) { setError("Data i import són obligatoris."); return; }
+    const { error } = await updateCapitalCall(ccEditModalRow._rowId, { ...values, eur: parseFloat(values.eur) });
+    if (error) { setError(error.message); return; }
+    const fresh = await loadCapitalCalls();
+    if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
+    setCcEditModalRow(null);
+  }
+
+  async function handleCCDelete(rowId) {
+    const { error } = await deleteCapitalCall(rowId);
+    if (error) { console.error(error); return; }
+    const fresh = await loadCapitalCalls();
+    if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
+  }
 
   const [exporting, setExporting] = useState(false);
 
@@ -101,13 +135,11 @@ function DashboardInner() {
   const exportAll = useCallback(async () => {
     setExporting(true);
     try {
-    const ls = (key, fallback) => { try { const s = localStorage.getItem(key); return s ? JSON.parse(s) : fallback; } catch { return fallback; } };
-    const companies = ls("tc_portfolioCompanies", PORTFOLIO_COMPANIES);
-    const searchers = ls("tc_allSearchers", ALL_SEARCHERS);
-    const pipeline  = ls("tc_funds0", FUNDS0_DEFAULT);
-    const cc        = ls("tc_rawCC",  RAW_CC_DEFAULT);
-
-    const fundMeta = ls("tc_fundMeta", FUND_META_DEFAULT);
+    const companies = readStoredJSON("tc_portfolioCompanies", []);
+    const searchers = readStoredJSON("tc_allSearchers", []);
+    const pipeline  = readStoredJSON("tc_funds0", []);
+    const cc        = readStoredJSON("tc_rawCC", []);
+    const fundMeta = readStoredJSON("tc_fundMeta", []);
     const fmtN = v => v != null ? +(v / 1e6).toFixed(3) : "";
 
     await exportMultiXLSX([
@@ -192,7 +224,7 @@ function DashboardInner() {
     try {
       if (key === "xlsx") {
         const byNom = rows.kpiTrimestral instanceof Map ? rows.kpiTrimestral : mapKpiRows(rows.kpiTrimestral || []);
-        const existingCompanies = rows.companies || (JSON.parse(localStorage.getItem("tc_portfolioCompanies") || "null") || PORTFOLIO_COMPANIES);
+        const existingCompanies = rows.companies || readStoredJSON("tc_portfolioCompanies", []);
         const mergedCompanies = existingCompanies.map(c => {
           const qs = byNom.get(c.nom);
           return qs ? { ...c, quarters: qs } : c;
@@ -208,42 +240,42 @@ function DashboardInner() {
         if (error) throw error;
         if (bundle.rawCC != null) {
           setRawCC(bundle.rawCC);
-          try { localStorage.setItem(LS_CC, JSON.stringify(bundle.rawCC)); } catch {}
+          writeStoredJSON(LS_CC, bundle.rawCC);
         }
         if (bundle.funds0 != null) {
           setFunds0(bundle.funds0);
-          try { localStorage.setItem(LS_PL, JSON.stringify(bundle.funds0)); } catch {}
+          writeStoredJSON(LS_PL, bundle.funds0);
         }
-        try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(bundle.companies)); } catch {}
-        if (bundle.searchers != null) try { localStorage.setItem("tc_allSearchers", JSON.stringify(bundle.searchers)); } catch {}
-        if (bundle.fundMeta != null) try { localStorage.setItem("tc_fundMeta", JSON.stringify(bundle.fundMeta)); } catch {}
+        writeStoredJSON("tc_portfolioCompanies", bundle.companies);
+        if (bundle.searchers != null) writeStoredJSON("tc_allSearchers", bundle.searchers);
+        if (bundle.fundMeta != null) writeStoredJSON("tc_fundMeta", bundle.fundMeta);
         setExcluded(new Set());
       } else if (key === "cc") {
         const { error } = await saveCapitalCalls(rows);
         if (error) throw error;
         setRawCC(rows);
         setExcluded(new Set());
-        try { localStorage.setItem(LS_CC, JSON.stringify(rows)); } catch {}
+        writeStoredJSON(LS_CC, rows);
       } else if (key === "pl") {
         const { error } = await savePipeline(rows);
         if (error) throw error;
         setFunds0(rows);
-        try { localStorage.setItem(LS_PL, JSON.stringify(rows)); } catch {}
+        writeStoredJSON(LS_PL, rows);
       } else if (key === "companies") {
         const { error } = await saveCompanies(rows);
         if (error) throw error;
-        try { localStorage.setItem("tc_portfolioCompanies", JSON.stringify(rows)); } catch {}
+        writeStoredJSON("tc_portfolioCompanies", rows);
       } else if (key === "searchers") {
         const { error } = await saveSearchers(rows);
         if (error) throw error;
-        try { localStorage.setItem("tc_allSearchers", JSON.stringify(rows)); } catch {}
+        writeStoredJSON("tc_allSearchers", rows);
       } else if (key === "fundMeta") {
         const { error } = await saveFundMeta(rows);
         if (error) throw error;
-        try { localStorage.setItem("tc_fundMeta", JSON.stringify(rows)); } catch {}
+        writeStoredJSON("tc_fundMeta", rows);
       }
       setLoadedAt(now);
-      try { localStorage.setItem(LS_TS, now); } catch {}
+      writeStoredJSON(LS_TS, now);
     } catch (err) {
       console.error("Load failed:", err);
       throw err;
@@ -341,12 +373,13 @@ function DashboardInner() {
   // Fons taula
   const FONS_MAP2 = useMemo(()=>{
     const m={};
-    baseCompr.forEach(r=>{m[r.fons]={fons:r.fons,compr:r.eur,vcpe:r.vcpe,est:r.est,calls:0,dist:0,retorn:0};});
+    baseCompr.forEach(r=>{m[r.id ?? r.fons]={id:r.id ?? null,fons:r.fons,compr:r.eur,vcpe:r.vcpe,est:r.est,calls:0,dist:0,retorn:0};});
     baseTx.forEach(r=>{
-      if(!m[r.fons])m[r.fons]={fons:r.fons,compr:0,vcpe:r.vcpe,est:r.est,calls:0,dist:0,retorn:0};
-      if(r.cat==="Capital Call")   m[r.fons].calls  +=r.eur;
-      if(r.cat==="Distribució")    m[r.fons].dist   +=Math.abs(r.eur);
-      if(r.cat==="Retorn Capital") m[r.fons].retorn +=Math.abs(r.eur);
+      const key = r.id ?? r.fons;
+      if(!m[key])m[key]={id:r.id ?? null,fons:r.fons,compr:0,vcpe:r.vcpe,est:r.est,calls:0,dist:0,retorn:0};
+      if(r.cat==="Capital Call")   m[key].calls  +=r.eur;
+      if(r.cat==="Distribució")    m[key].dist   +=Math.abs(r.eur);
+      if(r.cat==="Retorn Capital") m[key].retorn +=Math.abs(r.eur);
     });
     return Object.values(m);
   },[baseCompr,baseTx]);
@@ -937,7 +970,7 @@ function DashboardInner() {
                             <td style={{padding:"10px 10px",fontSize:11,color:tc.textLight,fontWeight:600}}>{i+1}</td>
                             <td style={{padding:"10px 10px",fontWeight:700,color:isExp?tc.green:tc.text,fontSize:12,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                               <Link
-                                to={`/fund/${slugify(f.fons)}`}
+                                to={`/fund/${encodeURIComponent(f.id ?? slugify(f.fons))}`}
                                 onClick={e => e.stopPropagation()}
                                 style={{ color: "inherit", textDecoration: "none" }}
                                 onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
@@ -979,7 +1012,7 @@ function DashboardInner() {
                                     : <table style={{width:"100%",borderCollapse:"collapse"}}>
                                         <thead>
                                           <tr style={{background:rowExpandHeader}}>
-                                            {["Data","Tipus","Categoria","FY","Import EUR"].map(h=>(
+                                            {["Data","Tipus","Categoria","FY","Import EUR",...(canEdit?[""]:[])] .map(h=>(
                                               <th key={h} style={{padding:"6px 10px",fontSize:10,letterSpacing:"0.08em",color:tc.greenDark,textTransform:"uppercase",fontWeight:600,textAlign:h==="Import EUR"?"right":"left",whiteSpace:"nowrap",borderBottom:`1px solid ${rowExpandBorder}`}}>{h}</th>
                                             ))}
                                           </tr>
@@ -999,6 +1032,19 @@ function DashboardInner() {
                                                 <td style={{padding:"6px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:isIn?tc.navy:tc.green}}>
                                                   {!isIn&&"+ "}{fmtM(Math.abs(r.eur))}
                                                 </td>
+                                                {canEdit&&(
+                                                  <td style={{padding:"4px 8px",whiteSpace:"nowrap"}}>
+                                                    {r._rowId&&(
+                                                      <span style={{display:"flex",gap:4}}>
+                                                        <button onClick={()=>setCcEditModalRow(r)}
+                                                          style={{padding:"2px 8px",borderRadius:4,border:`1px solid ${rowExpandBorder}`,background:"transparent",color:tc.textMid,cursor:"pointer",fontSize:10,fontFamily:"inherit"}}>
+                                                          Edita
+                                                        </button>
+                                                        <DeleteRowButton onDelete={()=>handleCCDelete(r._rowId)}/>
+                                                      </span>
+                                                    )}
+                                                  </td>
+                                                )}
                                               </tr>
                                             );
                                           })}
@@ -1014,6 +1060,14 @@ function DashboardInner() {
                                         </tfoot>
                                       </table>
                                   }
+                                  {canEdit&&(
+                                    <div style={{paddingTop:8}}>
+                                      <button onClick={()=>setCcAddModalFons(f.fons)}
+                                        style={{padding:"4px 12px",borderRadius:5,border:`1px solid ${rowExpandBorder}`,background:"transparent",color:tc.green,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
+                                        ＋ Afegeix moviment
+                                      </button>
+                                    </div>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1097,6 +1151,44 @@ function DashboardInner() {
           dataInfo={{ccRows:rawCC.length, plRows:funds0.length, loaded:loadedAt}}
         />
       )}
+
+      {/* ── Capital Call Add Modal ── */}
+      {ccAddModalFons&&(
+        <AddRowModal
+          title={`Nou moviment · ${ccAddModalFons}`}
+          fields={[
+            {key:"fons",label:"Fons",type:"select",options:[...new Set(rawCC.map(r=>r.fons))].sort(),defaultValue:ccAddModalFons},
+            {key:"cat",label:"Categoria",type:"select",options:CAPITAL_CALL_CAT_OPTIONS,defaultValue:CAPITAL_CALL_CAT_OPTIONS[0]},
+            {key:"data",label:"Data (YYYY-MM-DD)",type:"text",placeholder:"2024-03-15"},
+            {key:"eur",label:"Import EUR",type:"number"},
+            {key:"divisa",label:"Divisa",type:"select",options:["EUR","USD"],defaultValue:"EUR"},
+            {key:"vcpe",label:"VC/PE/RE",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:CAPITAL_CALL_VCPE_OPTIONS[0]},
+            {key:"est",label:"Estratègia",type:"select",options:CAPITAL_CALL_EST_OPTIONS,defaultValue:CAPITAL_CALL_EST_OPTIONS[0]},
+            {key:"tipus",label:"Tipus",type:"text"},
+          ]}
+          onSave={handleCCInsert}
+          onClose={()=>setCcAddModalFons(null)}
+        />
+      )}
+
+      {/* ── Capital Call Edit Modal ── */}
+      {ccEditModalRow&&(
+        <AddRowModal
+          title={`Edita moviment · ${ccEditModalRow.fons}`}
+          fields={[
+            {key:"fons",label:"Fons",type:"select",options:[...new Set(rawCC.map(r=>r.fons))].sort(),defaultValue:ccEditModalRow.fons},
+            {key:"cat",label:"Categoria",type:"select",options:CAPITAL_CALL_CAT_OPTIONS,defaultValue:ccEditModalRow.cat??CAPITAL_CALL_CAT_OPTIONS[0]},
+            {key:"data",label:"Data (YYYY-MM-DD)",type:"text",placeholder:"2024-03-15",defaultValue:ccEditModalRow.data??""},
+            {key:"eur",label:"Import EUR",type:"number",defaultValue:ccEditModalRow.eur??0},
+            {key:"divisa",label:"Divisa",type:"select",options:["EUR","USD"],defaultValue:ccEditModalRow.divisa??"EUR"},
+            {key:"vcpe",label:"VC/PE/RE",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:ccEditModalRow.vcpe??CAPITAL_CALL_VCPE_OPTIONS[0]},
+            {key:"est",label:"Estratègia",type:"select",options:CAPITAL_CALL_EST_OPTIONS,defaultValue:ccEditModalRow.est??CAPITAL_CALL_EST_OPTIONS[0]},
+            {key:"tipus",label:"Tipus",type:"text",defaultValue:ccEditModalRow.tipus??""},
+          ]}
+          onSave={handleCCUpdate}
+          onClose={()=>setCcEditModalRow(null)}
+        />
+      )}
     </div>
   );
 }
@@ -1109,7 +1201,7 @@ function useDataReload() {
     let version = null;
     const id = setInterval(async () => {
       try {
-        const { version: v } = await fetch("/api/data-version").then(r => r.json());
+        const { version: v } = await apiFetchJson("/api/data-version");
         if (version === null) { version = v; return; }
         if (v !== version) window.location.reload();
       } catch { /* server unreachable, ignore */ }
@@ -1120,12 +1212,12 @@ function useDataReload() {
 
 export default function Dashboard() {
   useDataReload();
-  const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1");
+  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
   const tc = dark ? TC_DARK : TC_LIGHT;
   const toggleDark = () => {
     setDark(d => {
       const next = !d;
-      localStorage.setItem("tc_dark", next ? "1" : "0");
+      writeStoredFlag("tc_dark", next);
       return next;
     });
   };

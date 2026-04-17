@@ -58,7 +58,7 @@ export function TxLogTab({ tc, filtered, catCfg }) {
                   style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
                   <td style={{ padding: "10px 10px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
                   <td style={{ padding: "10px 10px", fontSize: 12 }}>
-                    <Link to={`/fund/${slugify(r.fons)}`} style={{ color: tc.navy, fontWeight: 600, textDecoration: "none" }}>
+                    <Link to={`/fund/${encodeURIComponent(r.id ?? slugify(r.fons))}`} style={{ color: tc.navy, fontWeight: 600, textDecoration: "none" }}>
                       {r.fons}
                     </Link>
                   </td>

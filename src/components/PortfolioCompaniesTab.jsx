@@ -1,18 +1,14 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
-import { fmtM, slugify, tvpiColor, tvpiBg, usePersistedState } from "../utils.js";
-import { GEO_NAME } from "../config.js";
-import { PORTFOLIO_COMPANIES } from "../data/searchers.js";
+import { fmtM, tvpiColor, tvpiBg, usePersistedState, formatMultiple, formatIsoDateDMY } from "../utils.js";
+import { GEO_NAME, COMPANY_TIPUS_OPTIONS, COMPANY_ORIGEN_OPTIONS } from "../config.js";
 import { FlagImg, FlagSvgLabel, EditableCell, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
 import { Link } from "react-router-dom";
-import { upsertCompany, insertCompany, deleteCompany } from "../db.js";
+import { upsertCompany, insertCompany, deleteCompany, saveCompanies, loadCompanies } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
-
-const fmtDate = iso => { if (!iso) return "—"; const [y,m,d]=iso.split("-"); return `${d}/${m}/${y}`; };
-const fmtM2 = v => v == null ? "—" : fmtM(v);
 
 const ORIG_COLORS = {
   "Equity Gap":    "#3DC83E",
@@ -23,7 +19,7 @@ const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D",
 
 export function PortfolioCompaniesTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
-  const { isSuperuser } = useAuth();
+  const { canEdit } = useAuth();
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -31,36 +27,70 @@ export function PortfolioCompaniesTab({ search = "" }) {
   const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap" };
   const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
 
-  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", PORTFOLIO_COMPANIES);
+  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
   const fileRef = useRef(null);
+
+  useEffect(() => {
+    loadCompanies().then((data) => {
+      if (Array.isArray(data)) setCompanies(data);
+    }).catch((error) => {
+      console.error("Companies refresh failed:", error);
+    });
+  }, [setCompanies]);
 
   const handleFile = e => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async (ev) => {
       try {
         const data = JSON.parse(ev.target.result);
         if (Array.isArray(data) && data.length) {
-          setCompanies(data);
+          const { error } = await saveCompanies(data);
+          if (error) {
+            toast({ message: "Error carregant participades: " + error.message, type: "error" });
+            return;
+          }
+          const refreshed = await loadCompanies();
+          setCompanies(refreshed ?? data);
         }
-      } catch {}
+      } catch {
+        toast({ message: "No s'ha pogut llegir el JSON.", type: "error" });
+      }
     };
     reader.readAsText(file);
     e.target.value = "";
   };
 
-  const resetCompanies = () => { setCompanies(PORTFOLIO_COMPANIES); };
+  const reloadCompanies = async () => {
+    const refreshed = await loadCompanies();
+    if (!Array.isArray(refreshed)) {
+      toast({ message: "No s'han pogut refrescar les participades des de la base de dades.", type: "error" });
+      return;
+    }
+    setCompanies(refreshed);
+    toast({ message: "Participades recarregades des de la base de dades." });
+  };
 
-  const hasCustomData = companies !== PORTFOLIO_COMPANIES && companies.length !== PORTFOLIO_COMPANIES.length;
-
-  const saveField = async (nom, field, value) => {
-    const updated = companies.map(c => c.nom === nom ? { ...c, [field]: value } : c);
+  const saveField = async (companyRef, field, value) => {
+    const targetIndex = companies.findIndex((company) => (
+      companyRef.id != null ? company.id === companyRef.id : company.nom === companyRef.nom
+    ));
+    if (targetIndex === -1) return;
+    const updated = companies.map((company, index) => (
+      index === targetIndex ? { ...company, [field]: value } : company
+    ));
     setCompanies(updated);
-    const company = updated.find(c => c.nom === nom);
+    const company = updated[targetIndex];
     if (company) {
-      const { error } = await upsertCompany(company);
-      if (error) toast({ message: "Error desant canvis: " + error.message, type: "error" });
+      const { data, error } = await upsertCompany(company);
+      if (error) {
+        toast({ message: "Error desant canvis: " + error.message, type: "error" });
+        return;
+      }
+      if (data) {
+        setCompanies((current) => current.map((row, index) => (index === targetIndex ? data : row)));
+      }
     }
   };
 
@@ -85,11 +115,13 @@ export function PortfolioCompaniesTab({ search = "" }) {
     setShowAddModal(false);
   };
 
-  const handleDelete = async (id, nom) => {
-    const { error } = await deleteCompany(id);
-    if (error) { toast({ message: "Error eliminant empresa: " + error.message, type: "error" }); return; }
-    setCompanies(companies.filter(c => c.nom !== nom));
-    toast({ message: `"${nom}" eliminada.` });
+  const handleDelete = async (company) => {
+    if (company?.id) {
+      const { error } = await deleteCompany(company.id);
+      if (error) { toast({ message: "Error eliminant empresa: " + error.message, type: "error" }); return; }
+    }
+    setCompanies(companies.filter(c => c.nom !== company.nom));
+    toast({ message: `"${company.nom}" eliminada.` });
   };
 
   const filtered = search.trim()
@@ -142,7 +174,7 @@ export function PortfolioCompaniesTab({ search = "" }) {
 
       {/* ── Data load bar ── */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:8, marginBottom:14 }}>
-        {isSuperuser && (
+        {canEdit && (
           <button onClick={() => setShowAddModal(true)}
             style={{ padding: "7px 14px", borderRadius: 7, border: `1.5px solid ${TC.border}`,
               background: "transparent", color: TC.navy, cursor: "pointer",
@@ -150,21 +182,17 @@ export function PortfolioCompaniesTab({ search = "" }) {
             + Nova participada
           </button>
         )}
-        {hasCustomData && (
-          <span style={{ fontSize:11, color:TC.textLight }}>
-            {companies.length} participades carregades
-          </span>
-        )}
-        {hasCustomData && (
-          <button onClick={resetCompanies}
-            style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
-            Restaurar per defecte
-          </button>
-        )}
+        <span style={{ fontSize:11, color:TC.textLight }}>
+          {companies.length} participades a base de dades
+        </span>
+        <button onClick={reloadCompanies}
+          style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
+          Recarregar DB
+        </button>
         <input ref={fileRef} type="file" accept=".json" style={{ display:"none" }} onChange={handleFile} />
         <button onClick={() => fileRef.current?.click()}
           style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:7, padding:"6px 14px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
-          ↑ Carregar dades
+          ↑ Importar JSON
         </button>
       </div>
 
@@ -340,16 +368,16 @@ export function PortfolioCompaniesTab({ search = "" }) {
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
             <thead>
               <tr>
-                {["Empresa","Tipus","Segment","Empresaris","Origen","País","Ticket","TVPI","Rev LTM","EBITDA LTM","Data","Mesos"].map(h=>(
+                {["Empresa","ID","Tipus","Segment","Empresaris","Origen","País","Ticket","TVPI","Rev LTM","EBITDA LTM","Data","Mesos"].map(h=>(
                   <th key={h} style={th}>{h}</th>
                 ))}
-                {isSuperuser && <th style={{ ...th, width: 40 }} />}
+                {canEdit && <th style={{ ...th, width: 40 }} />}
               </tr>
             </thead>
             <tbody>
               {[...sfCompanies, ...peCompanies].map((r,i) => (
-                <PortRow key={r.nom} r={r} i={i} TC={TC}
-                  isSuperuser={isSuperuser}
+                <PortRow key={r.id} r={r} i={i} TC={TC}
+                  canEdit={canEdit}
                   saveField={saveField}
                   handleDelete={handleDelete}
                 />
@@ -357,12 +385,12 @@ export function PortfolioCompaniesTab({ search = "" }) {
             </tbody>
             <tfoot>
               <tr style={{ borderTop:`2px solid ${TC.border}` }}>
-                <td colSpan={6} style={{ padding:"8px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>
+                <td colSpan={7} style={{ padding:"8px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>
                   TOTAL ({filtered.length} empreses)
                 </td>
                 <td style={{ padding:"8px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.green }}>{fmtM(total)}</td>
                 <td style={{ padding:"8px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", fontWeight:700, color:wtTvpi >= 1 ? TC.green : "#C62828" }}>{wtTvpi.toFixed(2)}x</td>
-                <td colSpan={isSuperuser ? 5 : 4}/>
+                <td colSpan={canEdit ? 5 : 4}/>
               </tr>
             </tfoot>
           </table>
@@ -374,10 +402,11 @@ export function PortfolioCompaniesTab({ search = "" }) {
           title="Nova participada"
           fields={[
             { key: "nom", label: "Nom", type: "text", placeholder: "Nom de l'empresa" },
-            { key: "tipus", label: "Tipus", type: "select", options: ["", "Searcher", "Direct", "Co-inversió"], defaultValue: "" },
+            { key: "tipus", label: "Tipus", type: "select", options: ["", ...COMPANY_TIPUS_OPTIONS], defaultValue: "" },
             { key: "segment", label: "Segment", type: "text" },
+            { key: "origen", label: "Origen", type: "select", options: ["", ...COMPANY_ORIGEN_OPTIONS], defaultValue: "" },
             { key: "geo", label: "Geografia", type: "text", placeholder: "ES, FR, ..." },
-            { key: "ticket", label: "Ticket (€M)", type: "number" },
+            { key: "ticket", label: "Ticket (€)", type: "number" },
           ]}
           onSave={handleAdd}
           onClose={() => setShowAddModal(false)}
@@ -389,46 +418,49 @@ export function PortfolioCompaniesTab({ search = "" }) {
 }
 
 // ── Row component ─────────────────────────────────────────────────────────────
-function PortRow({ r, i, TC, isSuperuser, saveField, handleDelete }) {
+function PortRow({ r, i, TC, canEdit, saveField, handleDelete }) {
   const tdBase = { padding:"7px 10px" };
   return (
     <tr className="hoverable" style={{ background: i%2===0 ? TC.card : TC.bgAlt }}>
       <td style={{ ...tdBase, fontWeight:600, color:TC.navy, whiteSpace:"nowrap" }}>
         <Link
-          to={`/company/${slugify(r.nom)}`}
+          to={`/company/${encodeURIComponent(r.id)}`}
           style={{ color: "inherit", textDecoration: "none" }}
           onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
           onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
         >
           <EditableCell value={r.nom} type="text"
-            onSave={v => saveField(r.nom, "nom", v)}
-            disabled={!isSuperuser} />
+            onSave={v => saveField(r, "nom", v)}
+            disabled={!canEdit} />
         </Link>
       </td>
+      <td style={{ ...tdBase, fontFamily:"'DM Mono',monospace", fontSize:10, color:TC.textLight, whiteSpace:"nowrap" }}>
+        {r.id}
+      </td>
       <td style={tdBase}>
-        <EditableCell value={r.tipus} type="text"
-          onSave={v => saveField(r.nom, "tipus", v)}
-          disabled={!isSuperuser}
+        <EditableCell value={r.tipus} options={COMPANY_TIPUS_OPTIONS}
+          onSave={v => saveField(r, "tipus", v)}
+          disabled={!canEdit}
           fmt={v => (
             <span style={{ background:v==="SF"?"#E6EDF3":"#F3EEF8", color:v==="SF"?TC.navy:"#6A4C8A", borderRadius:20, padding:"1px 8px", fontSize:9, fontWeight:700, letterSpacing:"0.05em" }}>{v}</span>
           )} />
       </td>
       <td style={{ ...tdBase, fontSize:10 }}>
         <EditableCell value={r.segment} type="text"
-          onSave={v => saveField(r.nom, "segment", v)}
-          disabled={!isSuperuser}
+          onSave={v => saveField(r, "segment", v)}
+          disabled={!canEdit}
           fmt={v => v ? <span style={{ background:TC.bg, border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 7px", fontSize:9 }}>{v}</span> : "—"} />
       </td>
       <td style={{ ...tdBase, color:TC.textMid, fontSize:10, maxWidth:140, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
         <EditableCell value={r.entrepreneurs} type="text"
-          onSave={v => saveField(r.nom, "entrepreneurs", v)}
-          disabled={!isSuperuser}
+          onSave={v => saveField(r, "entrepreneurs", v)}
+          disabled={!canEdit}
           fmt={v => v && v !== "—" ? v : <span style={{color:TC.textLight}}>—</span>} />
       </td>
       <td style={tdBase}>
-        <EditableCell value={r.origen} type="text"
-          onSave={v => saveField(r.nom, "origen", v)}
-          disabled={!isSuperuser}
+        <EditableCell value={r.origen} options={COMPANY_ORIGEN_OPTIONS}
+          onSave={v => saveField(r, "origen", v)}
+          disabled={!canEdit}
           fmt={v => (
             <span style={{ background:v==="Equity Gap"?"#E8F8E8":v==="Search Capital"?"#E6EDF3":"#F3EEF8", color:v==="Equity Gap"?TC.green:v==="Search Capital"?TC.navy:"#6A4C8A", borderRadius:20, padding:"2px 8px", fontSize:9, fontWeight:600, whiteSpace:"nowrap" }}>{v}</span>
           )} />
@@ -437,32 +469,32 @@ function PortRow({ r, i, TC, isSuperuser, saveField, handleDelete }) {
       <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.green }}>
         <EditableCell value={r.ticket} type="number" align="right"
           fmt={v => v != null ? fmtM(v) : "—"}
-          onSave={v => saveField(r.nom, "ticket", v)}
-          disabled={!isSuperuser} />
+          onSave={v => saveField(r, "ticket", v)}
+          disabled={!canEdit} />
       </td>
       <td style={{ ...tdBase, textAlign:"center" }}>
         {r.tvpi != null
-          ? <span style={{ background:tvpiBg(r.tvpi), color:tvpiColor(r.tvpi), borderRadius:20, padding:"2px 8px", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:11, whiteSpace:"nowrap" }}>{r.tvpi.toFixed(2)}×</span>
+          ? <span style={{ background:tvpiBg(r.tvpi), color:tvpiColor(r.tvpi), borderRadius:20, padding:"2px 8px", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:11, whiteSpace:"nowrap" }}>{formatMultiple(r.tvpi)}</span>
           : <span style={{ color:TC.textLight, fontSize:10, fontStyle:"italic" }}>Pendent</span>
         }
       </td>
       <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:10, color:TC.textMid }}>
         <EditableCell value={r.rev} type="number" align="right"
           fmt={v => v ? fmtM(v) : "—"}
-          onSave={v => saveField(r.nom, "rev", v)}
-          disabled={!isSuperuser} />
+          onSave={v => saveField(r, "rev", v)}
+          disabled={!canEdit} />
       </td>
       <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:10, color:r.ebitda != null && r.ebitda < 0 ? "#C62828" : TC.textMid }}>
         <EditableCell value={r.ebitda} type="number" align="right"
           fmt={v => v != null ? fmtM(v) : "—"}
-          onSave={v => saveField(r.nom, "ebitda", v)}
-          disabled={!isSuperuser} />
+          onSave={v => saveField(r, "ebitda", v)}
+          disabled={!canEdit} />
       </td>
       <td style={{ ...tdBase, color:TC.textMid, fontSize:10, whiteSpace:"nowrap" }}>
         <EditableCell value={r.dataCompr} type="text"
-          onSave={v => saveField(r.nom, "dataCompr", v)}
-          disabled={!isSuperuser}
-          fmt={v => fmtDate(v)} />
+          onSave={v => saveField(r, "dataCompr", v)}
+          disabled={!canEdit}
+          fmt={formatIsoDateDMY} />
       </td>
       <td style={{ ...tdBase, textAlign:"center" }}>
         {r.mesosOperant != null
@@ -470,9 +502,9 @@ function PortRow({ r, i, TC, isSuperuser, saveField, handleDelete }) {
           : <span style={{color:TC.textLight}}>—</span>
         }
       </td>
-      {isSuperuser && (
+      {canEdit && (
         <td style={{ padding: "4px 8px", textAlign: "center" }}>
-          <DeleteRowButton onDelete={() => handleDelete(r.id, r.nom)} />
+          <DeleteRowButton onDelete={() => handleDelete(r)} />
         </td>
       )}
     </tr>

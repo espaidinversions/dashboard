@@ -7,23 +7,40 @@
     "dev": "concurrently \"node server.js\" \"vite\"",
     "server": "node server.js",
     "build": "vite build",
-    "start": "NODE_ENV=production node server.js"
+    "start": "NODE_ENV=production node server.js",
+    "test": "python -m unittest discover -s tests_py -p \"test_*.py\" && node --test --test-isolation=none",
+    "audit": "npm audit --audit-level=critical",
+    "audit:unused": "knip --no-progress",
+    "audit:cycles": "madge --extensions js,jsx,mjs --exclude \"^(dist|docs|node_modules|scripts/out|src/generated)/\" --circular src api scripts server.js vite.config.js",
+    "audit:code": "npm run audit:unused && npm run audit:cycles",
+    "verify": "npm test && npm run build && npm run audit:code",
+    "dashboard:private-entities-catalog": "node scripts/generate_private_entities_catalog.mjs",
+    "dashboard:private-entities-migration": "node scripts/generate_private_entities_migration.mjs",
+    "dashboard:private-entities-mock-report": "node scripts/generate_private_entities_mock_report.mjs",
+    "dashboard:seed-migration": "node scripts/generate_dashboard_seed_migration.mjs",
+    "pm:refresh": "node scripts/pm_refresh.mjs",
+    "pm:value-report": "node scripts/pm_vehicle_value_report.mjs",
+    "pm:autoresearch": "node scripts/pm_autoresearch.mjs",
+    "pm:model-export": "node scripts/pm_model_export_js.mjs",
+    "pm:coverage-report": "node scripts/pm_coverage_report.mjs"
   },
   "dependencies": {
     "@nivo/sankey": "^0.99.0",
-    "@supabase/supabase-js": "^2.99.3",
+    "@supabase/supabase-js": "^2.103.1",
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.6",
-    "express": "^4.18.2",
+    "express": "^5.2.1",
     "html2canvas": "^1.4.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^7.13.1",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^7.14.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "^4.3.4",
-    "concurrently": "^8.2.0",
-    "vite": "^6.2.0"
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.1",
+    "knip": "^6.4.1",
+    "madge": "^8.0.0",
+    "vite": "^8.0.8"
   }
 }

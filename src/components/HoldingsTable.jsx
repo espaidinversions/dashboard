@@ -126,14 +126,15 @@ export function HoldingsTable() {
     const merged = PM_STATIC.map(p => {
       const ov = overrides.get(p.isin);
       if (!ov) return p;
-      const out = { ...p };
-      if (ov.valorMercat != null) out.valorMercat = ov.valorMercat;
-      if (ov.rendInici   != null) out.rendInici   = ov.rendInici;
-      if (ov.rend2026    != null) out.rend2026    = ov.rend2026;
-      if (ov.rend2025    != null) out.rend2025    = ov.rend2025;
-      if (ov.rend2024    != null) out.rend2024    = ov.rend2024;
-      if (ov.rend2023    != null) out.rend2023    = ov.rend2023;
-      if (ov.costAnual   != null) out.costAnual   = ov.costAnual;
+      const out = { ...p, _overrideFields: new Set() };
+      const ovf = out._overrideFields;
+      if (ov.valorMercat != null) { out.valorMercat = ov.valorMercat; ovf.add("valorMercat"); }
+      if (ov.rendInici   != null) { out.rendInici   = ov.rendInici;   ovf.add("rendInici");   }
+      if (ov.rend2026    != null) { out.rend2026    = ov.rend2026;    ovf.add("rend2026");    }
+      if (ov.rend2025    != null) { out.rend2025    = ov.rend2025;    ovf.add("rend2025");    }
+      if (ov.rend2024    != null) { out.rend2024    = ov.rend2024;    ovf.add("rend2024");    }
+      if (ov.rend2023    != null) { out.rend2023    = ov.rend2023;    ovf.add("rend2023");    }
+      if (ov.costAnual   != null) { out.costAnual   = ov.costAnual;   ovf.add("costAnual");   }
       return out;
     });
     const totalVM = merged.reduce((s, p) => s + (p.valorMercat || 0), 0);
@@ -142,6 +143,14 @@ export function HoldingsTable() {
     }
     return merged;
   }, [overrides]);
+
+  const OverrideBadge = () => (
+    <span title="Valor manual (override)" style={{
+      fontSize: 8, fontWeight: 700, letterSpacing: "0.04em",
+      background: "#FFF3E0", color: "#E65100",
+      borderRadius: 3, padding: "1px 4px", marginLeft: 4, verticalAlign: "middle",
+    }}>OV</span>
+  );
 
   const rows = useMemo(() => {
     let all = [...mergedPositions];
@@ -281,6 +290,7 @@ export function HoldingsTable() {
                     renderValue={() => (
                       <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>
                         {p.valorMercat != null ? fmtM(p.valorMercat) : "—"}
+                        {p._overrideFields?.has("valorMercat") && <OverrideBadge />}
                       </span>
                     )}
                     td={{ padding: "6px 10px", textAlign: "right" }}
@@ -296,7 +306,10 @@ export function HoldingsTable() {
                       if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
                       const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
                       const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
-                      return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>{(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}</span>;
+                      return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>
+                        {(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}
+                        {p._overrideFields?.has("rendInici") && <OverrideBadge />}
+                      </span>;
                     }}
                     td={{ padding: "6px 10px", textAlign: "right" }}
                   />
@@ -315,7 +328,10 @@ export function HoldingsTable() {
                       if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
                       const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
                       const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
-                      return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>{(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}</span>;
+                      return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>
+                        {(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}
+                        {p._overrideFields?.has("rend2026") && <OverrideBadge />}
+                      </span>;
                     }}
                     td={{ padding: "6px 10px", textAlign: "right" }}
                   />
@@ -330,7 +346,10 @@ export function HoldingsTable() {
                       if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
                       const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
                       const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
-                      return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>{(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}</span>;
+                      return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>
+                        {(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}
+                        {p._overrideFields?.has("rend2025") && <OverrideBadge />}
+                      </span>;
                     }}
                     td={{ padding: "6px 10px", textAlign: "right" }}
                   />
@@ -343,6 +362,7 @@ export function HoldingsTable() {
                     renderValue={() => (
                       <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: tc.textLight }}>
                         {p.costAnual != null ? p.costAnual.toFixed(2) + "%" : "—"}
+                        {p._overrideFields?.has("costAnual") && <OverrideBadge />}
                       </span>
                     )}
                     td={{ padding: "6px 10px", textAlign: "right" }}

@@ -2,9 +2,22 @@
 -- Run this in the Supabase SQL editor
 -- Then apply the migrations in supabase/migrations/.
 
+-- ── Canonical private entities ────────────────────────────
+CREATE TABLE IF NOT EXISTS private_entities (
+  id              TEXT PRIMARY KEY,
+  kind            TEXT NOT NULL CHECK (kind IN ('company', 'vehicle')),
+  canonical_name  TEXT NOT NULL,
+  source_name     TEXT,
+  workbook_name   TEXT,
+  match_type      TEXT,
+  created_at      TIMESTAMPTZ DEFAULT now(),
+  updated_at      TIMESTAMPTZ DEFAULT now()
+);
+
 -- ── Capital Calls ─────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS capital_calls (
   id      BIGSERIAL PRIMARY KEY,
+  vehicle_id TEXT REFERENCES private_entities(id) ON UPDATE CASCADE ON DELETE SET NULL,
   fons    TEXT,
   tipus   TEXT,
   cat     TEXT,
@@ -20,8 +33,9 @@ CREATE TABLE IF NOT EXISTS capital_calls (
 
 -- ── Fund metadata (TVPI etc.) ─────────────────────────────
 CREATE TABLE IF NOT EXISTS fund_meta (
-  fons  TEXT PRIMARY KEY,
-  tvpi  NUMERIC
+  vehicle_id TEXT PRIMARY KEY REFERENCES private_entities(id) ON UPDATE CASCADE ON DELETE SET NULL,
+  fons       TEXT,
+  tvpi       NUMERIC
 );
 
 -- ── Pipeline ──────────────────────────────────────────────
@@ -42,6 +56,7 @@ CREATE TABLE IF NOT EXISTS pipeline (
 -- ── Portfolio companies ───────────────────────────────────
 CREATE TABLE IF NOT EXISTS portfolio_companies (
   id             BIGSERIAL PRIMARY KEY,
+  entity_id      TEXT UNIQUE REFERENCES private_entities(id) ON UPDATE CASCADE ON DELETE SET NULL,
   nom            TEXT UNIQUE NOT NULL,
   tipus          TEXT,
   segment        TEXT,
@@ -187,6 +202,7 @@ AS $$
 $$;
 
 -- ── Enable RLS by default ─────────────────────────────────
+ALTER TABLE private_entities    ENABLE ROW LEVEL SECURITY;
 ALTER TABLE capital_calls       ENABLE ROW LEVEL SECURITY;
 ALTER TABLE fund_meta           ENABLE ROW LEVEL SECURITY;
 ALTER TABLE pipeline            ENABLE ROW LEVEL SECURITY;
@@ -202,6 +218,7 @@ ALTER TABLE api_rate_limits     ENABLE ROW LEVEL SECURITY;
 
 -- ── Bulk replace helper ───────────────────────────────────
 CREATE OR REPLACE FUNCTION replace_dashboard_bundle(
+  p_private_entities_rows JSONB,
   p_cc_rows JSONB,
   p_pl_rows JSONB,
   p_companies_rows JSONB,
@@ -222,10 +239,10 @@ BEGIN
     DELETE FROM capital_calls;
   END IF;
   IF p_cc_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_cc_rows), 0) > 0 THEN
-    INSERT INTO capital_calls (fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa)
-    SELECT fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa
+    INSERT INTO capital_calls (vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa)
+    SELECT vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa
     FROM jsonb_to_recordset(COALESCE(p_cc_rows, '[]'::jsonb))
-    AS x(fons TEXT, tipus TEXT, cat TEXT, data TEXT, mes INTEGER, year INTEGER, fy TEXT, vcpe TEXT, est TEXT, eur NUMERIC, divisa TEXT);
+    AS x(vehicle_id TEXT, fons TEXT, tipus TEXT, cat TEXT, data TEXT, mes INTEGER, year INTEGER, fy TEXT, vcpe TEXT, est TEXT, eur NUMERIC, divisa TEXT);
   END IF;
 
   IF p_pl_rows IS NOT NULL THEN
@@ -243,15 +260,15 @@ BEGIN
   END IF;
   IF p_companies_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_companies_rows), 0) > 0 THEN
     INSERT INTO portfolio_companies (
-      nom, tipus, segment, entrepreneurs, origen, geo, ticket, tvpi, rvpi_eur, dpi_eur,
+      entity_id, nom, tipus, segment, entrepreneurs, origen, geo, ticket, tvpi, rvpi_eur, dpi_eur,
       rev, ebitda, dfn, gross_ev, mult_entry, data_compr, mesos_operant, is_mock, quarters
     )
     SELECT
-      nom, tipus, segment, entrepreneurs, origen, geo, ticket, tvpi, rvpi_eur, dpi_eur,
+      entity_id, nom, tipus, segment, entrepreneurs, origen, geo, ticket, tvpi, rvpi_eur, dpi_eur,
       rev, ebitda, dfn, gross_ev, mult_entry, data_compr, mesos_operant, is_mock, COALESCE(quarters, '[]'::jsonb)
     FROM jsonb_to_recordset(COALESCE(p_companies_rows, '[]'::jsonb))
     AS x(
-      nom TEXT, tipus TEXT, segment TEXT, entrepreneurs TEXT, origen TEXT, geo TEXT,
+      entity_id TEXT, nom TEXT, tipus TEXT, segment TEXT, entrepreneurs TEXT, origen TEXT, geo TEXT,
       ticket NUMERIC, tvpi NUMERIC, rvpi_eur NUMERIC, dpi_eur NUMERIC,
       rev NUMERIC, ebitda NUMERIC, dfn NUMERIC, gross_ev NUMERIC, mult_entry NUMERIC,
       data_compr TEXT, mesos_operant INTEGER, is_mock BOOLEAN, quarters JSONB
@@ -280,12 +297,63 @@ BEGIN
   IF p_fund_meta_rows IS NOT NULL THEN
     DELETE FROM fund_meta;
   END IF;
-  IF p_fund_meta_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_fund_meta_rows), 0) > 0 THEN
-    INSERT INTO fund_meta (fons, tvpi)
-    SELECT fons, tvpi
-    FROM jsonb_to_recordset(COALESCE(p_fund_meta_rows, '[]'::jsonb))
-    AS x(fons TEXT, tvpi NUMERIC);
+  IF p_private_entities_rows IS NOT NULL THEN
+    DELETE FROM private_entities
+    WHERE kind IN ('company', 'vehicle');
   END IF;
+  IF p_private_entities_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_private_entities_rows), 0) > 0 THEN
+    INSERT INTO private_entities (id, kind, canonical_name, source_name, workbook_name, match_type)
+    SELECT id, kind, canonical_name, source_name, workbook_name, match_type
+    FROM jsonb_to_recordset(COALESCE(p_private_entities_rows, '[]'::jsonb))
+    AS x(id TEXT, kind TEXT, canonical_name TEXT, source_name TEXT, workbook_name TEXT, match_type TEXT);
+  END IF;
+  IF p_fund_meta_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_fund_meta_rows), 0) > 0 THEN
+    INSERT INTO fund_meta (vehicle_id, fons, tvpi)
+    SELECT vehicle_id, fons, tvpi
+    FROM jsonb_to_recordset(COALESCE(p_fund_meta_rows, '[]'::jsonb))
+    AS x(vehicle_id TEXT, fons TEXT, tvpi NUMERIC);
+  END IF;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.rename_private_entity(
+  p_id TEXT,
+  p_name TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_superuser() THEN
+    RAISE EXCEPTION 'Forbidden';
+  END IF;
+
+  IF COALESCE(length(trim(p_id)), 0) = 0 THEN
+    RAISE EXCEPTION 'Entity id required';
+  END IF;
+
+  IF COALESCE(length(trim(p_name)), 0) = 0 THEN
+    RAISE EXCEPTION 'Entity name required';
+  END IF;
+
+  UPDATE public.private_entities
+  SET canonical_name = trim(p_name),
+      updated_at = now()
+  WHERE id = p_id;
+
+  UPDATE public.capital_calls
+  SET fons = trim(p_name)
+  WHERE vehicle_id = p_id;
+
+  UPDATE public.fund_meta
+  SET fons = trim(p_name)
+  WHERE vehicle_id = p_id;
+
+  UPDATE public.portfolio_companies
+  SET nom = trim(p_name)
+  WHERE entity_id = p_id;
 END;
 $$;
 

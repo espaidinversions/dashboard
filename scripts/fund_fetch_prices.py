@@ -151,6 +151,8 @@ ALL_ISINS = [x for x in ALL_ISINS if x not in _seen and not _seen.add(x)]
 FALLBACK_ISINS: dict[str, list[str]] = {
     "LU1878469862": ["LU1878470019"],  # Threadneedle (Lux) American Smaller Companies 9EH
     "LU2257995980": ["LU1890834598"],   # Allianz Global Water AT EUR Acc
+    "LU2005502690": ["LU1637618585", "LU1637618403"],  # Berenberg Eurozone Focus Fund
+    "LU2110829848": ["IE00BMWWJZ56", "IE00BMWWK073", "IE00BMWWJX33", "IE00BMWWJY40", "LU1346073783"],  # Infusive Consumer Alpha
 }
 
 

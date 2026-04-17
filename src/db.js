@@ -1,5 +1,4 @@
 import { supabase } from "./supabase.js";
-import { MESOS } from "./config.js";
 import {
   buildPrivateEntitiesFromDashboardBundle,
   getPrivateEntityName,
@@ -87,20 +86,30 @@ function rowToCompany(r, entityMap) {
   };
 }
 
+/** Derive mes/year/fy from an ISO date string (YYYY-MM-DD). */
+function parseDateParts(data) {
+  if (!data) return { mes: null, year: null, fy: null };
+  const s = String(data).slice(0, 10); // handles Date objects too
+  const [y, m] = s.split("-").map(Number);
+  if (!y || !m) return { mes: null, year: null, fy: null };
+  return { mes: m, year: y, fy: `FY ${y}` };
+}
+
 /**
  * @param {CapitalCallRow} row
  */
 function capitalCallToRow(row) {
   const resolved = resolvePrivateEntity("vehicle", row.fons, row.id ?? null);
+  const { mes, year, fy } = parseDateParts(row.data);
   return {
     vehicle_id: resolved.id,
     fons: row.fons,
     tipus: row.tipus,
     cat: row.cat,
     data: row.data,
-    mes: row.mes,
-    year: row.any,
-    fy: row.fy,
+    mes,
+    year,
+    fy,
     vcpe: row.vcpe,
     est: row.est,
     eur: row.eur,
@@ -115,15 +124,18 @@ function capitalCallToRow(row) {
  */
 function rowToCapitalCall(row, entityMap) {
   const entityId = row.vehicle_id ?? null;
+  const dataStr = row.data ? String(row.data).slice(0, 10) : null;
+  const { mes, year, fy } = parseDateParts(dataStr);
   return {
+    _rowId: row.id,
     id: entityId ?? undefined,
     fons: getPrivateEntityName(entityMap, entityId, row.fons),
     tipus: row.tipus,
     cat: row.cat,
-    data: row.data,
-    mes: row.mes,
-    any: row.year,
-    fy: row.fy,
+    data: dataStr,
+    mes,
+    any: year,
+    fy,
     vcpe: row.vcpe,
     est: row.est,
     eur: row.eur,
@@ -300,6 +312,17 @@ export async function loadCompanies() {
   ]);
   if (companies.error) return null;
   return companies.data.map((row) => rowToCompany(row, entityMap));
+}
+
+/** @returns {Promise<CapitalCallRow[] | null>} */
+export async function loadCapitalCalls() {
+  if (!supabase) return null;
+  const [cc, entityMap] = await Promise.all([
+    supabase.from("capital_calls").select("*").order("data"),
+    loadPrivateEntityMap(),
+  ]);
+  if (cc.error) return null;
+  return cc.data.map((row) => rowToCapitalCall(row, entityMap));
 }
 
 /** @returns {Promise<Searcher[] | null>} */
@@ -546,11 +569,8 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
   const resolved = resolvePrivateEntity("vehicle", fons);
   const { error: entityError } = await upsertPrivateEntities([resolved]);
   if (entityError) { console.error(entityError); return null; }
-  const now  = new Date();
-  const mes  = MESOS[now.getMonth() + 1]; // MESOS is 1-indexed; index 0 = ""
-  const year = now.getFullYear();
-  const fy   = "FY " + year;
-  const data_iso = now.toISOString().slice(0, 10);
+  const data_iso = new Date().toISOString().slice(0, 10);
+  const { mes, year, fy } = parseDateParts(data_iso);
 
   const { error: ccErr } = await supabase.from("capital_calls").insert({
     vehicle_id: resolved.id,
@@ -681,6 +701,42 @@ export async function loadPMOverrides() {
   };
 }
 
+// ── PM Operations load helpers ────────────────────────────────────────────────
+
+export async function loadPMTransactions() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("pm_transactions").select("*").order("date", { ascending: false });
+  if (error) return [];
+  return data;
+}
+
+export async function deletePMTransaction(id) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("pm_transactions").delete().eq("id", id);
+  return { error };
+}
+
+export async function loadPMTerOverridesTable() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("pm_ter_overrides").select("*").order("isin");
+  if (error) return [];
+  return data;
+}
+
+export async function loadPMPositionMetaTable() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("pm_position_meta").select("*").order("isin");
+  if (error) return [];
+  return data;
+}
+
+export async function loadPMPositionOverridesTable() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("pm_position_overrides").select("*").order("isin");
+  if (error) return [];
+  return data;
+}
+
 /**
  * @param {PMTransactionDraft & { id?: string | null }} tx
  */
@@ -706,10 +762,12 @@ export async function upsertTransaction(tx) {
   return { data, error };
 }
 
-export async function upsertTerOverride(isin, ter) {
+export async function upsertTerOverride(isin, ter, notes) {
   if (!supabase) return { error: null };
+  const row = { isin, ter, updated_at: new Date().toISOString() };
+  if (notes !== undefined) row.notes = notes;
   const { error } = await supabase.from("pm_ter_overrides")
-    .upsert({ isin, ter, updated_at: new Date().toISOString() }, { onConflict: "isin" });
+    .upsert(row, { onConflict: "isin" });
   return { error };
 }
 
@@ -756,6 +814,7 @@ export async function upsertPMPositionOverride(isin, fields) {
   if (fields.rend2024    != null) row.rend2024      = fields.rend2024;
   if (fields.rend2023    != null) row.rend2023      = fields.rend2023;
   if (fields.costAnual   != null) row.cost_anual    = fields.costAnual;
+  if (fields.notes       != null) row.notes         = fields.notes;
   const { error } = await supabase.from("pm_position_overrides")
     .upsert(row, { onConflict: "isin" });
   if (!error) logAudit("update", "pm_position_overrides", isin, fields);
@@ -763,6 +822,52 @@ export async function upsertPMPositionOverride(isin, fields) {
 }
 
 // ── Admin: bulk clear ─────────────────────────────────────
+
+// ── Capital call row-level CRUD ───────────────────────────────────────────────
+
+export async function insertCapitalCall(cc) {
+  if (!supabase) return { data: null, error: null };
+  const resolved = resolvePrivateEntity("vehicle", cc.fons, cc.vehicle_id ?? null);
+  const { error: entityError } = await upsertPrivateEntities([resolved]);
+  if (entityError) return { data: null, error: entityError };
+  const { mes, year, fy } = parseDateParts(cc.data);
+  const row = {
+    vehicle_id: resolved.id,
+    fons: resolved.canonicalName,
+    tipus: cc.tipus ?? cc.vcpe ?? null,
+    cat: cc.cat,
+    data: cc.data,
+    mes,
+    year,
+    fy,
+    vcpe: cc.vcpe ?? null,
+    est: cc.est ?? null,
+    eur: cc.eur,
+    divisa: cc.divisa ?? "EUR",
+  };
+  const { data, error } = await supabase.from("capital_calls").insert(row).select().single();
+  if (!error) logAudit("insert", "capital_calls", String(data?.id), row);
+  return { data, error };
+}
+
+export async function updateCapitalCall(rowId, fields) {
+  if (!supabase) return { error: null };
+  const updates = { ...fields };
+  if (fields.data) {
+    const { mes, year, fy } = parseDateParts(fields.data);
+    Object.assign(updates, { mes, year, fy });
+  }
+  const { error } = await supabase.from("capital_calls").update(updates).eq("id", rowId);
+  if (!error) logAudit("update", "capital_calls", String(rowId), updates);
+  return { error };
+}
+
+export async function deleteCapitalCall(rowId) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("capital_calls").delete().eq("id", rowId);
+  if (!error) logAudit("delete", "capital_calls", String(rowId), {});
+  return { error };
+}
 
 const CLEARABLE_TABLES = ["capital_calls", "portfolio_companies", "searchers", "pipeline"];
 

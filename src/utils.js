@@ -1,18 +1,22 @@
 // ── Helpers ───────────────────────────────────────────────
 export function fmtM(n) {
+  if (n == null || !Number.isFinite(Number(n))) return "—";
+  n = Number(n);
   const a=Math.abs(n);
   if(a>=1e6) return (n/1e6).toFixed(2)+"M€";
   if(a>=1e3) return (n/1e3).toFixed(0)+"K€";
   return n.toFixed(0)+"€";
 }
 export function fmtS(n) {
+  if (n == null || !Number.isFinite(Number(n))) return "—";
+  n = Number(n);
   const a=Math.abs(n);
   if(a>=1e6) return (n/1e6).toFixed(1)+"M€";
   if(a>=1e3) return (n/1e3).toFixed(0)+"K€";
   return n.toFixed(0)+"€";
 }
 const _CAT_MONTHS = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
-// Accepts "YYYY-MM" (legacy PM_MONTHLY) or "YYYY-MM-DD" (bi-weekly PM_VALUES)
+// Accepts "YYYY-MM" or "YYYY-MM-DD".
 export function fmtMonth(s) {
   if (!s) return "";
   const parts = s.split("-");
@@ -120,39 +124,100 @@ export function parsePipelineCSV(text) {
 // ── Persisted state hook ───────────────────────────────────
 import { useState, useEffect } from "react";
 
+export function readStoredJSON(key, fallback) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw == null) return fallback;
+    return JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeStoredJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function readStoredFlag(key, fallback = false) {
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw == null) return fallback;
+    if (raw === "1" || raw === "true") return true;
+    if (raw === "0" || raw === "false") return false;
+    return Boolean(JSON.parse(raw));
+  } catch {
+    return fallback;
+  }
+}
+
+export function writeStoredFlag(key, value) {
+  try {
+    localStorage.setItem(key, value ? "1" : "0");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function formatIsoDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("ca-ES", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export function formatIsoDateTime(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("ca-ES", {
+    day: "2-digit",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+export function formatIsoDateDMY(iso) {
+  if (!iso) return "—";
+  const [y, m, d] = String(iso).slice(0, 10).split("-");
+  if (!y || !m || !d) return "—";
+  return `${d}/${m}/${y}`;
+}
+
+export function formatMultiple(v) {
+  return v != null ? `${v.toFixed(2)}×` : "—";
+}
+
+export function multipleColor(v, tc) {
+  if (v == null) return tc?.textLight ?? "#999";
+  if (v < 1) return tc?.red ?? "#C62828";
+  if (v < 1.5) return tc?.warning ?? "#7A6000";
+  return tc?.green ?? "#1C6B1D";
+}
+
 /**
  * Like useState but syncs with localStorage.
  * Pass isSet:true for Set values (serialised as sorted array).
  */
 export function usePersistedState(key, defaultValue, { isSet = false } = {}) {
   const [value, setValue] = useState(() => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw === null) return defaultValue;
-      const parsed = JSON.parse(raw);
-      return isSet ? new Set(parsed) : parsed;
-    } catch {
-      return defaultValue;
-    }
+    const parsed = readStoredJSON(key, undefined);
+    if (parsed === undefined) return defaultValue;
+    return isSet ? new Set(parsed) : parsed;
   });
 
   useEffect(() => {
-    try {
-      const toStore = isSet ? [...value].sort() : value;
-      localStorage.setItem(key, JSON.stringify(toStore));
-    } catch {}
+    const toStore = isSet ? [...value].sort() : value;
+    writeStoredJSON(key, toStore);
   }, [key, value, isSet]);
 
   return [value, setValue];
-}
-
-// ── Excel export ──────────────────────────────────────────
-export async function exportXLSX(rows, sheetName, filename) {
-  const XLSX = await import("xlsx");
-  const ws = XLSX.utils.json_to_sheet(rows);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
 }
 
 // sheets: [{ name, rows }]
@@ -307,10 +372,11 @@ export function mapKpiRows(rows) {
   return byNom;
 }
 
-/** Returns the number of years between an ISO date string and now. */
-export function yearsHeld(dataCompra) {
+/** Returns the number of years between an ISO date string and a reference date. */
+export function yearsHeld(dataCompra, asOf = new Date()) {
   if (!dataCompra) return 0;
-  return (Date.now() - new Date(dataCompra).getTime()) / (365.25 * 24 * 3600 * 1000);
+  const end = asOf instanceof Date ? asOf.getTime() : new Date(asOf).getTime();
+  return (end - new Date(dataCompra).getTime()) / (365.25 * 24 * 3600 * 1000);
 }
 
 /**
@@ -327,7 +393,7 @@ export function parseSearchersCSV(text) {
 }
 
 // ── Turtle Capital LocalStorage keys ──────────────────────
-export const TC_LS_KEYS = [
+const TC_LS_KEYS = [
   "tc_rawCC",
   "tc_fundMeta",
   "tc_portfolioCompanies",

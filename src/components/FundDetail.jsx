@@ -1,35 +1,42 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
-import { RAW_CC as RAW_CC_DEFAULT, FUND_META as FUND_META_DEFAULT, CAT_CFG, VCPE_CFG, EST_CFG } from "../config.js";
+import { CAT_CFG, VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, slugify } from "../utils.js";
+import { fmtM, slugify, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
 import { Badge, Logo, KpiCard } from "./SharedComponents.jsx";
+import { loadAll } from "../db.js";
 
 function FundDetailInner() {
   const { id } = useParams();
   const { tc, dark, toggle } = useTheme();
   const navigate = useNavigate();
 
-  const rawCC = useMemo(() => {
-    try {
-      const s = localStorage.getItem("tc_rawCC");
-      return s ? JSON.parse(s) : RAW_CC_DEFAULT;
-    } catch { return RAW_CC_DEFAULT; }
-  }, []);
+  const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
+  const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
 
-  const fundMeta = useMemo(() => {
-    try {
-      const s = localStorage.getItem("tc_fundMeta");
-      return s ? JSON.parse(s) : FUND_META_DEFAULT;
-    } catch { return FUND_META_DEFAULT; }
+  useEffect(() => {
+    loadAll().then((data) => {
+      if (!data) return;
+      if (Array.isArray(data.rawCC)) {
+        setRawCC(data.rawCC);
+        writeStoredJSON("tc_rawCC", data.rawCC);
+      }
+      if (Array.isArray(data.fundMeta)) {
+        setFundMeta(data.fundMeta);
+        writeStoredJSON("tc_fundMeta", data.fundMeta);
+      }
+    }).catch((error) => {
+      console.error("Fund detail refresh failed:", error);
+    });
   }, []);
 
   // Find all transactions for this fund
+  const decodedId = decodeURIComponent(id ?? "");
   const txs = useMemo(
-    () => rawCC.filter(r => slugify(r.fons) === id),
-    [rawCC, id]
+    () => rawCC.filter(r => (r.id && r.id === decodedId) || slugify(r.fons) === decodedId),
+    [rawCC, decodedId]
   );
 
   if (txs.length === 0) {
@@ -42,6 +49,7 @@ function FundDetailInner() {
   }
 
   const fundName = txs[0].fons;
+  const fundId = txs[0].id ?? null;
   const vcpe = txs[0].vcpe;
   const est = txs[0].est;
 
@@ -52,13 +60,10 @@ function FundDetailInner() {
   const net       = dist - calls;
   const utilPct   = compromis > 0 ? (calls / compromis * 100).toFixed(1) + "%" : null;
 
-  const meta = fundMeta.find(m => m.fons === fundName);
+  const meta = fundMeta.find(m => (fundId && m.id === fundId) || m.fons === fundName);
   const tvpiFund = meta?.tvpi ?? null;
   const dpiFund = calls > 0 ? dist / calls : 0;
   const rvpiFund = tvpiFund != null ? tvpiFund - dpiFund : null;
-  const multipleColor = v => v == null ? tc.textLight : v < 1 ? tc.red : v < 1.5 ? tc.warning : tc.green;
-  const fmtX = v => v != null ? `${v.toFixed(2)}×` : "—";
-
   const [chartView, setChartView] = useState("quarterly");
 
   // J-curve data: grouped by quarter or year; bars = period flows, line = cumulative net
@@ -104,6 +109,7 @@ function FundDetailInner() {
         <span style={{ color: "rgba(255,255,255,0.25)", fontSize: 12 }}>/</span>
         <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fundName}</span>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+          {fundId && <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)", borderRadius: 4, padding: "2px 8px", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fundId}</span>}
           <Badge label={vcpe} cfg={VCPE_CFG[vcpe] || {}} />
           <Badge label={est}  cfg={EST_CFG[est]   || {}} />
         </div>
@@ -116,9 +122,9 @@ function FundDetailInner() {
           <KpiCard label="Capital Cridat" value={fmtM(calls)} sub={utilPct ? `${utilPct} del compromís` : null} tc={tc} />
           <KpiCard label="Distribucions"  value={dist ? fmtM(dist) : "—"} tc={tc} />
           <KpiCard label="Net"            value={(net >= 0 ? "+" : "") + fmtM(net)} tc={tc} />
-          <KpiCard label="TVPI" value={fmtX(tvpiFund)} sub="Inputat manualment" valueColor={multipleColor(tvpiFund)} tc={tc} />
-          <KpiCard label="DPI"  value={fmtX(dpiFund)}  valueColor={multipleColor(dpiFund)}  tc={tc} />
-          <KpiCard label="RVPI" value={fmtX(rvpiFund)} valueColor={multipleColor(rvpiFund)} tc={tc} />
+          <KpiCard label="TVPI" value={formatMultiple(tvpiFund)} sub="Inputat manualment" valueColor={multipleColor(tvpiFund, tc)} tc={tc} />
+          <KpiCard label="DPI"  value={formatMultiple(dpiFund)}  valueColor={multipleColor(dpiFund, tc)}  tc={tc} />
+          <KpiCard label="RVPI" value={formatMultiple(rvpiFund)} valueColor={multipleColor(rvpiFund, tc)} tc={tc} />
         </div>
 
         {/* J-curve */}
@@ -249,7 +255,7 @@ function FundDetailInner() {
 }
 
 export default function FundDetail() {
-  const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1");
+  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
   const tc = dark ? TC_DARK : TC_LIGHT;
   return (
     <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>

@@ -41,7 +41,7 @@ export default function AdminSettings() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await saveAllowedDomains(domains);
+      setDomains(await saveAllowedDomains(domains));
       toast({ message: "Configuració desada." });
     } catch (error) {
       toast({ message: "Error desant: " + error.message, type: "error" });

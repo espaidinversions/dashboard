@@ -1,14 +1,13 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
-import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState } from "../utils.js";
-import { GEO_NAME, SEARCHER_STATUS_CFG } from "../config.js";
-import { ACTIVE_SEARCHERS, ALL_SEARCHERS, PORTFOLIO_COMPANIES } from "../data/searchers.js";
-import { FlagImg, FlagSvgLabel, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
+import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState, formatIsoDateDMY } from "../utils.js";
+import { GEO_NAME, SEARCHER_STATUS_CFG, SEARCHER_STATUS_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_FORM_ENTRADA_OPTIONS } from "../config.js";
+import { FlagImg, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
-import { upsertSearcher, insertSearcher, deleteSearcher } from "../db.js";
+import { upsertSearcher, insertSearcher, deleteSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
 import { useToast } from "../toast.jsx";
 
 // ── constants ──────────────────────────────────────────────
@@ -25,12 +24,6 @@ const StatusBadge = ({ s }) => {
   );
 };
 
-const fmtDate = iso => {
-  if (!iso) return "—";
-  const [y, m, d] = iso.split("-");
-  return `${d}/${m}/${y}`;
-};
-
 // ── Sankey node colours ────────────────────────────────────
 const SANKEY_NODE_COLORS = {
   "Searchers":    "#2563A8",
@@ -41,16 +34,70 @@ const SANKEY_NODE_COLORS = {
   "Operant":      "#2B5070",
 };
 
+const ENTRY_BADGE_CFG = {
+  "Search Capital": { bg:"#E6EDF3", color:"#2563A8", border:"#E6EDF3" },
+  "Equity Gap": { bg:"#F5F0FA", color:"#6B2E7E", border:"#F5F0FA" },
+};
+
+function searcherKey(row) {
+  return row?.id ?? row?.nom ?? null;
+}
+
+function splitSearcherNames(value) {
+  const parts = String(value ?? "")
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    searcher1: parts[0] ?? null,
+    searcher2: parts[1] ?? null,
+  };
+}
+
+function splitSchoolNames(value) {
+  const parts = String(value ?? "")
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    searcher1: parts[0] ?? null,
+    searcher2: parts[1] ?? null,
+  };
+}
+
+function toggleActiveFilter(currentValue, nextValue) {
+  if (!nextValue || nextValue === "Tots") return "Tots";
+  return currentValue === nextValue ? "Tots" : nextValue;
+}
+
+function sankeyNodeToEntry(nodeId) {
+  if (nodeId === "Searchers") return "Search Capital";
+  if (nodeId === "Equity Gap") return "Equity Gap";
+  return null;
+}
+
+function formatPercent(value, digits = 1) {
+  return Number.isFinite(value) ? value.toFixed(digits) : "0.0";
+}
+
+function formatEquityStake(value) {
+  return Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)}%` : "—";
+}
+
 // ── main component ─────────────────────────────────────────
 export function SearchersTab({ search = "" }) {
   const { tc: TC, dark } = useTheme();
-  const { isSuperuser } = useAuth();
+  const { canEdit } = useAuth();
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const [historicData, setHistoricData] = usePersistedState("tc_allSearchers", ALL_SEARCHERS);
+  const [historicData, setHistoricData] = usePersistedState("tc_allSearchers", []);
+  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
   const [histFilter, setHistFilter]     = useState({ status:"Tots", geo:"Tots", entrada:"Tots" });
   const [histSort, setHistSort]         = useState({ k:"nom", d:"asc" });
+  const [activeGeoFilter, setActiveGeoFilter] = usePersistedState("ui_searchersGeo", "Tots");
+  const [activeEntryFilter, setActiveEntryFilter] = usePersistedState("ui_searchersEntry", "Tots");
+  const [activeSort, setActiveSort] = usePersistedState("ui_searchersSort", { k:"nom", d:"asc" });
   const csvRef = useRef(null);
 
   // shared styles
@@ -58,50 +105,86 @@ export function SearchersTab({ search = "" }) {
   const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap", userSelect:"none" };
   const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
 
-  // ── KPIs ──────────────────────────────────────────────────
-  const totalSearchers  = ACTIVE_SEARCHERS.reduce((s, r) => s + r.ticket, 0);
-  const soloCount       = ACTIVE_SEARCHERS.filter(r => r.modalitat === "Solo").length;
-  const duoCount        = ACTIVE_SEARCHERS.filter(r => r.modalitat !== "Solo").length;
+  useEffect(() => {
+    loadSearchers().then((data) => {
+      if (Array.isArray(data)) setHistoricData(data);
+    }).catch((error) => {
+      console.error("Searchers refresh failed:", error);
+    });
+    loadCompanies().then((data) => {
+      if (Array.isArray(data)) setCompanies(data);
+    }).catch((error) => {
+      console.error("Companies refresh failed:", error);
+    });
+  }, [setCompanies, setHistoricData]);
 
-  // ── Active searchers with dynamic mesos ───────────────────
-  const activeWithMesos = useMemo(() =>
-    ACTIVE_SEARCHERS.map(r => ({ ...r, mesosCercant: calcMesos(r.dataCompr) }))
-  , []);
+  const activeRows = useMemo(() => (
+    historicData
+      .filter((row) => row.statusScreening === "Invertit en fase de cerca")
+      .map((row) => {
+        const searchers = [row.searcher1, row.searcher2].filter(Boolean).join(" / ");
+        return {
+          ...row,
+          searchers,
+          mesosCercant: row.dataCompr ? calcMesos(row.dataCompr) : row.mesosCercant ?? null,
+        };
+      })
+  ), [historicData]);
+
+  // ── KPIs ──────────────────────────────────────────────────
+  const totalSearchers  = activeRows.reduce((sum, row) => sum + (row.ticket ?? 0), 0);
+  const soloCount       = activeRows.filter(r => r.modalitat === "Solo").length;
+  const duoCount        = activeRows.filter(r => r.modalitat !== "Solo").length;
+
+  const getActiveSortValue = (row, key) => {
+    if (key === "status") return row.statusScreening ?? "";
+    if (key === "geo") return GEO_NAME[row.geo] || row.geo || "";
+    if (key === "formEntrada") return row.formEntrada ?? "";
+    if (key === "ticket") return row.ticket ?? 0;
+    if (key === "mesosCercant") return row.mesosCercant ?? 0;
+    if (key === "equityStake") return row.equityStake ?? 0;
+    if (key === "dataCompr") return row.dataCompr ?? "";
+    return row[key] ?? "";
+  };
 
   const displayedSearchers = useMemo(() => {
-    let list = activeWithMesos;
+    let list = activeRows;
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(r =>
         r.nom.toLowerCase().includes(q) ||
-        r.searchers.toLowerCase().includes(q)
+        (r.searchers ?? "").toLowerCase().includes(q)
       );
     }
-    return [...list].sort((a, b) => (a.isMock === b.isMock ? 0 : a.isMock ? -1 : 1));
-  }, [activeWithMesos, search]);
-
-  // match status from ALL_SEARCHERS
-  const statusMap = useMemo(() => {
-    const m = {};
-    ALL_SEARCHERS.forEach(r => { m[r.nom.toLowerCase().trim()] = r.statusScreening; });
-    return m;
-  }, []);
-  const getStatus = nom => {
-    const key = nom.toLowerCase().trim();
-    // try exact, then partial match
-    if (statusMap[key]) return statusMap[key];
-    const partial = Object.keys(statusMap).find(k => k.includes(key.split(" ")[0].toLowerCase()) || key.includes(k.split(" ")[0].toLowerCase()));
-    return partial ? statusMap[partial] : "Invertit en fase de cerca";
-  };
+    if (activeGeoFilter !== "Tots") {
+      list = list.filter(r => r.geo === activeGeoFilter);
+    }
+    if (activeEntryFilter !== "Tots") {
+      list = list.filter(r => r.formEntrada === activeEntryFilter);
+    }
+    return [...list].sort((a, b) => {
+      const va = getActiveSortValue(a, activeSort.k);
+      const vb = getActiveSortValue(b, activeSort.k);
+      let cmp = 0;
+      if (typeof va === "number" && typeof vb === "number") cmp = va - vb;
+      else cmp = String(va).localeCompare(String(vb), "ca", { sensitivity: "base" });
+      if (cmp === 0) cmp = String(a.nom).localeCompare(String(b.nom), "ca", { sensitivity: "base" });
+      return activeSort.d === "asc" ? cmp : -cmp;
+    });
+  }, [activeEntryFilter, activeGeoFilter, activeRows, activeSort, search]);
+  const displayedSearchersTicket = useMemo(
+    () => displayedSearchers.reduce((sum, row) => sum + (row.ticket ?? 0), 0),
+    [displayedSearchers]
+  );
 
   // ── Sankey data ───────────────────────────────────────────
   const sankeyData = useMemo(() => {
-    const real = ALL_SEARCHERS.filter(r => !r.isMock);
+    const real = historicData.filter(r => !r.isMock);
     const sc   = real.filter(r => r.formEntrada === "Search Capital");
     const eg   = real.filter(r => r.formEntrada === "Equity Gap");
 
     const scBacked   = sc.filter(r => r.statusScreening === "Invertit en fase de cerca").length;
-    const scAcq      = PORTFOLIO_COMPANIES.filter(c => c.tipus === "SF" && c.origen === "Search Capital").length;
+    const scAcq      = companies.filter(c => c.tipus === "SF" && c.origen === "Search Capital").length;
     const scCercant  = Math.max(scBacked - scAcq, 0);
     const egInvertit = eg.filter(r =>
       r.statusScreening === "Invertit en fase d'adquisició" ||
@@ -121,11 +204,11 @@ export function SearchersTab({ search = "" }) {
     const nodes = [...usedIds].map(id => ({ id }));
 
     return { nodes, links };
-  }, []);
+  }, [companies, historicData]);
 
   // ── Conversations stats ────────────────────────────────────
   const convStats = useMemo(() => {
-    const real        = ALL_SEARCHERS.filter(r => !r.isMock);
+    const real        = historicData.filter(r => !r.isMock);
     const sc          = real.filter(r => r.formEntrada === "Search Capital");
     const eg          = real.filter(r => r.formEntrada === "Equity Gap");
     const scBacked    = sc.filter(r => r.statusScreening === "Invertit en fase de cerca").length;
@@ -133,21 +216,31 @@ export function SearchersTab({ search = "" }) {
     const allDescartat = real.filter(r => ["Descartat","Sobresuscrit","No tancat"].includes(r.statusScreening)).length;
     const allRevisio  = real.filter(r => ["En anàlisi","Pendent de formalitzar"].includes(r.statusScreening)).length;
     return { total: real.length, scBacked, egInvertit, allDescartat, allRevisio };
-  }, []);
+  }, [historicData]);
+
+  const handleGeoClick = (geo) => {
+    setActiveGeoFilter((current) => toggleActiveFilter(current, geo));
+  };
+
+  const handleEntryFilterClick = (entry) => {
+    setActiveEntryFilter((current) => toggleActiveFilter(current, entry));
+  };
 
   // ── Geography data (searchers only) ──────────────────────
   const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D","#2563A8","#8A6400","#007A8A"];
   const geoData = useMemo(() => {
     const m = {};
-    ACTIVE_SEARCHERS.forEach(s => {
+    activeRows.forEach(s => {
       if (!m[s.geo]) m[s.geo] = { geo:s.geo, name:GEO_NAME[s.geo]||s.geo, value:0, count:0 };
-      m[s.geo].value += s.ticket;
+      m[s.geo].value += s.ticket ?? 0;
       m[s.geo].count += 1;
     });
     return Object.values(m).sort((a, b) => b.value - a.value);
-  }, []);
+  }, [activeRows]);
   const geoTotal = geoData.reduce((s, r) => s + r.value, 0);
   const t = ecTheme(TC);
+  const sortActive = (k) => setActiveSort(p => ({ k, d: p.k === k && p.d === "asc" ? "desc" : "asc" }));
+  const AArr = ({ k }) => <span style={{ marginLeft:3, opacity:activeSort.k===k?1:0.2, fontSize:9 }}>{activeSort.k===k&&activeSort.d==="asc"?"▲":"▼"}</span>;
 
   // ── Historic table ─────────────────────────────────────────
   const filteredHistoric = useMemo(() => {
@@ -170,7 +263,7 @@ export function SearchersTab({ search = "" }) {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async (ev) => {
       try {
         const rows = parseSearchersCSV(ev.target.result);
         if (rows.length) {
@@ -180,28 +273,65 @@ export function SearchersTab({ search = "" }) {
             introPer: r.introPer, searcher1: r.searcher1||"", searcher2: r.searcher2||"",
             escola1: r.escola1||"", escola2: r.escola2||"",
           }));
-          setHistoricData(mapped);
+          const { error } = await saveSearchers(mapped);
+          if (error) {
+            toast({ message: "Error carregant searchers: " + error.message, type: "error" });
+            return;
+          }
+          const refreshed = await loadSearchers();
+          setHistoricData(refreshed ?? mapped);
         }
-      } catch {}
+      } catch {
+        toast({ message: "No s'ha pogut llegir el CSV.", type: "error" });
+      }
     };
     reader.readAsText(file);
     e.target.value = "";
   };
 
-  const resetSearchers = () => { setHistoricData(ALL_SEARCHERS); };
-
-  const hasCustomSearchers = historicData !== ALL_SEARCHERS && historicData.length !== ALL_SEARCHERS.length;
+  const reloadSearchers = async () => {
+    const refreshed = await loadSearchers();
+    if (!Array.isArray(refreshed)) {
+      toast({ message: "No s'han pogut refrescar els searchers des de la base de dades.", type: "error" });
+      return;
+    }
+    setHistoricData(refreshed);
+    toast({ message: "Searchers recarregats des de la base de dades." });
+  };
 
   const inp = { border:`1px solid ${TC.border}`, borderRadius:5, padding:"4px 8px", fontSize:11, color:TC.text, background:TC.card, outline:"none", fontFamily:"inherit", cursor:"pointer" };
 
   // ── Handlers for historic table ───────────────────────────
-  const saveSearcherField = async (id, field, value) => {
-    const updated = historicData.map(s => s.id === id ? { ...s, [field]: value } : s);
+  const saveSearcherField = async (target, field, value) => {
+    const targetKey = searcherKey(target);
+    const targetIndex = historicData.findIndex((searcher) => {
+      const candidateKey = searcherKey(searcher);
+      return targetKey != null ? candidateKey === targetKey : searcher.nom === target.nom;
+    });
+    if (targetIndex === -1) return;
+    const fieldPatch = field === "searchers"
+      ? splitSearcherNames(value)
+      : field === "schools"
+        ? splitSchoolNames(value)
+      : field === "status"
+        ? { statusScreening: value }
+        : { [field]: value };
+    const updated = historicData.map((searcher, index) => (
+      index === targetIndex ? { ...searcher, ...fieldPatch } : searcher
+    ));
     setHistoricData(updated);
-    const searcher = updated.find(s => s.id === id);
+    const searcher = updated[targetIndex];
     if (searcher) {
-      const { error } = await upsertSearcher(searcher);
-      if (error) toast({ message: "Error desant canvis: " + error.message, type: "error" });
+      const { data, error } = await upsertSearcher(searcher);
+      if (error) {
+        toast({ message: "Error desant canvis: " + error.message, type: "error" });
+        return;
+      }
+      if (data) {
+        setHistoricData((current) => current.map((row, index) => (
+          index === targetIndex ? data : row
+        )));
+      }
     }
   };
 
@@ -218,8 +348,8 @@ export function SearchersTab({ search = "" }) {
       formEntrada: values.formEntrada || null, introPer: null,
       searcher1: null, searcher2: null, escola1: null, escola2: null,
       ticket: parseFloat(values.ticket) || null,
-      dataInici: null, dataCompr: null, mesosCercant: null,
-      equityStake: null, isMock: false,
+      dataInici: values.dataInici || null, dataCompr: values.dataCompr || null, mesosCercant: null,
+      equityStake: parseFloat(values.equityStake) || null, isMock: false,
     };
     const inserted = await insertSearcher(searcher);
     if (!inserted) { setError("Error en crear el searcher"); return; }
@@ -227,10 +357,15 @@ export function SearchersTab({ search = "" }) {
     setShowAddModal(false);
   };
 
-  const handleDeleteSearcher = async (id) => {
-    const { error } = await deleteSearcher(id);
-    if (error) { toast({ message: "Error eliminant searcher: " + error.message, type: "error" }); return; }
-    setHistoricData(historicData.filter(s => s.id !== id));
+  const handleDeleteSearcher = async (target) => {
+    if (target?.id) {
+      const { error } = await deleteSearcher(target.id);
+      if (error) { toast({ message: "Error eliminant searcher: " + error.message, type: "error" }); return; }
+    }
+    const targetKey = searcherKey(target);
+    setHistoricData(historicData.filter((searcher) => (
+      targetKey != null ? searcherKey(searcher) !== targetKey : searcher.nom !== target.nom
+    )));
     toast({ message: "Searcher eliminat." });
   };
 
@@ -239,31 +374,27 @@ export function SearchersTab({ search = "" }) {
 
       {/* ── Data load bar ── */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:8, marginBottom:14 }}>
-        {hasCustomSearchers && (
-          <span style={{ fontSize:11, color:TC.textLight }}>
-            {historicData.length} searchers carregats
-          </span>
-        )}
-        {hasCustomSearchers && (
-          <button onClick={resetSearchers}
-            style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
-            Restaurar per defecte
-          </button>
-        )}
+        <span style={{ fontSize:11, color:TC.textLight }}>
+          {historicData.length} searchers a base de dades
+        </span>
+        <button onClick={reloadSearchers}
+          style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
+          Recarregar DB
+        </button>
         <input ref={csvRef} type="file" accept=".csv" style={{ display:"none" }} onChange={handleCSV} />
         <button onClick={() => csvRef.current?.click()}
           style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:7, padding:"6px 14px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
-          ↑ Carregar dades
+          ↑ Importar CSV
         </button>
       </div>
 
       {/* ── KPIs ── */}
       <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
         {[
-          { label:"Searchers Actius",  value: ACTIVE_SEARCHERS.length,                       sub:`${soloCount} solo / ${duoCount} duo`,   accent:TC.navy },
+          { label:"Searchers Actius",  value: activeRows.length,                             sub:`${soloCount} solo / ${duoCount} duo`,   accent:TC.navy },
           { label:"Capital Compromès", value: fmtM(totalSearchers),                          sub:"total search capital",                  accent:TC.green },
-          { label:"Ticket Promig",     value: fmtM(totalSearchers/ACTIVE_SEARCHERS.length),  sub:"per searcher",                          accent:TC.navyLight },
-          { label:"Total DB",          value: ALL_SEARCHERS.length,                          sub:"searchers en base de dades",            accent:TC.navyLight },
+          { label:"Ticket Promig",     value: activeRows.length ? fmtM(totalSearchers / activeRows.length) : "—", sub:"per searcher", accent:TC.navyLight },
+          { label:"Total DB",          value: historicData.length,                           sub:"searchers en base de dades",            accent:TC.navyLight },
         ].map(k => (
           <div key={k.label} style={{ ...card, padding:"16px 18px", borderTop:`3px solid ${k.accent}` }}>
             <div style={{ fontSize:10, color:TC.textLight, letterSpacing:"0.11em", textTransform:"uppercase", marginBottom:6, fontWeight:500 }}>{k.label}</div>
@@ -318,6 +449,10 @@ export function SearchersTab({ search = "" }) {
               labelOrientation="horizontal"
               label={node => `${node.id} (${node.value})`}
               labelTextColor={node => SANKEY_NODE_COLORS[node.id] || TC.textMid}
+              onClick={(node) => {
+                const entry = sankeyNodeToEntry(node?.id);
+                if (entry) handleEntryFilterClick(entry);
+              }}
               theme={{
                 text: { fontSize: 11, fontFamily: "'Outfit',system-ui,sans-serif", fill: TC.text },
                 tooltip: {
@@ -334,6 +469,23 @@ export function SearchersTab({ search = "" }) {
             />
             )}
           </div>
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, minHeight:20 }}>
+            {activeEntryFilter !== "Tots" ? (
+              <>
+                <span style={{ fontSize:11, color:TC.textMid }}>
+                  Filtre actiu: <b style={{ color:TC.navy }}>{activeEntryFilter}</b>
+                </span>
+                <button
+                  onClick={() => setActiveEntryFilter("Tots")}
+                  style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}
+                >
+                  ✕ netejar
+                </button>
+              </>
+            ) : (
+              <span style={{ fontSize:11, color:TC.textLight }}>Clica `Searchers` o `Equity Gap` per filtrar la taula d'actius per entrada.</span>
+            )}
+          </div>
         </div>
 
         <div style={card}>
@@ -341,11 +493,17 @@ export function SearchersTab({ search = "" }) {
           <ReactECharts
             style={{ width: "100%", height: 300 }}
             opts={{ renderer: "canvas" }}
+            onEvents={{
+              click: (params) => {
+                const geo = params?.data?.geo ?? "Tots";
+                handleGeoClick(geo);
+              },
+            }}
             option={{
               tooltip: {
                 ...t.tooltip,
                 trigger: "item",
-                formatter: p => `<b>${p.name}</b><br/>${fmtM(p.value)}<br/>${(geoTotal > 0 ? ((p.value / geoTotal) * 100).toFixed(1) : "0.0")}% · ${(geoData.find(r => r.name === p.name)?.count ?? 0)} searcher${(geoData.find(r => r.name === p.name)?.count ?? 0) === 1 ? "" : "s"}`,
+                formatter: p => `<b>${p.name}</b><br/>${fmtM(p.value)}<br/>${formatPercent(geoTotal > 0 ? (p.value / geoTotal) * 100 : 0)}% · ${(geoData.find(r => r.name === p.name)?.count ?? 0)} searcher${(geoData.find(r => r.name === p.name)?.count ?? 0) === 1 ? "" : "s"}`,
               },
               legend: { show: false },
               graphic: [{
@@ -361,21 +519,49 @@ export function SearchersTab({ search = "" }) {
                 type: "pie",
                 radius: ["48%", "76%"],
                 center: ["50%", "50%"],
+                selectedMode: false,
                 labelLine: { show: false },
                 label: {
                   show: true,
                   formatter: p => {
                     if (p.percent < 4) return "";
                     const flagMap = { ES:"🇪🇸", EN:"🇬🇧", IT:"🇮🇹", DE:"🇩🇪", FR:"🇫🇷", PT:"🇵🇹", NL:"🇳🇱", US:"🇺🇸", CH:"🇨🇭" };
-                    return `${flagMap[p.name] || p.name} ${p.percent.toFixed(0)}%`;
+                    return `${flagMap[p.name] || p.name} ${formatPercent(p.percent, 0)}%`;
                   },
                   fontSize: 11,
                   color: TC.textMid,
                 },
-                data: geoData.map((d, i) => ({ name: d.name, value: d.value, itemStyle: { color: GEO_COLORS[i % GEO_COLORS.length] } })),
+                data: geoData.map((d, i) => ({
+                  name: d.name,
+                  value: d.value,
+                  geo: d.geo,
+                  itemStyle: {
+                    color: GEO_COLORS[i % GEO_COLORS.length],
+                    opacity: activeGeoFilter === "Tots" || activeGeoFilter === d.geo ? 1 : 0.35,
+                    borderWidth: activeGeoFilter === d.geo ? 3 : 0,
+                    borderColor: activeGeoFilter === d.geo ? TC.navy : "transparent",
+                  },
+                })),
               }],
             }}
           />
+          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, minHeight:20 }}>
+            {activeGeoFilter !== "Tots" ? (
+              <>
+                <span style={{ fontSize:11, color:TC.textMid }}>
+                  Filtre actiu: <b style={{ color:TC.navy }}>{GEO_NAME[activeGeoFilter] || activeGeoFilter}</b>
+                </span>
+                <button
+                  onClick={() => setActiveGeoFilter("Tots")}
+                  style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}
+                >
+                  ✕ netejar
+                </button>
+              </>
+            ) : (
+              <span style={{ fontSize:11, color:TC.textLight }}>Clica un segment per filtrar la taula d'actius per geografia.</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -386,25 +572,104 @@ export function SearchersTab({ search = "" }) {
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
             <thead>
               <tr>
-                {["Search Fund","Searchers","Modalitat","País","Status","Ticket","Data Compromís","Mesos Cercant","Equity Stake"].map(h => (
-                  <th key={h} style={th}>{h}</th>
+                {[
+                  { label:"Search Fund", k:"nom" },
+                  { label:"Searchers", k:"searchers" },
+                  { label:"Entrada", k:"formEntrada" },
+                  { label:"Modalitat", k:"modalitat" },
+                  { label:"Pais", k:"geo" },
+                  { label:"Status", k:"status" },
+                  { label:"Ticket", k:"ticket", right:true },
+                  { label:"Data Compromis", k:"dataCompr" },
+                  { label:"Mesos Cercant", k:"mesosCercant", center:true },
+                  { label:"Equity Stake", k:"equityStake", right:true },
+                ].map(h => (
+                  <th
+                    key={h.k}
+                    style={{ ...th, cursor:"pointer", textAlign:h.right ? "right" : h.center ? "center" : "left" }}
+                    onClick={() => sortActive(h.k)}
+                  >
+                    {h.label}<AArr k={h.k} />
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {displayedSearchers.map((r, i) => {
-                const status = getStatus(r.nom);
+                const status = r.statusScreening ?? "—";
                 return (
-                  <tr key={r.nom} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt, opacity: r.isMock ? 0.45 : 1 }}>
-                    <td style={{ padding:"9px 10px", fontWeight:600, color:TC.navy }}>{r.nom}</td>
-                    <td style={{ padding:"9px 10px", color:TC.text, fontSize:11 }}>{r.searchers}</td>
-                    <td style={{ padding:"9px 10px" }}>
-                      <span style={{ background:r.modalitat==="Solo"?"#E8F8E8":"#E6EDF3", color:r.modalitat==="Solo"?TC.green:TC.navy, borderRadius:20, padding:"2px 10px", fontSize:10, fontWeight:600 }}>{r.modalitat}</span>
+                  <tr key={searcherKey(r) ?? r.nom} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt, opacity: r.isMock ? 0.45 : 1 }}>
+                    <td style={{ padding:"9px 10px", fontWeight:600, color:TC.navy }}>
+                      {canEdit
+                        ? <EditableCell value={r.nom} type="text" onSave={v => saveSearcherField(r, "nom", v)} />
+                        : r.nom}
                     </td>
-                    <td style={{ padding:"9px 10px", textAlign:"center" }}><FlagImg geo={r.geo} /></td>
-                    <td style={{ padding:"9px 10px" }}><StatusBadge s={status} /></td>
-                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:600, color:TC.navy }}>{fmtM(r.ticket)}</td>
-                    <td style={{ padding:"9px 10px", color:TC.textMid, fontSize:11 }}>{fmtDate(r.dataCompr)}</td>
+                    <td style={{ padding:"9px 10px", color:TC.text, fontSize:11 }}>
+                      {canEdit
+                        ? <EditableCell value={r.searchers} type="text" onSave={v => saveSearcherField(r, "searchers", v)} />
+                        : r.searchers}
+                    </td>
+                    <td style={{ padding:"9px 10px" }}>
+                      {canEdit ? (
+                        <EditableCell
+                          value={r.formEntrada}
+                          options={SEARCHER_FORM_ENTRADA_OPTIONS}
+                          onSave={v => saveSearcherField(r, "formEntrada", v)}
+                          badgeCfg={ENTRY_BADGE_CFG}
+                          emptyDisplay="—"
+                        />
+                      ) : (
+                        <span style={{ background:r.formEntrada==="Equity Gap"?"#E8F8E8":"#E6EDF3", color:r.formEntrada==="Equity Gap"?TC.green:TC.navy, borderRadius:20, padding:"2px 10px", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>
+                          {r.formEntrada || "—"}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding:"9px 10px" }}>
+                      {canEdit ? (
+                        <EditableCell
+                          value={r.modalitat}
+                          options={SEARCHER_MODALITAT_OPTIONS}
+                          onSave={v => saveSearcherField(r, "modalitat", v)}
+                          badgeCfg={{
+                            Solo: { bg:"#E8F8E8", color:TC.green, border:"#E8F8E8" },
+                            Duo: { bg:"#E6EDF3", color:TC.navy, border:"#E6EDF3" },
+                            Partnership: { bg:"#F5F0FA", color:"#5A3E9A", border:"#F5F0FA" },
+                          }}
+                        />
+                      ) : (
+                        <span style={{ background:r.modalitat==="Solo"?"#E8F8E8":"#E6EDF3", color:r.modalitat==="Solo"?TC.green:TC.navy, borderRadius:20, padding:"2px 10px", fontSize:10, fontWeight:600 }}>{r.modalitat}</span>
+                      )}
+                    </td>
+                    <td style={{ padding:"9px 10px", textAlign:"center" }}>
+                      {canEdit ? (
+                        <EditableCell
+                          value={r.geo}
+                          options={["ES","EN","IT","DE","FR","PT","NL","US","CH"]}
+                          onSave={v => saveSearcherField(r, "geo", v)}
+                          fmt={v => <FlagImg geo={v} />}
+                        />
+                      ) : <FlagImg geo={r.geo} />}
+                    </td>
+                    <td style={{ padding:"9px 10px" }}>
+                      {canEdit ? (
+                        <EditableCell
+                          value={status}
+                          options={uniq("statusScreening").filter((option) => option !== "Tots")}
+                          onSave={v => saveSearcherField(r, "status", v)}
+                          fmt={v => <StatusBadge s={v} />}
+                        />
+                      ) : <StatusBadge s={status} />}
+                    </td>
+                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:600, color:TC.navy }}>
+                      {canEdit
+                        ? <EditableCell value={r.ticket} type="number" align="right" fmt={fmtM} onSave={v => saveSearcherField(r, "ticket", v)} />
+                        : fmtM(r.ticket)}
+                    </td>
+                    <td style={{ padding:"9px 10px", color:TC.textMid, fontSize:11 }}>
+                      {canEdit
+                        ? <EditableCell value={r.dataCompr} type="text" onSave={v => saveSearcherField(r, "dataCompr", v)} fmt={formatIsoDateDMY} emptyDisplay="—" />
+                        : formatIsoDateDMY(r.dataCompr)}
+                    </td>
                     <td style={{ padding:"9px 10px", textAlign:"center" }}>
                       <span style={{
                         display:"inline-block", minWidth:32, textAlign:"center",
@@ -412,15 +677,19 @@ export function SearchersTab({ search = "" }) {
                         borderRadius:20, padding:"2px 8px", fontWeight:700, fontSize:11,
                       }}>{r.mesosCercant}</span>
                     </td>
-                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", color:TC.navyLight }}>{r.equityStake.toFixed(1)}%</td>
+                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", color:TC.navyLight }}>
+                      {canEdit
+                        ? <EditableCell value={r.equityStake} type="number" align="right" fmt={formatEquityStake} onSave={v => saveSearcherField(r, "equityStake", v)} />
+                        : formatEquityStake(r.equityStake)}
+                    </td>
                   </tr>
                 );
               })}
             </tbody>
             <tfoot>
               <tr style={{ borderTop:`2px solid ${TC.border}` }}>
-                <td colSpan={5} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({displayedSearchers.length}{search.trim() ? `/${ACTIVE_SEARCHERS.length}` : ""} searchers)</td>
-                <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.navy }}>{fmtM(totalSearchers)}</td>
+                <td colSpan={6} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({displayedSearchers.length}{search.trim() || activeGeoFilter !== "Tots" || activeEntryFilter !== "Tots" ? `/${activeRows.length}` : ""} searchers)</td>
+                <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.navy }}>{fmtM(displayedSearchersTicket)}</td>
                 <td colSpan={3} />
               </tr>
             </tfoot>
@@ -433,7 +702,7 @@ export function SearchersTab({ search = "" }) {
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <div style={sec}>Historial de Searchers</div>
-            {isSuperuser && (
+            {canEdit && (
               <button onClick={() => setShowAddModal(true)}
                 style={{ padding: "7px 14px", borderRadius: 7, border: `1.5px solid ${TC.border}`,
                   background: "transparent", color: TC.navy, cursor: "pointer",
@@ -489,7 +758,7 @@ export function SearchersTab({ search = "" }) {
                     {h.label}<HArr k={h.k} />
                   </th>
                 ))}
-                {isSuperuser && <th style={{ ...th, width: 40 }} />}
+                {canEdit && <th style={{ ...th, width: 40 }} />}
               </tr>
             </thead>
             <tbody>
@@ -497,51 +766,68 @@ export function SearchersTab({ search = "" }) {
                 <tr key={`${r.nom}-${i}`} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt }}>
                   <td style={{ padding:"7px 10px", fontWeight:500, color:TC.navy }}>
                     <EditableCell value={r.nom} type="text"
-                      onSave={v => saveSearcherField(r.id, "nom", v)}
-                      disabled={!isSuperuser} />
+                      onSave={v => saveSearcherField(r, "nom", v)}
+                      disabled={!canEdit} />
                   </td>
                   <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>
                     <EditableCell value={r.tipus} type="text"
-                      onSave={v => saveSearcherField(r.id, "tipus", v)}
-                      disabled={!isSuperuser} />
+                      onSave={v => saveSearcherField(r, "tipus", v)}
+                      disabled={!canEdit} />
                   </td>
                   <td style={{ padding:"7px 10px" }}>
                     <EditableCell value={r.modalitat} type="text"
-                      onSave={v => saveSearcherField(r.id, "modalitat", v)}
-                      disabled={!isSuperuser}
+                      onSave={v => saveSearcherField(r, "modalitat", v)}
+                      disabled={!canEdit}
                       fmt={v => (
                         <span style={{ background:v==="Solo"?"#E8F8E8":v==="Duo"?"#E6EDF3":"#F5F0FA", color:v==="Solo"?TC.green:v==="Duo"?TC.navy:"#5A3E9A", borderRadius:20, padding:"1px 8px", fontSize:10, fontWeight:600 }}>{v}</span>
                       )} />
                   </td>
-                  <td style={{ padding:"7px 10px", textAlign:"center" }}><FlagImg geo={r.geo} /></td>
-                  <td style={{ padding:"7px 10px" }}><StatusBadge s={r.statusScreening} /></td>
+                  <td style={{ padding:"7px 10px", textAlign:"center" }}>
+                    <EditableCell
+                      value={r.geo}
+                      options={["ES","EN","IT","DE","FR","PT","NL","US","CH"]}
+                      onSave={v => saveSearcherField(r, "geo", v)}
+                      fmt={v => <FlagImg geo={v} />}
+                      disabled={!canEdit}
+                    />
+                  </td>
                   <td style={{ padding:"7px 10px" }}>
-                    <EditableCell value={r.formEntrada} type="text"
-                      onSave={v => saveSearcherField(r.id, "formEntrada", v)}
-                      disabled={!isSuperuser}
-                      fmt={v => (
-                        <span style={{ background:v==="Equity Gap"?"#E8F8E8":"#E6EDF3", color:v==="Equity Gap"?TC.green:TC.navy, borderRadius:20, padding:"1px 8px", fontSize:10, fontWeight:600 }}>{v}</span>
-                      )} />
+                    <EditableCell
+                      value={r.statusScreening}
+                      options={uniq("statusScreening").filter((option) => option !== "Tots")}
+                      onSave={v => saveSearcherField(r, "status", v)}
+                      fmt={v => <StatusBadge s={v} />}
+                      disabled={!canEdit}
+                    />
+                  </td>
+                  <td style={{ padding:"7px 10px" }}>
+                    <EditableCell value={r.formEntrada} options={SEARCHER_FORM_ENTRADA_OPTIONS}
+                      onSave={v => saveSearcherField(r, "formEntrada", v)}
+                      disabled={!canEdit}
+                      badgeCfg={ENTRY_BADGE_CFG} />
                   </td>
                   <td style={{ padding:"7px 10px", fontSize:11, color:TC.text }}>
                     <EditableCell value={[r.searcher1, r.searcher2].filter(Boolean).join(" / ") || "—"} type="text"
-                      onSave={v => saveSearcherField(r.id, "searcher1", v)}
-                      disabled={!isSuperuser} />
+                      onSave={v => saveSearcherField(r, "searchers", v)}
+                      disabled={!canEdit} />
                   </td>
                   <td style={{ padding:"7px 10px", fontSize:11 }}>
-                    {[r.escola1, r.escola2].filter(Boolean).map((e,i) => (
-                      <span key={i} style={{ display:"inline-block", background:TC.bgAlt, border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 7px", fontSize:10, fontWeight:600, marginRight:3, color:TC.navy }}>{e}</span>
-                    ))}
-                    {!r.escola1 && !r.escola2 && <span style={{color:TC.textLight}}>—</span>}
+                    <EditableCell
+                      value={[r.escola1, r.escola2].filter(Boolean).join(" / ")}
+                      type="text"
+                      onSave={v => saveSearcherField(r, "schools", v)}
+                      disabled={!canEdit}
+                      emptyDisplay="—"
+                    />
                   </td>
                   <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>
                     <EditableCell value={r.introPer} type="text"
-                      onSave={v => saveSearcherField(r.id, "introPer", v)}
-                      disabled={!isSuperuser} />
+                      onSave={v => saveSearcherField(r, "introPer", v)}
+                      disabled={!canEdit} />
                   </td>
-                  {isSuperuser && (
+                  {canEdit && (
                     <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                      <DeleteRowButton onDelete={() => handleDeleteSearcher(r.id)} />
+                      <DeleteRowButton onDelete={() => handleDeleteSearcher(r)} />
                     </td>
                   )}
                 </tr>
@@ -556,10 +842,14 @@ export function SearchersTab({ search = "" }) {
           title="Nou searcher"
           fields={[
             { key: "nom", label: "Nom", type: "text", placeholder: "Nom del searcher" },
-            { key: "tipus", label: "Tipus", type: "select", options: ["", "Solo", "Duo"] },
-            { key: "modalitat", label: "Modalitat", type: "select", options: ["", "Solo", "Partnership"] },
+            { key: "tipus", label: "Tipus", type: "select", options: ["", "Tradicional", "Self-funded"] },
+            { key: "modalitat", label: "Modalitat", type: "select", options: ["", ...SEARCHER_MODALITAT_OPTIONS] },
             { key: "geo", label: "Geografia", type: "text", placeholder: "ES, FR, ..." },
-            { key: "ticket", label: "Ticket (€M)", type: "number" },
+            { key: "statusScreening", label: "Status", type: "select", options: ["", ...SEARCHER_STATUS_OPTIONS] },
+            { key: "formEntrada", label: "Entrada", type: "select", options: ["", ...SEARCHER_FORM_ENTRADA_OPTIONS] },
+            { key: "ticket", label: "Ticket (€)", type: "number" },
+            { key: "dataCompr", label: "Data compromís", type: "text", placeholder: "YYYY-MM-DD" },
+            { key: "equityStake", label: "Equity stake (%)", type: "number" },
           ]}
           onSave={handleAddSearcher}
           onClose={() => setShowAddModal(false)}

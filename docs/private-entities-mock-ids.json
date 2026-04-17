@@ -1,0 +1,390 @@
+{
+  "generatedAt": "2026-04-16T14:34:20.212Z",
+  "counts": {
+    "companies": 17,
+    "vehicles": 25,
+    "total": 42
+  },
+  "companies": [
+    {
+      "name": "A Ponent",
+      "id": "MOCKNIF:COMPANY:A-PONENT",
+      "kind": "company",
+      "canonicalName": "A Ponent",
+      "sourceName": "A Ponent",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Adinor",
+      "id": "MOCKNIF:COMPANY:ADINOR",
+      "kind": "company",
+      "canonicalName": "Adinor",
+      "sourceName": "Adinor",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Alfavet",
+      "id": "MOCKNIF:COMPANY:ALFAVET",
+      "kind": "company",
+      "canonicalName": "Alfavet",
+      "sourceName": "Alfavet",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Apluma",
+      "id": "MOCKNIF:COMPANY:APLUMA",
+      "kind": "company",
+      "canonicalName": "Apluma",
+      "sourceName": "Apluma",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Avatel",
+      "id": "MOCKNIF:COMPANY:AVATEL",
+      "kind": "company",
+      "canonicalName": "Avatel",
+      "sourceName": "Avatel",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Baluard",
+      "id": "MOCKNIF:COMPANY:BALUARD",
+      "kind": "company",
+      "canonicalName": "Baluard",
+      "sourceName": "Baluard",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Collective",
+      "id": "MOCKNIF:COMPANY:COLLECTIVE",
+      "kind": "company",
+      "canonicalName": "Collective",
+      "sourceName": "Collective",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "CSP",
+      "id": "MOCKNIF:COMPANY:CSP",
+      "kind": "company",
+      "canonicalName": "CSP",
+      "sourceName": "CSP",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "CW Group",
+      "id": "MOCKNIF:COMPANY:CW-GROUP",
+      "kind": "company",
+      "canonicalName": "CW Group",
+      "sourceName": "CW Group",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Feel at Home",
+      "id": "MOCKNIF:COMPANY:FEEL-AT-HOME",
+      "kind": "company",
+      "canonicalName": "Feel at Home",
+      "sourceName": "Feel at Home",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Hotek",
+      "id": "MOCKNIF:COMPANY:HOTEK",
+      "kind": "company",
+      "canonicalName": "Hotek",
+      "sourceName": "Hotek",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Irmafer",
+      "id": "MOCKNIF:COMPANY:IRMAFER",
+      "kind": "company",
+      "canonicalName": "Irmafer",
+      "sourceName": "Irmafer",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Jaama",
+      "id": "MOCKNIF:COMPANY:JAAMA",
+      "kind": "company",
+      "canonicalName": "Jaama",
+      "sourceName": "Jaama",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Mock Company",
+      "id": "MOCKNIF:COMPANY:MOCK-COMPANY",
+      "kind": "company",
+      "canonicalName": "Mock Company",
+      "sourceName": "Mock Company",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Next Clima",
+      "id": "MOCKNIF:COMPANY:NEXT-CLIMA",
+      "kind": "company",
+      "canonicalName": "Next Clima",
+      "sourceName": "Next Clima",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Semilleros La Sala",
+      "id": "MOCKNIF:COMPANY:SEMILLEROS-LA-SALA",
+      "kind": "company",
+      "canonicalName": "Semilleros La Sala",
+      "sourceName": "Semilleros La Sala",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "TTPack",
+      "id": "MOCKNIF:COMPANY:TTPACK",
+      "kind": "company",
+      "canonicalName": "TTPack",
+      "sourceName": "TTPack",
+      "workbookName": null,
+      "matchType": "fallback"
+    }
+  ],
+  "vehicles": [
+    {
+      "name": "Aldea Ventures",
+      "id": "MOCKNIF:VEHICLE:ALDEA-VENTURES",
+      "kind": "vehicle",
+      "canonicalName": "Aldea Ventures",
+      "sourceName": "Aldea Ventures",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "CASF V S.L.P.",
+      "id": "MOCKNIF:VEHICLE:CASF-V-S-L-P",
+      "kind": "vehicle",
+      "canonicalName": "CASF V S.L.P.",
+      "sourceName": "CASF V S.L.P.",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Espaiactiu",
+      "id": "MOCKNIF:VEHICLE:ESPAIACTIU",
+      "kind": "vehicle",
+      "canonicalName": "Espaiactiu",
+      "sourceName": "Espaiactiu",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "FASO VI SCSp",
+      "id": "MOCKNIF:VEHICLE:FASO-VI-SCSP",
+      "kind": "vehicle",
+      "canonicalName": "FASO VI SCSp",
+      "sourceName": "FASO VI SCSp",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Healthcare Activos Yield",
+      "id": "MOCKNIF:VEHICLE:HEALTHCARE-ACTIVOS-YIELD",
+      "kind": "vehicle",
+      "canonicalName": "Healthcare Activos Yield",
+      "sourceName": "Healthcare Activos Yield",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "IK Partners X",
+      "id": "MOCKNIF:VEHICLE:IK-PARTNERS-X",
+      "kind": "vehicle",
+      "canonicalName": "IK Partners X",
+      "sourceName": "IK Partners X",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "IK Small Cap IV Fund",
+      "id": "MOCKNIF:VEHICLE:IK-SMALL-CAP-IV-FUND",
+      "kind": "vehicle",
+      "canonicalName": "IK Small Cap IV Fund",
+      "sourceName": "IK Small Cap IV Fund",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Inveractiva Plus II A S.L",
+      "id": "MOCKNIF:VEHICLE:INVERACTIVA-PLUS-II-A-S-L",
+      "kind": "vehicle",
+      "canonicalName": "Inveractiva Plus II A S.L",
+      "sourceName": "Inveractiva Plus II A S.L",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Inveractiva Plus III A S.L",
+      "id": "MOCKNIF:VEHICLE:INVERACTIVA-PLUS-III-A-S-L",
+      "kind": "vehicle",
+      "canonicalName": "Inveractiva Plus III A S.L",
+      "sourceName": "Inveractiva Plus III A S.L",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Inveractiva SIA Deuda",
+      "id": "MOCKNIF:VEHICLE:INVERACTIVA-SIA-DEUDA",
+      "kind": "vehicle",
+      "canonicalName": "Inveractiva SIA Deuda",
+      "sourceName": "Inveractiva SIA Deuda",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Inveractiva SIA Plus IV D",
+      "id": "MOCKNIF:VEHICLE:INVERACTIVA-SIA-PLUS-IV-D",
+      "kind": "vehicle",
+      "canonicalName": "Inveractiva SIA Plus IV D",
+      "sourceName": "Inveractiva SIA Plus IV D",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Inveready HTE Infra SCR",
+      "id": "MOCKNIF:VEHICLE:INVEREADY-HTE-INFRA-SCR",
+      "kind": "vehicle",
+      "canonicalName": "Inveready HTE Infra SCR",
+      "sourceName": "Inveready HTE Infra SCR",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Inveready VFIII",
+      "id": "MOCKNIF:VEHICLE:INVEREADY-VFIII",
+      "kind": "vehicle",
+      "canonicalName": "Inveready VFIII",
+      "sourceName": "Inveready VFIII",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "L Squared Capital Partners V",
+      "id": "MOCKNIF:VEHICLE:L-SQUARED-CAPITAL-PARTNERS-V",
+      "kind": "vehicle",
+      "canonicalName": "L Squared Capital Partners V",
+      "sourceName": "L Squared Capital Partners V",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Main Foundation III Coöperatief U.A.",
+      "id": "MOCKNIF:VEHICLE:MAIN-FOUNDATION-III-COOPERATIEF-U-A",
+      "kind": "vehicle",
+      "canonicalName": "Main Foundation III Coöperatief U.A.",
+      "sourceName": "Main Foundation III Coöperatief U.A.",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "McWin - EBITDA Investmens Fund I SCSp",
+      "id": "MOCKNIF:VEHICLE:MCWIN-EBITDA-INVESTMENS-FUND-I-SCSP",
+      "kind": "vehicle",
+      "canonicalName": "McWin - EBITDA Investmens Fund I SCSp",
+      "sourceName": "McWin - EBITDA Investmens Fund I SCSp",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Novacap Tech VII-B",
+      "id": "MOCKNIF:VEHICLE:NOVACAP-TECH-VII-B",
+      "kind": "vehicle",
+      "canonicalName": "Novacap Tech VII-B",
+      "sourceName": "Novacap Tech VII-B",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Pantheon Co-inv",
+      "id": "MOCKNIF:VEHICLE:PANTHEON-COINVEST",
+      "kind": "vehicle",
+      "canonicalName": "Pantheon Co-inv",
+      "sourceName": "Pantheon Co-inv",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Pictet Monte Rosa V",
+      "id": "MOCKNIF:VEHICLE:PICTET-MONTE-ROSA-V",
+      "kind": "vehicle",
+      "canonicalName": "Pictet Monte Rosa V",
+      "sourceName": "Pictet Monte Rosa V",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Qualitas Funds V A SCR",
+      "id": "MOCKNIF:VEHICLE:QUALITAS-FUNDS-V-A-SCR",
+      "kind": "vehicle",
+      "canonicalName": "Qualitas Funds V A SCR",
+      "sourceName": "Qualitas Funds V A SCR",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Qualitas Funds VI SCR A",
+      "id": "MOCKNIF:VEHICLE:QUALITAS-FUNDS-VI-SCR-A",
+      "kind": "vehicle",
+      "canonicalName": "Qualitas Funds VI SCR A",
+      "sourceName": "Qualitas Funds VI SCR A",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Qualitas Mutual PE Program IV",
+      "id": "MOCKNIF:VEHICLE:QUALITAS-MUTUAL-PE-PROGRAM-IV",
+      "kind": "vehicle",
+      "canonicalName": "Qualitas Mutual PE Program IV",
+      "sourceName": "Qualitas Mutual PE Program IV",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Suma Capital Growth II",
+      "id": "MOCKNIF:VEHICLE:SUMA-CAPITAL-GROWTH-II",
+      "kind": "vehicle",
+      "canonicalName": "Suma Capital Growth II",
+      "sourceName": "Suma Capital Growth II",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "T2 Energy-B.March",
+      "id": "MOCKNIF:VEHICLE:T2-ENERGY-B-MARCH",
+      "kind": "vehicle",
+      "canonicalName": "T2 Energy-B.March",
+      "sourceName": "T2 Energy-B.March",
+      "workbookName": null,
+      "matchType": "fallback"
+    },
+    {
+      "name": "Tectum III",
+      "id": "MOCKNIF:VEHICLE:TECTUM-III",
+      "kind": "vehicle",
+      "canonicalName": "Tectum III",
+      "sourceName": "Tectum III",
+      "workbookName": null,
+      "matchType": "fallback"
+    }
+  ]
+}

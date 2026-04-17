@@ -1,0 +1,367 @@
+import React from "react";
+import ReactECharts from "../../ReactECharts.jsx";
+import { ecTheme } from "../../echartsTheme.js";
+import { fmtM, fmtMonthKey } from "../../utils.js";
+import { CumulativeFlowsChart } from "../CumulativeFlowsChart.jsx";
+import { FilterPills } from "./PublicMarketsFilters.jsx";
+import { AREA_COLORS, KpiCard, MGR_COLORS, pctFmt } from "./PublicMarketsShared.jsx";
+
+export function PublicMarketsSummarySection({
+  tc,
+  dark,
+  card,
+  secLabel,
+  total,
+  totalRV,
+  totalRF,
+  ytdWeighted,
+  portfolioTWR,
+  portfolioMWR,
+  providerData,
+  strategyData,
+  displayManagers,
+  chartView,
+  setChartView,
+  chartData,
+  flowGroupBy,
+  setFlowGroupBy,
+  totalValueSeries,
+  reportStartMonth,
+  transactions,
+}) {
+  return (
+    <>
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <KpiCard label="Total Patrimoni" value={fmtM(total)} sub="Mercats Públics" tc={tc} />
+        <KpiCard label="Renda Variable" value={fmtM(totalRV)} sub={total > 0 ? `${(totalRV / total * 100).toFixed(1)}% del total` : "—"} tc={tc} />
+        <KpiCard label="Renda Fixa" value={fmtM(totalRF)} sub={total > 0 ? `${(totalRF / total * 100).toFixed(1)}% del total` : "—"} tc={tc} />
+        <KpiCard label="YTD Global" value={pctFmt(ytdWeighted)} sub="Ponderat per AUM" tc={tc} valueColor={ytdWeighted >= 0 ? tc.green : tc.red} />
+        <KpiCard label="TWR Cartera (Des '23)" value={pctFmt(portfolioTWR)} sub="Retorn acumulat, sense fluxos" tc={tc} valueColor={portfolioTWR >= 0 ? tc.green : tc.red} />
+        <KpiCard label="MWR Cartera (Des '23)" value={pctFmt(portfolioMWR)} sub="Anualitzat, Modified Dietz" tc={tc} valueColor={portfolioMWR >= 0 ? tc.green : tc.red} />
+      </div>
+
+      <div style={{ display: "flex", gap: 16 }}>
+        <div style={{ ...card, flex: "1 1 58%" }}>
+          <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment TWR per Proveïdor</div>
+          {(() => {
+            const theme = ecTheme(tc);
+            const option = {
+              grid: { top: 8, right: 16, bottom: 40, left: 0, containLabel: true },
+              tooltip: {
+                ...theme.tooltip,
+                trigger: "axis",
+                formatter: (params) => {
+                  const label = params[0]?.axisValue ?? "";
+                  let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                  params.forEach((param) => {
+                    if (param.value == null) return;
+                    html += `<div>${param.marker}${param.seriesName}: ${pctFmt(param.value)}</div>`;
+                  });
+                  return html;
+                },
+              },
+              legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
+              xAxis: {
+                type: "category",
+                data: providerData.map((point) => point.year),
+                axisLabel: { fontSize: 11, color: tc.textLight },
+                axisLine: { show: false },
+                axisTick: { show: false },
+              },
+              yAxis: {
+                type: "value",
+                axisLabel: { fontSize: 10, color: tc.textLight, formatter: (value) => `${value.toFixed(1)}%` },
+                splitLine: { lineStyle: { color: tc.border } },
+                axisLine: { show: false },
+                axisTick: { show: false },
+              },
+              series: displayManagers.map((manager, index) => ({
+                name: manager.nom,
+                type: "bar",
+                data: providerData.map((point) => point[manager.id] ?? null),
+                itemStyle: { color: MGR_COLORS[manager.id], borderRadius: [3, 3, 0, 0] },
+                barMaxWidth: 28,
+                markLine: index === 0
+                  ? {
+                      data: [{ yAxis: 0 }],
+                      lineStyle: { color: tc.border, type: "dashed", width: 1 },
+                      symbol: "none",
+                      label: { show: false },
+                    }
+                  : undefined,
+              })),
+            };
+            return <ReactECharts option={option} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />;
+          })()}
+          <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+            TWR reportat per cada gestor. UBS: sense dades 2024–2025 (YTD disponible: ~+0.25%). Les barres absents indiquen que el gestor no ha reportat rendiment per al període.
+          </div>
+        </div>
+
+        <div style={{ ...card, flex: "1 1 38%" }}>
+          <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment ponderat per Estratègia</div>
+          {(() => {
+            const theme = ecTheme(tc);
+            const option = {
+              grid: { top: 8, right: 16, bottom: 40, left: 0, containLabel: true },
+              tooltip: {
+                ...theme.tooltip,
+                trigger: "axis",
+                formatter: (params) => {
+                  const label = params[0]?.axisValue ?? "";
+                  let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                  params.forEach((param) => {
+                    if (param.value == null) return;
+                    html += `<div>${param.marker}${param.seriesName}: ${pctFmt(param.value)}</div>`;
+                  });
+                  return html;
+                },
+              },
+              legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
+              xAxis: {
+                type: "category",
+                data: strategyData.map((point) => point.year),
+                axisLabel: { fontSize: 11, color: tc.textLight },
+                axisLine: { show: false },
+                axisTick: { show: false },
+              },
+              yAxis: {
+                type: "value",
+                axisLabel: { fontSize: 10, color: tc.textLight, formatter: (value) => `${value.toFixed(1)}%` },
+                splitLine: { lineStyle: { color: tc.border } },
+                axisLine: { show: false },
+                axisTick: { show: false },
+              },
+              series: [
+                {
+                  name: "Renda Variable",
+                  type: "line",
+                  data: strategyData.map((point) => point.rv),
+                  lineStyle: { color: tc.navy, width: 2 },
+                  itemStyle: { color: tc.navy },
+                  symbol: "circle",
+                  symbolSize: 8,
+                  connectNulls: true,
+                },
+                {
+                  name: "Renda Fixa",
+                  type: "line",
+                  data: strategyData.map((point) => point.rf),
+                  lineStyle: { color: "#E8A020", width: 2 },
+                  itemStyle: { color: "#E8A020" },
+                  symbol: "circle",
+                  symbolSize: 8,
+                  connectNulls: true,
+                },
+                {
+                  name: "Total",
+                  type: "line",
+                  data: strategyData.map((point) => point.total),
+                  lineStyle: { color: tc.green, width: 2, type: "dashed" },
+                  itemStyle: { color: tc.green },
+                  symbol: "circle",
+                  symbolSize: 8,
+                  connectNulls: true,
+                },
+              ],
+            };
+            return <ReactECharts option={option} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />;
+          })()}
+          <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+            Ponderat per AUM de cada gestor. Gestors sense dades del any exclosos del còmput.
+          </div>
+        </div>
+      </div>
+
+      <div style={card}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 16, gap: 8, flexWrap: "wrap" }}>
+          <div style={{ ...secLabel, flex: 1 }}>Evolució del Patrimoni</div>
+          <FilterPills
+            options={[
+              { id: "total", label: "Total" },
+              { id: "actiu", label: "Per Actiu" },
+              { id: "gestor", label: "Per Custodi" },
+            ]}
+            value={chartView}
+            onChange={setChartView}
+            tc={tc}
+            dark={dark}
+            tone="green"
+            rounded={5}
+          />
+        </div>
+
+        {(() => {
+          const theme = ecTheme(tc);
+          const gradArea = (color) => ({
+            color: {
+              type: "linear",
+              x: 0,
+              y: 0,
+              x2: 0,
+              y2: 1,
+              colorStops: [
+                { offset: 0, color: `${color}40` },
+                { offset: 1, color: `${color}0A` },
+              ],
+            },
+          });
+
+          let series = [];
+          if (chartView === "total") {
+            series = [{
+              name: "Valor cartera",
+              type: "line",
+              smooth: false,
+              data: chartData.map((row) => row.total ?? null),
+              lineStyle: { color: AREA_COLORS.total, width: 2 },
+              itemStyle: { color: AREA_COLORS.total },
+              areaStyle: gradArea(AREA_COLORS.total),
+              symbol: "none",
+              connectNulls: true,
+            }];
+          } else if (chartView === "actiu") {
+            series = [
+              {
+                name: "Renda Variable",
+                type: "line",
+                smooth: false,
+                stack: "a",
+                data: chartData.map((row) => row.rv ?? null),
+                lineStyle: { color: AREA_COLORS.rv, width: 1.5 },
+                itemStyle: { color: AREA_COLORS.rv },
+                areaStyle: gradArea(AREA_COLORS.rv),
+                symbol: "none",
+                connectNulls: true,
+              },
+              {
+                name: "Renda Fixa",
+                type: "line",
+                smooth: false,
+                stack: "a",
+                data: chartData.map((row) => row.rf ?? null),
+                lineStyle: { color: AREA_COLORS.rf, width: 1.5 },
+                itemStyle: { color: AREA_COLORS.rf },
+                areaStyle: gradArea(AREA_COLORS.rf),
+                symbol: "none",
+                connectNulls: true,
+              },
+              {
+                name: "Altres / no assignat",
+                type: "line",
+                smooth: false,
+                stack: "a",
+                data: chartData.map((row) => row.altres ?? null),
+                lineStyle: { color: AREA_COLORS.altres, width: 1.5 },
+                itemStyle: { color: AREA_COLORS.altres },
+                areaStyle: gradArea(AREA_COLORS.altres),
+                symbol: "none",
+                connectNulls: true,
+              },
+            ];
+          } else {
+            series = [
+              { key: "andbank", name: "WAM–Andbank" },
+              { key: "interactiveBrokers", name: "Interactive Brokers" },
+              { key: "bankinter", name: "Bankinter" },
+              { key: "ubs", name: "UBS" },
+              { key: "creditSuisse", name: "Credit Suisse" },
+              { key: "caixa", name: "CaixaBank" },
+              { key: "jpmorgan", name: "JPMorgan" },
+              { key: "altres", name: "Altres / no assignat" },
+            ]
+              .filter(({ key }) => chartData.some((row) => row[key] != null && row[key] > 0))
+              .map(({ key, name }) => ({
+              name,
+              type: "line",
+              smooth: false,
+              stack: "g",
+              data: chartData.map((row) => row[key] ?? null),
+              lineStyle: { color: AREA_COLORS[key], width: 1.5 },
+              itemStyle: { color: AREA_COLORS[key] },
+              areaStyle: gradArea(AREA_COLORS[key]),
+              symbol: "none",
+              connectNulls: true,
+            }));
+          }
+
+          const option = {
+            grid: { top: 8, right: 8, bottom: chartView !== "total" ? 48 : 32, left: 0, containLabel: true },
+            legend: chartView !== "total"
+              ? { bottom: 0, textStyle: { fontSize: 11, color: tc.textLight } }
+              : { show: false },
+            tooltip: {
+              ...theme.tooltip,
+              trigger: "axis",
+              formatter: (params) => {
+                const label = fmtMonthKey(params[0]?.axisValue ?? "");
+                let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                params.forEach((param) => {
+                  if (param.value == null) return;
+                  html += `<div>${param.marker}${param.seriesName}: ${fmtM(param.value)}</div>`;
+                });
+                return html;
+              },
+            },
+            xAxis: {
+              type: "category",
+              data: chartData.map((row) => row.month),
+              axisLabel: { fontSize: 10, color: tc.textLight, formatter: fmtMonthKey, hideOverlap: true, interval: 11 },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            yAxis: {
+              type: "value",
+              axisLabel: { fontSize: 10, color: tc.textLight, formatter: fmtM },
+              splitLine: { lineStyle: { color: tc.border } },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            series,
+          };
+
+          return <ReactECharts option={option} notMerge={true} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;
+        })()}
+
+        <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+          {chartView === "gestor"
+            ? "CaixaBank, UBS, Bankinter, Interactive Brokers, JPMorgan i WAM–Andbank per separat. Les sèries es reconstrueixen des de participacions i preus històrics."
+            : chartView === "total"
+              ? "Sèrie històrica reconstruïda a partir de participacions i NAV històrics, amb fallback a valors importats quan falta preu."
+              : "Sèries mensuals reconstruïdes des de participacions i NAV històrics, amb residual per a posicions no assignades."}
+        </div>
+      </div>
+
+      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+        <div style={{ display: "flex", alignItems: "center", marginBottom: 12, gap: 8, flexWrap: "wrap" }}>
+          <div style={{ fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, flex: 1 }}>
+            Fluxos acumulats · entrades i sortides de capital
+          </div>
+          <FilterPills
+            options={[
+              { id: "total", label: "Total" },
+              { id: "assetType", label: "Per Actiu" },
+              { id: "custodian", label: "Per Custodi" },
+            ]}
+            value={flowGroupBy}
+            onChange={setFlowGroupBy}
+            tc={tc}
+            dark={dark}
+            tone="navy"
+            rounded={5}
+          />
+        </div>
+        <CumulativeFlowsChart
+          transactions={transactions}
+          valuesSeries={totalValueSeries}
+          startMonth={reportStartMonth}
+          groupBy={flowGroupBy}
+          height={240}
+        />
+        <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+          Capital acumulat brut des de la primera mostra mensual: barres d'entrades i sortides de capital, amb línia de patrimoni mensual i línia agregada de capital. UBS i WAM–Andbank mostren les posicions dels PDFs, però no els moviments individuals.
+        </div>
+      </div>
+    </>
+  );
+}

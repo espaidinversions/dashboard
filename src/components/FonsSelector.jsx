@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useTheme } from "../theme.js";
-import { RAW_CC as RAW_CC_DEFAULT, VCPE_CFG, EST_CFG } from "../config.js";
+import { VCPE_CFG, EST_CFG } from "../config.js";
 
 // ══════════════════════════════════════════════════════════
-export function FonsSelector({excluded, setExcluded, rawCC = RAW_CC_DEFAULT}) {
+export function FonsSelector({excluded, setExcluded, rawCC = []}) {
   const { tc: TC, dark } = useTheme();
   const [open,   setOpen]   = useState(false);
   const [search, setSearch] = useState("");

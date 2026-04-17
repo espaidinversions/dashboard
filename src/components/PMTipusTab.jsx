@@ -2,12 +2,19 @@ import React, { useMemo, useState } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { Link } from "react-router-dom";
-import { PM_POSITIONS, PM_CLOSED, PM_MONTHLY } from "../data/publicMarkets.js";
+import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { useTheme } from "../theme.js";
 import { fmtM, usePersistedState, yearsHeld, cagr } from "../utils.js";
-import { PM_TER } from "../data/pmTer.js";
-import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
+import { PM_TER } from "../generated/publicMarkets/pmTer.js";
+import { buildClosedTransactionSummaryByIsin, enrichClosedPosition } from "../data/pmClosedUtils.js";
 import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
+import { buildMonthlySeriesFromNestedValues } from "../chartSeries.js";
+
+const PM_POSITIONS = PM_MODEL.holdings.active;
+const PM_CLOSED = PM_MODEL.holdings.closed;
+const PM_MONTHLY = PM_MODEL.series.monthly;
+const PM_VALUES = PM_MODEL.series.values;
+const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 
 const PM_COLORS = [
   "#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F",
@@ -19,6 +26,9 @@ const TOGGLES = [
   { id: "all",        label: "Tots" },
   { id: "caixabank",  label: "CaixaBank" },
   { id: "bankinter",  label: "Bankinter" },
+  { id: "jpmorgan",   label: "JPMorgan" },
+  { id: "ubs",        label: "UBS" },
+  { id: "andbank",    label: "Andbank" },
 ];
 
 const YEAR_FIELDS = [
@@ -75,9 +85,33 @@ export function PMTipusTab({ tipus }) {
     [tipus]
   );
 
+  const closedSummaryByIsin = useMemo(
+    () => buildClosedTransactionSummaryByIsin(),
+    []
+  );
+
+  const closedPositions = useMemo(
+    () => PM_CLOSED
+      .filter(p => p.tipus === tipus)
+      .map(p => enrichClosedPosition(p, closedSummaryByIsin)),
+    [tipus, closedSummaryByIsin]
+  );
+
+  const typePositions = useMemo(() => {
+    const byIsin = new Map();
+    [...positions, ...closedPositions].forEach(p => {
+      if (!p?.isin) return;
+      byIsin.set(p.isin, p);
+    });
+    return [...byIsin.values()];
+  }, [positions, closedPositions]);
+
   const visible = useMemo(() => {
     const base = toggle === "caixabank"  ? positions.filter(p => p.custodian === "CaixaBank")
-               : toggle === "bankinter"  ? positions.filter(p => p.custodian === "Bankinter")
+               : toggle === "bankinter"  ? positions.filter(p => p.custodian === "Bankinter" || p.custodian === "Interactive Brokers")
+               : toggle === "jpmorgan"   ? positions.filter(p => p.custodian === "JPMorgan")
+               : toggle === "ubs"        ? positions.filter(p => p.custodian === "UBS" || p.custodian === "Credit Suisse")
+               : toggle === "andbank"    ? positions.filter(p => p.custodian === "Andbank")
                : positions;
     return [...base].sort((a, b) => (b.valorMercat ?? 0) - (a.valorMercat ?? 0));
   }, [positions, toggle]);
@@ -90,18 +124,22 @@ export function PMTipusTab({ tipus }) {
   const allPositions = useMemo(() => {
     const active = visible.map(p => ({ ...p, _status: "active" }));
     const closed = PM_CLOSED
+      .map(p => enrichClosedPosition(p, closedSummaryByIsin))
       .filter(p => p.tipus === tipus)
       .filter(p => {
         if (toggle === "all") return true;
         if (!p.custodian) return false;
         if (toggle === "caixabank") return p.custodian === "CaixaBank";
-        if (toggle === "bankinter") return p.custodian === "Bankinter";
+        if (toggle === "bankinter") return p.custodian === "Bankinter" || p.custodian === "Interactive Brokers";
+        if (toggle === "jpmorgan") return p.custodian === "JPMorgan";
+        if (toggle === "ubs") return p.custodian === "UBS" || p.custodian === "Credit Suisse";
+        if (toggle === "andbank") return p.custodian === "Andbank";
         return true;
       })
       .sort((a, b) => a.nom.localeCompare(b.nom, "ca", { sensitivity: "base" }))
       .map(p => ({ ...p, _status: "closed" }));
     return [...active, ...closed];
-  }, [visible, tipus, toggle]);
+  }, [visible, tipus, toggle, closedSummaryByIsin]);
 
   // Transactions for this asset type
   const typeTxs = useMemo(
@@ -111,13 +149,12 @@ export function PMTipusTab({ tipus }) {
 
   // Monthly portfolio value series for this asset type
   const typeValueSeries = useMemo(
-    () => PM_MONTHLY.map(m => ({
-      date: m.date,
-      value: tipus === "RV"
-        ? m.caixaRV + m.ubsRV + (m.abelBK != null ? m.abelBK * ABEL_RV_SPLIT : 0)
-        : m.caixaRF + m.ubsRF + (m.abelBK != null ? m.abelBK * ABEL_RF_SPLIT : 0) + m.andbank,
-    })),
-    [tipus]
+    () => buildMonthlySeriesFromNestedValues(
+      PM_VALUES,
+      typePositions,
+      { include: p => p?.tipus === tipus }
+    ),
+    [tipus, typePositions]
   );
 
   // Years that have at least one non-null value across visible positions
@@ -308,6 +345,10 @@ export function PMTipusTab({ tipus }) {
                   </tr>
                 );
               }
+              const closeDate = p.any ? `${p.any}-12-31` : null;
+              const yh = yearsHeld(p.dataCompra, closeDate ?? undefined);
+              const rendInici = retMode === "net" ? netRendInici(p) : p.rendInici;
+              const mwr = cagr(rendInici, yh);
               return (
                 <tr key={`${p.isin}-${p.any ?? p.nom}`} className="hoverable"
                   style={{ borderBottom: `1px solid ${tc.border}`, opacity: 0.7 }}>
@@ -324,9 +365,15 @@ export function PMTipusTab({ tipus }) {
                   {YEAR_FIELDS.map(({ label }) => (
                     <td key={label} style={{ padding: "7px 10px", textAlign: "right", color: tc.textLight }}>—</td>
                   ))}
-                  <td style={{ padding: "7px 10px", textAlign: "right", color: tc.textLight }}>—</td>
-                  <td style={{ padding: "7px 10px", textAlign: "right", color: tc.textLight }}>—</td>
-                  <td style={{ padding: "7px 10px", textAlign: "right", color: tc.textLight }}>—</td>
+                  <td style={{ padding: "7px 10px", textAlign: "right" }}>
+                    <PctChip v={rendInici} tc={tc} />
+                  </td>
+                  <td style={{ padding: "7px 10px", textAlign: "right" }}>
+                    <PctChip v={mwr} tc={tc} />
+                  </td>
+                  <td style={{ padding: "7px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.navy, fontWeight: 600, fontSize: 11 }}>
+                    {p.valorMercat != null ? fmtM(p.valorMercat) : "—"}
+                  </td>
                   <td style={{ padding: "7px 10px", textAlign: "center" }}>
                     <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, fontWeight: 700,
                       background: tc.bgAlt, color: tc.textLight, border: `1px solid ${tc.border}` }}>

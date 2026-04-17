@@ -52,12 +52,38 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at  TIMESTAMPTZ DEFAULT now()
 );
 
--- Disable RLS (single-user personal dashboard)
-ALTER TABLE pm_transactions  DISABLE ROW LEVEL SECURITY;
-ALTER TABLE pm_ter_overrides DISABLE ROW LEVEL SECURITY;
-ALTER TABLE pm_position_meta DISABLE ROW LEVEL SECURITY;
-ALTER TABLE app_settings      DISABLE ROW LEVEL SECURITY;
-ALTER TABLE audit_log         DISABLE ROW LEVEL SECURITY;
+create or replace function public.current_app_role()
+returns text
+language sql
+stable
+as $$
+  select coalesce(
+    auth.jwt() -> 'app_metadata' ->> 'role',
+    'user'
+  )
+$$;
+
+create or replace function public.is_superuser()
+returns boolean
+language sql
+stable
+as $$
+  select public.current_app_role() in ('superuser', 'admin')
+$$;
+
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+as $$
+  select public.current_app_role() = 'admin'
+$$;
+
+alter table pm_transactions  enable row level security;
+alter table pm_ter_overrides enable row level security;
+alter table pm_position_meta enable row level security;
+alter table app_settings     enable row level security;
+alter table audit_log        enable row level security;
 
 CREATE OR REPLACE FUNCTION replace_dashboard_bundle(
   p_cc_rows JSONB,
@@ -69,8 +95,13 @@ CREATE OR REPLACE FUNCTION replace_dashboard_bundle(
 RETURNS VOID
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = public
 AS $$
 BEGIN
+  IF NOT public.is_superuser() THEN
+    RAISE EXCEPTION 'Forbidden';
+  END IF;
+
   IF p_cc_rows IS NOT NULL THEN
     DELETE FROM capital_calls;
   END IF;

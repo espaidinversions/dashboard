@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
+import { apiFetchJson } from "../apiClient.js";
 
 const DEFAULT_ALLOWED_DOMAINS = ["solvicocean.com", "espaidinversions.com"];
 
@@ -20,12 +21,10 @@ export default function LoginPage() {
 
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/auth-settings")
-      .then(r => r.ok ? r.json() : null)
+    apiFetchJson("/api/auth-settings", {}, { auth: "none" })
       .then(data => {
         if (cancelled) return;
-        const domains = Array.isArray(data?.allowed_domains) ? data.allowed_domains : [];
-        if (domains.length > 0) setAllowedDomains(domains);
+        if (Array.isArray(data?.allowed_domains)) setAllowedDomains(data.allowed_domains);
       })
       .catch(() => {});
     return () => { cancelled = true; };

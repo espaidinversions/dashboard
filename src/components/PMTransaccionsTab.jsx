@@ -3,9 +3,11 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
-import { PM_POSITIONS } from "../data/publicMarkets.js";
-import { PM_TRANSACTIONS } from "../data/pmTransactions.js";
+import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { loadPMOverrides, upsertTransaction } from "../db.js";
+
+const PM_POSITIONS = PM_MODEL.holdings.active;
+const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 
 const MONTH_NAMES = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
 const MESOS_SHORT = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
@@ -18,7 +20,7 @@ const fmtYYYYMMShort = yyyymm => {
   return `${MESOS_SHORT[parseInt(m, 10)]} '${y.slice(2)}`;
 };
 
-const CUSTODIANS = ["CaixaBank", "Bankinter", "UBS", "Credit Suisse", "Altre"];
+const CUSTODIANS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Credit Suisse", "Altre"];
 
 export function PMTransaccionsTab() {
   const { tc, dark } = useTheme();

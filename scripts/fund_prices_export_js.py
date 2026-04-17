@@ -1,6 +1,6 @@
 """
 Export monthly fund NAV prices per ISIN from the per-ISIN CSV files under
-Mercats Públics/prices and Mercats Públics/fund_prices to src/data/fundPrices.js.
+Mercats Públics/prices and Mercats Públics/fund_prices to src/generated/prices/fundPrices.js.
 
 Monthly resolution keeps the last available price in each calendar month.
 
@@ -25,13 +25,14 @@ PRICE_DIRS = [
     ROOT / "Mercats Públics" / "fund_prices",
     ROOT / "Mercats Públics" / "wam_prices",
 ]
-JS_OUT = ROOT / "src" / "data" / "fundPrices.js"
+JS_OUT = ROOT / "src" / "generated" / "prices" / "fundPrices.js"
 
 MIN_DATE = "2019-01-01"
 
 
-def read_series_from_csv(csv_path: Path) -> dict[str, dict[str, tuple[str, float]]]:
-    monthly = defaultdict(dict)
+def ingest_csv(csv_path: Path, series: dict[str, dict[str, tuple[str, float]]]) -> None:
+    if not csv_path.exists():
+        return
     with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
         reader = csv.DictReader(f)
         for row in reader:
@@ -48,12 +49,26 @@ def read_series_from_csv(csv_path: Path) -> dict[str, dict[str, tuple[str, float
             except ValueError:
                 continue
 
+            isin = (row.get("isin") or csv_path.stem).strip().upper()
             month = date[:7]
-            prev = monthly[month]
-            # Keep the last row of the month if the file has more than one entry.
-            prev["_last"] = (date, price)
+            prev = series[isin].get(month)
+            if prev is None or date > prev[0]:
+                series[isin][month] = (date, price)
 
-    return {csv_path.stem.upper(): monthly}
+
+def collect_monthly_prices(price_dirs: list[Path]) -> dict[str, list[list[float | str]]]:
+    series = defaultdict(dict)
+    for base in price_dirs:
+        if not base.exists():
+            continue
+        for csv_path in sorted(base.glob("*.csv")):
+            ingest_csv(csv_path, series)
+
+    return {
+        isin: [[month, value[1]] for month, value in sorted(months.items())]
+        for isin, months in sorted(series.items())
+        if months
+    }
 
 
 def main():
@@ -61,39 +76,7 @@ def main():
         print("ERROR: price directories not found.")
         raise SystemExit(1)
 
-    # series[isin][month] = (date, price)
-    series = defaultdict(dict)
-    for base in PRICE_DIRS:
-        if not base.exists():
-            continue
-        for csv_path in sorted(base.glob("*.csv")):
-            with csv_path.open("r", encoding="utf-8-sig", newline="") as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    date = (row.get("date") or row.get("Date") or "").strip()
-                    if not date or date < MIN_DATE:
-                        continue
-
-                    close = row.get("close") or row.get("Close") or row.get("nav") or row.get("NAV")
-                    if close in (None, ""):
-                        continue
-
-                    try:
-                        price = round(float(close), 4)
-                    except ValueError:
-                        continue
-
-                    isin = csv_path.stem.upper()
-                    month = date[:7]
-                    prev = series[isin].get(month)
-                    if prev is None or date > prev[0]:
-                        series[isin][month] = (date, price)
-
-    prices = {
-        isin: [[month, value[1]] for month, value in sorted(months.items())]
-        for isin, months in sorted(series.items())
-        if months
-    }
+    prices = collect_monthly_prices(PRICE_DIRS)
 
     today = datetime.date.today().isoformat()
     lines = [
@@ -109,6 +92,7 @@ def main():
     lines.append("};")
     lines.append("")
 
+    JS_OUT.parent.mkdir(parents=True, exist_ok=True)
     JS_OUT.write_text("\n".join(lines), encoding="utf-8")
 
     total_points = sum(len(v) for v in prices.values())

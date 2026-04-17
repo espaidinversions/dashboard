@@ -3,7 +3,7 @@ ter_export_js.py
 ────────────────
 Reads Mercats Públics/fund_ter.json and exports a JS module for the dashboard.
 
-Output: src/data/pmTer.js   →   export const PM_TER = { [isin]: ter_pct, ... }
+Output: src/generated/publicMarkets/pmTer.js   →   export const PM_TER = { [isin]: ter_pct, ... }
 
 TER values are floating-point percentages (e.g. 0.07 for 0.07%).
 
@@ -23,7 +23,7 @@ if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
 
 ROOT     = Path(__file__).parent.parent
 IN_JSON  = ROOT / "Mercats Públics" / "fund_ter.json"
-OUT_JS   = ROOT / "src" / "data" / "pmTer.js"
+OUT_JS   = ROOT / "src" / "generated" / "publicMarkets" / "pmTer.js"
 
 
 def main():
@@ -39,6 +39,7 @@ def main():
         "// Run scripts/fund_fetch_ter.py then scripts/ter_export_js.py to update\n"
         f"export const PM_TER = {payload};\n"
     )
+    OUT_JS.parent.mkdir(parents=True, exist_ok=True)
     OUT_JS.write_text(out, encoding="utf-8")
 
     print(f"ISINs exported: {len(data)}")
