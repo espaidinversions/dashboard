@@ -521,6 +521,10 @@ function DashboardInner() {
             ✕
           </button>
         )}
+        <Link to="/guia"
+          style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,textDecoration:"none"}}>
+          Guia
+        </Link>
         {isAdmin && (
           <Link to="/admin"
             style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,textDecoration:"none"}}>

@@ -11,6 +11,7 @@ const CompanyDetail = lazy(() => import("./components/CompanyDetail.jsx"));
 const LoginPage = lazy(() => import("./components/LoginPage.jsx"));
 const AdminPanel = lazy(() => import("./components/AdminPanel.jsx"));
 const PMPositionDetail = lazy(() => import("./components/PMPositionDetail.jsx"));
+const UserGuide = lazy(() => import("./components/UserGuide.jsx"));
 
 function LoadingFallback() {
   return (
@@ -49,6 +50,7 @@ export default function AppRoutes() {
           <Route path="/company/:id" element={<RequireAuth><CompanyDetail /></RequireAuth>} />
           <Route path="/mercats-publics/:id" element={<RequireAuth><PMPositionDetail /></RequireAuth>} />
           <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
+          <Route path="/guia" element={<RequireAuth><UserGuide /></RequireAuth>} />
         </Routes>
       </Suspense>
     </ErrorBoundary>
