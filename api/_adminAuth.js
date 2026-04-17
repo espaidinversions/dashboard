@@ -40,10 +40,19 @@ export async function verifyUser(req, serviceClient) {
   return user;
 }
 
+// Accepts both admin and superuser — use for all general admin operations
 export async function verifyAdmin(req, serviceClient) {
   const user = await verifyUser(req, serviceClient);
   if (!user) return null;
-  return getUserRole(user) === "admin" ? user : null;
+  const role = getUserRole(user);
+  return (role === "admin" || role === "superuser") ? user : null;
+}
+
+// Accepts only superuser — use for privileged operations (role changes, purge, system)
+export async function verifySuperuser(req, serviceClient) {
+  const user = await verifyUser(req, serviceClient);
+  if (!user) return null;
+  return getUserRole(user) === "superuser" ? user : null;
 }
 
 export function isAllowedRole(role) {

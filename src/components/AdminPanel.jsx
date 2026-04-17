@@ -2,14 +2,16 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { readStoredFlag } from "../utils.js";
+import { useAuth } from "../auth.jsx";
 import AdminUsers from "./admin/AdminUsers.jsx";
 import AdminActivity from "./admin/AdminActivity.jsx";
 import AdminData from "./admin/AdminData.jsx";
 import AdminSettings from "./admin/AdminSettings.jsx";
 import AdminEntities from "./admin/AdminEntities.jsx";
 import AdminPMOperations from "./admin/AdminPMOperations.jsx";
+import AdminSystem from "./admin/AdminSystem.jsx";
 
-const NAV = [
+const NAV_BASE = [
   { id: "users",     label: "Usuaris",      icon: "👥" },
   { id: "activity",  label: "Activitat",    icon: "📋" },
   { id: "data",      label: "Dades",        icon: "🗄️" },
@@ -17,9 +19,12 @@ const NAV = [
   { id: "pm",        label: "PM Operacions",icon: "📈" },
   { id: "settings",  label: "Configuració", icon: "⚙️" },
 ];
+const NAV_SUPERUSER = { id: "system", label: "Sistema", icon: "🔧" };
 
 function AdminPanelInner() {
   const { tc } = useTheme();
+  const { isSuperuser } = useAuth();
+  const NAV = isSuperuser ? [...NAV_BASE, NAV_SUPERUSER] : NAV_BASE;
   const [activeTab, setActiveTab] = useState("users");
 
   return (
@@ -57,6 +62,7 @@ function AdminPanelInner() {
           {activeTab === "entities" && <AdminEntities />}
           {activeTab === "pm"       && <AdminPMOperations />}
           {activeTab === "settings" && <AdminSettings />}
+          {activeTab === "system"   && <AdminSystem />}
         </div>
       </div>
     </div>

@@ -4,6 +4,27 @@ import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
 import { loadAuditLog } from "./adminApi.js";
 import { formatIsoDateTime } from "../../utils.js";
+import { useAuth } from "../../auth.jsx";
+
+function exportCsv(logs) {
+  const header = ["Data", "Usuari", "Acció", "Taula", "Registre", "Canvis"];
+  const rows = logs.map(l => [
+    l.created_at ?? "",
+    l.user_email ?? "",
+    l.action ?? "",
+    l.table_name ?? "",
+    l.record_id ?? "",
+    l.changes ? JSON.stringify(l.changes).replace(/"/g, '""') : "",
+  ]);
+  const csv = [header, ...rows].map(r => r.map(v => `"${v}"`).join(",")).join("\n");
+  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `audit-log-${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const ACTION_COLORS = {
   insert: { color: "#1B5E20", bg: "#E8F5E9" },
@@ -14,6 +35,7 @@ const ACTION_COLORS = {
 export default function AdminActivity() {
   const { tc } = useTheme();
   const { toast } = useToast();
+  const { isSuperuser } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
@@ -62,7 +84,13 @@ export default function AdminActivity() {
 
   return (
     <div>
-      <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700, color: tc.navy }}>Activitat</h2>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tc.navy }}>Activitat</h2>
+        <button onClick={() => exportCsv(logs)} disabled={logs.length === 0}
+          style={{ padding: "6px 14px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: logs.length === 0 ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit", opacity: logs.length === 0 ? 0.5 : 1 }}>
+          ↓ CSV
+        </button>
+      </div>
 
       {/* Summary cards */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>

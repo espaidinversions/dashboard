@@ -112,6 +112,7 @@ const SECTIONS = [
   { id: "s4", label: "Panell d'Administració" },
   { id: "s5", label: "Rols i Permisos" },
   { id: "s6", label: "Persistència de Dades" },
+  { id: "s7", label: "Flux de Dades" },
 ];
 
 function Sidebar({ active }) {
@@ -410,6 +411,135 @@ function S6() {
 }
 
 // ── Main component ─────────────────────────────────────────────────────────
+// ── Data flow diagram ──────────────────────────────────────────────────────
+function FlowBox({ label, sub, color = "#1B4F72", bg, width = 140, mono = false }) {
+  const { tc } = useTheme();
+  const boxBg = bg ?? tc.card;
+  return (
+    <div style={{ width, textAlign: "center", border: `2px solid ${color}`, borderRadius: 8, padding: "10px 8px", background: boxBg, flexShrink: 0 }}>
+      <div style={{ fontSize: mono ? 11 : 12, fontWeight: 700, color, fontFamily: mono ? "'DM Mono',monospace" : "inherit", lineHeight: 1.3 }}>{label}</div>
+      {sub && <div style={{ fontSize: 10, color: "#888", marginTop: 3, lineHeight: 1.3 }}>{sub}</div>}
+    </div>
+  );
+}
+
+function Arrow({ dir = "down", label }) {
+  const { tc } = useTheme();
+  const isH = dir === "right" || dir === "left";
+  return (
+    <div style={{ display: "flex", flexDirection: isH ? "row" : "column", alignItems: "center", justifyContent: "center", gap: 2, flexShrink: 0 }}>
+      {label && <span style={{ fontSize: 10, color: tc.textLight, whiteSpace: "nowrap" }}>{label}</span>}
+      <span style={{ fontSize: 18, color: tc.textLight, lineHeight: 1 }}>
+        {dir === "down" ? "↓" : dir === "up" ? "↑" : dir === "right" ? "→" : "←"}
+      </span>
+    </div>
+  );
+}
+
+function DataFlowDiagram() {
+  const { tc, dark } = useTheme();
+  const scriptBg  = dark ? "#0d2010" : "#F1F8E9";
+  const fileBg    = dark ? "#0d1a2e" : "#E8F0F7";
+  const apiBg     = dark ? "#1a0d2e" : "#F3E5F5";
+  const dbBg      = dark ? "#2e1a0d" : "#FFF8E1";
+  const browserBg = dark ? "#0d2020" : "#E0F7FA";
+  const lsBg      = dark ? "#1a1a0d" : "#FFFDE7";
+
+  return (
+    <div style={{ overflowX: "auto", margin: "20px 0" }}>
+      <div style={{ minWidth: 680, fontFamily: "'Outfit',system-ui,sans-serif" }}>
+
+        {/* Row 1: Scripts → Generated files → Build */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <FlowBox label="Scripts Python" sub="etf_fetch_prices.py fund_fetch_prices.py portfolio_build.py" color="#2E7D32" bg={scriptBg} width={150} />
+          <Arrow dir="right" label="generen" />
+          <FlowBox label="src/generated/" sub="fundPrices.js pmTransactions.js portfolioValues.js" color="#1565C0" bg={fileBg} width={160} mono />
+          <Arrow dir="right" label="empaquetat per" />
+          <FlowBox label="Vite Build" sub="npm run build → dist/" color="#6A1B9A" bg={apiBg} width={130} />
+          <Arrow dir="right" label="desplegat a" />
+          <FlowBox label="Vercel CDN" sub="vercel --prod" color="#E65100" bg={dbBg} width={120} />
+        </div>
+
+        {/* Vertical arrow down from Vercel CDN */}
+        <div style={{ display: "flex", paddingLeft: 570 }}>
+          <Arrow dir="down" />
+        </div>
+
+        {/* Row 2: Browser ↔ API ↔ Supabase */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <div style={{ width: 150, flexShrink: 0 }} />
+          <div style={{ width: 10 }} />
+          <div style={{ width: 160, flexShrink: 0 }} />
+          <div style={{ width: 10 }} />
+          <div style={{ width: 130, flexShrink: 0 }} />
+          <div style={{ width: 10 }} />
+          <FlowBox label="Navegador" sub="React + localStorage" color="#00838F" bg={browserBg} width={120} />
+        </div>
+
+        {/* Row: Browser ↔ API */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8, paddingLeft: 570 }}>
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+            <span style={{ fontSize: 10, color: tc.textLight }}>crida API</span>
+            <span style={{ fontSize: 18, color: tc.textLight }}>↕</span>
+          </div>
+        </div>
+
+        {/* Row 3: API routes ↔ Supabase */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, justifyContent: "flex-end" }}>
+          <FlowBox label="Supabase DB" sub="capital_calls portfolio_companies pm_transactions ..." color="#B45309" bg={dbBg} width={150} />
+          <Arrow dir="right" label="" />
+          <FlowBox label="Vercel API" sub="/api/admin/* /api/eur-usd /api/data-version" color="#6A1B9A" bg={apiBg} width={150} />
+        </div>
+
+        {/* Legend */}
+        <div style={{ marginTop: 24, padding: "12px 16px", background: tc.bgAlt, borderRadius: 8, border: `1px solid ${tc.border}` }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: tc.navy, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Llegenda</div>
+          <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
+            {[
+              { color: "#2E7D32", label: "Scripts Python (execució manual o programada)" },
+              { color: "#1565C0", label: "Fitxers JS generats (part del bundle)" },
+              { color: "#6A1B9A", label: "Vercel (build + API serverless)" },
+              { color: "#B45309", label: "Supabase (base de dades en viu)" },
+              { color: "#00838F", label: "Navegador (React + localStorage)" },
+              { color: "#E65100", label: "CDN / Desplegament" },
+            ].map(({ color, label }) => (
+              <div key={color} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: tc.textMid }}>
+                <span style={{ width: 12, height: 12, borderRadius: 3, background: color, flexShrink: 0, display: "inline-block" }} />
+                {label}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Paths explanation */}
+        <div style={{ marginTop: 16, display: "flex", flexDirection: "column", gap: 8 }}>
+          {[
+            { path: "Scripts → Generated → Vite → Vercel CDN", desc: "Dades estàtiques (historial de preus, model PM). S'actualitzen executant scripts i tornant a desplegar." },
+            { path: "Navegador ↔ Vercel API ↔ Supabase", desc: "Dades en viu (capital calls, participades, transaccions PM, usuaris). Totes les operacions CRUD passen per aquí." },
+            { path: "Navegador → localStorage", desc: "Caché local. Es carrega des de Supabase a l'inici de sessió i s'actualitza amb cada mutació. Ctrl+Shift+R força una recàrrega neta." },
+          ].map(({ path, desc }) => (
+            <div key={path} style={{ display: "flex", gap: 10, fontSize: 12 }}>
+              <code style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 4, padding: "2px 7px", fontSize: 11, fontFamily: "'DM Mono',monospace", color: tc.navy, whiteSpace: "nowrap", alignSelf: "flex-start", flexShrink: 0 }}>{path}</code>
+              <span style={{ color: tc.textMid, lineHeight: 1.5 }}>{desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function S7() {
+  return (
+    <>
+      <H2 id="s7">7. Flux de Dades</H2>
+      <P>El diagrama mostra com les dades entren, es processen i arriben al navegador.</P>
+      <DataFlowDiagram />
+    </>
+  );
+}
+
+// ── Main component ─────────────────────────────────────────────────────────
 function UserGuideInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
 
@@ -452,6 +582,7 @@ function UserGuideInner() {
           <S4 />
           <S5 />
           <S6 />
+          <S7 />
         </div>
       </div>
     </div>

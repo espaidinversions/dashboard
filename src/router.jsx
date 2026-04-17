@@ -29,10 +29,10 @@ function RequireAuth({ children }) {
 }
 
 function RequireAdmin({ children }) {
-  const { session, isAdmin } = useAuth();
+  const { session, isAdmin, isSuperuser } = useAuth();
   if (session === undefined) return <LoadingFallback />;
   if (!session) return <Navigate to="/login" replace />;
-  if (!isAdmin) return <Navigate to="/" replace />;
+  if (!isAdmin && !isSuperuser) return <Navigate to="/" replace />;
   return children;
 }
 

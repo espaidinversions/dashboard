@@ -34,7 +34,7 @@ const LS_TS = "tc_loadedAt";
 // ══════════════════════════════════════════════════════════
 function DashboardInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
-  const { signOut, isAdmin } = useAuth();
+  const { signOut, isAdmin, isSuperuser } = useAuth();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
@@ -525,7 +525,7 @@ function DashboardInner() {
           style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,textDecoration:"none"}}>
           Guia
         </Link>
-        {isAdmin && (
+        {(isAdmin || isSuperuser) && (
           <Link to="/admin"
             style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,textDecoration:"none"}}>
             Admin

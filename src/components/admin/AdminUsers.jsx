@@ -4,12 +4,20 @@ import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
 import { apiFetchJson } from "../../apiClient.js";
 import { formatIsoDate } from "../../utils.js";
+import { useAuth } from "../../auth.jsx";
 
 const ROLES = ["user", "superuser", "admin"];
+
+const ROLE_COLORS = {
+  superuser: { color: "#7c3c00", bg: "#fff0e0" },
+  admin:     { color: "#1A237E", bg: "#E8EAF6" },
+  user:      { color: "#1B5E20", bg: "#E8F5E9" },
+};
 
 export default function AdminUsers() {
   const { tc } = useTheme();
   const { toast } = useToast();
+  const { isSuperuser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState("active");
@@ -143,10 +151,16 @@ export default function AdminUsers() {
                 <tr key={u.id}>
                   <td style={td}>{u.email}</td>
                   <td style={td}>
-                    <select value={getRole(u)} onChange={e => changeRole(u.id, e.target.value)}
-                      style={{ padding: "4px 8px", borderRadius: 5, border: `1px solid ${tc.border}`, background: tc.bg, color: tc.text, fontFamily: "inherit", fontSize: 12 }}>
-                      {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
-                    </select>
+                    {isSuperuser ? (
+                      <select value={getRole(u)} onChange={e => changeRole(u.id, e.target.value)}
+                        style={{ padding: "4px 8px", borderRadius: 5, border: `1px solid ${tc.border}`, background: tc.bg, color: tc.text, fontFamily: "inherit", fontSize: 12 }}>
+                        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+                      </select>
+                    ) : (
+                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 5, padding: "2px 8px", ...(ROLE_COLORS[getRole(u)] ?? {}) }}>
+                        {getRole(u)}
+                      </span>
+                    )}
                   </td>
                   <td style={{ ...td, fontSize: 12, color: tc.textMid }}>{formatIsoDate(u.last_sign_in_at)}</td>
                   <td style={{ ...td, fontSize: 12, color: tc.textMid }}>{formatIsoDate(u.created_at)}</td>
