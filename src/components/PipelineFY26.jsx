@@ -24,13 +24,21 @@ function genMonthOpts(months = 36) {
 const MONTHS_OPTS = genMonthOpts(36);
 
 // ══════════════════════════════════════════════════════════
-export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
+export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }) {
   const { rate, toEUR, toUSD } = useCurrency(eurUsd);
   const { tc: TC, dark } = useTheme();
   const { canEdit } = useAuth();
   const { toast } = useToast();
   const [funds,setFunds]   = useState(initialFunds);
   useEffect(()=>{ setFunds(initialFunds); },[initialFunds]);
+
+  const setFundsAndSync = (updater) => {
+    setFunds(prev => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      onDealsChange?.(next);
+      return next;
+    });
+  };
 
   const [cur,setCur]       = usePersistedState("pl_cur", "EUR");
   const [nf,setNf]         = useState({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",estimatedClosing:""});
@@ -113,17 +121,17 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
   const isHl = (type,name) => !chartF||(chartF.type===type&&chartF.value===name);
   const sort=(k)=>{if(sk===k)setSd(d=>d==="asc"?"desc":"asc");else{setSk(k);setSd("asc");}};
   const Arr=({k})=><span style={{marginLeft:3,opacity:sk===k?1:0.2,fontSize:9}}>{sk===k&&sd==="desc"?"▼":"▲"}</span>;
-  const toggle=(id)=>setFunds(p=>p.map(f=>f.id===id?{...f,active:!f.active}:f));
+  const toggle=(id)=>setFundsAndSync(p=>p.map(f=>f.id===id?{...f,active:!f.active}:f));
   const del = async (id) => {
     const { error } = await deletePipelineDeal(id);
     if (error) { toast({ message: "Error eliminant deal: " + error.message, type: "error" }); return; }
-    setFunds(p => p.filter(f => f.id !== id));
+    setFundsAndSync(p => p.filter(f => f.id !== id));
     toast({ message: "Deal eliminat." });
   };
 
   const upd = async (id, field, val) => {
     let updatedDeal = null;
-    setFunds(p => {
+    setFundsAndSync(p => {
       const next = p.map(f => {
         if (f.id !== id) return f;
         updatedDeal = { ...f, [field]: val };
@@ -147,7 +155,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
     };
     const inserted = await insertPipelineDeal(deal);
     if (!inserted) { toast({ message: "Error en crear el deal", type: "error" }); return; }
-    setFunds(p => [inserted, ...p]);
+    setFundsAndSync(p => [inserted, ...p]);
   };
 
   const inp2={border:`1px solid ${TC.border}`,borderRadius:5,padding:"7px 10px",fontSize:13,color:TC.text,background:TC.card,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"};

@@ -666,7 +666,7 @@ function DashboardInner() {
         </div>
 
         {/* ── PIPELINE ── */}
-        {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd}/></div>}
+        {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd} onDealsChange={deals=>{ setFunds0(deals); writeStoredJSON(LS_PL, deals); }}/></div>}
 
         {/* ── SEARCHERS ── */}
         {tab==="searchers"&&<div className="tab-panel"><SearchersTab search={globalSearch} subTab={searchersSubTab}/></div>}
