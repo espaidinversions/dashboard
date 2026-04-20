@@ -63,6 +63,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
 
   const gOpts = ["Tots",...new Set(funds.map(f=>f.geography))];
   const sOpts = ["Tots",...new Set(funds.map(f=>f.strategy))];
+  const sectorOptions = useMemo(()=>Array.from(new Set(funds.map(f=>f.sector).filter(Boolean))).sort(),[funds]);
 
   const filtered = useMemo(()=>{
     let l=[...funds];
@@ -383,9 +384,9 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
                   </td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>
-                  <td style={{padding:"9px 10px",fontSize:12,color:TC.textMid,whiteSpace:"nowrap"}}>{f.sector}</td>
-                  <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.status} options={PIPELINE_STATUS_OPTIONS} badgeCfg={STATUS_CFG} onSave={v=>upd(f.id,"status",v)}/> : <span style={{display:"block"}}>{f.status}</span>}</td>
-                  <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.canal} options={PIPELINE_CANAL_OPTIONS} badgeCfg={CANAL_CFG} onSave={v=>upd(f.id,"canal",v)}/> : <span style={{display:"block"}}>{f.canal}</span>}</td>
+                  <td style={{padding:"9px 10px",fontSize:12,color:TC.textMid,whiteSpace:"nowrap"}}>{canEdit ? <EditableCell value={f.sector} options={sectorOptions} allowCustom optionsKey="p_sector" onSave={v=>upd(f.id,"sector",v)}/> : f.sector}</td>
+                  <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.status} options={PIPELINE_STATUS_OPTIONS} allowCustom optionsKey="p_status" badgeCfg={STATUS_CFG} onSave={v=>upd(f.id,"status",v)}/> : <span style={{display:"block"}}>{f.status}</span>}</td>
+                  <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.canal} options={PIPELINE_CANAL_OPTIONS} allowCustom optionsKey="p_canal" badgeCfg={CANAL_CFG} onSave={v=>upd(f.id,"canal",v)}/> : <span style={{display:"block"}}>{f.canal}</span>}</td>
                   <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.estimatedClosing} options={MONTHS_OPTS} emptyDisplay="— sense data" onSave={v=>upd(f.id,"estimatedClosing",v)}/> : <span>{f.estimatedClosing||""}</span>}</td>
                   <td style={{padding:"9px 10px"}}>
                     {canEdit && <button onClick={()=>del(f.id)} style={{background:"transparent",border:"none",color:TC.border,cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}
