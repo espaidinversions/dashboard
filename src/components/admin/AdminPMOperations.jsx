@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
@@ -8,6 +8,9 @@ import {
   loadPMPositionMetaTable, upsertPositionMeta,
   loadPMPositionOverridesTable, upsertPMPositionOverride,
 } from "../../db.js";
+import { PM_MODEL } from "../../data/publicMarketsModel.js";
+
+const PM_TRANSACTIONS_STATIC = PM_MODEL.activity.transactions;
 
 const TABS = [
   { id: "transactions", label: "Transaccions" },
@@ -69,24 +72,41 @@ function InlineSelect({ value, options, onSave, disabled }) {
 function TransactionsTab() {
   const { tc } = useTheme();
   const { toast } = useToast();
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [manualRows, setManualRows] = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [showAdd, setShowAdd]       = useState(false);
+  const [saving, setSaving]         = useState(false);
+  const [filterSource, setFilterSource] = useState("tots"); // "tots" | "model" | "manual"
   const [draft, setDraft] = useState({ action: "buy", date: "", isin: "", nom: "", tipus: "", custodian: "", units: "", nav: "", value_eur: "" });
 
   const load = useCallback(async () => {
     setLoading(true);
-    setRows(await loadPMTransactions());
+    setManualRows(await loadPMTransactions());
     setLoading(false);
   }, []);
 
   useEffect(() => { load(); }, [load]);
 
+  // Merge: static model rows (read-only) + manual Supabase rows
+  // Manual rows take precedence if same id exists in model
+  const allRows = useMemo(() => {
+    const manualIds = new Set(manualRows.map(r => r.id));
+    const modelRows = PM_TRANSACTIONS_STATIC
+      .filter(r => !manualIds.has(r.id))
+      .map(r => ({ ...r, _source: "model", value_eur: r.valueEur ?? r.value_eur }));
+    const manual = manualRows.map(r => ({ ...r, _source: "manual" }));
+    return [...modelRows, ...manual].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  }, [manualRows]);
+
+  const filtered = useMemo(() => {
+    if (filterSource === "tots") return allRows;
+    return allRows.filter(r => r._source === filterSource);
+  }, [allRows, filterSource]);
+
   async function handleDelete(id) {
     const { error } = await deletePMTransaction(id);
     if (error) { toast({ message: "Error eliminant: " + error.message, type: "error" }); return; }
-    setRows(prev => prev.filter(r => r.id !== id));
+    setManualRows(prev => prev.filter(r => r.id !== id));
     toast({ message: "Transacció eliminada", type: "success" });
   }
 
@@ -118,14 +138,38 @@ function TransactionsTab() {
   const td = { padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, fontSize: 12 };
   const inp = { padding: "5px 8px", borderRadius: 5, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit" };
 
+  const chip = (label, active, onClick) => (
+    <button key={label} onClick={onClick} style={{
+      padding: "3px 10px", borderRadius: 20, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
+      border: `1.5px solid ${active ? tc.green : tc.border}`,
+      background: active ? "#E8F8E8" : "transparent",
+      color: active ? tc.green : tc.textLight, fontWeight: active ? 700 : 400,
+    }}>{label}</button>
+  );
+
+  const modelCount  = allRows.filter(r => r._source === "model").length;
+  const manualCount = allRows.filter(r => r._source === "manual").length;
+
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <span style={{ fontSize: 13, color: tc.textLight }}>{rows.length} transaccions</span>
-        <button onClick={() => setShowAdd(s => !s)}
-          style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 600 }}>
-          {showAdd ? "✕ Cancel·la" : "＋ Afegeix"}
-        </button>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12, flexWrap: "wrap", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: tc.textLight }}>
+            {filtered.length} de {allRows.length} transaccions
+          </span>
+          {loading && <span style={{ fontSize: 11, color: tc.textLight, fontStyle: "italic" }}>· carregant manuals…</span>}
+          {!loading && <><span style={{ fontSize: 11, color: tc.textLight }}>·</span>
+          <span style={{ fontSize: 11, color: tc.textLight }}>{modelCount} model · {manualCount} manual</span></>}
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          {chip("Totes", filterSource === "tots", () => setFilterSource("tots"))}
+          {chip("Model", filterSource === "model", () => setFilterSource("model"))}
+          {chip("Manual", filterSource === "manual", () => setFilterSource("manual"))}
+          <button onClick={() => setShowAdd(s => !s)}
+            style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 600, marginLeft: 8 }}>
+            {showAdd ? "✕ Cancel·la" : "＋ Afegeix manual"}
+          </button>
+        </div>
       </div>
 
       {showAdd && (
@@ -162,45 +206,58 @@ function TransactionsTab() {
         </form>
       )}
 
-      {loading ? <div style={{ color: tc.textLight }}>Carregant…</div> : (
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: tc.bgAlt }}>
-                {["Data", "ISIN", "Nom", "Tipus", "Acció", "Custodi", "Unitats", "NAV", "Valor EUR", ""].map(h => (
-                  <th key={h} style={th}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.length === 0 && <tr><td colSpan={10} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap transacció</td></tr>}
-              {rows.map(r => (
-                <tr key={r.id} style={{ background: "transparent" }}>
-                  <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{r.date}</td>
-                  <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{r.isin}</td>
-                  <td style={{ ...td, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.nom ?? "—"}</td>
-                  <td style={td}>{r.tipus ?? "—"}</td>
-                  <td style={td}>
-                    <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, fontWeight: 700, background: r.action === "buy" ? "#E8EFF5" : "#FEF3EC", color: r.action === "buy" ? tc.navy : "#B45309" }}>
-                      {r.action}
-                    </span>
-                  </td>
-                  <td style={td}>{r.custodian ?? "—"}</td>
-                  <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11, textAlign: "right" }}>{r.units ?? "—"}</td>
-                  <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11, textAlign: "right" }}>{r.nav ?? "—"}</td>
-                  <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11, textAlign: "right" }}>{r.value_eur != null ? `€${Number(r.value_eur).toFixed(0)}` : "—"}</td>
-                  <td style={{ ...td, textAlign: "right" }}>
-                    <button onClick={() => handleDelete(r.id)}
-                      style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: "#C62828", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
-                      Elimina
-                    </button>
-                  </td>
-                </tr>
+      <div style={{ overflowX: "auto" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <thead>
+            <tr style={{ background: tc.bgAlt }}>
+              {["Data", "ISIN", "Nom", "Tipus", "Acció", "Custodi", "Unitats", "NAV", "Valor EUR", "Font", ""].map(h => (
+                <th key={h} style={th}>{h}</th>
               ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 && <tr><td colSpan={11} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap transacció</td></tr>}
+            {filtered.map(r => {
+              const isModel = r._source === "model";
+              const valueEur = r.value_eur ?? r.valueEur;
+              return (
+                  <tr key={r.id} style={{ background: isModel ? tc.bgAlt : "transparent", opacity: isModel ? 0.85 : 1 }}>
+                    <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{r.date}</td>
+                    <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{r.isin}</td>
+                    <td style={{ ...td, maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{r.nom ?? "—"}</td>
+                    <td style={td}>{r.tipus ?? "—"}</td>
+                    <td style={td}>
+                      <span style={{ fontSize: 10, padding: "2px 7px", borderRadius: 4, fontWeight: 700, background: r.action === "buy" ? "#E8EFF5" : "#FEF3EC", color: r.action === "buy" ? tc.navy : "#B45309" }}>
+                        {r.action}
+                      </span>
+                    </td>
+                    <td style={td}>{r.custodian ?? "—"}</td>
+                    <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11, textAlign: "right" }}>{r.units != null ? Number(r.units).toLocaleString("ca-ES", { maximumFractionDigits: 0 }) : "—"}</td>
+                    <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11, textAlign: "right" }}>{r.nav != null ? Number(r.nav).toFixed(2) : "—"}</td>
+                    <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11, textAlign: "right" }}>{valueEur != null ? `€${Number(valueEur).toFixed(0)}` : "—"}</td>
+                    <td style={{ ...td, textAlign: "center" }}>
+                      <span style={{
+                        fontSize: 9, padding: "2px 6px", borderRadius: 4, fontWeight: 700, letterSpacing: "0.05em",
+                        background: isModel ? "#E8EFF5" : "#E8F8E8",
+                        color: isModel ? tc.navy : tc.green,
+                      }}>
+                        {isModel ? "MODEL" : "MANUAL"}
+                      </span>
+                    </td>
+                    <td style={{ ...td, textAlign: "right" }}>
+                      {!isModel && (
+                        <button onClick={() => handleDelete(r.id)}
+                          style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: "#C62828", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
+                          Elimina
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
-      )}
     </div>
   );
 }

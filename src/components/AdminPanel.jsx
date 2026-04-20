@@ -10,14 +10,16 @@ import AdminSettings from "./admin/AdminSettings.jsx";
 import AdminEntities from "./admin/AdminEntities.jsx";
 import AdminPMOperations from "./admin/AdminPMOperations.jsx";
 import AdminSystem from "./admin/AdminSystem.jsx";
+import AdminPermissions from "./admin/AdminPermissions.jsx";
 
 const NAV_BASE = [
-  { id: "users",     label: "Usuaris",      icon: "👥" },
-  { id: "activity",  label: "Activitat",    icon: "📋" },
-  { id: "data",      label: "Dades",        icon: "🗄️" },
-  { id: "entities",  label: "Entitats",     icon: "🏢" },
-  { id: "pm",        label: "PM Operacions",icon: "📈" },
-  { id: "settings",  label: "Configuració", icon: "⚙️" },
+  { id: "users",       label: "Usuaris",      icon: "👥" },
+  { id: "activity",    label: "Activitat",    icon: "📋" },
+  { id: "permissions", label: "Permisos",     icon: "🔒" },
+  { id: "data",        label: "Dades",        icon: "🗄️" },
+  { id: "entities",    label: "Entitats",     icon: "🏢" },
+  { id: "pm",          label: "PM Operacions",icon: "📈" },
+  { id: "settings",    label: "Configuració", icon: "⚙️" },
 ];
 const NAV_SUPERUSER = { id: "system", label: "Sistema", icon: "🔧" };
 
@@ -56,9 +58,10 @@ function AdminPanelInner() {
 
         {/* Content */}
         <div style={{ flex: 1, padding: "32px", overflowY: "auto" }}>
-          {activeTab === "users"    && <AdminUsers />}
-          {activeTab === "activity" && <AdminActivity />}
-          {activeTab === "data"     && <AdminData />}
+          {activeTab === "users"       && <AdminUsers />}
+          {activeTab === "activity"    && <AdminActivity />}
+          {activeTab === "permissions" && <AdminPermissions />}
+          {activeTab === "data"        && <AdminData />}
           {activeTab === "entities" && <AdminEntities />}
           {activeTab === "pm"       && <AdminPMOperations />}
           {activeTab === "settings" && <AdminSettings />}

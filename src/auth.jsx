@@ -10,6 +10,7 @@ const ACTIVITY_EVENTS = ["mousemove", "keydown", "mousedown", "touchstart", "scr
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
   const [role, setRole] = useState("user");
+  const [deniedSections, setDeniedSections] = useState([]);
   const idleTimerRef = useRef(null);
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export function AuthProvider({ children }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s ?? null);
       setRole(s?.user?.app_metadata?.role ?? "user");
+      if (!s) setDeniedSections([]);
     });
 
     return () => subscription.unsubscribe();
@@ -36,6 +38,18 @@ export function AuthProvider({ children }) {
       .then(({ data: { user } }) => {
         if (user?.app_metadata?.role) setRole(user.app_metadata.role);
       })
+      .catch(() => {});
+  }, [session]);
+
+  // Load per-user section permissions after session is ready.
+  useEffect(() => {
+    if (!session || !supabase) return;
+    const token = session.access_token;
+    fetch("/api/admin/user-permissions", {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => { if (data?.deniedSections) setDeniedSections(data.deniedSections); })
       .catch(() => {});
   }, [session]);
 
@@ -76,7 +90,7 @@ export function AuthProvider({ children }) {
   const isElevated = canEdit;
 
   return (
-    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, role, isSuperuser, isAdmin, isElevated, canEdit }}>
+    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, role, isSuperuser, isAdmin, isElevated, canEdit, deniedSections }}>
       {children}
     </AuthContext.Provider>
   );

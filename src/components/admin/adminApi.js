@@ -35,3 +35,15 @@ export async function revertChange(auditId) {
     body: JSON.stringify({ auditId }),
   });
 }
+
+export async function loadUserPermissions() {
+  return apiFetchJson("/api/admin/user-permissions");
+}
+
+export async function saveUserPermissions(userId, deniedSections) {
+  return apiFetchJson("/api/admin/user-permissions", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId, deniedSections }),
+  });
+}

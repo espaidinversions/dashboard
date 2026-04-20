@@ -34,7 +34,7 @@ const LS_TS = "tc_loadedAt";
 // ══════════════════════════════════════════════════════════
 function DashboardInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
-  const { signOut, isAdmin, isSuperuser, canEdit } = useAuth();
+  const { signOut, isAdmin, isSuperuser, canEdit, deniedSections } = useAuth();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
@@ -458,20 +458,43 @@ function DashboardInner() {
     {id:"mensual", label:"📈 Detall Mensual"},
     {id:"fons",    label:"🏦 Per Fons"},
   ];
-  const SECTIONS = [
+  const SECTIONS_ALL = [
     {id:"alternatives",   label:"Alternatives"},
     {id:"mercats-publics", label:"Mercats Públics"},
     {id:"real-estate",    label:"Real Estate"},
   ];
-  const SUPRA = [
+  const SUPRA_ALL = [
     {id:"fons",       label:"Fons"},
     {id:"searchers",  label:"Searchers"},
     {id:"companies",  label:"Participades"},
     {id:"inversions", label:"Llistat d'Inversions"},
     {id:"txlog",      label:"Transaccions"},
   ];
+  // Admins/superusers see everything regardless of permissions
+  const deniedSet = useMemo(
+    () => (isAdmin || isSuperuser) ? new Set() : new Set(deniedSections ?? []),
+    [isAdmin, isSuperuser, deniedSections]
+  );
+  const SECTIONS = useMemo(() => SECTIONS_ALL.filter(s => !deniedSet.has(s.id)), [deniedSet]); // eslint-disable-line react-hooks/exhaustive-deps
+  const SUPRA = useMemo(() => SUPRA_ALL.filter(s => !deniedSet.has(s.id)), [deniedSet]); // eslint-disable-line react-hooks/exhaustive-deps
   const supra = tab==="searchers"?"searchers":tab==="companies"?"companies":tab==="inversions"?"inversions":tab==="txlog"?"txlog":"fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Current Pipeline"}, ...TABS_CC];
+
+  // If the active section/supra is denied, redirect to first allowed
+  useEffect(() => {
+    if (deniedSet.size === 0) return;
+    // Section-level check
+    if (deniedSet.has(section)) {
+      const first = SECTIONS[0];
+      if (first) setTab(first.id === "alternatives" ? "pipeline" : first.id);
+      return;
+    }
+    // Supra-level check (within alternatives)
+    if (section === "alternatives" && deniedSet.has(supra)) {
+      const first = SUPRA[0];
+      if (first) setTab(first.id === "fons" ? "resum" : first.id);
+    }
+  }, [deniedSet, section, supra, SECTIONS, SUPRA]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs or sections
   useEffect(() => {
@@ -480,7 +503,7 @@ function DashboardInner() {
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       const dir = e.key === "ArrowRight" ? 1 : -1;
       if (section !== "alternatives") {
-        const sectionIds = ["alternatives", "mercats-publics", "real-estate"];
+        const sectionIds = SECTIONS.map(s => s.id);
         const idx = sectionIds.indexOf(section);
         const next = sectionIds[(idx + dir + sectionIds.length) % sectionIds.length];
         setTab(next === "alternatives" ? "pipeline" : next);
@@ -489,7 +512,7 @@ function DashboardInner() {
         const next = TABS_FONS[(idx + dir + TABS_FONS.length) % TABS_FONS.length];
         setTab(next.id);
       } else {
-        const supraIds = ["fons", "searchers", "companies", "inversions", "txlog"];
+        const supraIds = SUPRA.map(s => s.id);
         const idx = supraIds.indexOf(supra);
         const nextSupra = supraIds[(idx + dir + supraIds.length) % supraIds.length];
         setTab(nextSupra === "fons" ? "pipeline" : nextSupra);
