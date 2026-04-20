@@ -7,7 +7,7 @@ import { useTheme } from "../theme.js";
 import { STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE, PIPELINE_STATUS_OPTIONS, PIPELINE_CANAL_OPTIONS } from "../config.js";
 import { EmptyState, EditableCell } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
-import { insertPipelineDeal, deletePipelineDeal, upsertPipelineDeal } from "../db.js";
+import { insertPipelineDeal, deletePipelineDeal, upsertPipelineDeal, loadPipelineDeals } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { useCurrency } from "./hooks/useCurrency.js";
 
@@ -30,7 +30,18 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   const { canEdit } = useAuth();
   const { toast } = useToast();
   const [funds,setFunds]   = useState(initialFunds);
-  useEffect(()=>{ setFunds(initialFunds); },[initialFunds]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    loadPipelineDeals().then(data => {
+      if (cancelled) return;
+      if (data) { setFunds(data); onDealsChange?.(data); }
+      setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const setFundsAndSync = (updater) => {
     setFunds(prev => {
@@ -381,7 +392,8 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
             </div>
           </div>
         )}
-        <div style={{overflowX:"auto"}}>
+        {loading && <div style={{padding:"32px",textAlign:"center",color:TC.textLight,fontSize:13}}>Carregant pipeline…</div>}
+        <div style={{overflowX:"auto",display:loading?"none":"block"}}>
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead>
               <tr style={{background:TC.bgAlt}}>

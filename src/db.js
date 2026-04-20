@@ -556,6 +556,13 @@ export async function insertSearcher(searcher) {
 }
 
 /**
+export async function loadPipelineDeals() {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("pipeline").select("*").order("id");
+  if (error) { console.error(error); return null; }
+  return mergePipelineDeals(data.map(rowToDeal));
+}
+
  * @param {PipelineDeal} deal
  * @returns {Promise<PipelineDeal | null>}
  */
