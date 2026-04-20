@@ -9,8 +9,8 @@ const SECTION_GROUPS = [
     groupLabel: "Seccions principals",
     items: [
       { id: "alternatives",   label: "Alternatives" },
-      { id: "mercats-publics", label: "Mercats Públics" },
       { id: "real-estate",    label: "Real Estate" },
+      { id: "mercats-publics", label: "Mercats Públics" },
     ],
   },
   {
@@ -147,8 +147,8 @@ export default function AdminPermissions() {
       <div style={{ marginBottom: 20 }}>
         <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy }}>Permisos per Secció</div>
         <div style={{ fontSize: 13, color: tc.textLight, marginTop: 4 }}>
-          Desmarcar oculta la secció a l'usuari. Admins i superusers veuen tot sempre i no es poden restringir.
-          Els permisos només s'apliquen a usuaris amb rol <strong>user</strong>.
+          Desmarcar oculta la secció a l'usuari. Superusers amb accés parcial veuen i editen només les seves seccions.
+          Admins veuen tot sempre i no es poden restringir.
         </div>
       </div>
 
@@ -211,7 +211,7 @@ export default function AdminPermissions() {
             )}
             {users.map(user => {
               const role = user.app_metadata?.role ?? "user";
-              const isElevated = role === "admin" || role === "superuser";
+              const isElevated = role === "admin"; // only admins are fully locked
               const denied = getDenied(user.id);
               return (
                 <tr key={user.id} style={{ background: isElevated ? tc.bgAlt : "transparent" }}>
@@ -221,6 +221,9 @@ export default function AdminPermissions() {
                       {role}
                       {isElevated && (
                         <span style={{ marginLeft: 6, color: tc.green, fontSize: 10 }}>accés total</span>
+                      )}
+                      {role === "superuser" && getDenied(user.id).size > 0 && (
+                        <span style={{ marginLeft: 6, color: "#B45309", fontSize: 10 }}>parcial</span>
                       )}
                     </div>
                   </td>

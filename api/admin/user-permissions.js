@@ -54,7 +54,14 @@ export default async function handler(req, res) {
         .from("user_permissions")
         .select("user_id, denied_sections");
       if (error) return serverError(res, error, "GET all");
-      return res.status(200).json({ permissions: data ?? [] });
+      const response = { permissions: data ?? [] };
+      // Superusers are segment-scoped: include their own denied sections
+      // so the frontend can restrict their nav just like regular users
+      if (role === "superuser") {
+        const myRow = (data ?? []).find(p => p.user_id === user.id);
+        response.deniedSections = myRow?.denied_sections ?? [];
+      }
+      return res.status(200).json(response);
     } catch (e) {
       return serverError(res, e, "GET all");
     }

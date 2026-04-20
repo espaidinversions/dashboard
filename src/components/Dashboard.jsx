@@ -460,8 +460,8 @@ function DashboardInner() {
   ];
   const SECTIONS_ALL = [
     {id:"alternatives",   label:"Alternatives"},
-    {id:"mercats-publics", label:"Mercats Públics"},
     {id:"real-estate",    label:"Real Estate"},
+    {id:"mercats-publics", label:"Mercats Públics"},
   ];
   const SUPRA_ALL = [
     {id:"fons",       label:"Fons"},
@@ -470,10 +470,10 @@ function DashboardInner() {
     {id:"inversions", label:"Llistat d'Inversions"},
     {id:"txlog",      label:"Transaccions"},
   ];
-  // Admins/superusers see everything regardless of permissions
+  // Only admins bypass permissions; superusers are segment-scoped
   const deniedSet = useMemo(
-    () => (isAdmin || isSuperuser) ? new Set() : new Set(deniedSections ?? []),
-    [isAdmin, isSuperuser, deniedSections]
+    () => isAdmin ? new Set() : new Set(deniedSections ?? []),
+    [isAdmin, deniedSections]
   );
   const SECTIONS = useMemo(() => SECTIONS_ALL.filter(s => !deniedSet.has(s.id)), [deniedSet]); // eslint-disable-line react-hooks/exhaustive-deps
   const SUPRA = useMemo(() => SUPRA_ALL.filter(s => !deniedSet.has(s.id)), [deniedSet]); // eslint-disable-line react-hooks/exhaustive-deps
