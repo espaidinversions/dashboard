@@ -457,7 +457,6 @@ function DashboardInner() {
     {id:"resum",   label:"📊 Resum Anual"},
     {id:"mensual", label:"📈 Detall Mensual"},
     {id:"fons",    label:"🏦 Per Fons"},
-    {id:"txlog",   label:"📋 Transaccions"},
   ];
   const SECTIONS = [
     {id:"alternatives",   label:"Alternatives"},
@@ -469,9 +468,10 @@ function DashboardInner() {
     {id:"searchers",  label:"Searchers"},
     {id:"companies",  label:"Participades"},
     {id:"inversions", label:"Llistat d'Inversions"},
+    {id:"txlog",      label:"Transaccions"},
   ];
-  const supra = tab==="searchers"?"searchers":tab==="companies"?"companies":tab==="inversions"?"inversions":"fons";
-  const TABS_FONS = [{id:"pipeline",label:"🎯 Pipeline FY26"}, ...TABS_CC];
+  const supra = tab==="searchers"?"searchers":tab==="companies"?"companies":tab==="inversions"?"inversions":tab==="txlog"?"txlog":"fons";
+  const TABS_FONS = [{id:"pipeline",label:"🎯 Current Pipeline"}, ...TABS_CC];
 
   // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs or sections
   useEffect(() => {
@@ -489,7 +489,7 @@ function DashboardInner() {
         const next = TABS_FONS[(idx + dir + TABS_FONS.length) % TABS_FONS.length];
         setTab(next.id);
       } else {
-        const supraIds = ["fons", "searchers", "companies", "inversions"];
+        const supraIds = ["fons", "searchers", "companies", "inversions", "txlog"];
         const idx = supraIds.indexOf(supra);
         const nextSupra = supraIds[(idx + dir + supraIds.length) % supraIds.length];
         setTab(nextSupra === "fons" ? "pipeline" : nextSupra);

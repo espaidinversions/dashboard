@@ -39,6 +39,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
   const [fStr,setFStr]     = usePersistedState("pl_fStr",  "Tots");
   const [fStat,setFStat]   = usePersistedState("pl_fStat", "Tots");
   const [fCanal,setFCanal] = usePersistedState("pl_fCanal","Tots");
+  const [fSec,setFSec]     = usePersistedState("pl_fSec",  "Tots");
   const [fAct,setFAct]     = usePersistedState("pl_fAct",  "Tots");
   const [chartF,setChartF] = useState(null);
   const [sk,setSk]         = usePersistedState("pl_sk", "name");
@@ -63,7 +64,25 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
 
   const gOpts = ["Tots",...new Set(funds.map(f=>f.geography))];
   const sOpts = ["Tots",...new Set(funds.map(f=>f.strategy))];
-  const sectorOptions = useMemo(()=>Array.from(new Set(funds.map(f=>f.sector).filter(Boolean))).sort(),[funds]);
+
+  const getLS = key => { try { return JSON.parse(localStorage.getItem(`copts_${key}`) || "[]"); } catch { return []; } };
+
+  const BASE_SECTORS = ["Software","Generalista","B2B Services","Healthcare","Software / B2B"];
+
+  const sectorOptions = useMemo(() => {
+    const fromFunds = funds.map(f => f.sector).filter(Boolean);
+    return Array.from(new Set([...BASE_SECTORS, ...fromFunds, ...getLS("p_sector")])).sort();
+  }, [funds]);
+
+  const canalOptions = useMemo(() => {
+    const fromFunds = funds.map(f => f.canal).filter(Boolean);
+    return Array.from(new Set([...PIPELINE_CANAL_OPTIONS, ...fromFunds, ...getLS("p_canal")])).sort();
+  }, [funds]);
+
+  const statusOptions = useMemo(() => {
+    const fromFunds = funds.map(f => f.status).filter(Boolean);
+    return Array.from(new Set([...PIPELINE_STATUS_OPTIONS, ...fromFunds, ...getLS("p_status")])).sort();
+  }, [funds]);
 
   const filtered = useMemo(()=>{
     let l=[...funds];
@@ -78,6 +97,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
     if(fStr!=="Tots")  l=l.filter(f=>f.strategy===fStr);
     if(fStat!=="Tots") l=l.filter(f=>f.status===fStat);
     if(fCanal!=="Tots")l=l.filter(f=>f.canal===fCanal);
+    if(fSec!=="Tots")  l=l.filter(f=>f.sector===fSec);
     if(fAct==="Actiu")   l=l.filter(f=>f.active);
     if(fAct==="Inactiu") l=l.filter(f=>!f.active);
     l.sort((a,b)=>{
@@ -87,7 +107,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
       return sd==="asc"?va-vb:vb-va;
     });
     return l;
-  },[funds,chartF,fGeo,fStr,fStat,fCanal,fAct,sk,sd]);
+  },[funds,chartF,fGeo,fStr,fStat,fCanal,fSec,fAct,sk,sd]);
 
   const clickChart = (type,name) => setChartF(prev=>prev&&prev.type===type&&prev.value===name?null:{type,value:name});
   const isHl = (type,name) => !chartF||(chartF.type===type&&chartF.value===name);
@@ -303,8 +323,9 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
             {[
               {label:"Geo",    val:fGeo,   set:setFGeo,   opts:gOpts},
               {label:"Estrat.",val:fStr,   set:setFStr,   opts:sOpts},
-              {label:"Status", val:fStat,  set:setFStat,  opts:["Tots","En estudi","Aprovat","Descartat"]},
-              {label:"Canal",  val:fCanal, set:setFCanal, opts:["Tots","Arcano","Placement Agent","Propietari","Altres"]},
+              {label:"Sector", val:fSec,   set:setFSec,   opts:["Tots",...sectorOptions]},
+              {label:"Status", val:fStat,  set:setFStat,  opts:["Tots",...statusOptions]},
+              {label:"Canal",  val:fCanal, set:setFCanal, opts:["Tots",...canalOptions]},
               {label:"Actiu",  val:fAct,   set:setFAct,   opts:["Tots","Actiu","Inactiu"]},
             ].map(f=>(
               <div key={f.label} style={{display:"flex",alignItems:"center",gap:3}}>
@@ -327,9 +348,9 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null }) {
                 {label:"Moneda",key:"currency",type:"sel",opts:["EUR","USD"]},
                 {label:"Geo",key:"geography",type:"sel",opts:["EU","US","EU/US"]},
                 {label:"Estratègia",key:"strategy",type:"sel",opts:["Fons primari","Coinversions","Fons secundaris","Fons de fons"]},
-                {label:"Sector",key:"sector",type:"sel",opts:["Software","Generalista","B2B Services","Healthcare","Software / B2B"]},
-                {label:"Status",key:"status",type:"sel",opts:PIPELINE_STATUS_OPTIONS},
-                {label:"Canal",key:"canal",type:"sel",opts:PIPELINE_CANAL_OPTIONS},
+                {label:"Sector",key:"sector",type:"sel",opts:sectorOptions},
+                {label:"Status",key:"status",type:"sel",opts:statusOptions},
+                {label:"Canal",key:"canal",type:"sel",opts:canalOptions},
                 {label:"Tancament Est.",key:"estimatedClosing",type:"sel",opts:MONTHS_OPTS},
               ].map(f=>(
                 <div key={f.key}>
