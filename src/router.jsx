@@ -29,10 +29,10 @@ function RequireAuth({ children }) {
 }
 
 function RequireAdmin({ children }) {
-  const { session, isElevated } = useAuth();
+  const { session, isAdmin } = useAuth();
   if (session === undefined) return <LoadingFallback />;
   if (!session) return <Navigate to="/login" replace />;
-  if (!isElevated) return <Navigate to="/" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
   return children;
 }
 

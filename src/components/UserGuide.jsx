@@ -117,6 +117,7 @@ const SECTIONS = [
   { id: "s5", label: "Rols i Permisos" },
   { id: "s6", label: "On es Guarden les Dades" },
   { id: "s7", label: "Com Funciona el Tauler" },
+  { id: "s8", label: "Preguntes Freqüents (FAQ)" },
 ];
 
 function Sidebar({ active }) {
@@ -169,7 +170,7 @@ function S1() {
           ["Caixa de cerca", "Filtra les dades de la secció activa"],
           ["↓ Excel", "Exporta la vista actual a un fitxer Excel"],
           ["☀️ / 🌙", "Alterna el tema clar/fosc (es desa entre sessions)"],
-          ["Admin", "Accedeix al panell d'administració (superusers i admins)"],
+          ["Admin", "Accedeix al panell d'administració (només admins)"],
           ["Guia", "Aquesta pàgina"],
           ["Sortir", "Tanca la sessió"],
         ]}
@@ -281,7 +282,7 @@ function S3() {
   return (
     <>
       <H2 id="s3">3. Mercats Públics</H2>
-      <P>La secció de mercats públics mostra les posicions en renda variable i renda fixa. Sub-pestanyes (barra verda): <strong>Resum</strong>, <strong>Renda Variable</strong>, <strong>Renda Fixa</strong>, <strong>Posicions</strong>, <strong>Transaccions</strong>.</P>
+      <P>La secció de mercats públics mostra les posicions en renda variable i renda fixa. Sub-pestanyes (barra verda): <strong>Resum</strong>, <strong>Renda Variable</strong>, <strong>Renda Fixa</strong>, <strong>Posicions</strong>, <strong>Transaccions</strong>, <strong>Traçabilitat</strong>.</P>
 
       <H2 id="s3-1">3.1 Posicions i Resum</H2>
       <P>Les quatre primeres pestanyes són vistes computades de només lectura. Les dades provenen del model PM (agregat a partir de preus de fons, metadades de posicions i historial de transaccions).</P>
@@ -326,8 +327,7 @@ function S4() {
   return (
     <>
       <H2 id="s4">4. Panell d'Administració</H2>
-      <P>Accessible a <Code>/admin</Code> per a usuaris amb rol <strong>superuser</strong> o <strong>admin</strong>.</P>
-      <P>La majoria d'eines del panell estan disponibles per a tots dos rols. Les accions especialment sensibles queden reservades al rol <strong>admin</strong>.</P>
+      <P>Accessible a <Code>/admin</Code> exclusivament per a usuaris amb rol <strong>admin</strong>.</P>
 
       <H3>Usuaris</H3>
       <UL>
@@ -389,8 +389,8 @@ function S5() {
           ["Afegir / editar / eliminar deals de pipeline", "—", "✓", "✓"],
           ["Afegir / editar / eliminar transaccions PM", "—", "✓", "✓"],
           ["Gestionar overrides, TER, metadades PM", "—", "✓", "✓"],
-          ["Accedir al panell d'administració", "—", "✓", "✓"],
-          ["Gestionar usuaris (convidar, aprovar, eliminar)", "—", "✓", "✓"],
+          ["Accedir al panell d'administració", "—", "—", "✓"],
+          ["Gestionar usuaris (convidar, aprovar, eliminar)", "—", "—", "✓"],
           ["Canviar rols d'usuari", "—", "—", "✓"],
           ["Esborrar taules senceres", "—", "✓", "✓"],
           ["Configurar dominis permesos", "—", "✓", "✓"],
@@ -550,6 +550,33 @@ function S7() {
   );
 }
 
+function S8() {
+  return (
+    <>
+      <H2 id="s8">8. Preguntes Freqüents (FAQ)</H2>
+
+      <H3>No puc iniciar sessió</H3>
+      <P>Assegura't que el teu correu pertany a un domini autoritzat. Si el domini és correcte però no pots entrar, contacta l'administrador.</P>
+
+      <H3>No veig alguna secció del tauler</H3>
+      <P>L'accés a les seccions el controla l'administrador. Si creus que t'hi hauria de tenir accés però no el veus, contacta'l perquè pugui revisar els teus permisos.</P>
+
+      <H3>Les dades semblen antigues o incorrectes</H3>
+      <P>Recarrega la pàgina per forçar una actualització completa. Si el problema persisteix, pot ser que els preus o el model no s'hagin publicat encara. Contacta l'administrador.</P>
+
+      <H3>He afegit una transacció per error</H3>
+      <P>Pots eliminar-la des de la mateixa pestanya on la vas crear (Transaccions o Admin → PM Operacions). Si no tens permisos d'edició, contacta un superuser o admin.</P>
+
+      <H3>Com puc demanar accés o reportar un error?</H3>
+      <P>
+        Posa't en contacte amb l'administrador del sistema:{" "}
+        <a href="mailto:roberto@espaidinversions.com" style={{ color: "inherit", fontWeight: 600 }}>roberto@espaidinversions.com</a>
+        . També pots enviar un Teams o comentar-ho directament a l'oficina.
+      </P>
+    </>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────
 function UserGuideInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
@@ -594,6 +621,7 @@ function UserGuideInner() {
           <S5 />
           <S6 />
           <S7 />
+          <S8 />
         </div>
       </div>
     </div>

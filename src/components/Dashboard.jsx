@@ -25,6 +25,7 @@ import { PublicMarketsTab } from "./PublicMarketsTab.jsx";
 import { HoldingsTable } from "./HoldingsTable.jsx";
 import { PMTipusTab } from "./PMTipusTab.jsx";
 import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
+import { PMTraçabilitatTab } from "./PMTraçabilitatTab.jsx";
 import { ResumTab, FonsTab, TxLogTab } from "./tabs/index.js";
 
 const LS_CC = "tc_rawCC";
@@ -459,7 +460,7 @@ function DashboardInner() {
     {id:"fons",    label:"🏦 Per Fons"},
   ];
   const SECTIONS_ALL = [
-    {id:"alternatives",   label:"Alternatives"},
+    {id:"alternatives",   label:"Alternatius"},
     {id:"real-estate",    label:"Real Estate"},
     {id:"mercats-publics", label:"Mercats Públics"},
   ];
@@ -548,7 +549,7 @@ function DashboardInner() {
           style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,textDecoration:"none"}}>
           Guia
         </Link>
-        {(isAdmin || isSuperuser) && (
+        {isAdmin && (
           <Link to="/admin"
             style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,textDecoration:"none"}}>
             Admin
@@ -632,7 +633,7 @@ function DashboardInner() {
       {/* ── Sub-tabs (Mercats Públics) ── */}
       {section==="mercats-publics"&&(
       <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0}}>
-        {[{id:"resum",label:"Resum"},{id:"rv",label:"Renda Variable"},{id:"rf",label:"Renda Fixa"},{id:"posicions",label:"Posicions"},{id:"transaccions",label:"Transaccions"}].map(t=>(
+        {[{id:"resum",label:"Resum"},{id:"rv",label:"Renda Variable"},{id:"rf",label:"Renda Fixa"},{id:"posicions",label:"Posicions"},{id:"transaccions",label:"Transaccions"},{id:"traçabilitat",label:"Traçabilitat"}].map(t=>(
           <button key={t.id} onClick={()=>setMercatsPublicsTab(t.id)}
             style={{background:"none",border:"none",borderBottom:`2px solid ${mercatsPublicsTab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:mercatsPublicsTab===t.id?600:400,color:mercatsPublicsTab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
             {t.label}
@@ -701,7 +702,7 @@ function DashboardInner() {
 
         {/* ── ALTERNATIVES ── */}
         {tab==="mercats-publics"&&mercatsPublicsTab==="resum"&&(
-          <div className="tab-panel"><PublicMarketsTab setMercatsPublicsTab={setMercatsPublicsTab}/></div>
+          <div className="tab-panel"><PublicMarketsTab/></div>
         )}
         {tab==="mercats-publics"&&mercatsPublicsTab==="rv"&&(
           <div className="tab-panel"><PMTipusTab tipus="RV"/></div>
@@ -714,6 +715,9 @@ function DashboardInner() {
         )}
         {tab==="mercats-publics"&&mercatsPublicsTab==="transaccions"&&(
           <div className="tab-panel"><PMTransaccionsTab/></div>
+        )}
+        {tab==="mercats-publics"&&mercatsPublicsTab==="traçabilitat"&&(
+          <div className="tab-panel"><PMTraçabilitatTab/></div>
         )}
         {tab==="real-estate"&&realEstateTab==="directe"&&(
           <div className="tab-panel" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 0",gap:12}}>

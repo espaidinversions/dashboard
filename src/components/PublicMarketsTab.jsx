@@ -1,61 +1,21 @@
 import React, { useMemo, useState } from "react";
 import { useTheme } from "../theme.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
-import { FUND_PRICES } from "../generated/prices/fundPrices.js";
 import { summarizeLatestPmValues } from "../data/pmValueUtils.js";
-import { ALL_PRICE_SERIES, ESTIMATED_PRICE_ISINS } from "../data/allPrices.js";
 import { buildGroupedMonthlySeriesFromNestedValues, buildMonthlySeriesFromNestedValues } from "../chartSeries.js";
-import { buildPmVehicleCoverageReport } from "../data/pmVehicleCoverage.js";
 import { PERIODS, weightedReturn } from "./publicMarkets/PublicMarketsShared.jsx";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
 import { PublicMarketsSummarySection } from "./publicMarkets/PublicMarketsSummarySection.jsx";
 import { PublicMarketsTablesSection } from "./publicMarkets/PublicMarketsTablesSection.jsx";
-import { PublicMarketsTransactionsSection } from "./publicMarkets/PublicMarketsTransactionsSection.jsx";
 
 const PM_MONTHLY = PM_MODEL.series.monthly;
 const PM_VALUES = PM_MODEL.series.values;
-const PM_POSITIONS = PM_MODEL.holdings.active;
-const PM_CLOSED = PM_MODEL.holdings.closed;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 const PM_MANAGERS = PM_MODEL.metadata.managers;
 const PM_TOTAL_ACTIVE = PM_MODEL.metadata.totals.active;
 
 const CUSTODIAN_GROUPS = ["caixa", "ubs", "creditSuisse", "bankinter", "interactiveBrokers", "jpmorgan", "andbank", "altres"];
 const TYPE_GROUPS = ["rv", "rf", "altres"];
-
-function minDate(a, b) {
-  if (!a) return b ?? null;
-  if (!b) return a;
-  return a < b ? a : b;
-}
-
-function maxDate(a, b) {
-  if (!a) return b ?? null;
-  if (!b) return a;
-  return a > b ? a : b;
-}
-
-function formatDateRange(start, end) {
-  if (!start && !end) return "—";
-  if (!end || start === end) return start ?? end ?? "—";
-  return `${start} → ${end}`;
-}
-
-function monthIndex(month) {
-  if (!month) return null;
-  const [year, monthNum] = String(month).slice(0, 7).split("-").map(Number);
-  if (!year || !monthNum) return null;
-  return year * 12 + (monthNum - 1);
-}
-
-function formatCoverageGap(flowStart, valueStart) {
-  const flowMonth = monthIndex(flowStart);
-  const valueMonth = monthIndex(valueStart);
-  if (flowMonth == null || valueMonth == null) return "—";
-  const delta = valueMonth - flowMonth;
-  if (delta === 0) return "0m";
-  return `${delta > 0 ? "+" : ""}${delta}m`;
-}
 
 function groupPmCustodian(position = null) {
   const custodian = String(position?.custodian ?? "").trim();
@@ -76,13 +36,10 @@ function groupPmAssetType(position = null) {
   return "altres";
 }
 
-export function PublicMarketsTab({ setMercatsPublicsTab }) {
+export function PublicMarketsTab() {
   const { tc, dark } = useTheme();
   const [chartView, setChartView] = useState("total");
   const [expanded, setExpanded] = useState(new Set());
-  const [txActionFilter, setTxActionFilter] = useState("all");
-  const [txCustodianFilter, setTxCustodianFilter] = useState("all");
-  const [openTxMonths, setOpenTxMonths] = useState(() => new Set());
   const [flowGroupBy, setFlowGroupBy] = useState("total");
 
   const latestPmSummary = useMemo(() => {
@@ -98,13 +55,6 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
     }
     return summary;
   }, []);
-  const vehicleCoverageReport = useMemo(() => buildPmVehicleCoverageReport({
-    pmModel: PM_MODEL,
-    allPriceSeries: ALL_PRICE_SERIES,
-    fundPrices: FUND_PRICES,
-    estimatedPriceIsins: ESTIMATED_PRICE_ISINS,
-  }), []);
-
   const currentManagerValues = useMemo(() => ({
     caixa: latestPmSummary.byManager.caixa ?? 0,
     ubs: latestPmSummary.byManager.ubs ?? 0,
@@ -119,14 +69,6 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
     setExpanded((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
-      return next;
-    });
-  };
-
-  const toggleTxMonth = (month) => {
-    setOpenTxMonths((prev) => {
-      const next = new Set(prev);
-      next.has(month) ? next.delete(month) : next.add(month);
       return next;
     });
   };
@@ -186,133 +128,6 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
   }, [monthlyCustodianValueSeries, monthlyPortfolioValueSeries, monthlyTypeValueSeries]);
 
   const reportStartMonth = chartMonths[0] ?? "2023-12";
-
-  const vehicleTraceabilityRows = useMemo(() => {
-    const coverageByIsin = new Map(vehicleCoverageReport.rows.map((row) => [row.isin, row]));
-    const activeByIsin = new Map();
-    PM_POSITIONS.forEach((position) => {
-      if (!position?.isin) return;
-      const current = activeByIsin.get(position.isin) ?? {
-        isin: position.isin,
-        nom: position.nom ?? position.isin,
-        status: "Present",
-        custodians: new Set(),
-        strategies: new Set(),
-        startDate: null,
-        endDate: null,
-        trancheCount: 0,
-      };
-      current.nom = current.nom ?? position.nom ?? position.isin;
-      current.custodians.add(position.custodian ?? "Sense custodi");
-      current.strategies.add(position.tipus ?? "—");
-      current.startDate = minDate(current.startDate, position.startDate ?? position.dataCompra ?? null);
-      current.endDate = maxDate(current.endDate, position.endDate ?? null);
-      current.trancheCount += 1;
-      activeByIsin.set(position.isin, current);
-    });
-
-    const closedByIsin = new Map();
-    PM_CLOSED.forEach((position) => {
-      if (!position?.isin) return;
-      const current = closedByIsin.get(position.isin) ?? {
-        isin: position.isin,
-        nom: position.nom ?? position.isin,
-        status: "Discontinued",
-        custodians: new Set(),
-        strategies: new Set(),
-        startDate: null,
-        endDate: null,
-        trancheCount: 0,
-      };
-      current.nom = current.nom ?? position.nom ?? position.isin;
-      current.custodians.add(position.custodian ?? "Sense custodi");
-      current.strategies.add(position.tipus ?? "—");
-      current.startDate = minDate(current.startDate, position.dataCompra ?? position.startDate ?? null);
-      current.endDate = maxDate(current.endDate, position.endDate ?? position.startDate ?? null);
-      current.trancheCount += 1;
-      closedByIsin.set(position.isin, current);
-    });
-
-    const txCoverageByIsin = new Map();
-    PM_TRANSACTIONS.forEach((tx) => {
-      if (!tx?.isin || !tx?.date) return;
-      const current = txCoverageByIsin.get(tx.isin) ?? {
-        start: null,
-        end: null,
-        custodians: new Set(),
-        strategies: new Set(),
-      };
-      current.start = minDate(current.start, tx.date);
-      current.end = maxDate(current.end, tx.date);
-      current.custodians.add(tx.custodian ?? "Sense custodi");
-      current.strategies.add(tx.tipus ?? "—");
-      txCoverageByIsin.set(tx.isin, current);
-    });
-
-    const allIsins = new Set([
-      ...activeByIsin.keys(),
-      ...closedByIsin.keys(),
-      ...coverageByIsin.keys(),
-      ...txCoverageByIsin.keys(),
-    ]);
-
-    return [...allIsins].map((isin) => {
-      const active = activeByIsin.get(isin) ?? null;
-      const closed = closedByIsin.get(isin) ?? null;
-      const coverage = coverageByIsin.get(isin) ?? null;
-      const valueCoverage = coverage?.valueCoverageStart ? {
-        start: coverage.valueCoverageStart,
-        end: coverage.valueCoverageEnd,
-      } : null;
-      const txCoverage = txCoverageByIsin.get(isin) ?? null;
-      const base = active ?? closed ?? {};
-      const custodians = new Set([
-        ...(active?.custodians ?? []),
-        ...(closed?.custodians ?? []),
-        ...(txCoverage?.custodians ?? []),
-      ]);
-      const strategies = new Set([
-        ...(active?.strategies ?? []),
-        ...(closed?.strategies ?? []),
-        ...(txCoverage?.strategies ?? []),
-      ]);
-      const sources = [
-        active ? "PM_POSITIONS" : null,
-        closed ? "PM_CLOSED" : null,
-        txCoverage ? "PM_TRANSACTIONS" : null,
-        coverage?.priceSource === "FUND_PRICES" ? "FUND_PRICES" : null,
-        coverage?.priceSource === "estimated" ? "ESTIMATED_PRICES" : null,
-        coverage?.priceSource === "transactions" ? "TX_NAV" : null,
-      ].filter(Boolean);
-      const coverageNotes = [...(coverage?.notes ?? [])];
-      if (base.startDate && valueCoverage?.start && valueCoverage.start < String(base.startDate).slice(0, 7)) {
-        coverageNotes.push("Valors abans de l'inici del vehicle");
-      }
-      if (base.endDate && valueCoverage?.end && valueCoverage.end > String(base.endDate).slice(0, 7)) {
-        coverageNotes.push("Valors després de la venda del vehicle");
-      }
-      if (!txCoverage && coverage?.unitSource === "missing") coverageNotes.push("Sense fluxos");
-      const lifecycleStart = coverage?.startMonth ?? base.startDate ?? null;
-      const lifecycleEnd = coverage?.endMonth ?? base.endDate ?? null;
-      return {
-        isin,
-        nom: base.nom ?? isin,
-        status: base.status ?? (active ? "Present" : "Discontinued"),
-        custodians: [...custodians].sort(),
-        strategies: [...strategies].sort(),
-        sources,
-        valueCoverage: formatDateRange(valueCoverage?.start, valueCoverage?.end),
-        txCoverage: formatDateRange(coverage?.txCoverageStart ?? txCoverage?.start, coverage?.txCoverageEnd ?? txCoverage?.end),
-        coverageGap: formatCoverageGap(coverage?.txCoverageStart ?? txCoverage?.start, valueCoverage?.start),
-        lifecycle: formatDateRange(lifecycleStart, lifecycleEnd),
-        notes: [...new Set(coverageNotes)].join(" · "),
-        trancheCount: base.trancheCount ?? 0,
-      };
-    }).sort((a, b) => {
-      if (a.status !== b.status) return a.status === "Present" ? -1 : 1;
-      return a.nom.localeCompare(b.nom) || a.isin.localeCompare(b.isin);
-    });
-  }, [vehicleCoverageReport]);
 
   const ytdWeighted = useMemo(() => weightedReturn("ytd", managerValueByIdForReturns), [managerValueByIdForReturns]);
 
@@ -441,31 +256,6 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
     });
   }, [chartMonths, chartView, custodianValueByMonth, totalValueSeries, typeValueByMonth]);
 
-  const txCustodians = useMemo(() => (
-    [...new Set(PM_TRANSACTIONS.map((tx) => tx.custodian).filter(Boolean))].sort()
-  ), []);
-
-  const txFiltered = useMemo(() => {
-    let rows = PM_TRANSACTIONS;
-    if (txActionFilter !== "all") rows = rows.filter((tx) => tx.action === txActionFilter);
-    if (txCustodianFilter !== "all") rows = rows.filter((tx) => tx.custodian === txCustodianFilter);
-    return rows;
-  }, [txActionFilter, txCustodianFilter]);
-
-  const txByMonth = useMemo(() => {
-    const grouped = new Map();
-    txFiltered.forEach((tx) => {
-      const key = tx.date ? tx.date.slice(0, 7) : "????-??";
-      if (!grouped.has(key)) grouped.set(key, []);
-      grouped.get(key).push(tx);
-    });
-    return [...grouped.entries()].sort(([a], [b]) => {
-      if (a === "????-??") return 1;
-      if (b === "????-??") return -1;
-      return b.localeCompare(a);
-    });
-  }, [txFiltered]);
-
   const card = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
   const secLabel = { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 };
 
@@ -499,26 +289,9 @@ export function PublicMarketsTab({ setMercatsPublicsTab }) {
         tc={tc}
         dark={dark}
         secLabel={secLabel}
-        vehicleTraceabilityRows={vehicleTraceabilityRows}
         displayManagers={displayManagers}
         expanded={expanded}
         toggleExpand={toggleExpand}
-      />
-
-      <PublicMarketsTransactionsSection
-        tc={tc}
-        dark={dark}
-        txFiltered={txFiltered}
-        transactionCount={PM_TRANSACTIONS.length}
-        txCustodians={txCustodians}
-        txActionFilter={txActionFilter}
-        setTxActionFilter={setTxActionFilter}
-        txCustodianFilter={txCustodianFilter}
-        setTxCustodianFilter={setTxCustodianFilter}
-        openTxMonths={openTxMonths}
-        toggleTxMonth={toggleTxMonth}
-        txByMonth={txByMonth}
-        setMercatsPublicsTab={setMercatsPublicsTab}
       />
     </div>
   );

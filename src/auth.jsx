@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase.js";
 import { clearTurtleCapitalLS } from "./utils.js";
 
@@ -42,16 +42,24 @@ export function AuthProvider({ children }) {
   }, [session]);
 
   // Load per-user section permissions after session is ready.
-  useEffect(() => {
-    if (!session || !supabase) return;
-    const token = session.access_token;
+  const fetchPermissions = useCallback((token) => {
     fetch("/api/admin/user-permissions", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => { if (data?.deniedSections) setDeniedSections(data.deniedSections); })
       .catch(() => {});
-  }, [session]);
+  }, []);
+
+  useEffect(() => {
+    if (!session || !supabase) return;
+    fetchPermissions(session.access_token);
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") fetchPermissions(session.access_token);
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [session, fetchPermissions]);
 
   // Session inactivity timeout — sign out after 30 min of no activity
   useEffect(() => {

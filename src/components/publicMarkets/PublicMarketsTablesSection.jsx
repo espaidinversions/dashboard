@@ -8,85 +8,12 @@ export function PublicMarketsTablesSection({
   tc,
   dark,
   secLabel,
-  vehicleTraceabilityRows,
   displayManagers,
   expanded,
   toggleExpand,
 }) {
   return (
-    <>
-      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)", overflowX: "auto" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-          <div style={{ fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, flex: 1 }}>
-            Traçabilitat per vehicle
-          </div>
-        </div>
-        <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 14, maxWidth: 980, lineHeight: 1.5 }}>
-          Taula de diagnosi per veure quines fonts alimenten cada vehicle i quina cobertura de valor reconstruïble té cada cas. La cobertura de valors es calcula amb la mateixa lògica del report de vehicle coverage: unitats reconstruïdes i sèrie de preus, no només des de la sèrie activa agregada.
-        </div>
-        <table style={{ borderCollapse: "collapse", fontSize: 11, width: "100%", minWidth: 1080 }}>
-          <thead>
-            <tr>
-              {[
-                { label: "Vehicle", align: "left" },
-                { label: "Estat", align: "left" },
-                { label: "Custodi(s)", align: "left" },
-                { label: "Estratègia", align: "left" },
-                { label: "Font(s)", align: "left" },
-                { label: "Vida vehicle", align: "left" },
-                { label: "Cobertura valors", align: "left" },
-                { label: "Cobertura fluxos", align: "left" },
-                { label: "Coverage gap", align: "left" },
-                { label: "Notes", align: "left" },
-              ].map((header) => (
-                <th key={header.label} style={{ textAlign: header.align, padding: "8px 10px", fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, borderBottom: `1px solid ${tc.border}` }}>
-                  {header.label}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {vehicleTraceabilityRows.map((row, idx) => {
-              const zebra = idx % 2 === 1;
-              const statusCfg = row.status === "Present"
-                ? { bg: dark ? "#0E2415" : "#E8F8E8", color: tc.green }
-                : { bg: dark ? "#24140E" : "#FDECEA", color: tc.red };
-              return (
-                <tr key={`${row.isin}-${row.nom}`} style={{ background: zebra ? (dark ? "rgba(255,255,255,.02)" : "#FAFBFC") : "transparent" }}>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, whiteSpace: "nowrap" }}>
-                    <div style={{ fontWeight: 700, color: tc.navy }}>{row.nom}</div>
-                    <div style={{ fontSize: 10, color: tc.textLight, fontFamily: "'DM Mono', monospace" }}>{row.isin}</div>
-                  </td>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}` }}>
-                    <Badge label={row.status === "Present" ? "Present" : "Discontinued"} cfg={statusCfg} />
-                  </td>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, whiteSpace: "nowrap" }}>
-                    {row.custodians.length > 0 ? row.custodians.map((custodian) => <div key={custodian}>{custodian}</div>) : "—"}
-                  </td>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, whiteSpace: "nowrap" }}>
-                    {row.strategies.length > 0 ? row.strategies.map((strategy) => <div key={strategy}>{strategy}</div>) : "—"}
-                  </td>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}` }}>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: row.sources.length ? 6 : 0 }}>
-                      {row.sources.map((source) => <Badge key={source} label={source} />)}
-                    </div>
-                    <div style={{ fontSize: 10, color: tc.textLight }}>
-                      {row.trancheCount > 1 ? `${row.trancheCount} trams` : "1 tram"}
-                    </div>
-                  </td>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, fontFamily: "'DM Mono', monospace" }}>{row.lifecycle}</td>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, fontFamily: "'DM Mono', monospace" }}>{row.valueCoverage}</td>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, fontFamily: "'DM Mono', monospace" }}>{row.txCoverage}</td>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, fontFamily: "'DM Mono', monospace", color: tc.navy, fontWeight: 700 }}>{row.coverageGap}</td>
-                  <td style={{ padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, color: tc.textLight }}>{row.notes || "—"}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)", overflowX: "auto" }}>
+    <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)", overflowX: "auto" }}>
         <div style={{ ...secLabel, marginBottom: 16 }}>Banc Custodi</div>
         <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 700 }}>
           <thead>
@@ -222,7 +149,6 @@ export function PublicMarketsTablesSection({
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 10, fontStyle: "italic" }}>
           Des d'inici: TWR reportat pels gestors (WAM/Andbank des de creació; UBS YTD; Abel BK des d'abr. 2025). CAGR: retorn anualitzat equivalent.
         </div>
-      </div>
-    </>
+    </div>
   );
 }
