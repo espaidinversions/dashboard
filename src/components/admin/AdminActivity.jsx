@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
-import { loadAuditLog } from "./adminApi.js";
+import { loadAuditLog, revertChange } from "./adminApi.js";
 import { formatIsoDateTime } from "../../utils.js";
 import { useAuth } from "../../auth.jsx";
 
@@ -30,15 +30,18 @@ const ACTION_COLORS = {
   insert: { color: "#1B5E20", bg: "#E8F5E9" },
   update: { color: "#1A237E", bg: "#E8EAF6" },
   delete: { color: "#B71C1C", bg: "#FFEBEE" },
+  revert: { color: "#4A148C", bg: "#F3E5F5" },
 };
+
+const REVERTABLE_TABLES = new Set(["capital_calls", "portfolio_companies", "searchers", "pipeline"]);
 
 export default function AdminActivity() {
   const { tc } = useTheme();
   const { toast } = useToast();
-  const { isSuperuser } = useAuth();
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
+  const [reverting, setReverting] = useState(null);
   const [filterUser, setFilterUser] = useState("");
   const [filterTable, setFilterTable] = useState("");
   const [filterAction, setFilterAction] = useState("");
@@ -66,6 +69,23 @@ export default function AdminActivity() {
     }
     load();
   }, [page, filterAction, filterTable, filterUser, toast]);
+
+  const handleRevert = async (logEntry) => {
+    if (!confirm(`Revertir ${logEntry.action} a ${logEntry.table_name} (${logEntry.record_id})?`)) return;
+    setReverting(logEntry.id);
+    try {
+      await revertChange(logEntry.id);
+      toast({ message: "Canvi revertit correctament." });
+      setLogs(prev => prev.filter(l => l.id !== logEntry.id));
+    } catch (e) {
+      toast({ message: "Error revertint: " + e.message, type: "error" });
+    } finally {
+      setReverting(null);
+    }
+  };
+
+  const canRevert = (l) =>
+    REVERTABLE_TABLES.has(l.table_name) && ["insert", "update", "delete"].includes(l.action);
 
   const tables = [...new Set(logs.map(l => l.table_name).filter(Boolean))];
 
@@ -121,6 +141,7 @@ export default function AdminActivity() {
           <option value="insert">Insert</option>
           <option value="update">Update</option>
           <option value="delete">Delete</option>
+          <option value="revert">Revert</option>
         </select>
       </div>
 
@@ -135,14 +156,16 @@ export default function AdminActivity() {
               <th style={th}>Acció</th>
               <th style={th}>Taula</th>
               <th style={th}>Registre</th>
+              <th style={{ ...th, width: 48 }}></th>
             </tr></thead>
             <tbody>
               {logs.length === 0 && (
-                <tr><td colSpan={5} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap resultat</td></tr>
+                <tr><td colSpan={6} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap resultat</td></tr>
               )}
               {logs.map(l => {
                 const cfg = ACTION_COLORS[l.action] || {};
                 const isExp = expanded === l.id;
+                const isReverting = reverting === l.id;
                 return (
                   <React.Fragment key={l.id}>
                     <tr onClick={() => setExpanded(isExp ? null : l.id)} style={{ cursor: "pointer", background: isExp ? tc.bgAlt : "transparent" }}>
@@ -153,10 +176,21 @@ export default function AdminActivity() {
                       </td>
                       <td style={td}>{l.table_name}</td>
                       <td style={td}>{l.record_id}</td>
+                      <td style={{ ...td, textAlign: "right" }} onClick={e => e.stopPropagation()}>
+                        {canRevert(l) && (
+                          <button
+                            onClick={() => handleRevert(l)}
+                            disabled={isReverting}
+                            title="Revertir canvi"
+                            style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 5, padding: "3px 7px", cursor: isReverting ? "not-allowed" : "pointer", fontSize: 12, color: "#6A1B9A", fontFamily: "inherit", opacity: isReverting ? 0.5 : 1 }}>
+                            ↩
+                          </button>
+                        )}
+                      </td>
                     </tr>
                     {isExp && l.changes && (
                       <tr style={{ background: tc.bgAlt }}>
-                        <td colSpan={5} style={{ padding: "8px 12px 12px 32px" }}>
+                        <td colSpan={6} style={{ padding: "8px 12px 12px 32px" }}>
                           <pre style={{ margin: 0, fontSize: 11, color: tc.textMid, fontFamily: "'DM Mono',monospace" }}>
                             {JSON.stringify(l.changes, null, 2)}
                           </pre>

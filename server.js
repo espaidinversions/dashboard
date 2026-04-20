@@ -307,6 +307,9 @@ app.post("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, as
   if (!email) return sendJson(res, 400, { error: "Email required" });
   if (!isValidEmail(email)) return sendJson(res, 400, { error: "Invalid email" });
   if (!isAllowedRole(role)) return sendJson(res, 400, { error: "Invalid role" });
+  if (role !== "user" && getUserRole(req.user) !== "admin") {
+    return sendJson(res, 403, { error: "Assigning elevated roles requires admin" });
+  }
 
   const { data: setting } = await supabase
     .from("app_settings")
@@ -336,13 +339,18 @@ app.post("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, as
   return res.json({ user: data?.user ?? null });
 }));
 
-// ── PATCH /api/admin/users/:id ────────────────────────────
-app.patch("/api/admin/users/:id", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
-  const id = sanitizeText(req.params.id, { maxLength: 128 });
+// ── PATCH /api/admin/users?id=:id ─────────────────────────
+app.patch("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+  const id = sanitizeText(req.query?.id, { maxLength: 128 });
+  if (!id) return sendJson(res, 400, { error: "User id required" });
+
   const role = req.body?.role !== undefined ? sanitizeText(req.body.role, { maxLength: 20 }) : undefined;
   const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
   const updates = {};
   if (role !== undefined) {
+    if (getUserRole(req.user) !== "admin") {
+      return sendJson(res, 403, { error: "Role changes require admin" });
+    }
     if (!isAllowedRole(role)) return sendJson(res, 400, { error: "Invalid role" });
     updates.app_metadata = { role };
   }
@@ -350,6 +358,41 @@ app.patch("/api/admin/users/:id", withGuard({ auth: "admin", rateLimit: "admin" 
   const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
   if (error) throw error;
   return res.json({ user: data?.user ?? null });
+}));
+
+// ── PATCH /api/admin/users/:id ────────────────────────────
+app.patch("/api/admin/users/:id", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+  const id = sanitizeText(req.params.id, { maxLength: 128 });
+  const role = req.body?.role !== undefined ? sanitizeText(req.body.role, { maxLength: 20 }) : undefined;
+  const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
+  const updates = {};
+  if (role !== undefined) {
+    if (getUserRole(req.user) !== "admin") {
+      return sendJson(res, 403, { error: "Role changes require admin" });
+    }
+    if (!isAllowedRole(role)) return sendJson(res, 400, { error: "Invalid role" });
+    updates.app_metadata = { role };
+  }
+  if (emailConfirm) updates.email_confirm = true;
+  const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
+  if (error) throw error;
+  return res.json({ user: data?.user ?? null });
+}));
+
+// ── DELETE /api/admin/users?id=:id ────────────────────────
+app.delete("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+  const id = sanitizeText(req.query?.id, { maxLength: 128 });
+  if (!id) return sendJson(res, 400, { error: "User id required" });
+
+  const { data: allUsers } = await supabase.auth.admin.listUsers();
+  const admins = (allUsers?.users ?? []).filter(user => getUserRole(user) === "admin");
+  const target = admins.find(user => user.id === id);
+  if (target && admins.length <= 1) {
+    return sendJson(res, 409, { error: "Cannot delete the last admin" });
+  }
+  const { error } = await supabase.auth.admin.deleteUser(id);
+  if (error) throw error;
+  return res.json({ ok: true });
 }));
 
 // ── DELETE /api/admin/users/:id ───────────────────────────

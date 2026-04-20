@@ -6,7 +6,7 @@ import { apiFetchJson } from "../../apiClient.js";
 import { formatIsoDate } from "../../utils.js";
 import { useAuth } from "../../auth.jsx";
 
-const ROLES = ["user", "superuser", "admin"];
+const ROLES = ["user", "admin", "superuser"];
 
 const ROLE_COLORS = {
   superuser: { color: "#7c3c00", bg: "#fff0e0" },
@@ -17,7 +17,7 @@ const ROLE_COLORS = {
 export default function AdminUsers() {
   const { tc } = useTheme();
   const { toast } = useToast();
-  const { isSuperuser } = useAuth();
+  const { isAdmin } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState("active");
@@ -28,6 +28,7 @@ export default function AdminUsers() {
   const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 1 });
 
   const getRole = (u) => u.app_metadata?.role ?? "user";
+  const userEndpoint = (id) => `/api/admin/users?id=${encodeURIComponent(id)}`;
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -46,7 +47,7 @@ export default function AdminUsers() {
 
   const changeRole = async (id, role) => {
     try {
-      await apiFetchJson(`/api/admin/users/${id}`, {
+      await apiFetchJson(userEndpoint(id), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
@@ -64,7 +65,7 @@ export default function AdminUsers() {
   const deleteUser = async (id, email) => {
     if (!confirm(`Eliminar l'usuari ${email}?`)) return;
     try {
-      await apiFetchJson(`/api/admin/users/${id}`, { method: "DELETE" });
+      await apiFetchJson(userEndpoint(id), { method: "DELETE" });
       setUsers(prev => prev.filter(u => u.id !== id));
       setPagination(prev => ({ ...prev, total: Math.max(prev.total - 1, 0) }));
       toast({ message: `Usuari ${email} eliminat.` });
@@ -75,7 +76,7 @@ export default function AdminUsers() {
 
   const approveUser = async (id) => {
     try {
-      await apiFetchJson(`/api/admin/users/${id}`, {
+      await apiFetchJson(userEndpoint(id), {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email_confirm: true }),
@@ -99,7 +100,7 @@ export default function AdminUsers() {
       });
       toast({ message: `Invitació enviada a ${inviteEmail.trim()}.` });
       setInviteEmail("");
-      setInviteRole("user");
+      setInviteRole(isAdmin ? "user" : "user");
       if (page !== 1) setPage(1);
       else await loadUsers();
     } catch (e) {
@@ -151,7 +152,7 @@ export default function AdminUsers() {
                 <tr key={u.id}>
                   <td style={td}>{u.email}</td>
                   <td style={td}>
-                    {isSuperuser ? (
+                    {isAdmin ? (
                       <select value={getRole(u)} onChange={e => changeRole(u.id, e.target.value)}
                         style={{ padding: "4px 8px", borderRadius: 5, border: `1px solid ${tc.border}`, background: tc.bg, color: tc.text, fontFamily: "inherit", fontSize: 12 }}>
                         {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
@@ -245,10 +246,15 @@ export default function AdminUsers() {
           </div>
           <div>
             <label style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 }}>Rol</label>
-            <select value={inviteRole} onChange={e => setInviteRole(e.target.value)}
+            <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} disabled={!isAdmin}
               style={{ padding: "8px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit" }}>
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              {(isAdmin ? ROLES : ["user"]).map(r => <option key={r} value={r}>{r}</option>)}
             </select>
+            {!isAdmin && (
+              <div style={{ marginTop: 6, fontSize: 11, color: tc.textLight }}>
+                Només els admins poden assignar rols elevats.
+              </div>
+            )}
           </div>
           <button type="submit" disabled={inviting}
             style={{ padding: "9px 20px", borderRadius: 7, border: "none", background: tc.navy, color: "#fff", cursor: inviting ? "not-allowed" : "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: 600, opacity: inviting ? 0.7 : 1, alignSelf: "flex-start" }}>

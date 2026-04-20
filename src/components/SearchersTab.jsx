@@ -85,7 +85,7 @@ function formatEquityStake(value) {
 }
 
 // ── main component ─────────────────────────────────────────
-export function SearchersTab({ search = "" }) {
+export function SearchersTab({ search = "", subTab = "tots" }) {
   const { tc: TC, dark } = useTheme();
   const { canEdit } = useAuth();
   const { toast } = useToast();
@@ -257,7 +257,8 @@ export function SearchersTab({ search = "" }) {
   const sortHist = k => setHistSort(p => ({ k, d: p.k === k && p.d === "asc" ? "desc" : "asc" }));
   const HArr = ({ k }) => <span style={{ marginLeft:3, opacity:histSort.k===k?1:0.2, fontSize:9 }}>{histSort.k===k&&histSort.d==="asc"?"▲":"▼"}</span>;
 
-  const uniq = key => ["Tots", ...Array.from(new Set(historicData.map(r => r[key]).filter(Boolean))).sort()];
+  const uniq     = key => ["Tots", ...Array.from(new Set(historicData.map(r => r[key]).filter(Boolean))).sort()];
+  const uniqVals = key => Array.from(new Set(historicData.map(r => r[key]).filter(Boolean))).sort();
 
   const handleCSV = e => {
     const file = e.target.files[0];
@@ -614,6 +615,7 @@ export function SearchersTab({ search = "" }) {
                         <EditableCell
                           value={r.formEntrada}
                           options={SEARCHER_FORM_ENTRADA_OPTIONS}
+                          allowCustom optionsKey="s_entrada"
                           onSave={v => saveSearcherField(r, "formEntrada", v)}
                           badgeCfg={ENTRY_BADGE_CFG}
                           emptyDisplay="—"
@@ -629,6 +631,7 @@ export function SearchersTab({ search = "" }) {
                         <EditableCell
                           value={r.modalitat}
                           options={SEARCHER_MODALITAT_OPTIONS}
+                          allowCustom optionsKey="s_modalitat"
                           onSave={v => saveSearcherField(r, "modalitat", v)}
                           badgeCfg={{
                             Solo: { bg:"#E8F8E8", color:TC.green, border:"#E8F8E8" },
@@ -654,7 +657,8 @@ export function SearchersTab({ search = "" }) {
                       {canEdit ? (
                         <EditableCell
                           value={status}
-                          options={uniq("statusScreening").filter((option) => option !== "Tots")}
+                          options={uniqVals("statusScreening")}
+                          allowCustom optionsKey="s_status"
                           onSave={v => saveSearcherField(r, "status", v)}
                           fmt={v => <StatusBadge s={v} />}
                         />
@@ -698,7 +702,7 @@ export function SearchersTab({ search = "" }) {
       </div>
 
       {/* ── Historic table ── */}
-      <div style={card}>
+      {subTab === "tots" && <div style={card}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <div style={sec}>Historial de Searchers</div>
@@ -794,7 +798,8 @@ export function SearchersTab({ search = "" }) {
                   <td style={{ padding:"7px 10px" }}>
                     <EditableCell
                       value={r.statusScreening}
-                      options={uniq("statusScreening").filter((option) => option !== "Tots")}
+                      options={uniqVals("statusScreening")}
+                      allowCustom optionsKey="s_status"
                       onSave={v => saveSearcherField(r, "status", v)}
                       fmt={v => <StatusBadge s={v} />}
                       disabled={!canEdit}
@@ -802,26 +807,34 @@ export function SearchersTab({ search = "" }) {
                   </td>
                   <td style={{ padding:"7px 10px" }}>
                     <EditableCell value={r.formEntrada} options={SEARCHER_FORM_ENTRADA_OPTIONS}
+                      allowCustom optionsKey="s_entrada"
                       onSave={v => saveSearcherField(r, "formEntrada", v)}
                       disabled={!canEdit}
                       badgeCfg={ENTRY_BADGE_CFG} />
                   </td>
                   <td style={{ padding:"7px 10px", fontSize:11, color:TC.text }}>
-                    <EditableCell value={[r.searcher1, r.searcher2].filter(Boolean).join(" / ") || "—"} type="text"
+                    <EditableCell
+                      value={[r.searcher1, r.searcher2].filter(Boolean).join(" / ") || "—"}
+                      options={uniqVals("searcher1")}
+                      allowCustom optionsKey="s_searchers"
                       onSave={v => saveSearcherField(r, "searchers", v)}
                       disabled={!canEdit} />
                   </td>
                   <td style={{ padding:"7px 10px", fontSize:11 }}>
                     <EditableCell
                       value={[r.escola1, r.escola2].filter(Boolean).join(" / ")}
-                      type="text"
+                      options={uniqVals("escola1")}
+                      allowCustom optionsKey="s_escola"
                       onSave={v => saveSearcherField(r, "schools", v)}
                       disabled={!canEdit}
                       emptyDisplay="—"
                     />
                   </td>
                   <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>
-                    <EditableCell value={r.introPer} type="text"
+                    <EditableCell
+                      value={r.introPer}
+                      options={uniqVals("introPer")}
+                      allowCustom optionsKey="s_introPer"
                       onSave={v => saveSearcherField(r, "introPer", v)}
                       disabled={!canEdit} />
                   </td>
@@ -835,7 +848,7 @@ export function SearchersTab({ search = "" }) {
             </tbody>
           </table>
         </div>
-      </div>
+      </div>}
 
       {showAddModal && (
         <AddRowModal

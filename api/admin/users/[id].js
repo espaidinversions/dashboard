@@ -1,4 +1,4 @@
-import { getUserRole, isAllowedRole, makeServiceClient, verifyAdmin, verifySuperuser } from "../../_adminAuth.js";
+import { getUserRole, isAllowedRole, makeServiceClient, verifyAdmin, verifyAdminOnly } from "../../_adminAuth.js";
 import {
   applySecurityHeaders,
   enforceCors,
@@ -37,9 +37,8 @@ export default async function handler(req, res) {
       const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
       const updates = {};
       if (role !== undefined) {
-        // Role changes require superuser
-        const superuser = await verifySuperuser(req, supabase);
-        if (!superuser) return res.status(403).json({ error: "Role changes require superuser" });
+        const privilegedAdmin = await verifyAdminOnly(req, supabase);
+        if (!privilegedAdmin) return res.status(403).json({ error: "Role changes require admin" });
         if (!isAllowedRole(role)) return res.status(400).json({ error: "Invalid role" });
         updates.app_metadata = { role };
       }

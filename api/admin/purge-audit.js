@@ -1,4 +1,4 @@
-import { makeServiceClient, verifySuperuser } from "../_adminAuth.js";
+import { makeServiceClient, verifyAdminOnly } from "../_adminAuth.js";
 import {
   applySecurityHeaders,
   enforceCors,
@@ -17,8 +17,8 @@ export default async function handler(req, res) {
 
   try {
     const supabase = makeServiceClient();
-    const superuser = await verifySuperuser(req, supabase);
-    if (!superuser) return res.status(403).json({ error: "Superuser required" });
+    const admin = await verifyAdminOnly(req, supabase);
+    if (!admin) return res.status(403).json({ error: "Admin required" });
 
     const days = parseInt(req.query?.days ?? "90", 10);
     if (isNaN(days) || days < 7 || days > 365) {

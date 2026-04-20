@@ -1,6 +1,9 @@
 node_modules/
 dist/
 .DS_Store
+.env
+.env.*
+!.env.example
 *.local
 raw-data/
 .obsidian/
@@ -43,4 +46,5 @@ supabase/.temp/
 scripts/out/
 .test-artifacts/
 .tmp-test-fund-prices/
+.tmp-*.pdf
 scripts/__pycache__/

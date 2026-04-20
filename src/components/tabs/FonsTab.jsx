@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { fmtM, slugify } from "../../utils.js";
 import { Badge, AddRowModal, DeleteRowButton } from "../SharedComponents.jsx";
-import { FY_LIST, VCPE_CFG, EST_CFG, CAPITAL_CALL_CAT_OPTIONS, CAPITAL_CALL_VCPE_OPTIONS, CAPITAL_CALL_EST_OPTIONS } from "../../config.js";
+import { FY_LIST, VCPE_CFG, EST_CFG, CAPITAL_CALL_CAT_OPTIONS, CAPITAL_CALL_VCPE_OPTIONS, CAPITAL_CALL_EST_OPTIONS, CAPITAL_CALL_TIPUS_OPTIONS } from "../../config.js";
 
 const DIVISA_OPTIONS = ["EUR", "USD"];
 
@@ -10,12 +10,12 @@ function ccFields(fonsList, defaultFons = "") {
   return [
     { key: "fons", label: "Fons", type: "select", options: fonsList, defaultValue: defaultFons },
     { key: "cat", label: "Categoria", type: "select", options: CAPITAL_CALL_CAT_OPTIONS, defaultValue: CAPITAL_CALL_CAT_OPTIONS[0] },
-    { key: "data", label: "Data (YYYY-MM-DD)", type: "text", placeholder: "2024-03-15" },
+    { key: "data", label: "Data", type: "date" },
     { key: "eur", label: "Import EUR", type: "number" },
     { key: "divisa", label: "Divisa", type: "select", options: DIVISA_OPTIONS, defaultValue: "EUR" },
     { key: "vcpe", label: "VC/PE/RE", type: "select", options: CAPITAL_CALL_VCPE_OPTIONS, defaultValue: CAPITAL_CALL_VCPE_OPTIONS[0] },
     { key: "est", label: "Estratègia", type: "select", options: CAPITAL_CALL_EST_OPTIONS, defaultValue: CAPITAL_CALL_EST_OPTIONS[0] },
-    { key: "tipus", label: "Tipus", type: "text" },
+    { key: "tipus", label: "Tipus", type: "select", options: CAPITAL_CALL_TIPUS_OPTIONS, defaultValue: CAPITAL_CALL_TIPUS_OPTIONS[0] },
   ];
 }
 

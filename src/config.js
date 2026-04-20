@@ -59,6 +59,7 @@ export const COMPANY_ORIGEN_OPTIONS     = ["Search Capital", "Equity Gap", "Dire
 export const CAPITAL_CALL_CAT_OPTIONS   = Object.keys(CAT_CFG).filter(k => k !== "Compromís");
 export const CAPITAL_CALL_VCPE_OPTIONS  = Object.keys(VCPE_CFG);
 export const CAPITAL_CALL_EST_OPTIONS   = Object.keys(EST_CFG);
+export const CAPITAL_CALL_TIPUS_OPTIONS = ["Aportació", "Distribució", "Devol. Capital", "Close Interest"];
 
 // ── Data imports ─────────────────────────────────────────
 import { RAW_CC as RAW_CC_DATA } from "./data/capital-calls.js";

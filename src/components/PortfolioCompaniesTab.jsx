@@ -17,7 +17,7 @@ const ORIG_COLORS = {
 };
 const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D","#2563A8","#8A6400","#007A8A"];
 
-export function PortfolioCompaniesTab({ search = "" }) {
+export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
   const { tc: TC, dark } = useTheme();
   const { canEdit } = useAuth();
   const { toast } = useToast();
@@ -124,12 +124,17 @@ export function PortfolioCompaniesTab({ search = "" }) {
     toast({ message: `"${company.nom}" eliminada.` });
   };
 
-  const filtered = search.trim()
-    ? companies.filter(r =>
-        r.nom.toLowerCase().includes(search.toLowerCase()) ||
-        (r.segment||"").toLowerCase().includes(search.toLowerCase())
-      )
-    : companies;
+  const segmentOptions = useMemo(
+    () => Array.from(new Set(companies.map(c => c.segment).filter(Boolean))).sort(),
+    [companies]
+  );
+
+  const filtered = companies
+    .filter(r => !tipusFilter ? true : tipusFilter === "altres" ? r.tipus !== "SF" : r.tipus === tipusFilter)
+    .filter(r => !search.trim() ? true :
+      r.nom.toLowerCase().includes(search.toLowerCase()) ||
+      (r.segment||"").toLowerCase().includes(search.toLowerCase())
+    );
 
   const total    = filtered.reduce((s,r) => s + r.ticket, 0);
   const totalAll = companies.reduce((s,r) => s + r.ticket, 0);
@@ -380,6 +385,7 @@ export function PortfolioCompaniesTab({ search = "" }) {
                   canEdit={canEdit}
                   saveField={saveField}
                   handleDelete={handleDelete}
+                  segmentOptions={segmentOptions}
                 />
               ))}
             </tbody>
@@ -418,7 +424,7 @@ export function PortfolioCompaniesTab({ search = "" }) {
 }
 
 // ── Row component ─────────────────────────────────────────────────────────────
-function PortRow({ r, i, TC, canEdit, saveField, handleDelete }) {
+function PortRow({ r, i, TC, canEdit, saveField, handleDelete, segmentOptions = [] }) {
   const tdBase = { padding:"7px 10px" };
   return (
     <tr className="hoverable" style={{ background: i%2===0 ? TC.card : TC.bgAlt }}>
@@ -439,6 +445,7 @@ function PortRow({ r, i, TC, canEdit, saveField, handleDelete }) {
       </td>
       <td style={tdBase}>
         <EditableCell value={r.tipus} options={COMPANY_TIPUS_OPTIONS}
+          allowCustom optionsKey="c_tipus"
           onSave={v => saveField(r, "tipus", v)}
           disabled={!canEdit}
           fmt={v => (
@@ -446,7 +453,9 @@ function PortRow({ r, i, TC, canEdit, saveField, handleDelete }) {
           )} />
       </td>
       <td style={{ ...tdBase, fontSize:10 }}>
-        <EditableCell value={r.segment} type="text"
+        <EditableCell value={r.segment}
+          options={segmentOptions}
+          allowCustom optionsKey="c_segment"
           onSave={v => saveField(r, "segment", v)}
           disabled={!canEdit}
           fmt={v => v ? <span style={{ background:TC.bg, border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 7px", fontSize:9 }}>{v}</span> : "—"} />
@@ -459,6 +468,7 @@ function PortRow({ r, i, TC, canEdit, saveField, handleDelete }) {
       </td>
       <td style={tdBase}>
         <EditableCell value={r.origen} options={COMPANY_ORIGEN_OPTIONS}
+          allowCustom optionsKey="c_origen"
           onSave={v => saveField(r, "origen", v)}
           disabled={!canEdit}
           fmt={v => (

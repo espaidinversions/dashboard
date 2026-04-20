@@ -73,9 +73,10 @@ export function AuthProvider({ children }) {
   const isAdmin = role === "admin";
   const isSuperuser = role === "superuser";
   const canEdit = role === "admin" || role === "superuser";
+  const isElevated = canEdit;
 
   return (
-    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, role, isSuperuser, isAdmin, canEdit }}>
+    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, role, isSuperuser, isAdmin, isElevated, canEdit }}>
       {children}
     </AuthContext.Provider>
   );

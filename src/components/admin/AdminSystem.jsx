@@ -19,10 +19,11 @@ const TABLE_LABELS = {
 };
 
 const ROLE_COLORS = {
-  superuser: { color: "#7c3c00", bg: "#fff0e0" },
-  admin:     { color: "#1A237E", bg: "#E8EAF6" },
   user:      { color: "#1B5E20", bg: "#E8F5E9" },
+  admin:     { color: "#1A237E", bg: "#E8EAF6" },
+  superuser: { color: "#7c3c00", bg: "#fff0e0" },
 };
+const ROLE_ORDER = ["user", "admin", "superuser"];
 
 function StatCard({ label, value, sub }) {
   const { tc } = useTheme();
@@ -93,7 +94,8 @@ export default function AdminSystem() {
           <div style={{ display: "flex", gap: 12, marginBottom: 28, flexWrap: "wrap" }}>
             <StatCard label="Total" value={status.users.total} />
             <StatCard label="Pendents d'aprovació" value={status.users.pending} />
-            {Object.entries(status.users.byRole).map(([role, count]) => {
+            {ROLE_ORDER.map((role) => {
+              const count = status.users.byRole?.[role] ?? 0;
               const cfg = ROLE_COLORS[role] ?? {};
               return (
                 <div key={role} style={sharedStyles.cardPad(tc, "14px 18px")}>

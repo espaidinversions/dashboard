@@ -79,21 +79,43 @@ export function Badge({label,cfg}) {
 // options: string[] for select. fmt: v => display string.
 // badgeCfg: object mapping values to {bg, color, border} for badge styling
 // emptyDisplay: string to show when value is empty (default "—")
+// allowCustom: adds "＋ Afegir nou…" at bottom of select; custom values persisted to localStorage
+// optionsKey: localStorage key for custom options (required for persistence when allowCustom)
 // onSave(newValue) called only when value actually changes.
-export function EditableCell({ value, onSave, type = "text", options, fmt, style = {}, align = "left", disabled = false, badgeCfg, emptyDisplay }) {
+export function EditableCell({ value, onSave, type = "text", options, fmt, style = {}, align = "left", disabled = false, badgeCfg, emptyDisplay, allowCustom = false, optionsKey }) {
   const { tc } = useTheme();
-  const [editing, setEditing] = useState(false);
-  const [draft,   setDraft]   = useState("");
-  const ref = useRef(null);
+  const [editing, setEditing]     = useState(false);
+  const [draft,   setDraft]       = useState("");
+  const [addingNew, setAddingNew] = useState(false);
+  const [newDraft, setNewDraft]   = useState("");
+  const ref    = useRef(null);
+  const newRef = useRef(null);
+  const addingNewRef = useRef(false); // ref to block commit() during "add new" flow
 
-  useEffect(() => { if (editing) ref.current?.focus(); }, [editing]);
+  useEffect(() => { if (editing && !addingNew) ref.current?.focus(); }, [editing, addingNew]);
+  useEffect(() => { if (addingNew) newRef.current?.focus(); }, [addingNew]);
+
+  const getCustomOpts = () => {
+    if (!optionsKey) return [];
+    try { return JSON.parse(localStorage.getItem(`copts_${optionsKey}`) || "[]"); } catch { return []; }
+  };
+  const saveCustomOpt = (val) => {
+    if (!optionsKey) return;
+    const existing = getCustomOpts();
+    if (!existing.includes(val)) {
+      localStorage.setItem(`copts_${optionsKey}`, JSON.stringify([...existing, val]));
+    }
+  };
 
   const start = () => {
     setDraft(value != null && value !== "" ? String(value) : "");
+    addingNewRef.current = false;
+    setAddingNew(false);
     setEditing(true);
   };
 
   const commit = () => {
+    if (addingNewRef.current) return;
     setEditing(false);
     const trimmed = draft.trim();
     let next;
@@ -106,6 +128,17 @@ export function EditableCell({ value, onSave, type = "text", options, fmt, style
     if (next !== value) onSave(next);
   };
 
+  const commitNew = () => {
+    const val = newDraft.trim();
+    addingNewRef.current = false;
+    setAddingNew(false);
+    setEditing(false);
+    if (val) {
+      saveCustomOpt(val);
+      if (val !== value) onSave(val);
+    }
+  };
+
   const inputStyle = {
     background: tc.bg, color: tc.text,
     border: `1.5px solid ${tc.green}`, borderRadius: 4,
@@ -115,12 +148,41 @@ export function EditableCell({ value, onSave, type = "text", options, fmt, style
   };
 
   if (editing && options) {
+    if (addingNew) {
+      return (
+        <input ref={newRef} value={newDraft} type="text"
+          onChange={e => setNewDraft(e.target.value)}
+          onBlur={commitNew}
+          onKeyDown={e => {
+            if (e.key === "Enter") commitNew();
+            if (e.key === "Escape") { addingNewRef.current = false; setAddingNew(false); setEditing(false); }
+          }}
+          placeholder="Nou valor…"
+          style={{ ...inputStyle, minWidth: 110 }}
+        />
+      );
+    }
+    const customOpts = getCustomOpts();
+    const hasEmpty = options.includes("");
+    const baseNoEmpty = options.filter(o => o !== "");
+    const merged = [...new Set([...baseNoEmpty, ...customOpts])];
+    const mergedOptions = hasEmpty ? ["", ...merged] : merged;
     return (
-      <select ref={ref} value={draft} onChange={e => setDraft(e.target.value)}
+      <select ref={ref} value={draft}
+        onChange={e => {
+          if (e.target.value === "__add_new__") {
+            addingNewRef.current = true;
+            setAddingNew(true);
+            setNewDraft("");
+          } else {
+            setDraft(e.target.value);
+          }
+        }}
         onBlur={commit}
         onKeyDown={e => { if (e.key === "Escape") setEditing(false); }}
         style={inputStyle}>
-        {options.map(o => <option key={o} value={o}>{o}</option>)}
+        {mergedOptions.map(o => <option key={o} value={o}>{o || "—"}</option>)}
+        {allowCustom && <option value="__add_new__">＋ Afegir nou…</option>}
       </select>
     );
   }

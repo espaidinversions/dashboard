@@ -23,8 +23,8 @@ const NAV_SUPERUSER = { id: "system", label: "Sistema", icon: "🔧" };
 
 function AdminPanelInner() {
   const { tc } = useTheme();
-  const { isSuperuser } = useAuth();
-  const NAV = isSuperuser ? [...NAV_BASE, NAV_SUPERUSER] : NAV_BASE;
+  const { isAdmin } = useAuth();
+  const NAV = isAdmin ? [...NAV_BASE, NAV_SUPERUSER] : NAV_BASE;
   const [activeTab, setActiveTab] = useState("users");
 
   return (

@@ -64,7 +64,10 @@ function Badge({ label, color = "#1B4F72", bg = "#E8F0F7" }) {
   );
 }
 function AdminOnly() {
-  return <Badge label="Només admins" color="#7c3c00" bg="#fff0e0" />;
+  return <Badge label="Admin o superuser" color="#7c3c00" bg="#fff0e0" />;
+}
+function AdminStrictOnly() {
+  return <Badge label="Només admin" color="#6A1B9A" bg="#F3E5F5" />;
 }
 
 function Table({ head, rows }) {
@@ -105,14 +108,15 @@ const SECTIONS = [
   { id: "s2-2", label: "   Searchers", sub: true },
   { id: "s2-3", label: "   Participades", sub: true },
   { id: "s2-4", label: "   Pipeline FY26", sub: true },
+  { id: "s2-5", label: "   Detall per Inversió", sub: true },
   { id: "s3", label: "Mercats Públics" },
   { id: "s3-1", label: "   Posicions & Resum", sub: true },
   { id: "s3-2", label: "   Transaccions", sub: true },
   { id: "s3-3", label: "   Overrides & Metadades", sub: true },
   { id: "s4", label: "Panell d'Administració" },
   { id: "s5", label: "Rols i Permisos" },
-  { id: "s6", label: "Persistència de Dades" },
-  { id: "s7", label: "Flux de Dades" },
+  { id: "s6", label: "On es Guarden les Dades" },
+  { id: "s7", label: "Com Funciona el Tauler" },
 ];
 
 function Sidebar({ active }) {
@@ -165,7 +169,7 @@ function S1() {
           ["Caixa de cerca", "Filtra les dades de la secció activa"],
           ["↓ Excel", "Exporta la vista actual a un fitxer Excel"],
           ["☀️ / 🌙", "Alterna el tema clar/fosc (es desa entre sessions)"],
-          ["Admin", "Accedeix al panell d'administració (només admins)"],
+          ["Admin", "Accedeix al panell d'administració (superusers i admins)"],
           ["Guia", "Aquesta pàgina"],
           ["Sortir", "Tanca la sessió"],
         ]}
@@ -190,18 +194,18 @@ function S2() {
 
       <H2 id="s2-1">2.1 Capital Calls (Per Fons)</H2>
       <P>La pestanya <strong>Per Fons</strong> és el registre principal de moviments de capital. Llista cada capital call, distribució i retorn agrupat per fons.</P>
+      <H3>Afegir un moviment <AdminOnly /></H3>
+      <UL>
+        <LI>Fes clic a <strong>+ Afegeix moviment</strong> al peu de la secció del fons</LI>
+        <LI>Omple el modal: fons, categoria, data, import EUR, divisa original, VC/PE/RE, estructura</LI>
+        <LI>Fes clic a <strong>Desa</strong>. El mes, any i exercici fiscal es deriven automàticament de la data</LI>
+      </UL>
       <H3>Veure i filtrar</H3>
       <UL>
         <LI>Utilitza el selector d'any fiscal (FY 2019–2027) per delimitar la vista</LI>
         <LI>Filtra per tipus (PE / VC / RE), estructura del fons o categoria</LI>
         <LI>Cerca per nom de fons amb el camp de text</LI>
         <LI>Fes clic a elements del gràfic per filtrar la taula per aquell segment</LI>
-      </UL>
-      <H3>Afegir un moviment <AdminOnly /></H3>
-      <UL>
-        <LI>Fes clic a <strong>+ Afegeix moviment</strong> al peu de la secció del fons</LI>
-        <LI>Omple el modal: fons, categoria, data, import EUR, divisa original, VC/PE/RE, estructura</LI>
-        <LI>Fes clic a <strong>Desa</strong>. Els camps <Code>mes</Code>, <Code>any</Code> i <Code>FY</Code> es deriven automàticament de la data</LI>
       </UL>
       <H3>Editar un moviment <AdminOnly /></H3>
       <P>Fes clic a la icona del llapis de la fila per obrir el modal d'edició. Modifica els camps i fes clic a <strong>Desa</strong>.</P>
@@ -256,6 +260,19 @@ function S2() {
       <P>Fes clic al toggle <strong>Actiu</strong> de la fila. Els deals inactius s'oculten dels gràfics de resum però es mantenen a la base de dades.</P>
       <H3>Eliminar un deal <AdminOnly /></H3>
       <P>Fes clic a la icona de la paperera de la fila.</P>
+
+      <H2 id="s2-5">2.5 Detall per Inversió</H2>
+      <P>Vista de detall d'una inversió concreta: fons, empresa participada o searcher. Mostra les mètriques clau i l'historial de moviments associats.</P>
+      <Table
+        head={["Camp", "Descripció"]}
+        rows={[
+          ["Data de compromís", "Data en què es va formalitzar la inversió. Punt de referència per calcular mesos en operació i rendibilitats temporals."],
+          ["Ticket", "Import total compromès en la inversió"],
+          ["TVPI", "Total Value to Paid-In — ràtio de valor total retornat sobre capital invertit"],
+          ["Mesos en operació", "Calculat automàticament des de la data de compromís fins avui"],
+        ]}
+      />
+      <Note>La data de compromís es pot editar des de la pestanya <strong>Participades</strong> fent clic a la cel·la corresponent de la taula.</Note>
     </>
   );
 }
@@ -282,7 +299,7 @@ function S3() {
       <H3>Afegir una transacció <AdminOnly /></H3>
       <UL>
         <LI>Fes clic a <strong>+ Afegeix transacció</strong></LI>
-        <LI>Omple: acció (Buy / Sell / Income), data, ISIN, nom de l'actiu, tipus (RV / RF), custodi, unitats, NAV, valor en EUR</LI>
+        <LI>Omple: acció (Buy / Sell / Income), data, codi del fons (ISIN), nom de l'actiu, tipus (RV / RF), custodi, unitats, NAV, valor en EUR</LI>
         <LI>Fes clic a <strong>Desa</strong></LI>
       </UL>
       <H3>Editar una transacció <AdminOnly /></H3>
@@ -295,12 +312,12 @@ function S3() {
       <Table
         head={["Eina", "Controla"]}
         rows={[
-          ["TER", "Total Expense Ratio per fons. Estableix quan el TER del model és incorrecte o inexistent."],
-          ["Overrides", "Correccions manuals per posició: valorMercat, rendInici, rend2026, rend2025, costAnual."],
-          ["Metadades", "Etiquetes personalitzades de nom, gestora i custodi per posició."],
+          ["TER", "Cost anual del fons (%). Permet corregir-lo quan el valor automàtic és incorrecte o no existeix."],
+          ["Overrides", "Correccions manuals per posició: valor de mercat, rendibilitat des de l'inici, rendibilitat 2026/2025 i cost anual."],
+          ["Metadades", "Etiquetes personalitzades de nom, gestora i custodi per a cada posició."],
         ]}
       />
-      <Note>Per afegir un override: ves a la sub-pestanya corresponent, fes clic a <strong>+ Afegeix</strong>, omple l'ISIN i el valor, afegeix opcionalment una <strong>Nota</strong> explicativa i desa. Per eliminar-lo, fes clic a la paperera — la taula de Holdings revertirà al valor del model en la propera càrrega.</Note>
+      <Note>Per afegir una correcció: ves a la sub-pestanya corresponent, fes clic a <strong>+ Afegeix</strong>, introdueix el codi del fons i el valor corregit, afegeix opcionalment una <strong>Nota</strong> explicativa i desa. Per eliminar-la, fes clic a la paperera — la taula de Holdings tornarà al valor original.</Note>
     </>
   );
 }
@@ -309,15 +326,16 @@ function S4() {
   return (
     <>
       <H2 id="s4">4. Panell d'Administració</H2>
-      <P>Accessible a <Code>/admin</Code> per a usuaris amb rol <strong>admin</strong> o <strong>superuser</strong>.</P>
+      <P>Accessible a <Code>/admin</Code> per a usuaris amb rol <strong>superuser</strong> o <strong>admin</strong>.</P>
+      <P>La majoria d'eines del panell estan disponibles per a tots dos rols. Les accions especialment sensibles queden reservades al rol <strong>admin</strong>.</P>
 
       <H3>Usuaris</H3>
       <UL>
         <LI>Llista tots els usuaris registrats (actius + pendents d'aprovació)</LI>
-        <LI><strong>Canviar rol:</strong> Selecciona un nou rol al desplegable de l'usuari (usuari / admin / superuser)</LI>
-        <LI><strong>Eliminar usuari:</strong> Fes clic a la icona de la paperera</LI>
-        <LI><strong>Aprovar usuari pendent:</strong> Apareix a la pestanya Pendents. Fes clic a <strong>Aprovar</strong></LI>
-        <LI><strong>Convidar usuari:</strong> Introdueix un correu i selecciona un rol, després fes clic a <strong>Invitar</strong></LI>
+        <LI><strong>Canviar rol <AdminStrictOnly />:</strong> Selecciona un nou rol al desplegable de l'usuari (usuari / superuser / admin)</LI>
+        <LI><strong>Eliminar usuari <AdminOnly />:</strong> Fes clic a la icona de la paperera</LI>
+        <LI><strong>Aprovar usuari pendent <AdminOnly />:</strong> Apareix a la pestanya Pendents. Fes clic a <strong>Aprovar</strong></LI>
+        <LI><strong>Convidar usuari <AdminOnly />:</strong> Introdueix un correu i fes clic a <strong>Invitar</strong>. Assignar un rol elevat és una acció <strong>només admin</strong></LI>
       </UL>
 
       <H3>Activitat</H3>
@@ -344,7 +362,13 @@ function S4() {
       <P>Quatre sub-pestanyes per gestionar les dades operatives dels mercats públics: Transaccions (CRUD complet), Metadades, TER i Overrides. Veure secció 3.3 per als detalls.</P>
 
       <H3>Configuració</H3>
-      <P><strong>Dominis permesos:</strong> Llista dels dominis de correu autoritzats per registrar-se. Afegeix un domini (p.ex. <Code>espaidinversions.com</Code>) i fes clic a <strong>Desa</strong>. Fes clic a la × d'una etiqueta per eliminar-la. Si la llista és buida, qualsevol domini de correu pot registrar-se.</P>
+      <P><strong>Dominis permesos <AdminOnly />:</strong> Llista dels dominis de correu autoritzats per registrar-se. Afegeix un domini (p.ex. <Code>espaidinversions.com</Code>) i fes clic a <strong>Desa</strong>. Fes clic a la × d'una etiqueta per eliminar-la. Si la llista és buida, qualsevol domini de correu pot registrar-se.</P>
+
+      <H3>Sistema <AdminStrictOnly /></H3>
+      <UL>
+        <LI>Mostra mètriques internes del sistema: recompte d'usuaris per rol, usuaris pendents i volum de files per taula</LI>
+        <LI><strong>Purgar registre d'auditoria:</strong> elimina entrades antigues del log a partir d'un llindar de dies. És una acció irreversible</LI>
+      </UL>
     </>
   );
 }
@@ -370,6 +394,8 @@ function S5() {
           ["Canviar rols d'usuari", "—", "—", "✓"],
           ["Esborrar taules senceres", "—", "✓", "✓"],
           ["Configurar dominis permesos", "—", "✓", "✓"],
+          ["Accedir a la pestanya Sistema", "—", "—", "✓"],
+          ["Purgar el registre d'auditoria", "—", "—", "✓"],
         ]}
       />
     </>
@@ -379,33 +405,18 @@ function S5() {
 function S6() {
   return (
     <>
-      <H2 id="s6">6. Persistència de Dades</H2>
-      <P>Entendre on viuen les dades ajuda a evitar sorpreses.</P>
+      <H2 id="s6">6. On es Guarden les Dades</H2>
+      <P>El tauler treballa amb dos tipus de dades. Saber-ho ajuda a entendre per què de vegades cal esperar o recarregar.</P>
 
-      <H3>Dades en viu (Supabase)</H3>
-      <P>Totes les operacions CRUD persisteixen a Supabase immediatament. Les taules principals:</P>
-      <Table
-        head={["Taula", "Contingut"]}
-        rows={[
-          ["capital_calls", "Tots els moviments de fons (calls, distribucions, retorns)"],
-          ["portfolio_companies", "Registres d'empreses i KPIs trimestrals"],
-          ["searchers", "Seguiment de searchers"],
-          ["pipeline", "Pipeline de deals"],
-          ["pm_transactions", "Esdeveniments de compra/venda/ingressos de mercats públics"],
-          ["pm_ter_overrides", "Correccions de TER per fons"],
-          ["pm_position_meta", "Etiquetes personalitzades per ISIN"],
-          ["pm_position_overrides", "Correccions manuals de valors per ISIN"],
-          ["private_entities", "Registre d'entitats"],
-          ["audit_logs", "Registre de canvis immutable (s'omple automàticament)"],
-          ["allowed_domains", "Llista blanca de registre"],
-        ]}
-      />
+      <H3>Dades en viu</H3>
+      <P>Tot el que afegeixes, edites o elimines des del tauler (capital calls, participades, searchers, transaccions de mercats públics…) es desa immediatament al núvol. Els canvis es reflecteixen en tots els dispositius a la propera càrrega.</P>
+      <Note>Si veus dades antigues després d'un canvi fet des d'un altre dispositiu, fes clic a <strong>Refrescar</strong> (on estigui disponible) o recarrega la pàgina per obtenir les dades més recents.</Note>
 
-      <H3>Caché del client (localStorage)</H3>
-      <P>El tauler emmagatzema les dades de Supabase al navegador per a càrregues ràpides. Si veus dades obsoletes després d'una edició feta des d'un altre dispositiu, fes clic a <strong>Refrescar</strong> (on estigui disponible) o fes una recàrrega forçada (<Code>Ctrl+Shift+R</Code>) per obtenir dades fresques.</P>
+      <H3>Dades de preus i historial</H3>
+      <P>L'historial de preus dels fons i el model de mercats públics s'actualitzen periòdicament per l'administrador del sistema. Aquests valors no es poden modificar des de la interfície — si detectes un preu incorrecte, utilitza les eines d'<strong>Overrides</strong> a <strong>Admin → PM Operacions</strong> per corregir-lo manualment.</P>
 
-      <H3>Dades generades / estàtiques</H3>
-      <P>Algunes dades es pre-generen amb scripts Python i s'empaqueten com a fitxers JavaScript a <Code>src/generated/</Code>. Això inclou l'historial de preus de fons i el model PM. Aquests fitxers no es poden editar des de la UI — s'actualitzen executant l'script corresponent i desplegant. Qualsevol transacció PM afegida via UI es desa a Supabase i es superposa al model estàtic en temps d'execució.</P>
+      <H3>Registre de canvis</H3>
+      <P>Tota modificació de dades queda registrada automàticament amb la data, l'hora i l'usuari que l'ha fet. Pots consultar aquest historial a <strong>Admin → Activitat</strong>.</P>
     </>
   );
 }
@@ -532,9 +543,9 @@ function DataFlowDiagram() {
 function S7() {
   return (
     <>
-      <H2 id="s7">7. Flux de Dades</H2>
-      <P>El diagrama mostra com les dades entren, es processen i arriben al navegador.</P>
-      <DataFlowDiagram />
+      <H2 id="s7">7. Com Funciona el Tauler</H2>
+      <P>Quan obres el tauler, les dades es carreguen des del núvol i es mostren al navegador. Qualsevol canvi que facis (afegir, editar o eliminar) s'envia directament al servidor i queda desat de forma permanent. Els preus dels fons s'actualitzen periòdicament per l'administrador i es publiquen automàticament.</P>
+      <P>Si en algun moment el tauler sembla mostrar informació desfasada, recarrega la pàgina per forçar una actualització completa.</P>
     </>
   );
 }
@@ -574,7 +585,7 @@ function UserGuideInner() {
             Turtle Capital Dashboard · Darrera actualització: abril 2026
           </p>
           <Note>
-            Les accions marcades amb <AdminOnly /> requereixen rol <strong>admin</strong> o <strong>superuser</strong>. Els usuaris estàndard poden veure totes les dades però no modificar-les.
+            Les accions marcades amb <AdminOnly /> requereixen rol <strong>admin</strong> o <strong>superuser</strong>. Les marcades amb <AdminStrictOnly /> només estan disponibles per a <strong>admin</strong>. Els usuaris estàndard poden veure totes les dades però no modificar-les.
           </Note>
           <S1 />
           <S2 />

@@ -4,7 +4,7 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import {
   FY_LIST, MESOS, CAT_CFG, VCPE_CFG, EST_CFG,
-  CAPITAL_CALL_CAT_OPTIONS, CAPITAL_CALL_VCPE_OPTIONS, CAPITAL_CALL_EST_OPTIONS,
+  CAPITAL_CALL_CAT_OPTIONS, CAPITAL_CALL_VCPE_OPTIONS, CAPITAL_CALL_EST_OPTIONS, CAPITAL_CALL_TIPUS_OPTIONS,
 } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify, exportMultiXLSX, mapKpiRows, readStoredJSON, writeStoredJSON, readStoredFlag, writeStoredFlag } from "../utils.js";
@@ -34,7 +34,7 @@ const LS_TS = "tc_loadedAt";
 // ══════════════════════════════════════════════════════════
 function DashboardInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
-  const { signOut, isAdmin, isSuperuser } = useAuth();
+  const { signOut, isAdmin, isSuperuser, canEdit } = useAuth();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
@@ -43,10 +43,10 @@ function DashboardInner() {
   const [inversionsSubTab, setInversionsSubTab] = useState("fons");
   const [realEstateTab, setRealEstateTab] = useState("directe");
   const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
+  const [searchersSubTab, setSearchersSubTab] = useState("tots");
+  const [companiesSubTab, setCompaniesSubTab] = useState("totes");
   const [ccAddModalFons, setCcAddModalFons] = useState(null);
   const [ccEditModalRow, setCcEditModalRow] = useState(null);
-
-  const canEdit = isAdmin;
 
   // Editable app state starts from localStorage.
   const [rawCC,   setRawCC]   = useState(()=>readStoredJSON(LS_CC, []));
@@ -467,10 +467,11 @@ function DashboardInner() {
   const SUPRA = [
     {id:"fons",       label:"Fons"},
     {id:"searchers",  label:"Searchers"},
+    {id:"companies",  label:"Companies"},
     {id:"portfolio",  label:"Participades"},
     {id:"inversions", label:"Detall per Inversió"},
   ];
-  const supra = tab==="searchers"?"searchers":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":"fons";
+  const supra = tab==="searchers"?"searchers":tab==="companies"?"companies":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":"fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Pipeline FY26"}, ...TABS_CC];
 
   // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs or sections
@@ -489,7 +490,7 @@ function DashboardInner() {
         const next = TABS_FONS[(idx + dir + TABS_FONS.length) % TABS_FONS.length];
         setTab(next.id);
       } else {
-        const supraIds = ["fons", "searchers", "portfolio", "inversions"];
+        const supraIds = ["fons", "searchers", "companies", "portfolio", "inversions"];
         const idx = supraIds.indexOf(supra);
         const nextSupra = supraIds[(idx + dir + supraIds.length) % supraIds.length];
         setTab(nextSupra === "fons" ? "pipeline" : nextSupra);
@@ -569,14 +570,27 @@ function DashboardInner() {
       </div>
       )}
 
-      {/* ── Sub-toolbar (Searchers) ── */}
+      {/* ── Sub-tabs (Searchers) ── */}
       {section==="alternatives"&&supra==="searchers"&&(
-      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",justifyContent:"flex-end",alignItems:"center",minHeight:44}}>
-        <button
-          style={{background:"transparent",color:tc.textMid,border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"6px 14px",cursor:"default",fontSize:11,fontFamily:"inherit",opacity:0.6}}
-          title="Actualitza el CSV dins la secció Historial de Searchers">
-          ↑ CSV Searchers
-        </button>
+      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex"}}>
+        {[{id:"tots",label:"Tots"},{id:"actius",label:"Actius"}].map(s=>(
+          <button key={s.id} onClick={()=>setSearchersSubTab(s.id)}
+            style={{background:"none",border:"none",borderBottom:`2px solid ${searchersSubTab===s.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:searchersSubTab===s.id?600:400,color:searchersSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+      )}
+
+      {/* ── Sub-tabs (Companies) ── */}
+      {section==="alternatives"&&supra==="companies"&&(
+      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex"}}>
+        {[{id:"totes",label:"Totes"},{id:"search-funds",label:"Search Funds"},{id:"altres",label:"Altres"}].map(s=>(
+          <button key={s.id} onClick={()=>setCompaniesSubTab(s.id)}
+            style={{background:"none",border:"none",borderBottom:`2px solid ${companiesSubTab===s.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:companiesSubTab===s.id?600:400,color:companiesSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
+            {s.label}
+          </button>
+        ))}
       </div>
       )}
 
@@ -662,7 +676,10 @@ function DashboardInner() {
         {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd}/></div>}
 
         {/* ── SEARCHERS ── */}
-        {tab==="searchers"&&<div className="tab-panel"><SearchersTab search={globalSearch}/></div>}
+        {tab==="searchers"&&<div className="tab-panel"><SearchersTab search={globalSearch} subTab={searchersSubTab}/></div>}
+
+        {/* ── COMPANIES ── */}
+        {tab==="companies"&&<div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} tipusFilter={companiesSubTab==="search-funds"?"SF":companiesSubTab==="altres"?"altres":null}/></div>}
 
         {/* ── PORTFOLIO COMPANIES ── */}
         {tab==="portfolio"&&<div className="tab-panel"><PortfolioCompaniesTab search={globalSearch}/></div>}
@@ -1163,12 +1180,12 @@ function DashboardInner() {
           fields={[
             {key:"fons",label:"Fons",type:"select",options:[...new Set(rawCC.map(r=>r.fons))].sort(),defaultValue:ccAddModalFons},
             {key:"cat",label:"Categoria",type:"select",options:CAPITAL_CALL_CAT_OPTIONS,defaultValue:CAPITAL_CALL_CAT_OPTIONS[0]},
-            {key:"data",label:"Data (YYYY-MM-DD)",type:"text",placeholder:"2024-03-15"},
+            {key:"data",label:"Data",type:"date"},
             {key:"eur",label:"Import EUR",type:"number"},
             {key:"divisa",label:"Divisa",type:"select",options:["EUR","USD"],defaultValue:"EUR"},
             {key:"vcpe",label:"VC/PE/RE",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:CAPITAL_CALL_VCPE_OPTIONS[0]},
             {key:"est",label:"Estratègia",type:"select",options:CAPITAL_CALL_EST_OPTIONS,defaultValue:CAPITAL_CALL_EST_OPTIONS[0]},
-            {key:"tipus",label:"Tipus",type:"text"},
+            {key:"tipus",label:"Tipus",type:"select",options:CAPITAL_CALL_TIPUS_OPTIONS,defaultValue:CAPITAL_CALL_TIPUS_OPTIONS[0]},
           ]}
           onSave={handleCCInsert}
           onClose={()=>setCcAddModalFons(null)}
@@ -1182,12 +1199,12 @@ function DashboardInner() {
           fields={[
             {key:"fons",label:"Fons",type:"select",options:[...new Set(rawCC.map(r=>r.fons))].sort(),defaultValue:ccEditModalRow.fons},
             {key:"cat",label:"Categoria",type:"select",options:CAPITAL_CALL_CAT_OPTIONS,defaultValue:ccEditModalRow.cat??CAPITAL_CALL_CAT_OPTIONS[0]},
-            {key:"data",label:"Data (YYYY-MM-DD)",type:"text",placeholder:"2024-03-15",defaultValue:ccEditModalRow.data??""},
+            {key:"data",label:"Data",type:"date",defaultValue:ccEditModalRow.data??""},
             {key:"eur",label:"Import EUR",type:"number",defaultValue:ccEditModalRow.eur??0},
             {key:"divisa",label:"Divisa",type:"select",options:["EUR","USD"],defaultValue:ccEditModalRow.divisa??"EUR"},
             {key:"vcpe",label:"VC/PE/RE",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:ccEditModalRow.vcpe??CAPITAL_CALL_VCPE_OPTIONS[0]},
             {key:"est",label:"Estratègia",type:"select",options:CAPITAL_CALL_EST_OPTIONS,defaultValue:ccEditModalRow.est??CAPITAL_CALL_EST_OPTIONS[0]},
-            {key:"tipus",label:"Tipus",type:"text",defaultValue:ccEditModalRow.tipus??""},
+            {key:"tipus",label:"Tipus",type:"select",options:CAPITAL_CALL_TIPUS_OPTIONS,defaultValue:ccEditModalRow.tipus??CAPITAL_CALL_TIPUS_OPTIONS[0]},
           ]}
           onSave={handleCCUpdate}
           onClose={()=>setCcEditModalRow(null)}

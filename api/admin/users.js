@@ -1,10 +1,11 @@
-import { isAllowedRole, isValidEmail, makeServiceClient, verifyAdmin } from "../_adminAuth.js";
+import { getUserRole, isAllowedRole, isValidEmail, makeServiceClient, verifyAdmin, verifyAdminOnly } from "../_adminAuth.js";
 import {
   applySecurityHeaders,
   enforceCors,
   enforceHttps,
   enforceRateLimit,
   handlePreflight,
+  normalizeBoolean,
   parsePagination,
   sanitizeDomain,
   sanitizeEmail,
@@ -31,6 +32,9 @@ export default async function handler(req, res) {
     const supabase = makeServiceClient();
     const admin = await verifyAdmin(req, supabase);
     if (!admin) return res.status(403).json({ error: "Forbidden" });
+    const id = req.query?.id !== undefined
+      ? sanitizeText(req.query.id, { maxLength: 128 })
+      : "";
 
     if (req.method === "GET") {
       const { page, pageSize, offset } = parsePagination(req.query, { defaultPageSize: 25, maxPageSize: 100 });
@@ -55,6 +59,10 @@ export default async function handler(req, res) {
       if (!isValidEmail(email)) return res.status(400).json({ error: "Invalid email" });
       if (!isAllowedRole(role)) {
         return res.status(400).json({ error: "Invalid role" });
+      }
+      if (role !== "user") {
+        const privilegedAdmin = await verifyAdminOnly(req, supabase);
+        if (!privilegedAdmin) return res.status(403).json({ error: "Assigning elevated roles requires admin" });
       }
 
       const { data: setting } = await supabase
@@ -81,6 +89,41 @@ export default async function handler(req, res) {
         if (roleError) return serverError(res, roleError, "updateUserById(role)");
       }
       return res.json({ user: data?.user ?? null });
+    }
+
+    if (req.method === "PATCH") {
+      if (!id) return res.status(400).json({ error: "User id required" });
+
+      const role = req.body?.role !== undefined ? sanitizeText(req.body.role, { maxLength: 20 }) : undefined;
+      const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
+      const updates = {};
+      if (role !== undefined) {
+        const privilegedAdmin = await verifyAdminOnly(req, supabase);
+        if (!privilegedAdmin) return res.status(403).json({ error: "Role changes require admin" });
+        if (!isAllowedRole(role)) return res.status(400).json({ error: "Invalid role" });
+        updates.app_metadata = { role };
+      }
+      if (emailConfirm) updates.email_confirm = true;
+
+      const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
+      if (error) return serverError(res, error, "updateUserById");
+      return res.json({ user: data?.user ?? null });
+    }
+
+    if (req.method === "DELETE") {
+      if (!id) return res.status(400).json({ error: "User id required" });
+
+      const { data: allUsers, error } = await supabase.auth.admin.listUsers();
+      if (error) return serverError(res, error, "listUsers(delete)");
+      const admins = (allUsers?.users ?? []).filter(user => getUserRole(user) === "admin");
+      const target = admins.find(user => user.id === id);
+      if (target && admins.length <= 1) {
+        return res.status(409).json({ error: "Cannot delete the last admin" });
+      }
+
+      const { error: deleteError } = await supabase.auth.admin.deleteUser(id);
+      if (deleteError) return serverError(res, deleteError, "deleteUser");
+      return res.json({ ok: true });
     }
 
     res.status(405).json({ error: "Method not allowed" });

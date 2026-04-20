@@ -27,3 +27,11 @@ export async function saveAllowedDomains(domains) {
 export async function loadAuditLog(params = {}) {
   return apiFetchJson(`/api/admin/audit-log${toQuery(params)}`);
 }
+
+export async function revertChange(auditId) {
+  return apiFetchJson("/api/admin/revert-change", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ auditId }),
+  });
+}

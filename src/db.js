@@ -4,6 +4,7 @@ import {
   getPrivateEntityName,
   resolvePrivateEntity,
 } from "./data/privateEntities.js";
+import { mergePipelineDeals } from "./data/pipelineCatalog.js";
 
 /** @typedef {import("./data/dashboardTypes.js").CapitalCallRow} CapitalCallRow */
 /** @typedef {import("./data/dashboardTypes.js").DashboardBundle} DashboardBundle */
@@ -251,7 +252,7 @@ async function upsertPrivateEntities(rows) {
  * @param {string} action
  * @param {string} tableName
  * @param {string | number | null | undefined} recordId
- * @param {Record<string, unknown> | null} changes
+ * @param {{ old?: Record<string, unknown> | null, new?: Record<string, unknown> | null } | Record<string, unknown> | null} changes
  */
 async function logAudit(action, tableName, recordId, changes) {
   if (!supabase) return;
@@ -286,10 +287,23 @@ export async function loadAll() {
   if (cc.error || fm.error || pl.error || co.error || sr.error) return null;
   const privateEntities = pe.error || !Array.isArray(pe.data) ? [] : pe.data;
   const entityMap = new Map(privateEntities.map((row) => [row.id, row]));
+  const livePipelineDeals = pl.data.map(r => ({
+    id: r.id,
+    name: r.name,
+    amount: r.amount,
+    currency: r.currency,
+    geography: r.geography,
+    strategy: r.strategy,
+    sector: r.sector,
+    status: r.status,
+    canal: r.canal,
+    active: r.active,
+    estimatedClosing: r.estimated_closing ?? null,
+  }));
   return {
     rawCC:      cc.data.map((row) => rowToCapitalCall(row, entityMap)),
     fundMeta:   fm.data.map((row) => rowToFundMeta(row, entityMap)),
-    funds0:     pl.data.map(r => ({ id:r.id, name:r.name, amount:r.amount, currency:r.currency, geography:r.geography, strategy:r.strategy, sector:r.sector, status:r.status, canal:r.canal, active:r.active, estimatedClosing: r.estimated_closing ?? null })),
+    funds0:     mergePipelineDeals(livePipelineDeals),
     companies:  co.data.map((row) => rowToCompany(row, entityMap)),
     searchers:  sr.data.map(rowToSearcher),
     privateEntities: privateEntities.map((row) => ({
@@ -621,24 +635,27 @@ export async function renamePrivateEntity(entityId, canonicalName) {
 /** @param {string} id */
 export async function deleteCompany(id) {
   if (!supabase) return { error: null };
+  const { data: old } = await supabase.from("portfolio_companies").select("*").eq("entity_id", id).single();
   const { error } = await supabase.from("portfolio_companies").delete().eq("entity_id", id);
-  if (!error) logAudit("delete", "portfolio_companies", id, null);
+  if (!error) logAudit("delete", "portfolio_companies", id, { old: old ?? null });
   return { error };
 }
 
 /** @param {number} id */
 export async function deleteSearcher(id) {
   if (!supabase) return { error: null };
+  const { data: old } = await supabase.from("searchers").select("*").eq("id", id).single();
   const { error } = await supabase.from("searchers").delete().eq("id", id);
-  if (!error) logAudit("delete", "searchers", id, null);
+  if (!error) logAudit("delete", "searchers", id, { old: old ?? null });
   return { error };
 }
 
 /** @param {number} id */
 export async function deletePipelineDeal(id) {
   if (!supabase) return { error: null };
+  const { data: old } = await supabase.from("pipeline").select("*").eq("id", id).single();
   const { error } = await supabase.from("pipeline").delete().eq("id", id);
-  if (!error) logAudit("delete", "pipeline", id, null);
+  if (!error) logAudit("delete", "pipeline", id, { old: old ?? null });
   return { error };
 }
 
@@ -852,20 +869,22 @@ export async function insertCapitalCall(cc) {
 
 export async function updateCapitalCall(rowId, fields) {
   if (!supabase) return { error: null };
+  const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
   const updates = { ...fields };
   if (fields.data) {
     const { mes, year, fy } = parseDateParts(fields.data);
     Object.assign(updates, { mes, year, fy });
   }
   const { error } = await supabase.from("capital_calls").update(updates).eq("id", rowId);
-  if (!error) logAudit("update", "capital_calls", String(rowId), updates);
+  if (!error) logAudit("update", "capital_calls", String(rowId), { old: old ?? null, new: updates });
   return { error };
 }
 
 export async function deleteCapitalCall(rowId) {
   if (!supabase) return { error: null };
+  const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
   const { error } = await supabase.from("capital_calls").delete().eq("id", rowId);
-  if (!error) logAudit("delete", "capital_calls", String(rowId), {});
+  if (!error) logAudit("delete", "capital_calls", String(rowId), { old: old ?? null });
   return { error };
 }
 
