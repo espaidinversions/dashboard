@@ -1,10 +1,11 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { useTheme } from "../theme.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { summarizeLatestPmValues } from "../data/pmValueUtils.js";
 import { buildGroupedMonthlySeriesFromNestedValues, buildMonthlySeriesFromNestedValues } from "../chartSeries.js";
 import { PERIODS, weightedReturn } from "./publicMarkets/PublicMarketsShared.jsx";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
+import { loadPMOverrides } from "../db.js";
 import { PublicMarketsSummarySection } from "./publicMarkets/PublicMarketsSummarySection.jsx";
 import { PublicMarketsTablesSection } from "./publicMarkets/PublicMarketsTablesSection.jsx";
 
@@ -42,6 +43,19 @@ export function PublicMarketsTab() {
   const [chartView, setChartView] = useState("total");
   const [expanded, setExpanded] = useState(new Set());
   const [flowGroupBy, setFlowGroupBy] = useState("total");
+  const [manualTxs, setManualTxs] = useState([]);
+
+  useEffect(() => {
+    loadPMOverrides().then(data => {
+      if (data?.transactions?.length) setManualTxs(data.transactions);
+    });
+  }, []);
+
+  const allTransactions = useMemo(() => {
+    const staticIds = new Set(PM_TRANSACTIONS.map(t => t.id));
+    const extras = manualTxs.filter(t => !staticIds.has(t.id));
+    return [...PM_TRANSACTIONS, ...extras];
+  }, [manualTxs]);
 
   const latestPmSummary = useMemo(() => {
     const summary = summarizeLatestPmValues(PM_VALUES, PM_POSITIONS);
@@ -283,7 +297,7 @@ export function PublicMarketsTab() {
         setFlowGroupBy={setFlowGroupBy}
         totalValueSeries={totalValueSeries}
         reportStartMonth={reportStartMonth}
-        transactions={PM_TRANSACTIONS}
+        transactions={allTransactions}
       />
 
       <PublicMarketsTablesSection

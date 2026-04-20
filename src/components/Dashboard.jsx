@@ -1044,8 +1044,16 @@ function DashboardInner() {
                             <tr key={`exp-${i}`} style={{borderBottom:`2px solid ${tc.green}`}}>
                               <td colSpan={12} style={{padding:0,background:rowExpandBg}}>
                                 <div style={{padding:"0 16px 14px 52px"}}>
-                                  <div style={{fontSize:10,letterSpacing:"0.12em",color:tc.green,textTransform:"uppercase",fontWeight:700,padding:"10px 0 8px"}}>
-                                    Moviments · {moviments.length} transaccions
+                                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0 8px"}}>
+                                    <div style={{fontSize:10,letterSpacing:"0.12em",color:tc.green,textTransform:"uppercase",fontWeight:700}}>
+                                      Moviments · {moviments.length} transaccions
+                                    </div>
+                                    {canEdit&&(
+                                      <button onClick={()=>setCcAddModalFons(f.fons)}
+                                        style={{padding:"3px 10px",borderRadius:5,border:`1px solid ${rowExpandBorder}`,background:"transparent",color:tc.green,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
+                                        ＋ Afegeix moviment
+                                      </button>
+                                    )}
                                   </div>
                                   {moviments.length===0
                                     ? <div style={{fontSize:12,color:tc.textLight,padding:"8px 0"}}>Cap moviment amb els filtres actuals.</div>
@@ -1100,14 +1108,6 @@ function DashboardInner() {
                                         </tfoot>
                                       </table>
                                   }
-                                  {canEdit&&(
-                                    <div style={{paddingTop:8}}>
-                                      <button onClick={()=>setCcAddModalFons(f.fons)}
-                                        style={{padding:"4px 12px",borderRadius:5,border:`1px solid ${rowExpandBorder}`,background:"transparent",color:tc.green,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
-                                        ＋ Afegeix moviment
-                                      </button>
-                                    </div>
-                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -1139,6 +1139,14 @@ function DashboardInner() {
         {/* ── TRANSACCIONS ── */}
         {tab==="txlog"&&(
           <div key="txlog" className="tab-panel" style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+            {canEdit&&(
+              <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
+                <button onClick={()=>setCcAddModalFons("")}
+                  style={{padding:"5px 14px",borderRadius:6,border:`1.5px solid ${tc.green}`,background:dark?"#0A2010":"#E8F8E8",color:tc.green,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:700}}>
+                  ＋ Afegeix moviment
+                </button>
+              </div>
+            )}
             <div style={{overflowX:"auto"}}>
               <table style={{width:"100%",borderCollapse:"collapse"}}>
                 <thead>
@@ -1193,9 +1201,9 @@ function DashboardInner() {
       )}
 
       {/* ── Capital Call Add Modal ── */}
-      {ccAddModalFons&&(
+      {ccAddModalFons!=null&&(
         <AddRowModal
-          title={`Nou moviment · ${ccAddModalFons}`}
+          title={ccAddModalFons ? `Nou moviment · ${ccAddModalFons}` : "Nou moviment"}
           fields={[
             {key:"fons",label:"Fons",type:"select",options:[...new Set(rawCC.map(r=>r.fons))].sort(),defaultValue:ccAddModalFons},
             {key:"cat",label:"Categoria",type:"select",options:CAPITAL_CALL_CAT_OPTIONS,defaultValue:CAPITAL_CALL_CAT_OPTIONS[0]},
