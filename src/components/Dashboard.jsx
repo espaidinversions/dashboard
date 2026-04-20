@@ -467,11 +467,10 @@ function DashboardInner() {
   const SUPRA = [
     {id:"fons",       label:"Fons"},
     {id:"searchers",  label:"Searchers"},
-    {id:"companies",  label:"Companies"},
-    {id:"portfolio",  label:"Participades"},
-    {id:"inversions", label:"Detall per Inversió"},
+    {id:"companies",  label:"Participades"},
+    {id:"inversions", label:"Llistat d'Inversions"},
   ];
-  const supra = tab==="searchers"?"searchers":tab==="companies"?"companies":tab==="portfolio"?"portfolio":tab==="inversions"?"inversions":"fons";
+  const supra = tab==="searchers"?"searchers":tab==="companies"?"companies":tab==="inversions"?"inversions":"fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Pipeline FY26"}, ...TABS_CC];
 
   // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs or sections
@@ -490,7 +489,7 @@ function DashboardInner() {
         const next = TABS_FONS[(idx + dir + TABS_FONS.length) % TABS_FONS.length];
         setTab(next.id);
       } else {
-        const supraIds = ["fons", "searchers", "companies", "portfolio", "inversions"];
+        const supraIds = ["fons", "searchers", "companies", "inversions"];
         const idx = supraIds.indexOf(supra);
         const nextSupra = supraIds[(idx + dir + supraIds.length) % supraIds.length];
         setTab(nextSupra === "fons" ? "pipeline" : nextSupra);
@@ -594,12 +593,6 @@ function DashboardInner() {
       </div>
       )}
 
-      {/* ── Sub-toolbar (Portfolio) ── */}
-      {section==="alternatives"&&supra==="portfolio"&&(
-      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",justifyContent:"flex-end",alignItems:"center",minHeight:44}}>
-        <span style={{fontSize:11,color:tc.textLight}}>21 empreses en cartera</span>
-      </div>
-      )}
 
       {/* ── Sub-tabs (Inversions) ── */}
       {section==="alternatives"&&supra==="inversions"&&(
@@ -682,7 +675,6 @@ function DashboardInner() {
         {tab==="companies"&&<div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} tipusFilter={companiesSubTab==="search-funds"?"SF":companiesSubTab==="altres"?"altres":null}/></div>}
 
         {/* ── PORTFOLIO COMPANIES ── */}
-        {tab==="portfolio"&&<div className="tab-panel"><PortfolioCompaniesTab search={globalSearch}/></div>}
 
         {/* ── ALTERNATIVES ── */}
         {tab==="mercats-publics"&&mercatsPublicsTab==="resum"&&(
