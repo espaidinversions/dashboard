@@ -10,6 +10,7 @@ import { PublicMarketsTablesSection } from "./publicMarkets/PublicMarketsTablesS
 
 const PM_MONTHLY = PM_MODEL.series.monthly;
 const PM_VALUES = PM_MODEL.series.values;
+const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 const PM_MANAGERS = PM_MODEL.metadata.managers;
 const PM_TOTAL_ACTIVE = PM_MODEL.metadata.totals.active;
