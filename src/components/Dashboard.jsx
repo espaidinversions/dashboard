@@ -27,6 +27,7 @@ import { PMTipusTab } from "./PMTipusTab.jsx";
 import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
 import { PMTraçabilitatTab } from "./PMTraçabilitatTab.jsx";
 import { ResumTab, FonsTab, TxLogTab } from "./tabs/index.js";
+import { Sidebar, SIDEBAR_W, RAIL_W } from "./Sidebar.jsx";
 
 const LS_CC = "tc_rawCC";
 const LS_PL = "tc_funds0";
@@ -46,6 +47,8 @@ function DashboardInner() {
   const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
   const [searchersSubTab, setSearchersSubTab] = useState("tots");
   const [companiesSubTab, setCompaniesSubTab] = useState("totes");
+  const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
+  const [activeNavItem,    setActiveNavItem]     = usePersistedState("ui_navItem", "fons");
   const [ccAddModalFons, setCcAddModalFons] = useState(null);
   const [ccEditModalRow, setCcEditModalRow] = useState(null);
 
@@ -110,6 +113,27 @@ function DashboardInner() {
     if (error) { console.error(error); return; }
     const fresh = await loadCapitalCalls();
     if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
+  }
+
+  function handleNavigate(itemId) {
+    setActiveNavItem(itemId);
+    switch (itemId) {
+      case "fons":           setTab("pipeline"); break;
+      case "searchers":      setTab("searchers"); break;
+      case "companies":      setTab("companies"); break;
+      case "posicions":      setTab("inversions"); break;
+      case "re-directe":     setTab("real-estate");     setRealEstateTab("directe"); break;
+      case "re-altres":      setTab("real-estate");     setRealEstateTab("altres-vehicles"); break;
+      case "mp-resum":       setTab("mercats-publics"); setMercatsPublicsTab("resum"); break;
+      case "mp-rv":          setTab("mercats-publics"); setMercatsPublicsTab("rv"); break;
+      case "mp-rf":          setTab("mercats-publics"); setMercatsPublicsTab("rf"); break;
+      case "mp-posicions":   setTab("mercats-publics"); setMercatsPublicsTab("posicions"); break;
+      case "mp-transaccions":setTab("mercats-publics"); setMercatsPublicsTab("transaccions"); break;
+      case "mp-traçabilitat":setTab("mercats-publics"); setMercatsPublicsTab("traçabilitat"); break;
+      case "tx-alt":         setTab("tx-alt"); break;
+      case "tx-mp":          setTab("mercats-publics"); setMercatsPublicsTab("transaccions"); break;
+      default: break;
+    }
   }
 
   const [exporting, setExporting] = useState(false);
@@ -306,7 +330,10 @@ function DashboardInner() {
   const baseCompr = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)),[COMPROMISOS,excluded]);
 
   // Hoisted above filtered so it can be used in the dep array without TDZ:
-  const section = (tab==="mercats-publics"||tab==="real-estate") ? tab : "alternatives";
+  const section = tab==="mercats-publics" ? "mercats-publics"
+              : tab==="real-estate"     ? "real-estate"
+              : tab==="tx-alt"          ? "transaccions"
+              : "alternatives";
 
   // Filtres addicionals
   const filtered = useMemo(()=>{
@@ -470,8 +497,7 @@ function DashboardInner() {
     {id:"fons",       label:"Fons"},
     {id:"searchers",  label:"Searchers"},
     {id:"companies",  label:"Participades"},
-    {id:"inversions", label:"Llistat d'Inversions"},
-    {id:"txlog",      label:"Transaccions"},
+    {id:"inversions", label:"Totes les Posicions"},
   ];
   // Only admins bypass permissions; superusers are segment-scoped
   const deniedSet = useMemo(
@@ -480,7 +506,10 @@ function DashboardInner() {
   );
   const SECTIONS = useMemo(() => SECTIONS_ALL.filter(s => !deniedSet.has(s.id)), [deniedSet]); // eslint-disable-line react-hooks/exhaustive-deps
   const SUPRA = useMemo(() => SUPRA_ALL.filter(s => !deniedSet.has(s.id)), [deniedSet]); // eslint-disable-line react-hooks/exhaustive-deps
-  const supra = tab==="searchers"?"searchers":tab==="companies"?"companies":tab==="inversions"?"inversions":tab==="txlog"?"txlog":"fons";
+  const supra = tab==="searchers"?"searchers"
+              : tab==="companies"?"companies"
+              : tab==="inversions"?"inversions"
+              : "fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Current Pipeline"}, ...TABS_CC];
 
   // If the active section/supra is denied, redirect to first allowed
@@ -527,169 +556,123 @@ function DashboardInner() {
   }, [tab, section, supra, TABS_FONS]);
 
   return (
-    <div id="dashboard-content" style={{minHeight:"100vh",background:tc.bg,color:tc.text,fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,letterSpacing:"0.005em"}}>
+    <div id="dashboard-content" style={{display:"flex",minHeight:"100vh",background:tc.bg,color:tc.text,fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,letterSpacing:"0.005em"}}>
 
-      {/* ── Header ── */}
-      <div className="no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"12px 32px",display:"flex",alignItems:"center",gap:12,boxShadow:"0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)"}}>
-        <Link to="/" style={{display:"flex",alignItems:"center",flexShrink:0}}>
-          <Logo/>
-        </Link>
-        <div style={{flex:1}}/>
-        <input
-          value={globalSearch}
-          onChange={e=>{setGlobalSearch(e.target.value);setTxPage(0);}}
-          placeholder="Cerca…"
-          style={{padding:"7px 14px",borderRadius:8,border:`1.5px solid ${tc.border}`,background:tc.bg,color:tc.text,fontSize:13,fontFamily:"inherit",width:220,outline:"none"}}
-        />
-        {globalSearch&&(
-          <button onClick={()=>{setGlobalSearch("");setTxPage(0);}}
-            style={{background:"transparent",border:"none",cursor:"pointer",fontSize:14,color:tc.textLight,padding:"0 2px",lineHeight:1,marginLeft:-4}}>
-            ✕
-          </button>
-        )}
-        <Link to="/guia"
-          style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,textDecoration:"none"}}>
-          Guia
-        </Link>
-        {isAdmin && (
-          <Link to="/admin"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,textDecoration:"none"}}>
-            Admin
-          </Link>
-        )}
-        <button onClick={exportAll} disabled={exporting}
-          style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:exporting?"not-allowed":"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600,opacity:exporting?0.6:1}}>
-          {exporting ? "Exportant…" : "↓ Excel"}
-        </button>
-        <button onClick={toggleDark}
-          style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:16,color:tc.textMid,fontFamily:"inherit"}}>
-          {dark?"☀️":"🌙"}
-        </button>
-        <button onClick={signOut}
-          style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"7px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit",fontWeight:600}}>
-          Sortir
-        </button>
-      </div>
+      {/* ── Sidebar ── */}
+      <Sidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(c => !c)}
+        activeItem={activeNavItem}
+        onNavigate={handleNavigate}
+        tc={tc}
+        dark={dark}
+        isAdmin={isAdmin}
+      />
 
-      {/* ── Section nav (top level) ── */}
-      <div className="tab-bar no-print" style={{background:tc.navy,padding:"0 32px",display:"flex",gap:0}}>
-        {SECTIONS.map(s=>(
-          <button key={s.id}
-            onClick={()=>{ if(s.id!=="alternatives") setTab(s.id); else if(section!=="alternatives") setTab("pipeline"); }}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${section===s.id?"rgba(255,255,255,0.9)":"transparent"}`,padding:"12px 24px",cursor:"pointer",fontSize:12,fontWeight:section===s.id?600:400,color:section===s.id?"#fff":"rgba(255,255,255,0.5)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s, transform 0.1s cubic-bezier(0.23,1,0.32,1), opacity 0.1s ease",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
-            {s.label}
-          </button>
-        ))}
-      </div>
+      {/* ── Main column ── */}
+      <div style={{flex:1, display:"flex", flexDirection:"column", minWidth:0}}>
 
-      {/* ── Supra-category nav (Alternatives only) ── */}
-      {section==="alternatives"&&(
-      <div className="tab-bar no-print" style={{background:"#1a3a5c",padding:"0 32px",display:"flex",gap:0}}>
-        {SUPRA.map(s=>(
-          <button key={s.id}
-            onClick={()=>{ setTab(s.id==="fons"?"pipeline":s.id); }}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${supra===s.id?"rgba(255,255,255,0.75)":"transparent"}`,padding:"10px 22px",cursor:"pointer",fontSize:11,fontWeight:supra===s.id?600:400,color:supra===s.id?"rgba(255,255,255,0.95)":"rgba(255,255,255,0.4)",fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.04em",textTransform:"uppercase"}}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-      )}
-
-      {/* ── Sub-tabs (Searchers) ── */}
-      {section==="alternatives"&&supra==="searchers"&&(
-      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex"}}>
-        {[{id:"tots",label:"Tots"},{id:"actius",label:"Actius"}].map(s=>(
-          <button key={s.id} onClick={()=>setSearchersSubTab(s.id)}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${searchersSubTab===s.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:searchersSubTab===s.id?600:400,color:searchersSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-      )}
-
-      {/* ── Sub-tabs (Companies) ── */}
-      {section==="alternatives"&&supra==="companies"&&(
-      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex"}}>
-        {[{id:"totes",label:"Totes"},{id:"search-funds",label:"Search Funds"},{id:"altres",label:"Altres"}].map(s=>(
-          <button key={s.id} onClick={()=>setCompaniesSubTab(s.id)}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${companiesSubTab===s.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:companiesSubTab===s.id?600:400,color:companiesSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-      )}
-
-
-      {/* ── Sub-tabs (Inversions) ── */}
-      {section==="alternatives"&&supra==="inversions"&&(
-      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex"}}>
-        {[{id:"fons",label:"Fons"},{id:"companies",label:"Participades"}].map(s=>(
-          <button key={s.id} onClick={()=>setInversionsSubTab(s.id)}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${inversionsSubTab===s.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:inversionsSubTab===s.id?600:400,color:inversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
-            {s.label}
-          </button>
-        ))}
-      </div>
-      )}
-
-      {/* ── Sub-tabs (Mercats Públics) ── */}
-      {section==="mercats-publics"&&(
-      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0}}>
-        {[{id:"resum",label:"Resum"},{id:"rv",label:"Renda Variable"},{id:"rf",label:"Renda Fixa"},{id:"posicions",label:"Posicions"},{id:"transaccions",label:"Transaccions"},{id:"traçabilitat",label:"Traçabilitat"}].map(t=>(
-          <button key={t.id} onClick={()=>setMercatsPublicsTab(t.id)}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${mercatsPublicsTab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:mercatsPublicsTab===t.id?600:400,color:mercatsPublicsTab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-      )}
-
-      {/* ── Sub-tabs (Real Estate) ── */}
-      {section==="real-estate"&&(
-      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0}}>
-        {[{id:"directe",label:"Directe"},{id:"altres-vehicles",label:"Altres Vehicles"}].map(t=>(
-          <button key={t.id} onClick={()=>setRealEstateTab(t.id)}
-            style={{background:"none",border:"none",borderBottom:`2px solid ${realEstateTab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:realEstateTab===t.id?600:400,color:realEstateTab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
-            {t.label}
-          </button>
-        ))}
-      </div>
-      )}
-
-      {/* ── Sub-tabs (Fons only) ── */}
-      {section==="alternatives"&&supra==="fons"&&(
-      <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 32px",display:"flex",gap:0,alignItems:"center"}}>
-        <div style={{display:"flex",flex:1}}>
-          {TABS_FONS.map(t=>(
-            <button key={t.id} onClick={()=>setTab(t.id)}
-              style={{background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?tc.green:"transparent"}`,padding:"11px 20px",cursor:"pointer",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",transition:"color 0.15s, border-color 0.15s, transform 0.1s cubic-bezier(0.23,1,0.32,1), opacity 0.1s ease",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
-              {t.label}
+        {/* ── Slim top bar ── */}
+        <div className="no-print" style={{
+          height:44, display:"flex", alignItems:"center", gap:8,
+          padding:"0 18px", background:tc.card,
+          borderBottom:`1px solid ${tc.border}`,
+          flexShrink:0, boxShadow:"0 1px 0 rgba(0,0,0,.06)",
+        }}>
+          <input
+            value={globalSearch}
+            onChange={e=>{setGlobalSearch(e.target.value);setTxPage(0);}}
+            placeholder="Cerca…"
+            style={{padding:"5px 12px",borderRadius:7,border:`1.5px solid ${tc.border}`,background:tc.bg,color:tc.text,fontSize:12,fontFamily:"inherit",width:200,outline:"none"}}
+          />
+          {globalSearch&&(
+            <button onClick={()=>{setGlobalSearch("");setTxPage(0);}}
+              style={{background:"transparent",border:"none",cursor:"pointer",fontSize:13,color:tc.textLight,padding:"0 2px",lineHeight:1,marginLeft:-4}}>
+              ✕
             </button>
-          ))}
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:8,paddingRight:4}}>
-          {tab!=="pipeline"&&(
+          )}
+          {section==="alternatives"&&supra==="fons"&&tab!=="pipeline"&&(
             <FonsSelector excluded={excluded} setExcluded={setExcluded} rawCC={rawCC}/>
           )}
+          <div style={{flex:1}}/>
           <button onClick={()=>setShowLoader(true)}
-            style={{background:tc.navy,color:"#fff",border:"none",borderRadius:7,padding:"6px 14px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
+            style={{background:tc.navy,color:"#fff",border:"none",borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
             ↑ Carregar dades
           </button>
-        </div>
-      </div>
-      )}
-
-      <div className="page-pad" style={{padding:"22px 32px 60px"}}>
-        <div className="no-print" style={{display:"flex",justifyContent:"flex-end",gap:8,marginBottom:16}}>
+          <button onClick={exportAll} disabled={exporting}
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:exporting?"not-allowed":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit",opacity:exporting?0.6:1}}>
+            {exporting?"…":"↓ Excel"}
+          </button>
           <button onClick={exportPDF}
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"6px 12px",cursor:"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit"}}>
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
             ↓ PDF
           </button>
           <button onClick={exportPNG} disabled={exporting}
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"6px 12px",cursor:exporting?"wait":"pointer",fontSize:12,color:tc.textMid,fontFamily:"inherit"}}>
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:exporting?"wait":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
             {exporting?"…":"↓ PNG"}
           </button>
+          <button onClick={toggleDark}
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:15,color:tc.textMid,fontFamily:"inherit"}}>
+            {dark?"☀️":"🌙"}
+          </button>
+          <button onClick={signOut}
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit",fontWeight:600}}>
+            Sortir
+          </button>
         </div>
+
+        {/* ── Sub-tab bar (Fons) ── */}
+        {section==="alternatives"&&supra==="fons"&&(
+        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex",gap:0,alignItems:"center"}}>
+          <div style={{display:"flex",flex:1}}>
+            {TABS_FONS.map(t=>(
+              <button key={t.id} onClick={()=>setTab(t.id)}
+                style={{background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+        )}
+
+        {/* ── Sub-tab bar (Searchers) ── */}
+        {section==="alternatives"&&supra==="searchers"&&(
+        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
+          {[{id:"tots",label:"Tots"},{id:"actius",label:"Actius"},{id:"transaccions",label:"Transaccions"}].map(s=>(
+            <button key={s.id} onClick={()=>setSearchersSubTab(s.id)}
+              style={{background:"none",border:"none",borderBottom:`2px solid ${searchersSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:searchersSubTab===s.id?600:400,color:searchersSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+        )}
+
+        {/* ── Sub-tab bar (Participades) ── */}
+        {section==="alternatives"&&supra==="companies"&&(
+        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
+          {[{id:"totes",label:"Totes"},{id:"search-funds",label:"Search Funds"},{id:"altres",label:"Altres"},{id:"transaccions",label:"Transaccions"}].map(s=>(
+            <button key={s.id} onClick={()=>setCompaniesSubTab(s.id)}
+              style={{background:"none",border:"none",borderBottom:`2px solid ${companiesSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:companiesSubTab===s.id?600:400,color:companiesSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+        )}
+
+        {/* ── Sub-tab bar (Totes les Posicions) ── */}
+        {section==="alternatives"&&supra==="inversions"&&(
+        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
+          {[{id:"fons",label:"Fons"},{id:"companies",label:"Participades"}].map(s=>(
+            <button key={s.id} onClick={()=>setInversionsSubTab(s.id)}
+              style={{background:"none",border:"none",borderBottom:`2px solid ${inversionsSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:inversionsSubTab===s.id?600:400,color:inversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+        )}
+
+        {/* ── Content area ── */}
+        <div className="page-pad" style={{flex:1,overflowY:"auto",padding:"22px 28px 60px"}}>
 
         {/* ── PIPELINE ── */}
         {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd} onDealsChange={deals=>{ setFunds0(deals); writeStoredJSON(LS_PL, deals); }}/></div>}
@@ -1191,7 +1174,8 @@ function DashboardInner() {
           </div>
         )}
 
-      </div>
+        </div>{/* page-pad */}
+      </div>{/* main column */}
 
       {/* ── Data Loader Modal ── */}
       {showLoader&&(
