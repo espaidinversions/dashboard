@@ -1,0 +1,235 @@
+// src/components/Sidebar.jsx
+import React, { useState } from "react";
+import { Link } from "react-router-dom";
+
+export const SIDEBAR_W = 220;
+export const RAIL_W    = 52;
+
+// ── nav tree ─────────────────────────────────────────────
+const PORTFOLI_SECTIONS = [
+  {
+    id:"alt", label:"Alternatius", icon:"💼",
+    children:[
+      {id:"fons",      label:"Fons",                icon:"🏦"},
+      {id:"searchers", label:"Searchers",           icon:"🔍"},
+      {id:"companies", label:"Participades",        icon:"🏢"},
+      {id:"posicions", label:"Totes les Posicions", icon:"📋"},
+    ],
+  },
+  {
+    id:"re", label:"Real Estate", icon:"🏠",
+    children:[
+      {id:"re-directe", label:"Directe"},
+      {id:"re-altres",  label:"Altres Vehicles"},
+    ],
+  },
+  {
+    id:"mp", label:"Mercats Públics", icon:"📈",
+    children:[
+      {id:"mp-resum",        label:"Resum"},
+      {id:"mp-rv",           label:"Renda Variable"},
+      {id:"mp-rf",           label:"Renda Fixa"},
+      {id:"mp-posicions",    label:"Posicions"},
+      {id:"mp-transaccions", label:"Transaccions"},
+      {id:"mp-traçabilitat", label:"Traçabilitat"},
+    ],
+  },
+];
+
+const TX_LEAVES = [
+  {id:"tx-alt", label:"Alternatives",    icon:"💼"},
+  {id:"tx-mp",  label:"Mercats Públics", icon:"📈"},
+];
+
+const BOTTOM_ITEMS = [
+  {id:"guia",  label:"Guia",  icon:"📖", to:"/guia"},
+  {id:"admin", label:"Admin", icon:"⚙️",  to:"/admin", adminOnly:true},
+];
+
+// ── component ─────────────────────────────────────────────
+export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark, isAdmin }) {
+  const [expanded, setExpanded] = useState(new Set(["alt","re","mp"]));
+  const [popover,  setPopover]  = useState(null);
+
+  const toggleSec = id =>
+    setExpanded(p => { const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n; });
+
+  const C = {
+    bg:           dark ? "#0d1e30" : "#1a3a5c",
+    bgHover:      dark ? "#162840" : "#1f4570",
+    bgActive:     dark ? "#1a3a5c" : "#2461a0",
+    text:         "rgba(255,255,255,0.85)",
+    textFade:     "rgba(255,255,255,0.4)",
+    groupLabel:   "rgba(255,255,255,0.32)",
+    border:       "rgba(255,255,255,0.08)",
+    activeBorder: "#3DC83E",
+  };
+
+  // ── shared leaf button ──
+  function Leaf({ item, indent = false }) {
+    const active = activeItem === item.id;
+    return (
+      <button
+        onClick={() => onNavigate(item.id)}
+        title={collapsed ? item.label : undefined}
+        style={{
+          display:"flex", alignItems:"center", gap:9,
+          width:"100%", border:"none", cursor:"pointer",
+          borderLeft:`3px solid ${active ? C.activeBorder : "transparent"}`,
+          padding: collapsed ? "9px 0" : indent ? "8px 16px 8px 32px" : "9px 14px",
+          background: active ? C.bgActive : "transparent",
+          color: active ? "#fff" : C.text,
+          fontSize:12, fontFamily:"inherit",
+          justifyContent: collapsed ? "center" : "flex-start",
+          transition:"background 0.1s",
+        }}
+        onMouseEnter={e => { if(!active) e.currentTarget.style.background=C.bgHover; }}
+        onMouseLeave={e => { if(!active) e.currentTarget.style.background="transparent"; }}
+      >
+        {item.icon && <span style={{fontSize:13,flexShrink:0,lineHeight:1}}>{item.icon}</span>}
+        {!collapsed && <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</span>}
+      </button>
+    );
+  }
+
+  // ── collapsible section ──
+  function Section({ sec }) {
+    const open        = expanded.has(sec.id);
+    const childActive = sec.children.some(c => c.id === activeItem);
+
+    return (
+      <div
+        style={{position:"relative"}}
+        onMouseEnter={() => collapsed && setPopover(sec.id)}
+        onMouseLeave={() => collapsed && setPopover(null)}
+      >
+        {/* section header */}
+        <button
+          onClick={() => collapsed ? onNavigate(sec.children[0].id) : toggleSec(sec.id)}
+          title={collapsed ? sec.label : undefined}
+          style={{
+            display:"flex", alignItems:"center", gap:9,
+            width:"100%", border:"none", cursor:"pointer",
+            borderLeft:`3px solid ${childActive && collapsed ? C.activeBorder : "transparent"}`,
+            padding: collapsed ? "10px 0" : "9px 14px",
+            background:"transparent",
+            color: childActive ? "#fff" : C.text,
+            fontSize:12, fontFamily:"inherit", fontWeight:600,
+            justifyContent: collapsed ? "center" : "flex-start",
+            transition:"background 0.1s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background=C.bgHover; }}
+          onMouseLeave={e => { e.currentTarget.style.background="transparent"; }}
+        >
+          <span style={{fontSize:15,flexShrink:0,lineHeight:1}}>{sec.icon}</span>
+          {!collapsed && (
+            <>
+              <span style={{flex:1,letterSpacing:"0.01em"}}>{sec.label}</span>
+              <span style={{fontSize:8,opacity:0.5}}>{open ? "▾" : "▸"}</span>
+            </>
+          )}
+        </button>
+
+        {/* children (expanded) */}
+        {!collapsed && open && sec.children.map(c => <Leaf key={c.id} item={c} indent />)}
+
+        {/* popover (collapsed hover) */}
+        {collapsed && popover === sec.id && (
+          <div style={{
+            position:"absolute", left:RAIL_W+6, top:0, zIndex:300,
+            background: dark ? "#0d1e30" : "#1a3a5c",
+            border:`1px solid ${C.border}`,
+            borderRadius:8, padding:"6px 0", minWidth:170,
+            boxShadow:"0 6px 24px rgba(0,0,0,.35)",
+            pointerEvents:"all",
+          }}>
+            <div style={{padding:"4px 14px 8px",fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:C.groupLabel}}>
+              {sec.label}
+            </div>
+            {sec.children.map(c => (
+              <button key={c.id}
+                onClick={() => { onNavigate(c.id); setPopover(null); }}
+                style={{
+                  display:"block", width:"100%", textAlign:"left",
+                  background: activeItem===c.id ? C.bgActive : "transparent",
+                  border:"none",
+                  borderLeft:`3px solid ${activeItem===c.id ? C.activeBorder : "transparent"}`,
+                  padding:"8px 16px", cursor:"pointer",
+                  color: activeItem===c.id ? "#fff" : C.text,
+                  fontSize:12, fontFamily:"inherit",
+                }}
+                onMouseEnter={e => { if(activeItem!==c.id) e.currentTarget.style.background=C.bgHover; }}
+                onMouseLeave={e => { if(activeItem!==c.id) e.currentTarget.style.background="transparent"; }}
+              >{c.label}</button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── group label ──
+  function GroupLabel({ label }) {
+    if (collapsed) return <div style={{height:12, borderTop:`1px solid ${C.border}`, margin:"4px 8px"}} />;
+    return (
+      <div style={{padding:"14px 14px 4px",fontSize:10,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase",color:C.groupLabel}}>
+        {label}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      width: collapsed ? RAIL_W : SIDEBAR_W,
+      minHeight:"100vh", background:C.bg,
+      display:"flex", flexDirection:"column",
+      transition:"width 0.2s ease", flexShrink:0, overflowX:"hidden",
+      borderRight:`1px solid ${C.border}`,
+    }}>
+      {/* header */}
+      <div style={{
+        height:44, display:"flex", alignItems:"center",
+        padding: collapsed ? "0" : "0 14px",
+        justifyContent: collapsed ? "center" : "space-between",
+        borderBottom:`1px solid ${C.border}`, flexShrink:0,
+      }}>
+        {!collapsed && <span style={{color:"#fff",fontWeight:700,fontSize:13,letterSpacing:"0.05em",whiteSpace:"nowrap"}}>Turtle Capital</span>}
+        <button onClick={onToggle} style={{background:"none",border:"none",cursor:"pointer",color:C.text,fontSize:16,padding:6,lineHeight:1,flexShrink:0}}>
+          {collapsed ? "☰" : "←"}
+        </button>
+      </div>
+
+      {/* scrollable nav body */}
+      <div style={{flex:1, overflowY:"auto", overflowX:"hidden", padding:"4px 0"}}>
+
+        {/* ── Portfoli group ── */}
+        <GroupLabel label="Portfoli" />
+        {PORTFOLI_SECTIONS.map(sec => <Section key={sec.id} sec={sec} />)}
+
+        {/* ── Transaccions group ── */}
+        <GroupLabel label="Transaccions" />
+        {TX_LEAVES.map(item => <Leaf key={item.id} item={item} />)}
+
+      </div>
+
+      {/* bottom links */}
+      <div style={{borderTop:`1px solid ${C.border}`, padding:"6px 0", flexShrink:0}}>
+        {BOTTOM_ITEMS.filter(i => !i.adminOnly || isAdmin).map(item => (
+          <Link key={item.id} to={item.to}
+            title={collapsed ? item.label : undefined}
+            style={{
+              display:"flex", alignItems:"center", gap:9,
+              padding: collapsed ? "9px 0" : "9px 14px",
+              color:C.text, textDecoration:"none",
+              fontSize:12, fontFamily:"inherit",
+              justifyContent: collapsed ? "center" : "flex-start",
+            }}
+          >
+            <span style={{fontSize:14,lineHeight:1}}>{item.icon}</span>
+            {!collapsed && <span>{item.label}</span>}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
