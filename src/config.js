@@ -11,9 +11,11 @@ export const CAT_CFG = {
   "Altres":          { color:TC.textLight, bg:TC.bgAlt  },
 };
 export const VCPE_CFG = {
-  "PE": { color:TC.navy,    bg:"#E6EDF3" },
-  "VC": { color:TC.green,   bg:"#E8F8E8" },
-  "RE": { color:"#6A4C8A",  bg:"#F3EEF8" },
+  "PE": { color:TC.navy,      bg:"#E6EDF3" },
+  "VC": { color:TC.green,     bg:"#E8F8E8" },
+  "RE": { color:"#6A4C8A",    bg:"#F3EEF8" },
+  "SF": { color:"#2563A8",    bg:"#DDEAF8" },
+  "PC": { color:"#7A5A00",    bg:"#FFF5D6" },
 };
 export const EST_CFG = {
   "Fons Primari": { color:TC.navy,      bg:"#E6EDF3" },

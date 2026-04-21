@@ -431,9 +431,11 @@ function DashboardInner() {
 
   // Dark-aware badge configs
   const vcpeCfg = {
-    "PE": { color:tc.navy,  bg: dark ? "#112030" : "#E6EDF3" },
-    "VC": { color:tc.green, bg: dark ? "#0A2010" : "#E8F8E8" },
-    "RE": { color:tc.purple||"#9B7CC8", bg: dark ? "#20163A" : "#F3EEF8" },
+    "PE": { color:tc.navy,               bg: dark ? "#112030" : "#E6EDF3" },
+    "VC": { color:tc.green,              bg: dark ? "#0A2010" : "#E8F8E8" },
+    "RE": { color:tc.purple||"#9B7CC8",  bg: dark ? "#20163A" : "#F3EEF8" },
+    "SF": { color:"#2563A8",             bg: dark ? "#0A1828" : "#DDEAF8" },
+    "PC": { color:"#7A5A00",             bg: dark ? "#1A1200" : "#FFF5D6" },
   };
   const estCfg = {
     "Fons Primari": { color:tc.navy,      bg: dark ? "#112030" : "#E6EDF3" },
@@ -789,7 +791,7 @@ function DashboardInner() {
                   return(
                     <div key={f.label} style={{display:"flex",alignItems:"center",gap:5}}>
                       <span style={{fontSize:11,color:tc.textLight}}>{f.label}:</span>
-                      {["PE","VC","RE"].map(v=>(
+                      {Object.keys(vcpeCfg).map(v=>(
                         <button key={v} onClick={()=>toggleVcpe(v)}
                           style={{background:fVcpe.has(v)?tc.navy:"transparent",border:`1.5px solid ${fVcpe.has(v)?tc.navy:tc.border}`,color:fVcpe.has(v)?"#fff":tc.textMid,borderRadius:20,padding:"2px 10px",cursor:"pointer",fontSize:11,fontWeight:fVcpe.has(v)?700:400,fontFamily:"inherit"}}>
                           {v}
@@ -871,7 +873,7 @@ function DashboardInner() {
               return(
               <div style={{display:"flex",gap:6,marginBottom:14,alignItems:"center"}}>
                 <span style={{fontSize:11,color:tc.textLight,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase"}}>Tipus:</span>
-                {["PE","VC","RE"].map(v=>(
+                {Object.keys(vcpeCfg).map(v=>(
                   <button key={v} onClick={()=>toggleVcpe(v)}
                     style={{background:fVcpe.has(v)?tc.navy:"transparent",border:`1.5px solid ${fVcpe.has(v)?tc.navy:tc.border}`,color:fVcpe.has(v)?"#fff":tc.textMid,borderRadius:20,padding:"4px 14px",cursor:"pointer",fontSize:12,fontWeight:fVcpe.has(v)?700:400,fontFamily:"inherit"}}>
                     {v}
