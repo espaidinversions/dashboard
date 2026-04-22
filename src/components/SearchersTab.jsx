@@ -3,12 +3,13 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
-import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState, formatIsoDateDMY } from "../utils.js";
+import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState, formatIsoDateDMY, readStoredJSON } from "../utils.js";
 import { GEO_NAME, SEARCHER_STATUS_CFG, SEARCHER_STATUS_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_FORM_ENTRADA_OPTIONS } from "../config.js";
 import { FlagImg, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { upsertSearcher, insertSearcher, deleteSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
 import { useToast } from "../toast.jsx";
+import * as XLSX from "xlsx";
 
 // ── constants ──────────────────────────────────────────────
 
@@ -60,8 +61,8 @@ function splitSchoolNames(value) {
     .map((part) => part.trim())
     .filter(Boolean);
   return {
-    searcher1: parts[0] ?? null,
-    searcher2: parts[1] ?? null,
+    escola1: parts[0] ?? null,
+    escola2: parts[1] ?? null,
   };
 }
 
@@ -84,10 +85,82 @@ function formatEquityStake(value) {
   return Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)}%` : "—";
 }
 
+const STAGE_BADGE_CFG = {
+  "Cerca activa": { bg:"#E8F8E8", color:"#1C6B1D" },
+  "Equity Gap actiu": { bg:"#F5F0FA", color:"#6B2E7E" },
+  "En adquisició": { bg:"#D6EAD6", color:"#1C5220" },
+  "En revisió": { bg:"#FFF6DB", color:"#8A6400" },
+  "Sense plaça": { bg:"#FDECEC", color:"#B01F17" },
+  "Procés aturat": { bg:"#EEF2F7", color:"#425466" },
+  "Descartat": { bg:"#FDECEC", color:"#B01F17" },
+  "Sense classificar": { bg:"#EEF2F7", color:"#425466" },
+};
+
+function normalizeSearcherName(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[().,/-]/g, " ")
+    .replace(/\b(s\.?l\.?|srl|ltd|limited)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function describeSearcherStage(row) {
+  const status = String(row?.statusScreening ?? "").trim();
+  if (status === "Invertit en fase de cerca") {
+    return row?.formEntrada === "Equity Gap"
+      ? { label: "Equity Gap actiu", order: 2 }
+      : { label: "Cerca activa", order: 1 };
+  }
+  if (status === "Invertit en fase d'adquisició") return { label: "En adquisició", order: 3 };
+  if (status === "Pendent de formalitzar" || status === "En anàlisi") return { label: "En revisió", order: 4 };
+  if (status === "Sobresuscrit") return { label: "Sense plaça", order: 5 };
+  if (status === "No tancat") return { label: "Procés aturat", order: 6 };
+  if (status === "Descartat") return { label: "Descartat", order: 7 };
+  return { label: status || "Sense classificar", order: 99 };
+}
+
+function SectionHeading({ icon, children, color }) {
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+      <span style={{
+        width:24,
+        height:24,
+        display:"inline-flex",
+        alignItems:"center",
+        justifyContent:"center",
+        borderRadius:999,
+        background:color,
+        fontSize:13,
+        lineHeight:1,
+      }}>{icon}</span>
+      <span style={{ fontSize:10, letterSpacing:"0.11em", color:"inherit", textTransform:"uppercase", fontWeight:600 }}>{children}</span>
+    </div>
+  );
+}
+
+function StageBadge({ label }) {
+  const cfg = STAGE_BADGE_CFG[label] || STAGE_BADGE_CFG["Sense classificar"];
+  return (
+    <span style={{
+      background: cfg.bg,
+      color: cfg.color,
+      borderRadius: 20,
+      padding: "2px 9px",
+      fontSize: 10,
+      fontWeight: 600,
+      whiteSpace: "nowrap",
+    }}>{label || "—"}</span>
+  );
+}
+
 // ── main component ─────────────────────────────────────────
-export function SearchersTab({ search = "", subTab = "tots" }) {
+export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const { tc: TC, dark } = useTheme();
-  const { canEdit } = useAuth();
+  const { canEditSection } = useAuth();
+  const canEdit = canEditSection("searchers");
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -98,7 +171,12 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
   const [activeGeoFilter, setActiveGeoFilter] = usePersistedState("ui_searchersGeo", "Tots");
   const [activeEntryFilter, setActiveEntryFilter] = usePersistedState("ui_searchersEntry", "Tots");
   const [activeSort, setActiveSort] = usePersistedState("ui_searchersSort", { k:"nom", d:"asc" });
-  const csvRef = useRef(null);
+  const csvRef    = useRef(null);
+  const nifXlsRef = useRef(null);
+  const capitalCalls = useMemo(
+    () => (Array.isArray(rawCC) && rawCC.length ? rawCC : readStoredJSON("tc_rawCC", [])),
+    [rawCC]
+  );
 
   // shared styles
   const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:12, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
@@ -118,18 +196,78 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
     });
   }, [setCompanies, setHistoricData]);
 
-  const activeRows = useMemo(() => (
-    historicData
-      .filter((row) => row.statusScreening === "Invertit en fase de cerca")
-      .map((row) => {
-        const searchers = [row.searcher1, row.searcher2].filter(Boolean).join(" / ");
-        return {
-          ...row,
-          searchers,
-          mesosCercant: row.dataCompr ? calcMesos(row.dataCompr) : row.mesosCercant ?? null,
-        };
-      })
-  ), [historicData]);
+  // Keyed by private_entity NIF (= row.id in rawCC = vehicle_id)
+  const capitalCallsByNif = useMemo(() => {
+    const map = new Map();
+    (Array.isArray(capitalCalls) ? capitalCalls : []).forEach((row) => {
+      if (row?.vcpe !== "SF" || !row?.id) return;
+      const date = String(row?.data ?? "").slice(0, 10);
+      if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
+      const current = map.get(row.id) ?? { firstCommitmentDate: null, firstCommitmentEur: null };
+      if (row?.cat === "Compromís" && (!current.firstCommitmentDate || date < current.firstCommitmentDate)) {
+        current.firstCommitmentDate = date;
+        if (current.firstCommitmentEur == null && row.eur != null) current.firstCommitmentEur = row.eur;
+      }
+      map.set(row.id, current);
+    });
+    return map;
+  }, [capitalCalls]);
+
+  // Fallback: keyed by normalised fund name for searchers without NIF set
+  const capitalCallsBySearcher = useMemo(() => {
+    const map = new Map();
+    (Array.isArray(capitalCalls) ? capitalCalls : []).forEach((row) => {
+      if (row?.vcpe !== "SF") return;
+      const key = normalizeSearcherName(row?.fons);
+      const date = String(row?.data ?? "").slice(0, 10);
+      if (!key || !date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
+      const current = map.get(key) ?? { firstCommitmentDate: null, firstCommitmentEur: null };
+      if (row?.cat === "Compromís" && (!current.firstCommitmentDate || date < current.firstCommitmentDate)) {
+        current.firstCommitmentDate = date;
+        if (current.firstCommitmentEur == null && row.eur != null) current.firstCommitmentEur = row.eur;
+      }
+      map.set(key, current);
+    });
+    return map;
+  }, [capitalCalls]);
+
+  const enrichedSearchers = useMemo(() => (
+    historicData.map((row) => {
+      const searchers = [row.searcher1, row.searcher2].filter(Boolean).join(" / ");
+      const stage = describeSearcherStage(row);
+      const ccMeta = (row.nif && capitalCallsByNif.get(row.nif)) || capitalCallsBySearcher.get(normalizeSearcherName(row.nom));
+      const derivedDataCompr = ccMeta?.firstCommitmentDate ?? row.dataCompr ?? null;
+      const derivedTicket = row.ticket ?? ccMeta?.firstCommitmentEur ?? null;
+      const investmentYear = derivedDataCompr ? Number(derivedDataCompr.slice(0, 4)) : null;
+      return {
+        ...row,
+        ticket: derivedTicket,
+        searchers,
+        derivedDataCompr,
+        investmentYear,
+        stageLabel: stage.label,
+        stageOrder: stage.order,
+        mesosCercant: derivedDataCompr ? calcMesos(derivedDataCompr) : row.mesosCercant ?? null,
+      };
+    })
+  ), [capitalCallsByNif, capitalCallsBySearcher, historicData]);
+
+  const activeRows = useMemo(
+    () => enrichedSearchers.filter((row) => row.statusScreening === "Invertit en fase de cerca"),
+    [enrichedSearchers]
+  );
+
+  const commitmentYearData = useMemo(() => {
+    const counts = new Map();
+    activeRows
+      .filter((row) => !row.isMock && Number.isFinite(row.investmentYear))
+      .forEach((row) => {
+        counts.set(row.investmentYear, (counts.get(row.investmentYear) ?? 0) + 1);
+      });
+    return [...counts.entries()]
+      .sort((a, b) => a[0] - b[0])
+      .map(([year, count]) => ({ year: String(year), count }));
+  }, [activeRows]);
 
   // ── KPIs ──────────────────────────────────────────────────
   const totalSearchers  = activeRows.reduce((sum, row) => sum + (row.ticket ?? 0), 0);
@@ -137,13 +275,14 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
   const duoCount        = activeRows.filter(r => r.modalitat !== "Solo").length;
 
   const getActiveSortValue = (row, key) => {
-    if (key === "status") return row.statusScreening ?? "";
+    if (key === "stage") return row.stageOrder ?? 0;
     if (key === "geo") return GEO_NAME[row.geo] || row.geo || "";
     if (key === "formEntrada") return row.formEntrada ?? "";
     if (key === "ticket") return row.ticket ?? 0;
+    if (key === "investmentYear") return row.investmentYear ?? 0;
     if (key === "mesosCercant") return row.mesosCercant ?? 0;
     if (key === "equityStake") return row.equityStake ?? 0;
-    if (key === "dataCompr") return row.dataCompr ?? "";
+    if (key === "dataCompr") return row.derivedDataCompr ?? "";
     return row[key] ?? "";
   };
 
@@ -179,7 +318,7 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
 
   // ── Sankey data ───────────────────────────────────────────
   const sankeyData = useMemo(() => {
-    const real = historicData.filter(r => !r.isMock);
+    const real = enrichedSearchers.filter(r => !r.isMock);
     const sc   = real.filter(r => r.formEntrada === "Search Capital");
     const eg   = real.filter(r => r.formEntrada === "Equity Gap");
 
@@ -204,11 +343,11 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
     const nodes = [...usedIds].map(id => ({ id }));
 
     return { nodes, links };
-  }, [companies, historicData]);
+  }, [companies, enrichedSearchers]);
 
   // ── Conversations stats ────────────────────────────────────
   const convStats = useMemo(() => {
-    const real        = historicData.filter(r => !r.isMock);
+    const real        = enrichedSearchers.filter(r => !r.isMock);
     const sc          = real.filter(r => r.formEntrada === "Search Capital");
     const eg          = real.filter(r => r.formEntrada === "Equity Gap");
     const scBacked    = sc.filter(r => r.statusScreening === "Invertit en fase de cerca").length;
@@ -216,7 +355,7 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
     const allDescartat = real.filter(r => ["Descartat","Sobresuscrit","No tancat"].includes(r.statusScreening)).length;
     const allRevisio  = real.filter(r => ["En anàlisi","Pendent de formalitzar"].includes(r.statusScreening)).length;
     return { total: real.length, scBacked, egInvertit, allDescartat, allRevisio };
-  }, [historicData]);
+  }, [enrichedSearchers]);
 
   const handleGeoClick = (geo) => {
     setActiveGeoFilter((current) => toggleActiveFilter(current, geo));
@@ -243,16 +382,28 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
   const AArr = ({ k }) => <span style={{ marginLeft:3, opacity:activeSort.k===k?1:0.2, fontSize:9 }}>{activeSort.k===k&&activeSort.d==="asc"?"▲":"▼"}</span>;
 
   // ── Historic table ─────────────────────────────────────────
+  const getHistoricSortValue = (row, key) => {
+    if (key === "geo") return GEO_NAME[row.geo] || row.geo || "";
+    if (key === "stageLabel") return row.stageOrder ?? 0;
+    if (key === "investmentYear") return row.investmentYear ?? 0;
+    return row[key] ?? "";
+  };
+
   const filteredHistoric = useMemo(() => {
-    let d = [...historicData];
+    let d = [...enrichedSearchers];
     if (histFilter.status !== "Tots") d = d.filter(r => r.statusScreening === histFilter.status);
     if (histFilter.geo    !== "Tots") d = d.filter(r => r.geo === histFilter.geo);
     if (histFilter.entrada !== "Tots") d = d.filter(r => r.formEntrada === histFilter.entrada);
     return [...d].sort((a, b) => {
-      const va = a[histSort.k] || "", vb = b[histSort.k] || "";
-      return histSort.d === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
+      const va = getHistoricSortValue(a, histSort.k);
+      const vb = getHistoricSortValue(b, histSort.k);
+      let cmp = 0;
+      if (typeof va === "number" && typeof vb === "number") cmp = va - vb;
+      else cmp = String(va).localeCompare(String(vb), "ca", { sensitivity: "base" });
+      if (cmp === 0) cmp = String(a.nom).localeCompare(String(b.nom), "ca", { sensitivity: "base" });
+      return histSort.d === "asc" ? cmp : -cmp;
     });
-  }, [historicData, histFilter, histSort]);
+  }, [enrichedSearchers, histFilter, histSort]);
 
   const sortHist = k => setHistSort(p => ({ k, d: p.k === k && p.d === "asc" ? "desc" : "asc" }));
   const HArr = ({ k }) => <span style={{ marginLeft:3, opacity:histSort.k===k?1:0.2, fontSize:9 }}>{histSort.k===k&&histSort.d==="asc"?"▲":"▼"}</span>;
@@ -287,6 +438,69 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
       }
     };
     reader.readAsText(file);
+    e.target.value = "";
+  };
+
+  const isMockNif = (nif) => !nif || String(nif).startsWith("MOCKNIF:");
+
+  const exportNifExcel = () => {
+    const rows = historicData.filter(r => isMockNif(r.nif));
+    if (!rows.length) {
+      toast({ message: "Tots els searchers ja tenen NIF real." });
+      return;
+    }
+    const data = rows.map(r => ({
+      id:          r.id ?? "",
+      nom:         r.nom ?? "",
+      nif_actual:  r.nif ?? "",
+      nif_nou:     "",
+      status:      r.statusScreening ?? "",
+      entrada:     r.formEntrada ?? "",
+      geo:         r.geo ?? "",
+      ticket:      r.ticket ?? "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(data);
+    ws["!cols"] = [
+      { wch: 10 }, { wch: 40 }, { wch: 30 }, { wch: 20 },
+      { wch: 30 }, { wch: 16 }, { wch: 6 }, { wch: 10 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "NIFs");
+    XLSX.writeFile(wb, `searchers_nif_${new Date().toISOString().slice(0,10)}.xlsx`);
+    toast({ message: `${rows.length} searchers exportats.` });
+  };
+
+  const handleNifImport = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = async (ev) => {
+      try {
+        const wb = XLSX.read(ev.target.result, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        const updates = rows.filter(r => String(r.nif_nou ?? "").trim());
+        if (!updates.length) {
+          toast({ message: "Cap NIF nou trobat a la columna nif_nou." });
+          return;
+        }
+        let ok = 0, fail = 0;
+        for (const row of updates) {
+          const id = Number(row.id);
+          const newNif = String(row.nif_nou).trim();
+          const target = historicData.find(s => s.id === id);
+          if (!target) { fail++; continue; }
+          const { error } = await upsertSearcher({ ...target, nif: newNif });
+          if (error) { fail++; } else { ok++; }
+        }
+        const refreshed = await loadSearchers();
+        if (Array.isArray(refreshed)) setHistoricData(refreshed);
+        toast({ message: `NIFs actualitzats: ${ok} ok${fail ? `, ${fail} errors` : ""}.`, type: fail ? "error" : "success" });
+      } catch (err) {
+        toast({ message: "Error important NIFs: " + err.message, type: "error" });
+      }
+    };
+    reader.readAsArrayBuffer(file);
     e.target.value = "";
   };
 
@@ -349,8 +563,9 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
       formEntrada: values.formEntrada || null, introPer: null,
       searcher1: null, searcher2: null, escola1: null, escola2: null,
       ticket: parseFloat(values.ticket) || null,
-      dataInici: values.dataInici || null, dataCompr: values.dataCompr || null, mesosCercant: null,
+      dataInici: values.dataInici || null, dataCompr: null, mesosCercant: null,
       equityStake: parseFloat(values.equityStake) || null, isMock: false,
+      nif: values.nif?.trim() || null,
     };
     const inserted = await insertSearcher(searcher);
     if (!inserted) { setError("Error en crear el searcher"); return; }
@@ -377,10 +592,24 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:8, marginBottom:14 }}>
         <span style={{ fontSize:11, color:TC.textLight }}>
           {historicData.length} searchers a base de dades
+          {historicData.filter(r => isMockNif(r.nif)).length > 0 && (
+            <span style={{ marginLeft:6, color:"#B01F17", fontWeight:600 }}>
+              · {historicData.filter(r => isMockNif(r.nif)).length} sense NIF real
+            </span>
+          )}
         </span>
         <button onClick={reloadSearchers}
           style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
           Recarregar DB
+        </button>
+        <button onClick={exportNifExcel}
+          style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
+          ↓ Exportar NIFs
+        </button>
+        <input ref={nifXlsRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={handleNifImport} />
+        <button onClick={() => nifXlsRef.current?.click()}
+          style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
+          ↑ Importar NIFs
         </button>
         <input ref={csvRef} type="file" accept=".csv" style={{ display:"none" }} onChange={handleCSV} />
         <button onClick={() => csvRef.current?.click()}
@@ -408,7 +637,9 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
       {/* ── Sankey + Geography ── */}
       <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
         <div style={card}>
-          <div style={sec}>Participades per Forma d'Entrada i Resultat</div>
+          <div style={{ ...sec, color:TC.textLight }}>
+            <SectionHeading icon="🧭" color={dark ? "#112030" : "#E6EDF3"}>Participades per Forma d'Entrada i Resultat</SectionHeading>
+          </div>
 
           {/* Conversations funnel strip */}
           <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16, padding:"10px 14px", background:TC.bgAlt, borderRadius:8 }}>
@@ -490,7 +721,9 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
         </div>
 
         <div style={card}>
-          <div style={sec}>Allocation Geogràfica — Searchers (€)</div>
+          <div style={{ ...sec, color:TC.textLight }}>
+            <SectionHeading icon="🌍" color={dark ? "#0A2010" : "#E8F8E8"}>Allocation Geogràfica — Searchers (€)</SectionHeading>
+          </div>
           <ReactECharts
             style={{ width: "100%", height: 300 }}
             opts={{ renderer: "canvas" }}
@@ -566,9 +799,69 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
         </div>
       </div>
 
+      <div style={{ ...card, marginBottom:14 }}>
+        <div style={{ ...sec, color:TC.textLight }}>
+          <SectionHeading icon="📅" color={dark ? "#162840" : "#EAF2FB"}>Any de Compromís — Nombre de Searchers</SectionHeading>
+        </div>
+        {commitmentYearData.length === 0 ? (
+          <div style={{ padding:"36px 0 12px", textAlign:"center", color:TC.textLight, fontSize:12 }}>
+            Sense dades de compromís a capital calls.
+          </div>
+        ) : (
+          <ReactECharts
+            style={{ width:"100%", height:260 }}
+            opts={{ renderer:"canvas" }}
+            option={{
+              grid: { top: 12, right: 12, bottom: 32, left: 12, containLabel: true },
+              tooltip: {
+                ...t.tooltip,
+                trigger: "axis",
+                axisPointer: { type: "shadow" },
+                formatter: (params) => {
+                  const item = params?.[0];
+                  if (!item) return "";
+                  return `<b>${item.axisValue}</b><br/>${item.marker}Searchers: ${item.value}`;
+                },
+              },
+              xAxis: {
+                type: "category",
+                data: commitmentYearData.map((row) => row.year),
+                axisLine: { show: false },
+                axisTick: { show: false },
+                axisLabel: { color: TC.textLight, fontSize: 10 },
+              },
+              yAxis: {
+                type: "value",
+                minInterval: 1,
+                axisLine: { show: false },
+                axisTick: { show: false },
+                axisLabel: { color: TC.textLight, fontSize: 10 },
+                splitLine: { lineStyle: { color: TC.border } },
+              },
+              series: [{
+                type: "bar",
+                name: "Searchers",
+                data: commitmentYearData.map((row) => row.count),
+                itemStyle: { color: TC.navy, borderRadius: [5, 5, 0, 0] },
+                barMaxWidth: 42,
+                label: {
+                  show: true,
+                  position: "top",
+                  color: TC.textMid,
+                  fontSize: 10,
+                  formatter: ({ value }) => value,
+                },
+              }],
+            }}
+          />
+        )}
+      </div>
+
       {/* ── Active Searchers table ── */}
       <div style={{ ...card, marginBottom:14 }}>
-        <div style={sec}>Searchers Actius</div>
+        <div style={{ ...sec, color:TC.textLight }}>
+          <SectionHeading icon="🔍" color={dark ? "#162840" : "#EAF2FB"}>Searchers Actius</SectionHeading>
+        </div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
             <thead>
@@ -579,8 +872,9 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
                   { label:"Entrada", k:"formEntrada" },
                   { label:"Modalitat", k:"modalitat" },
                   { label:"Pais", k:"geo" },
-                  { label:"Status", k:"status" },
+                  { label:"Fase", k:"stage" },
                   { label:"Ticket", k:"ticket", right:true },
+                  { label:"Any Inv.", k:"investmentYear", center:true },
                   { label:"Data Compromis", k:"dataCompr" },
                   { label:"Mesos Cercant", k:"mesosCercant", center:true },
                   { label:"Equity Stake", k:"equityStake", right:true },
@@ -597,7 +891,6 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
             </thead>
             <tbody>
               {displayedSearchers.map((r, i) => {
-                const status = r.statusScreening ?? "—";
                 return (
                   <tr key={searcherKey(r) ?? r.nom} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding:"9px 10px", fontWeight:600, color:TC.navy }}>
@@ -654,25 +947,26 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
                       ) : <FlagImg geo={r.geo} />}
                     </td>
                     <td style={{ padding:"9px 10px" }}>
-                      {canEdit ? (
-                        <EditableCell
-                          value={status}
-                          options={uniqVals("statusScreening")}
-                          allowCustom optionsKey="s_status"
-                          onSave={v => saveSearcherField(r, "status", v)}
-                          fmt={v => <StatusBadge s={v} />}
-                        />
-                      ) : <StatusBadge s={status} />}
+                      <StageBadge label={r.stageLabel} />
                     </td>
                     <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:600, color:TC.navy }}>
                       {canEdit
                         ? <EditableCell value={r.ticket} type="number" align="right" fmt={fmtM} onSave={v => saveSearcherField(r, "ticket", v)} />
                         : fmtM(r.ticket)}
                     </td>
+                    <td style={{ padding:"9px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", color:TC.textMid }}>
+                      {r.investmentYear || "—"}
+                    </td>
                     <td style={{ padding:"9px 10px", color:TC.textMid, fontSize:11 }}>
                       {canEdit
-                        ? <EditableCell value={r.dataCompr} type="text" onSave={v => saveSearcherField(r, "dataCompr", v)} fmt={formatIsoDateDMY} emptyDisplay="—" />
-                        : formatIsoDateDMY(r.dataCompr)}
+                        ? <EditableCell
+                            value={r.derivedDataCompr ?? ""}
+                            type="date"
+                            fmt={formatIsoDateDMY}
+                            emptyDisplay="—"
+                            onSave={v => saveSearcherField(r, "dataCompr", v || null)}
+                          />
+                        : formatIsoDateDMY(r.derivedDataCompr)}
                     </td>
                     <td style={{ padding:"9px 10px", textAlign:"center" }}>
                       <span style={{
@@ -694,7 +988,7 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
               <tr style={{ borderTop:`2px solid ${TC.border}` }}>
                 <td colSpan={6} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({displayedSearchers.length}{search.trim() || activeGeoFilter !== "Tots" || activeEntryFilter !== "Tots" ? `/${activeRows.length}` : ""} searchers)</td>
                 <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.navy }}>{fmtM(displayedSearchersTicket)}</td>
-                <td colSpan={3} />
+                <td colSpan={4} />
               </tr>
             </tfoot>
           </table>
@@ -705,7 +999,9 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
       {subTab === "tots" && <div style={card}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <div style={sec}>Historial de Searchers</div>
+            <div style={{ ...sec, color:TC.textLight, marginBottom:0 }}>
+              <SectionHeading icon="🗂" color={dark ? "#112030" : "#E6EDF3"}>Historial de Searchers</SectionHeading>
+            </div>
             {canEdit && (
               <button onClick={() => setShowAddModal(true)}
                 style={{ padding: "7px 14px", borderRadius: 7, border: `1.5px solid ${TC.border}`,
@@ -746,17 +1042,20 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
         <div style={{ overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
             <thead>
-              <tr>
-                {[
-                  { label:"Nom SF",       k:"nom"            },
-                  { label:"Tipus",        k:"tipus"          },
-                  { label:"Modalitat",    k:"modalitat"      },
-                  { label:"País",         k:"geo"            },
-                  { label:"Status",       k:"statusScreening"},
-                  { label:"Entrada",      k:"formEntrada"    },
-                  { label:"Searchers",    k:"searcher1"      },
-                  { label:"Escola/MBA",   k:"escola1"        },
-                  { label:"Intro per",    k:"introPer"       },
+                <tr>
+                  {[
+                    { label:"Nom SF",       k:"nom"            },
+                    { label:"NIF",          k:"nif"            },
+                    { label:"Tipus",        k:"tipus"          },
+                    { label:"Modalitat",    k:"modalitat"      },
+                    { label:"País",         k:"geo"            },
+                    { label:"Status",       k:"statusScreening"},
+                    { label:"Fase",         k:"stageLabel"     },
+                    { label:"Any Inv.",     k:"investmentYear" },
+                    { label:"Entrada",      k:"formEntrada"    },
+                    { label:"Searchers",    k:"searcher1"      },
+                    { label:"Escola/MBA",   k:"escola1"        },
+                    { label:"Intro per",    k:"introPer"       },
                 ].map(h => (
                   <th key={h.k} style={{ ...th, cursor:"pointer" }} onClick={() => sortHist(h.k)}>
                     {h.label}<HArr k={h.k} />
@@ -771,6 +1070,12 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
                   <td style={{ padding:"7px 10px", fontWeight:500, color:TC.navy }}>
                     <EditableCell value={r.nom} type="text"
                       onSave={v => saveSearcherField(r, "nom", v)}
+                      disabled={!canEdit} />
+                  </td>
+                  <td style={{ padding:"7px 10px", fontFamily:"'DM Mono',monospace", fontSize:11, color:TC.textLight }}>
+                    <EditableCell value={r.nif ?? ""} type="text"
+                      emptyDisplay="—"
+                      onSave={v => saveSearcherField(r, "nif", v || null)}
                       disabled={!canEdit} />
                   </td>
                   <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>
@@ -804,6 +1109,12 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
                       fmt={v => <StatusBadge s={v} />}
                       disabled={!canEdit}
                     />
+                  </td>
+                  <td style={{ padding:"7px 10px" }}>
+                    <StageBadge label={r.stageLabel} />
+                  </td>
+                  <td style={{ padding:"7px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", fontSize:11, color:TC.textMid }}>
+                    {r.investmentYear || "—"}
                   </td>
                   <td style={{ padding:"7px 10px" }}>
                     <EditableCell value={r.formEntrada} options={SEARCHER_FORM_ENTRADA_OPTIONS}
@@ -855,13 +1166,13 @@ export function SearchersTab({ search = "", subTab = "tots" }) {
           title="Nou searcher"
           fields={[
             { key: "nom", label: "Nom", type: "text", placeholder: "Nom del searcher" },
+            { key: "nif", label: "NIF", type: "text", placeholder: "B12345678" },
             { key: "tipus", label: "Tipus", type: "select", options: ["", "Tradicional", "Self-funded"] },
             { key: "modalitat", label: "Modalitat", type: "select", options: ["", ...SEARCHER_MODALITAT_OPTIONS] },
             { key: "geo", label: "Geografia", type: "text", placeholder: "ES, FR, ..." },
             { key: "statusScreening", label: "Status", type: "select", options: ["", ...SEARCHER_STATUS_OPTIONS] },
             { key: "formEntrada", label: "Entrada", type: "select", options: ["", ...SEARCHER_FORM_ENTRADA_OPTIONS] },
             { key: "ticket", label: "Ticket (€)", type: "number" },
-            { key: "dataCompr", label: "Data compromís", type: "text", placeholder: "YYYY-MM-DD" },
             { key: "equityStake", label: "Equity stake (%)", type: "number" },
           ]}
           onSave={handleAddSearcher}

@@ -94,7 +94,7 @@ export function PublicMarketsSummarySection({
             return <ReactECharts option={option} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />;
           })()}
           <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-            TWR reportat per cada gestor. UBS: sense dades 2024–2025 (YTD disponible: ~+0.25%). Les barres absents indiquen que el gestor no ha reportat rendiment per al període.
+            TWR reportat per cada gestor a partir dels snapshots mensuals del model. Les barres absents indiquen que el gestor no ha reportat rendiment per al període.
           </div>
         </div>
 

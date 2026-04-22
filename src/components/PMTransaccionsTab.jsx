@@ -1,12 +1,15 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { Link } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { loadPMOverrides, upsertTransaction } from "../db.js";
+import { resolvePmTransactionRouteId } from "../data/pmPositionRouting.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
+const PM_CLOSED = PM_MODEL.holdings.closed;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 
 const MONTH_NAMES = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
@@ -27,7 +30,7 @@ export function PMTransaccionsTab() {
   const [actionFilter,   setActionFilter]   = useState("tots");
   const [custodianFilter, setCustodianFilter] = useState("tots");
   const [showModal,  setShowModal]  = useState(false);
-  const [openMonths, setOpenMonths] = useState(null);
+  const [openMonths, setOpenMonths] = useState(() => new Set());
   const [manualTxs,  setManualTxs]  = useState([]);
 
   useEffect(() => {
@@ -65,7 +68,7 @@ export function PMTransaccionsTab() {
 
   const resolvedOpen = useMemo(() => {
     if (openMonths !== null) return openMonths;
-    return new Set(byMonth.slice(0, 3).map(([m]) => m));
+    return new Set();
   }, [openMonths, byMonth]);
 
   const toggleMonth = m => setOpenMonths(prev => {
@@ -283,7 +286,12 @@ export function PMTransaccionsTab() {
                           <td />
                           <td style={{ padding: "8px 10px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight, whiteSpace: "nowrap" }}>{t.date}</td>
                           <td style={{ padding: "8px 10px", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            <span style={{ color: tc.navy, fontWeight: 600 }}>{t.nom}</span>
+                            <Link to={`/mercats-publics/${encodeURIComponent(resolvePmTransactionRouteId(t, PM_POSITIONS, PM_CLOSED) ?? t.isin)}`}
+                              style={{ color: tc.navy, fontWeight: 600, textDecoration: "none" }}
+                              onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
+                              onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>
+                              {t.nom || t.isin}
+                            </Link>
                           </td>
                           <td style={{ padding: "8px 10px", textAlign: "center" }}>
                             <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,

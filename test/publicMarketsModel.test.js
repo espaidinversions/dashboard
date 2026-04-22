@@ -14,3 +14,10 @@ test("PM_MODEL exposes the canonical PM runtime datasets and indexes", () => {
   assert.ok(PM_MODEL.indexes.transactionsByIsin instanceof Map);
   assert.ok(PM_MODEL.indexes.activeById.size > 0);
 });
+
+test("PM_MODEL keeps duplicate isins split by custodian in the exact index", () => {
+  const rows = PM_MODEL.indexes.activeByIsinCustodian.get("IE00BYVQ9F29||Interactive Brokers");
+  assert.ok(Array.isArray(rows));
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].custodian, "Interactive Brokers");
+});

@@ -119,7 +119,8 @@ function MetricChart({ title, data, actualKey, budgetKey, ltmKey, color, view, t
 function CompanyDetailInner() {
   const { id } = useParams();
   const { tc, dark, toggle } = useTheme();
-  const { canEdit } = useAuth();
+  const { canEditSection } = useAuth();
+  const canEdit = canEditSection("companies");
   const { toast } = useToast();
   const navigate = useNavigate();
   const [chartView, setChartView] = useState("quarterly");

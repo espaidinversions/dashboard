@@ -4,13 +4,16 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { CAT_CFG, VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, slugify, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
+import { fmtM, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
 import { Badge, Logo, KpiCard } from "./SharedComponents.jsx";
 import { loadAll } from "../db.js";
+import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
+import { useAuth } from "../auth.jsx";
 
 function FundDetailInner() {
   const { id } = useParams();
   const { tc, dark, toggle } = useTheme();
+  const { canAccessSection } = useAuth();
   const navigate = useNavigate();
 
   const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
@@ -32,12 +35,8 @@ function FundDetailInner() {
     });
   }, []);
 
-  // Find all transactions for this fund
-  const decodedId = decodeURIComponent(id ?? "");
-  const txs = useMemo(
-    () => rawCC.filter(r => (r.id && r.id === decodedId) || slugify(r.fons) === decodedId),
-    [rawCC, decodedId]
-  );
+  const detail = useMemo(() => buildFundDetailSnapshot(rawCC, fundMeta, id), [rawCC, fundMeta, id]);
+  const txs = detail?.txs ?? [];
 
   if (txs.length === 0) {
     return (
@@ -48,22 +47,16 @@ function FundDetailInner() {
     );
   }
 
-  const fundName = txs[0].fons;
-  const fundId = txs[0].id ?? null;
-  const vcpe = txs[0].vcpe;
-  const est = txs[0].est;
-
-  // KPI sums
-  const compromis = txs.filter(r => r.cat === "Compromís").reduce((s, r) => s + r.eur, 0);
-  const calls     = txs.filter(r => r.cat === "Capital Call").reduce((s, r) => s + r.eur, 0);
-  const dist      = txs.filter(r => r.cat === "Distribució" || r.cat === "Retorn Capital").reduce((s, r) => s + Math.abs(r.eur), 0);
-  const net       = dist - calls;
-  const utilPct   = compromis > 0 ? (calls / compromis * 100).toFixed(1) + "%" : null;
-
-  const meta = fundMeta.find(m => (fundId && m.id === fundId) || m.fons === fundName);
-  const tvpiFund = meta?.tvpi ?? null;
-  const dpiFund = calls > 0 ? dist / calls : 0;
-  const rvpiFund = tvpiFund != null ? tvpiFund - dpiFund : null;
+  const { fundName, fundId, vcpe, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, txLog } = detail;
+  const canAccessFund = vcpe === "RE" ? canAccessSection("real-estate") : canAccessSection("alternatives");
+  if (!canAccessFund) {
+    return (
+      <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", padding: 32 }}>
+        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 13, fontFamily: "inherit", padding: 0 }}>← Inversions</button>
+        <div style={{ marginTop: 48, textAlign: "center", color: tc.textLight }}>No tens accés a aquest vehicle.</div>
+      </div>
+    );
+  }
   const [chartView, setChartView] = useState("quarterly");
 
   // J-curve data: grouped by quarter or year; bars = period flows, line = cumulative net
@@ -89,9 +82,6 @@ function FundDetailInner() {
       return { period: p.period, calls: -p.calls, dist: p.dist, cumNet };
     });
   }, [txs, chartView]);
-
-  // Transaction log: sorted newest first
-  const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
 
   return (
     <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>

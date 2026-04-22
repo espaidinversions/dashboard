@@ -27,7 +27,8 @@ const MONTHS_OPTS = genMonthOpts(36);
 export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }) {
   const { rate, toEUR, toUSD } = useCurrency(eurUsd);
   const { tc: TC, dark } = useTheme();
-  const { canEdit } = useAuth();
+  const { canEditSection } = useAuth();
+  const canEdit = canEditSection("fons");
   const { toast } = useToast();
   const [funds,setFunds]   = useState(initialFunds);
   const [loading, setLoading] = useState(true);

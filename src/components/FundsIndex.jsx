@@ -7,11 +7,17 @@ import { Badge, EditableCell, DeleteRowButton } from "./SharedComponents.jsx";
 import { upsertFundMeta, insertFund, deleteFund, loadAll, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
+import { getVehiclePermissionSection } from "../permissions.js";
 
 export function FundsIndexInner({ inline = false, searchOverride }) {
-  const { canEdit } = useAuth();
+  const { canAccessSection, canEditSection } = useAuth();
   const { toast } = useToast();
   const { tc } = useTheme();
+  const canAccessAlternatives = canAccessSection("alternatives");
+  const canAccessRealEstate = canAccessSection("real-estate");
+  const canEditAlternatives = canEditSection("alternatives");
+  const canEditRealEstate = canEditSection("real-estate");
+  const canEditAny = canEditAlternatives || canEditRealEstate;
   const [searchLocal, setSearchLocal] = useState("");
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [sortKey, setSortKey] = useState("compromis");
@@ -39,13 +45,13 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
     });
   }, []);
 
-  const saveTvpi = async (fons, tvpi) => {
-    const updated = fundMeta.some(m => m.fons === fons)
-      ? fundMeta.map(m => m.fons === fons ? { ...m, tvpi } : m)
-      : [...fundMeta, { fons, tvpi }];
+  const saveTvpi = async (fund, tvpi) => {
+    const updated = fundMeta.some(m => (m.id ?? m.fons) === (fund.id ?? fund.fons))
+      ? fundMeta.map(m => (m.id ?? m.fons) === (fund.id ?? fund.fons) ? { ...m, tvpi } : m)
+      : [...fundMeta, { id: fund.id ?? undefined, fons: fund.fons, tvpi }];
     setFundMeta(updated);
     writeStoredJSON("tc_fundMeta", updated);
-    const { error } = await upsertFundMeta(fons, tvpi);
+    const { error } = await upsertFundMeta(fund, tvpi);
     if (error) toast({ message: "Error desant TVPI: " + error.message, type: "error" });
   };
 
@@ -71,8 +77,17 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
     toast({ message: `Fons "${fundName}" eliminat.` });
   };
 
+  const defaultVcpe = canEditAlternatives ? "PE" : "RE";
   const [addingFund, setAddingFund] = useState(false);
-  const [newFund, setNewFund] = useState({ fons: "", vcpe: "PE", est: "Fons Primari", compromis: "", divisa: "EUR" });
+  const [newFund, setNewFund] = useState({ fons: "", vcpe: defaultVcpe, est: "Fons Primari", compromis: "", divisa: "EUR" });
+
+  useEffect(() => {
+    setNewFund((current) => {
+      if (current.vcpe === "RE" && canEditRealEstate) return current;
+      if ((current.vcpe === "PE" || current.vcpe === "VC") && canEditAlternatives) return current;
+      return { ...current, vcpe: defaultVcpe, est: defaultVcpe === "RE" ? "SOCIMI" : "Fons Primari" };
+    });
+  }, [canEditAlternatives, canEditRealEstate, defaultVcpe]);
 
   const handleAddFund = async (e) => {
     e.preventDefault();
@@ -87,7 +102,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
     if (!row) { toast({ message: "Error en crear el fons", type: "error" }); return; }
     persistRawCC([...rawCC, row]);
     setAddingFund(false);
-    setNewFund({ fons: "", vcpe: "PE", est: "Fons Primari", compromis: "", divisa: "EUR" });
+    setNewFund({ fons: "", vcpe: defaultVcpe, est: defaultVcpe === "RE" ? "SOCIMI" : "Fons Primari", compromis: "", divisa: "EUR" });
     toast({ message: `Fons "${newFund.fons.trim()}" afegit.` });
   };
 
@@ -118,8 +133,12 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return rows.filter(r => r.fons.toLowerCase().includes(q));
-  }, [rows, search]);
+    return rows.filter((row) => {
+      const sectionId = getVehiclePermissionSection(row);
+      const hasAccess = sectionId === "real-estate" ? canAccessRealEstate : canAccessAlternatives;
+      return hasAccess && row.fons.toLowerCase().includes(q);
+    });
+  }, [rows, search, canAccessAlternatives, canAccessRealEstate]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -159,7 +178,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
 
   const COLS = [
     { k: "nom",       label: "Nom",      align: "left" },
-    { k: "id",        label: "ID",       align: "left" },
+    { k: "id",        label: "NIF",      align: "left" },
     { k: "tipus",     label: "Tipus",    align: "left" },
     { k: "compromis", label: "Compromís",align: "right" },
     { k: "cridat",    label: "Cridat",   align: "right" },
@@ -200,11 +219,13 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                       {label}<SortArrow k={k} />
                     </th>
                   ))}
-                  {canEdit && <th style={{ width: 40 }} />}
+                  {canEditAny && <th style={{ width: 40 }} />}
                 </tr>
               </thead>
               <tbody>
-                {sorted.map((r, i) => (
+                {sorted.map((r, i) => {
+                  const rowCanEdit = getVehiclePermissionSection(r) === "real-estate" ? canEditRealEstate : canEditAlternatives;
+                  return (
                   <tr key={r.id ?? r.fons} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
                       <Link to={`/fund/${encodeURIComponent(r.id ?? r.fons)}`} style={{ color: tc.navy, textDecoration: "none" }}
@@ -226,7 +247,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                               writeStoredJSON("tc_fundMeta", refreshed.fundMeta);
                             }
                           }}
-                          disabled={!canEdit || !r.id} />
+                          disabled={!rowCanEdit || !r.id} />
                       </Link>
                     </td>
                     <td style={{ padding: "10px 12px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight }}>
@@ -250,7 +271,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.tvpi, tc) }}>
                       <EditableCell value={r.tvpi} type="number" align="right"
                         fmt={formatMultiple} onSave={v => saveTvpi(r, v)}
-                        disabled={!canEdit} />
+                        disabled={!rowCanEdit} />
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.dpi, tc) }}>
                       {formatMultiple(r.dpi)}
@@ -258,19 +279,19 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.rvpi, tc) }}>
                       {formatMultiple(r.rvpi)}
                     </td>
-                    {canEdit && (
+                    {canEditAny && (
                       <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                        <DeleteRowButton onDelete={() => handleDeleteFund(r)} />
+                        {rowCanEdit ? <DeleteRowButton onDelete={() => handleDeleteFund(r)} /> : null}
                       </td>
                     )}
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           </div>
           )
         }
-      {canEdit && (
+      {canEditAny && (
         <div style={{ marginTop: 16 }}>
           {!addingFund ? (
             <button onClick={() => setAddingFund(true)}
@@ -289,7 +310,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                   placeholder="Nom del fons" style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
               </div>
               {[
-                { label: "Tipus", key: "vcpe", options: ["PE", "VC", "RE"] },
+                { label: "Tipus", key: "vcpe", options: [...(canEditAlternatives ? ["PE", "VC"] : []), ...(canEditRealEstate ? ["RE"] : [])] },
                 { label: "Estructura", key: "est", options: ["Fons Primari", "Fons de Fons", "SOCIMI"] },
                 { label: "Divisa", key: "divisa", options: ["EUR", "USD"] },
               ].map(f => (

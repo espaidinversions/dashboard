@@ -92,7 +92,8 @@ function EditableCell({ value, canEdit, onSave, renderValue, td }) {
 
 export function HoldingsTable() {
   const { tc, dark } = useTheme();
-  const { canEdit }  = useAuth();
+  const { canEditSection }  = useAuth();
+  const canEdit = canEditSection("mercats-publics");
 
   const [custodianFilter, setCustodianFilter] = useState("all");
   const [tipusFilter,     setTipusFilter]     = useState("all");

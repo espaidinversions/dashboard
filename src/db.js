@@ -183,6 +183,7 @@ function searcherToRow(s) {
     ticket: s.ticket ?? null, data_inici: s.dataInici || null,
     data_compr: s.dataCompr || null, mesos_cercant: s.mesosCercant ?? null,
     equity_stake: s.equityStake ?? null, is_mock: s.isMock ?? false,
+    nif: s.nif ?? null,
   };
 }
 
@@ -199,6 +200,7 @@ function rowToSearcher(r) {
     ticket: r.ticket, dataInici: r.data_inici,
     dataCompr: r.data_compr, mesosCercant: r.mesos_cercant,
     equityStake: r.equity_stake, isMock: r.is_mock ?? false,
+    nif: r.nif ?? null,
   };
 }
 
@@ -878,6 +880,13 @@ export async function updateCapitalCall(rowId, fields) {
   if (!supabase) return { error: null };
   const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
   const updates = { ...fields };
+  if (fields.fons) {
+    const resolved = resolvePrivateEntity("vehicle", fields.fons, old?.vehicle_id ?? null);
+    const { error: entityError } = await upsertPrivateEntities([resolved]);
+    if (entityError) return { error: entityError };
+    updates.vehicle_id = resolved.id;
+    updates.fons = resolved.canonicalName;
+  }
   if (fields.data) {
     const { mes, year, fy } = parseDateParts(fields.data);
     Object.assign(updates, { mes, year, fy });

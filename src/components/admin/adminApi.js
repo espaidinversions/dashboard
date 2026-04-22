@@ -40,10 +40,10 @@ export async function loadUserPermissions() {
   return apiFetchJson("/api/admin/user-permissions");
 }
 
-export async function saveUserPermissions(userId, deniedSections) {
+export async function saveUserPermissions(userId, payload) {
   return apiFetchJson("/api/admin/user-permissions", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId, deniedSections }),
+    body: JSON.stringify({ userId, ...payload }),
   });
 }

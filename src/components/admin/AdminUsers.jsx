@@ -6,12 +6,12 @@ import { apiFetchJson } from "../../apiClient.js";
 import { formatIsoDate } from "../../utils.js";
 import { useAuth } from "../../auth.jsx";
 
-const ROLES = ["user", "admin", "superuser"];
+const ROLES = ["user", "admin"];
 
 const ROLE_COLORS = {
-  superuser: { color: "#7c3c00", bg: "#fff0e0" },
   admin:     { color: "#1A237E", bg: "#E8EAF6" },
   user:      { color: "#1B5E20", bg: "#E8F5E9" },
+  superuser: { color: "#7c3c00", bg: "#fff0e0" },
 };
 
 export default function AdminUsers() {

@@ -19,7 +19,8 @@ const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D",
 
 export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
   const { tc: TC, dark } = useTheme();
-  const { canEdit } = useAuth();
+  const { canEditSection } = useAuth();
+  const canEdit = canEditSection("companies");
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
 

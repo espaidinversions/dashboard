@@ -6,9 +6,10 @@ import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { useTheme } from "../theme.js";
 import { fmtM, usePersistedState, yearsHeld, cagr } from "../utils.js";
 import { PM_TER } from "../generated/publicMarkets/pmTer.js";
-import { buildClosedTransactionSummaryByIsin, enrichClosedPosition } from "../data/pmClosedUtils.js";
+import { buildClosedTransactionSummaryByIsinCustodian, enrichClosedPosition } from "../data/pmClosedUtils.js";
 import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
 import { buildMonthlySeriesFromNestedValues } from "../chartSeries.js";
+import { makePmPositionRouteId } from "../data/pmPositionRouting.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
@@ -77,7 +78,7 @@ export function PMTipusTab({ tipus }) {
   const [toggle, setToggle] = usePersistedState(`pm_toggle_${tipus}`, "all");
   const [retMode, setRetMode] = useState("brut");
 
-  const secLabel     = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
+  const secLabel     = { fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
   const th           = { padding: "8px 10px", fontSize: 10, letterSpacing: "0.09em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
   const positions = useMemo(
@@ -86,7 +87,7 @@ export function PMTipusTab({ tipus }) {
   );
 
   const closedSummaryByIsin = useMemo(
-    () => buildClosedTransactionSummaryByIsin(),
+    () => buildClosedTransactionSummaryByIsinCustodian(),
     []
   );
 
@@ -97,14 +98,7 @@ export function PMTipusTab({ tipus }) {
     [tipus, closedSummaryByIsin]
   );
 
-  const typePositions = useMemo(() => {
-    const byIsin = new Map();
-    [...positions, ...closedPositions].forEach(p => {
-      if (!p?.isin) return;
-      byIsin.set(p.isin, p);
-    });
-    return [...byIsin.values()];
-  }, [positions, closedPositions]);
+  const typePositions = positions;
 
   const visible = useMemo(() => {
     const base = toggle === "caixabank"  ? positions.filter(p => p.custodian === "CaixaBank")
@@ -316,7 +310,7 @@ export function PMTipusTab({ tipus }) {
                       <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: PM_COLORS[i % PM_COLORS.length] }} />
                     </td>
                     <td style={{ padding: "7px 10px" }}>
-                      <Link to={`/mercats-publics/${p.id}`}
+                      <Link to={`/mercats-publics/${makePmPositionRouteId(p)}`}
                         style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>
                         {p.nom}
                       </Link>
@@ -356,7 +350,7 @@ export function PMTipusTab({ tipus }) {
                     <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: tc.border }} />
                   </td>
                   <td style={{ padding: "7px 10px" }}>
-                    <Link to={`/mercats-publics/${p.isin}`}
+                    <Link to={`/mercats-publics/${makePmPositionRouteId(p)}`}
                       style={{ color: tc.textMid, textDecoration: "none", fontWeight: 500 }}>
                       {p.nom}
                     </Link>

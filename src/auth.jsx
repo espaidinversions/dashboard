@@ -1,6 +1,16 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { supabase } from "./supabase.js";
 import { clearTurtleCapitalLS } from "./utils.js";
+import {
+  ACCESS_SUPERUSER,
+  buildSectionAccessMap,
+  canAccessAnySection,
+  getSectionAccessLevel,
+  hasSectionAccess,
+  isAdminRole,
+  isLegacySuperuserRole,
+  sectionAccessMapToDeniedSections,
+} from "./permissions.js";
 
 const AuthContext = createContext(null);
 
@@ -10,7 +20,8 @@ const ACTIVITY_EVENTS = ["mousemove", "keydown", "mousedown", "touchstart", "scr
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
   const [role, setRole] = useState("user");
-  const [deniedSections, setDeniedSections] = useState([]);
+  const [sectionRoles, setSectionRoles] = useState({});
+  const [isRecovery, setIsRecovery] = useState(false);
   const idleTimerRef = useRef(null);
 
   useEffect(() => {
@@ -21,9 +32,12 @@ export function AuthProvider({ children }) {
     }
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      if (_event === "PASSWORD_RECOVERY") {
+        setIsRecovery(true);
+      }
       setSession(s ?? null);
       setRole(s?.user?.app_metadata?.role ?? "user");
-      if (!s) setDeniedSections([]);
+      if (!s) { setSectionRoles({}); setIsRecovery(false); }
     });
 
     return () => subscription.unsubscribe();
@@ -47,9 +61,16 @@ export function AuthProvider({ children }) {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
-      .then(data => { if (data?.deniedSections) setDeniedSections(data.deniedSections); })
+      .then(data => {
+        const accessMap = buildSectionAccessMap({
+          role,
+          sectionRoles: data?.sectionRoles,
+          deniedSections: data?.deniedSections,
+        });
+        setSectionRoles(accessMap);
+      })
       .catch(() => {});
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     if (!session || !supabase) return;
@@ -92,13 +113,41 @@ export function AuthProvider({ children }) {
     redirectTo: window.location.origin + "/reset-password",
   });
 
-  const isAdmin = role === "admin";
-  const isSuperuser = role === "superuser";
-  const canEdit = role === "admin" || role === "superuser";
-  const isElevated = canEdit;
+  const clearRecovery = () => setIsRecovery(false);
+
+  const isAdmin = isAdminRole(role);
+  const isSuperuser = isLegacySuperuserRole(role);
+  const sectionAccess = buildSectionAccessMap({ role, sectionRoles });
+  const deniedSections = sectionAccessMapToDeniedSections(sectionAccess);
+  const canEdit = isAdmin || canAccessAnySection(sectionAccess, Object.keys(sectionAccess), ACCESS_SUPERUSER);
+  const isElevated = isAdmin;
+  const canAccessSection = useCallback((sectionId) => hasSectionAccess(sectionAccess, sectionId), [sectionAccess]);
+  const canEditSection = useCallback((sectionId) => hasSectionAccess(sectionAccess, sectionId, ACCESS_SUPERUSER), [sectionAccess]);
+  const getSectionAccess = useCallback((sectionId) => getSectionAccessLevel(sectionAccess, sectionId), [sectionAccess]);
+  const canAccessAny = useCallback((sectionIds) => canAccessAnySection(sectionAccess, sectionIds), [sectionAccess]);
 
   return (
-    <AuthContext.Provider value={{ session, signIn, signUp, signOut, resendConfirmation, resetPassword, role, isSuperuser, isAdmin, isElevated, canEdit, deniedSections }}>
+    <AuthContext.Provider value={{
+      session,
+      signIn,
+      signUp,
+      signOut,
+      resendConfirmation,
+      resetPassword,
+      role,
+      isSuperuser,
+      isAdmin,
+      isElevated,
+      canEdit,
+      deniedSections,
+      sectionAccess,
+      canAccessSection,
+      canEditSection,
+      getSectionAccess,
+      canAccessAny,
+      isRecovery,
+      clearRecovery,
+    }}>
       {children}
     </AuthContext.Provider>
   );

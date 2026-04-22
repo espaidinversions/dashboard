@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { fmtM, cagr, yearsHeld } from "../../utils.js";
 import { Badge } from "../SharedComponents.jsx";
 import { getMgrPositions, PctChip, TIPUS_CFG } from "./PublicMarketsShared.jsx";
+import { makePmPositionRouteId } from "../../data/pmPositionRouting.js";
 
 export function PublicMarketsTablesSection({
   tc,
@@ -114,7 +115,7 @@ export function PublicMarketsTablesSection({
                                             <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: tc.red, background: tc.red + "18", borderRadius: 3, padding: "1px 4px" }}>DISC.</span>
                                           </span>
                                         ) : (
-                                          <Link to={`/mercats-publics/${position.id}`} style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>
+                                          <Link to={`/mercats-publics/${makePmPositionRouteId(position)}`} style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>
                                             {position.nom}
                                           </Link>
                                         )}

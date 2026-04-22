@@ -10,7 +10,8 @@ import { loadPMOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js
 import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
 import { PriceHistoryChart } from "./PriceHistoryChart.jsx";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
-import { buildClosedTransactionSummaryByIsin, enrichClosedPosition } from "../data/pmClosedUtils.js";
+import { buildClosedTransactionSummaryByIsinCustodian, enrichClosedPosition } from "../data/pmClosedUtils.js";
+import { findActivePositionByRouteId, findClosedPositionByRouteId, makeIsinCustodianKey } from "../data/pmPositionRouting.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
@@ -49,15 +50,12 @@ function PMPositionDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { tc, dark } = useTheme();
-  const closedSummaryByIsin = useMemo(() => buildClosedTransactionSummaryByIsin(), []);
+  const closedSummaryByIsin = useMemo(() => buildClosedTransactionSummaryByIsinCustodian(), []);
 
-  let p = PM_POSITIONS.find(pos => pos.id === id);
-  if (!p && PM_POSITION_ID_ALIASES[id]) {
-    p = PM_POSITIONS.find(pos => pos.id === PM_POSITION_ID_ALIASES[id]);
-  }
+  let p = findActivePositionByRouteId(id, PM_POSITIONS, PM_POSITION_ID_ALIASES);
   let isClosed = false;
   if (!p) {
-    const closed = PM_CLOSED.find(pos => pos.isin === id);
+    const closed = findClosedPositionByRouteId(id, PM_CLOSED);
     if (closed) { p = enrichClosedPosition(closed, closedSummaryByIsin); isClosed = true; }
   }
 
@@ -65,6 +63,7 @@ function PMPositionDetail() {
   const [metaOverride, setMetaOverride] = useState({});
   const [terOverride, setTerOverride] = useState(null);
   const isin = p ? cleanIsin(p.isin) : null;
+  const positionKey = p ? makeIsinCustodianKey(isin, p.custodian) : null;
 
   useEffect(() => {
     if (!isin) return;
@@ -124,24 +123,29 @@ function PMPositionDetail() {
   }, [p, isAbelFont]);
 
   const positionTxs = useMemo(
-    () => PM_TRANSACTIONS.filter(t => t.isin === isin),
-    [isin]
+    () => PM_TRANSACTIONS.filter(t => {
+      if (t.isin !== isin) return false;
+      if (!positionKey) return true;
+      return makeIsinCustodianKey(t.isin, t.custodian) === positionKey;
+    }),
+    [isin, positionKey]
   );
 
   const positionValues = useMemo(() => {
     const custodianData = PM_VALUES[isin] ?? (isClosed ? PM_CLOSED_VALUES[isin] : null);
     if (!custodianData) return [];
     const monthMap = new Map();
-    Object.values(custodianData).forEach(series =>
+    Object.entries(custodianData).forEach(([custodian, series]) => {
+      if (positionKey && makeIsinCustodianKey(isin, custodian) !== positionKey) return;
       series.forEach(({ date, value }) => {
         const month = date.slice(0, 7);
         monthMap.set(month, (monthMap.get(month) ?? 0) + value);
-      })
-    );
+      });
+    });
     return [...monthMap.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, value]) => ({ date: month, value }));
-  }, [isin, isClosed]);
+  }, [isin, isClosed, positionKey]);
 
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card        = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };

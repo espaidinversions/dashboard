@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { readStoredFlag } from "../utils.js";
@@ -21,13 +21,19 @@ const NAV_BASE = [
   { id: "pm",          label: "PM Operacions",icon: "📈" },
   { id: "settings",    label: "Configuració", icon: "⚙️" },
 ];
-const NAV_SUPERUSER = { id: "system", label: "Sistema", icon: "🔧" };
+const NAV_SYSTEM = { id: "system", label: "Sistema", icon: "🔧" };
 
 function AdminPanelInner() {
   const { tc } = useTheme();
   const { isAdmin } = useAuth();
-  const NAV = isAdmin ? [...NAV_BASE, NAV_SUPERUSER] : NAV_BASE;
-  const [activeTab, setActiveTab] = useState("users");
+  const NAV = isAdmin ? [...NAV_BASE, NAV_SYSTEM] : NAV_BASE;
+  const [activeTab, setActiveTab] = useState(NAV[0]?.id ?? "users");
+
+  useEffect(() => {
+    if (!NAV.some((item) => item.id === activeTab)) {
+      setActiveTab(NAV[0]?.id ?? "users");
+    }
+  }, [NAV, activeTab]);
 
   return (
     <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14, display: "flex", flexDirection: "column" }}>

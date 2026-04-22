@@ -1,6 +1,6 @@
 import React, { useState, useRef } from "react";
 import { useTheme } from "../theme.js";
-import { parseCapitalCallsCSV, parsePipelineCSV, mapCapitalCallsRows, mapPipelineRows, mapCompanyRows, mapSearcherRows, mapFundMetaRows, mapKpiRows } from "../utils.js";
+import { parseCapitalCallsCSV, parsePipelineCSV, mapCapitalCallsRows, mapLegacySearchFundRows, mapPipelineRows, mapCompanyRows, mapSearcherRows, mapFundMetaRows, mapKpiRows } from "../utils.js";
 import { apiFetchJson } from "../apiClient.js";
 
 function DataLoader({ onLoad, onClose, dataInfo }) {
@@ -34,22 +34,26 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
         const ws = wb.Sheets[name];
         return ws ? XLSX.utils.sheet_to_json(ws) : null;
       };
+      const hasHeaders = (rows, headers) => Array.isArray(rows) && rows.length > 0
+        && headers.every((header) => Object.prototype.hasOwnProperty.call(rows[0], header));
 
       let loaded = 0;
       const bundle = {};
       const ccRows = sheet("Capital Calls");
-      if (ccRows?.length) { bundle.cc = mapCapitalCallsRows(ccRows); loaded++; }
+      if (hasHeaders(ccRows, ["Fons", "Categoria", "Data", "Import (€)"])) { bundle.cc = mapCapitalCallsRows(ccRows); loaded++; }
+      const legacySfRows = sheet("Search_Funds");
+      if (legacySfRows?.length) { bundle.ccSearchFunds = mapLegacySearchFundRows(legacySfRows); loaded++; }
       const plRows = sheet("Pipeline");
-      if (plRows?.length) { bundle.pl = mapPipelineRows(plRows); loaded++; }
+      if (hasHeaders(plRows, ["Nom", "Import", "Divisa"])) { bundle.pl = mapPipelineRows(plRows); loaded++; }
       const coRows = sheet("Participades");
-      if (coRows?.length) { bundle.companies = mapCompanyRows(coRows); loaded++; }
+      if (hasHeaders(coRows, ["Nom", "Tipus"])) { bundle.companies = mapCompanyRows(coRows); loaded++; }
       const srRows = sheet("Searchers");
-      if (srRows?.length) { bundle.searchers = mapSearcherRows(srRows); loaded++; }
+      if (hasHeaders(srRows, ["Nom", "Status"])) { bundle.searchers = mapSearcherRows(srRows); loaded++; }
       const fmRows = sheet("Fund Meta");
-      if (fmRows?.length) { bundle.fundMeta = mapFundMetaRows(fmRows); loaded++; }
+      if (hasHeaders(fmRows, ["Fons", "TVPI"])) { bundle.fundMeta = mapFundMetaRows(fmRows); loaded++; }
       const kpiRows = sheet("KPIs Trimestral");
-      if (kpiRows?.length) { bundle.kpiTrimestral = mapKpiRows(kpiRows); loaded++; }
-      if (!loaded) throw new Error("No s'ha trobat cap full reconegut (Capital Calls, Pipeline, Participades, Searchers, Fund Meta, KPIs Trimestral).");
+      if (kpiRows?.length && hasHeaders(kpiRows, ["Nom"])) { bundle.kpiTrimestral = mapKpiRows(kpiRows); loaded++; }
+      if (!loaded) throw new Error("No s'ha trobat cap full reconegut (Capital Calls, Search_Funds, Pipeline, Participades, Searchers, Fund Meta, KPIs Trimestral).");
       await Promise.resolve(onLoad("xlsx", bundle));
       setXlsxStatus({ name: file.name, sheets: loaded });
       setError(null);

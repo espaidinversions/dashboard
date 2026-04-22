@@ -12,6 +12,7 @@ const LoginPage = lazy(() => import("./components/LoginPage.jsx"));
 const AdminPanel = lazy(() => import("./components/AdminPanel.jsx"));
 const PMPositionDetail = lazy(() => import("./components/PMPositionDetail.jsx"));
 const UserGuide = lazy(() => import("./components/UserGuide.jsx"));
+const ResetPasswordPage = lazy(() => import("./components/ResetPasswordPage.jsx"));
 
 function LoadingFallback() {
   return (
@@ -22,9 +23,10 @@ function LoadingFallback() {
 }
 
 function RequireAuth({ children }) {
-  const { session } = useAuth();
+  const { session, isRecovery } = useAuth();
   if (session === undefined) return <LoadingFallback />;
   if (!session) return <Navigate to="/login" replace />;
+  if (isRecovery) return <Navigate to="/reset-password" replace />;
   return children;
 }
 
@@ -36,19 +38,38 @@ function RequireAdmin({ children }) {
   return children;
 }
 
+function RequireSection({ children, section, fallback = "/" }) {
+  const { session, isRecovery, canAccessSection } = useAuth();
+  if (session === undefined) return <LoadingFallback />;
+  if (!session) return <Navigate to="/login" replace />;
+  if (isRecovery) return <Navigate to="/reset-password" replace />;
+  if (!canAccessSection(section)) return <Navigate to={fallback} replace />;
+  return children;
+}
+
+function RequireAnySection({ children, sections, fallback = "/" }) {
+  const { session, isRecovery, canAccessAny } = useAuth();
+  if (session === undefined) return <LoadingFallback />;
+  if (!session) return <Navigate to="/login" replace />;
+  if (isRecovery) return <Navigate to="/reset-password" replace />;
+  if (!canAccessAny(sections)) return <Navigate to={fallback} replace />;
+  return children;
+}
+
 export default function AppRoutes() {
   return (
     <ErrorBoundary>
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/" element={<RequireAuth><Dashboard /></RequireAuth>} />
           <Route path="/investments" element={<RequireAuth><Navigate to="/investments/funds" replace /></RequireAuth>} />
-          <Route path="/investments/funds" element={<RequireAuth><FundsIndex /></RequireAuth>} />
-          <Route path="/investments/companies" element={<RequireAuth><CompaniesIndex /></RequireAuth>} />
-          <Route path="/fund/:id" element={<RequireAuth><FundDetail /></RequireAuth>} />
-          <Route path="/company/:id" element={<RequireAuth><CompanyDetail /></RequireAuth>} />
-          <Route path="/mercats-publics/:id" element={<RequireAuth><PMPositionDetail /></RequireAuth>} />
+          <Route path="/investments/funds" element={<RequireAnySection sections={["alternatives", "real-estate"]}><FundsIndex /></RequireAnySection>} />
+          <Route path="/investments/companies" element={<RequireSection section="companies"><CompaniesIndex /></RequireSection>} />
+          <Route path="/fund/:id" element={<RequireAnySection sections={["alternatives", "real-estate"]}><FundDetail /></RequireAnySection>} />
+          <Route path="/company/:id" element={<RequireSection section="companies"><CompanyDetail /></RequireSection>} />
+          <Route path="/mercats-publics/:id" element={<RequireSection section="mercats-publics"><PMPositionDetail /></RequireSection>} />
           <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
           <Route path="/guia" element={<RequireAuth><UserGuide /></RequireAuth>} />
         </Routes>

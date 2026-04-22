@@ -16,16 +16,39 @@ function getAllowedOrigins() {
   return process.env.NODE_ENV === "production" ? [] : DEV_ALLOWED_ORIGINS;
 }
 
-export function isOriginAllowed(origin) {
+function getRequestHost(req) {
+  return String(
+    req?.headers?.["x-forwarded-host"]
+    ?? req?.headers?.host
+    ?? ""
+  ).split(",")[0].trim().toLowerCase();
+}
+
+function getOriginHost(origin) {
+  try {
+    return new URL(origin).host.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+export function isOriginAllowed(origin, req = null) {
   if (!origin) return true;
-  return getAllowedOrigins().includes(origin);
+  const allowedOrigins = getAllowedOrigins();
+  if (allowedOrigins.includes(origin)) return true;
+
+  const requestHost = getRequestHost(req);
+  const originHost = getOriginHost(origin);
+  if (requestHost && originHost && requestHost === originHost) return true;
+
+  return false;
 }
 
 export function setCors(reqOrRes, maybeRes = null) {
   const req = maybeRes ? reqOrRes : null;
   const res = maybeRes ?? reqOrRes;
   const requestOrigin = req?.headers?.origin ?? null;
-  const allowed = isOriginAllowed(requestOrigin);
+  const allowed = isOriginAllowed(requestOrigin, req);
 
   res.setHeader("Vary", "Origin");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");

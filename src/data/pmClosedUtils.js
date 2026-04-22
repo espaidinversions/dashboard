@@ -6,6 +6,16 @@ import { PM_MODEL } from "./publicMarketsModel.js";
 
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 
+function normalizeCustodian(custodian) {
+  return String(custodian ?? "").trim();
+}
+
+function summaryKey(isin, custodian) {
+  const cleanIsin = String(isin ?? "").trim();
+  if (!cleanIsin) return null;
+  return `${cleanIsin}||${normalizeCustodian(custodian)}`;
+}
+
 function txDateKey(t) {
   return t?.date ?? "";
 }
@@ -25,15 +35,16 @@ function sumTxUnits(txs, kind) {
 /**
  * @returns {Map<string, PMClosedTransactionSummary>}
  */
-export function buildClosedTransactionSummaryByIsin() {
-  const byIsin = new Map();
+export function buildClosedTransactionSummaryByIsinCustodian() {
+  const byKey = new Map();
 
   [...PM_TRANSACTIONS]
     .filter(t => t?.isin)
     .sort((a, b) => txDateKey(a).localeCompare(txDateKey(b)))
     .forEach(t => {
-      const isin = t.isin;
-      const cur = byIsin.get(isin) ?? { txs: [], firstTx: null, firstBuy: null, lastTx: null, lastSell: null };
+      const key = summaryKey(t.isin, t.custodian);
+      if (!key) return;
+      const cur = byKey.get(key) ?? { txs: [], firstTx: null, firstBuy: null, lastTx: null, lastSell: null };
       cur.txs.push(t);
       if (!cur.firstTx || txDateKey(t).localeCompare(txDateKey(cur.firstTx)) < 0) {
         cur.firstTx = t;
@@ -47,19 +58,18 @@ export function buildClosedTransactionSummaryByIsin() {
       if (t.action === "sell" && (!cur.lastSell || txDateKey(t).localeCompare(txDateKey(cur.lastSell)) > 0)) {
         cur.lastSell = t;
       }
-      byIsin.set(isin, cur);
+      byKey.set(key, cur);
     });
 
   const summary = new Map();
-  byIsin.forEach((cur, isin) => {
+  byKey.forEach((cur, key) => {
     const buyTxs = cur.txs.filter(t => t.action === "buy" && t.date);
-    const sellTxs = cur.txs.filter(t => t.action === "sell");
     const firstBuy = cur.firstBuy ?? buyTxs[0] ?? cur.firstTx ?? null;
     const costEur = sumTxValue(cur.txs, "buy");
     const unitats = sumTxUnits(cur.txs, "buy");
     const valorMercat = sumTxValue(cur.txs, "sell");
 
-    summary.set(isin, {
+    summary.set(key, {
       gestor: firstBuy?.gestor ?? firstBuy?.custodian ?? cur.firstTx?.gestor ?? null,
       custodian: firstBuy?.custodian ?? cur.firstTx?.custodian ?? null,
       divisa: "EUR",
@@ -82,7 +92,7 @@ export function buildClosedTransactionSummaryByIsin() {
  * @returns {PMClosedPosition}
  */
 export function enrichClosedPosition(p, summaryByIsin) {
-  const summary = summaryByIsin.get(p.isin) ?? {};
+  const summary = summaryByIsin.get(summaryKey(p?.isin, p?.custodian)) ?? {};
   return {
     ...p,
     ...summary,

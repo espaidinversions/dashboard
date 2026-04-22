@@ -87,9 +87,13 @@ export const PM_MONTHLY = [
 ];
 
 const PM_MONTHLY_BY_DATE = Object.fromEntries(PM_MONTHLY.map(m => [m.date, m]));
-const ubsValue = d => {
+const ubsRVValue = d => {
   const row = PM_MONTHLY_BY_DATE[d];
-  return row ? row.ubsRV + row.ubsRF : null;
+  return row ? row.ubsRV : null;
+};
+const ubsRFValue = d => {
+  const row = PM_MONTHLY_BY_DATE[d];
+  return row ? row.ubsRF : null;
 };
 const pctChange = (startDate, endDate, getter) => {
   const start = getter(startDate);
@@ -103,8 +107,8 @@ const pctChange = (startDate, endDate, getter) => {
 const PM_MANAGER_TEMPLATE = [
   { id:"caixa-rv", nom:"Caixa RV",     gestor:"CaixaBank", tipus:"RV",    valorActual:8_037_347,  rendPct:7.44,  ytd:-1.20,  r2025:9.51,  r2024:17.02 },
   { id:"caixa-rf", nom:"Caixa RF",     gestor:"CaixaBank", tipus:"RF",    valorActual:3_990_758,  rendPct:-0.04, ytd:-0.004, r2025:4.96,  r2024:4.96  },
-  { id:"ubs-rv",   nom:"UBS RV",       gestor:"UBS",       tipus:"RV",    valorActual:10_704_128, rendPct:pctChange("2023-12", "2026-03", ubsValue), ytd:pctChange("2025-12", "2026-03", ubsValue), r2025:pctChange("2024-12", "2025-12", ubsValue), r2024:pctChange("2023-12", "2024-12", ubsValue) },
-  { id:"ubs-rf",   nom:"UBS RF",       gestor:"UBS",       tipus:"RF",    valorActual:2_220_845,  rendPct:pctChange("2023-12", "2026-03", ubsValue), ytd:pctChange("2025-12", "2026-03", ubsValue), r2025:pctChange("2024-12", "2025-12", ubsValue), r2024:pctChange("2023-12", "2024-12", ubsValue) },
+  { id:"ubs-rv",   nom:"UBS RV",       gestor:"UBS",       tipus:"RV",    valorActual:10_704_128, rendPct:pctChange("2023-12", "2026-03", ubsRVValue), ytd:pctChange("2025-12", "2026-03", ubsRVValue), r2025:pctChange("2024-12", "2025-12", ubsRVValue), r2024:pctChange("2023-12", "2024-12", ubsRVValue) },
+  { id:"ubs-rf",   nom:"UBS RF",       gestor:"UBS",       tipus:"RF",    valorActual:2_220_845,  rendPct:pctChange("2023-12", "2026-03", ubsRFValue), ytd:pctChange("2025-12", "2026-03", ubsRFValue), r2025:pctChange("2024-12", "2025-12", ubsRFValue), r2024:pctChange("2023-12", "2024-12", ubsRFValue) },
   { id:"abel",     nom:"Abel (BK+IB)", gestor:"Abel Font", tipus:"RV+RF", valorActual:20_933_017, rendPct:null,  ytd:-2.68,  r2025:-8.05, r2024:11.44 },
   { id:"andbank",  nom:"WAM–Andbank (Goyo)", gestor:"WAM", tipus:"RF",    valorActual:6_088_661,  rendPct:17.76, ytd:0.60,   r2025:4.18,  r2024:6.32  },
 ];

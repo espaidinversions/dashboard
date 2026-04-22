@@ -75,7 +75,7 @@ export function Badge({label,cfg}) {
 }
 
 // ── EditableCell ──────────────────────────────────────────
-// Click-to-edit cell. type: "text" | "number" | "select"
+// Click-to-edit cell. type: "text" | "number" | "select" | "date"
 // options: string[] for select. fmt: v => display string.
 // badgeCfg: object mapping values to {bg, color, border} for badge styling
 // emptyDisplay: string to show when value is empty (default "—")
@@ -189,7 +189,7 @@ export function EditableCell({ value, onSave, type = "text", options, fmt, style
 
   if (editing) {
     return (
-      <input ref={ref} value={draft} type={type === "number" ? "number" : "text"}
+      <input ref={ref} value={draft} type={type === "number" ? "number" : type === "date" ? "date" : "text"}
         onChange={e => setDraft(e.target.value)} onBlur={commit}
         onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
         style={inputStyle} />
@@ -283,11 +283,15 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
   const [values, setValues] = useState(() =>
     Object.fromEntries(fields.map(f => [f.key, f.defaultValue ?? ""]))
   );
+  const [customOpen, setCustomOpen] = useState(() =>
+    Object.fromEntries(fields.filter(f => f.type === "combo").map(f => [f.key, false]))
+  );
   const [error, setError] = useState(null);
   const [closing, setClosing] = useState(false);
   const handleClose = () => { setClosing(true); setTimeout(onClose, 175); };
 
   const set = (key, val) => setValues(v => ({ ...v, [key]: val }));
+  const setCustom = (key, val) => setCustomOpen(v => ({ ...v, [key]: val }));
 
   const inp = {
     width: "100%", padding: "7px 10px", fontSize: 13,
@@ -323,6 +327,68 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                 <select value={values[f.key]} onChange={e => set(f.key, e.target.value)} style={inp}>
                   {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
+              ) : f.type === "combo" ? (
+                <div style={{ display: "flex", gap: 8 }}>
+                  {!customOpen[f.key] ? (
+                    <>
+                      <select
+                        value={(f.options ?? []).includes(values[f.key]) ? values[f.key] : ""}
+                        onChange={e => {
+                          if (e.target.value === "__custom__") {
+                            setCustom(f.key, true);
+                          } else {
+                            set(f.key, e.target.value);
+                          }
+                        }}
+                        style={{ ...inp, flex: 1 }}
+                      >
+                        <option value="" disabled>{f.placeholder ?? "Selecciona una opció"}</option>
+                        {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+                        <option value="__custom__">+ Nou valor…</option>
+                      </select>
+                      {values[f.key] && !(f.options ?? []).includes(values[f.key]) ? (
+                        <button
+                          type="button"
+                          onClick={() => setCustom(f.key, true)}
+                          style={{ padding: "0 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit" }}
+                        >
+                          Edita
+                        </button>
+                      ) : null}
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        type="text"
+                        value={values[f.key]}
+                        onChange={e => set(f.key, e.target.value)}
+                        placeholder={f.placeholder ?? ""}
+                        style={{ ...inp, flex: 1 }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setCustom(f.key, false)}
+                        style={{ padding: "0 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit" }}
+                      >
+                        Llista
+                      </button>
+                    </>
+                  )}
+                </div>
+              ) : f.type === "datalist" ? (
+                <>
+                  <input
+                    type="text"
+                    value={values[f.key]}
+                    onChange={e => set(f.key, e.target.value)}
+                    placeholder={f.placeholder ?? ""}
+                    list={`addrow-${f.key}`}
+                    style={inp}
+                  />
+                  <datalist id={`addrow-${f.key}`}>
+                    {(f.options ?? []).map(o => <option key={o} value={o} />)}
+                  </datalist>
+                </>
               ) : (
                 <input type={f.type ?? "text"} value={values[f.key]}
                   onChange={e => set(f.key, e.target.value)}

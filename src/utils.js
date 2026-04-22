@@ -288,6 +288,79 @@ export function mapCapitalCallsRows(rows) {
   }));
 }
 
+function excelSerialToIsoDate(value) {
+  if (value == null || value === "") return "";
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const epoch = Date.UTC(1899, 11, 30);
+    const date = new Date(epoch + Math.round(value) * 86400000);
+    return date.toISOString().slice(0, 10);
+  }
+  const text = String(value).trim();
+  if (!text || /pendent desemborsar/i.test(text)) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const parsed = new Date(text);
+  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+}
+
+function inferCapitalCallCategory(tipus, eur) {
+  if (Number(eur) >= 0) return "Capital Call";
+  const label = String(tipus ?? "").toLowerCase();
+  return /capital/.test(label) ? "Retorn Capital" : "Distribució";
+}
+
+export function mapLegacySearchFundRows(rows) {
+  return rows
+    .map((row) => {
+      const data = excelSerialToIsoDate(row["Data"]);
+      const eur = Number(row["Import"] ?? 0);
+      if (!data || !Number.isFinite(eur) || eur === 0) return null;
+      const year = Number(row["Any"]) || Number(data.slice(0, 4));
+      const mes = Number(row["Mes"]) || Number(data.slice(5, 7));
+      return {
+        fons: String(row["Startup"] ?? "").trim(),
+        tipus: String(row["Tipus"] ?? "").trim() || "Aportació",
+        cat: inferCapitalCallCategory(row["Tipus"], eur),
+        data,
+        mes,
+        any: year,
+        fy: `FY ${year}`,
+        vcpe: String(row["VC/PE"] ?? "").trim() || null,
+        est: null,
+        eur,
+        divisa: String(row["Divisa"] ?? "").trim() || "EUR",
+      };
+    })
+    .filter(Boolean);
+}
+
+export function mergeCapitalCallRows(baseRows, extraRows) {
+  const merged = [];
+  const seen = new Set();
+  const add = (row) => {
+    if (!row) return;
+    const key = [
+      row.fons ?? "",
+      row.tipus ?? "",
+      row.cat ?? "",
+      row.data ?? "",
+      Number(row.eur ?? 0),
+      row.vcpe ?? "",
+    ].join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    merged.push(row);
+  };
+  (Array.isArray(baseRows) ? baseRows : []).forEach(add);
+  (Array.isArray(extraRows) ? extraRows : []).forEach(add);
+  return merged.sort((a, b) => {
+    const byDate = String(a?.data ?? "").localeCompare(String(b?.data ?? ""));
+    if (byDate !== 0) return byDate;
+    const byFund = String(a?.fons ?? "").localeCompare(String(b?.fons ?? ""), "ca", { sensitivity: "base" });
+    if (byFund !== 0) return byFund;
+    return Number(a?.eur ?? 0) - Number(b?.eur ?? 0);
+  });
+}
+
 export function mapPipelineRows(rows) {
   return rows.map(r => ({
     id:        Number(r["ID"]),

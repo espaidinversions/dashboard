@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import html2canvas from "html2canvas";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
@@ -7,10 +7,10 @@ import {
   CAPITAL_CALL_CAT_OPTIONS, CAPITAL_CALL_VCPE_OPTIONS, CAPITAL_CALL_EST_OPTIONS, CAPITAL_CALL_TIPUS_OPTIONS,
 } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtS, parseCapitalCallsCSV, parsePipelineCSV, usePersistedState, slugify, exportMultiXLSX, mapKpiRows, readStoredJSON, writeStoredJSON, readStoredFlag, writeStoredFlag } from "../utils.js";
+import { fmtM, fmtS, usePersistedState, slugify, exportMultiXLSX, mapKpiRows, mergeCapitalCallRows, readStoredJSON, writeStoredJSON, readStoredFlag, writeStoredFlag } from "../utils.js";
 import { loadAll, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls } from "../db.js";
 import { apiFetchJson } from "../apiClient.js";
-import { Logo, Badge, EmptyState, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
+import { Badge, EmptyState, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
 import { MensualTab } from "./MensualTab.jsx";
@@ -26,17 +26,348 @@ import { HoldingsTable } from "./HoldingsTable.jsx";
 import { PMTipusTab } from "./PMTipusTab.jsx";
 import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
 import { PMTraçabilitatTab } from "./PMTraçabilitatTab.jsx";
-import { ResumTab, FonsTab, TxLogTab } from "./tabs/index.js";
-import { Sidebar, SIDEBAR_W, RAIL_W } from "./Sidebar.jsx";
+import { ResumTab } from "./tabs/index.js";
+import { Sidebar } from "./Sidebar.jsx";
+import { buildPrivateSyntheticRows, mergePrivateRows, normalizePrivateWorkbookRows } from "../data/alternativesModel.js";
+import { splitRealEstateRows, buildRealEstateFundsMap } from "../data/realEstateModel.js";
 
 const LS_CC = "tc_rawCC";
 const LS_PL = "tc_funds0";
 const LS_TS = "tc_loadedAt";
+const PM_TX_MONTHS_SHORT = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
+
+function sanitizeCapitalCallValues(values) {
+  return {
+    ...values,
+    fons: String(values?.fons ?? "").trim(),
+    tipus: String(values?.tipus ?? "").trim() || null,
+    est: String(values?.est ?? "").trim() || null,
+    divisa: values?.divisa || "EUR",
+    vcpe: values?.vcpe || null,
+  };
+}
+
+function normalizeOptionValue(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function dedupeOptionValues(values) {
+  const seen = new Map();
+  (Array.isArray(values) ? values : []).forEach((value) => {
+    const raw = String(value ?? "").trim();
+    if (!raw) return;
+    const key = normalizeOptionValue(raw);
+    if (!seen.has(key)) seen.set(key, raw);
+  });
+  return [...seen.values()].sort((a, b) => String(a).localeCompare(String(b), "ca", { sensitivity: "base" }));
+}
 
 // ══════════════════════════════════════════════════════════
+function TxSection({
+  tx,
+  compr = [],
+  search = "",
+  catCfg,
+  vcpeCfg,
+  estCfg,
+  tc,
+  dark,
+  canEdit,
+  onAdd,
+  onEdit,
+  onDelete,
+  title,
+}) {
+  const [sort, setSort] = React.useState({ k: "data", d: "desc" });
+  const [page, setPage] = React.useState(0);
+  const TX_PP = 25;
+
+  const query = search.trim().toLowerCase();
+  const visibleTx = useMemo(() => {
+    if (!query) return tx;
+    return tx.filter((row) => (
+      (row.fons || "").toLowerCase().includes(query) ||
+      (row.tipus || "").toLowerCase().includes(query) ||
+      (row.cat || "").toLowerCase().includes(query) ||
+      (row.fy || "").toLowerCase().includes(query)
+    ));
+  }, [query, tx]);
+  const visibleCompr = useMemo(() => {
+    if (!query) return compr;
+    return compr.filter((row) => (row.fons || "").toLowerCase().includes(query));
+  }, [compr, query]);
+
+  const sorted = useMemo(() => [...visibleTx].sort((a, b) => {
+    const av = a?.[sort.k] ?? "";
+    const bv = b?.[sort.k] ?? "";
+    if (typeof av === "string" || typeof bv === "string") {
+      return sort.d === "asc"
+        ? String(av).localeCompare(String(bv), "ca", { sensitivity: "base" })
+        : String(bv).localeCompare(String(av), "ca", { sensitivity: "base" });
+    }
+    return sort.d === "asc" ? Number(av) - Number(bv) : Number(bv) - Number(av);
+  }), [sort, visibleTx]);
+  const pageCount = Math.max(1, Math.ceil(sorted.length / TX_PP));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pagedRows = sorted.slice(currentPage * TX_PP, (currentPage + 1) * TX_PP);
+
+  const totalCompr = visibleCompr.reduce((sum, row) => sum + row.eur, 0);
+  const totalCalls = visibleTx.filter((row) => row.cat === "Capital Call").reduce((sum, row) => sum + row.eur, 0);
+  const totalPaidBack = visibleTx
+    .filter((row) => row.cat === "Distribució" || row.cat === "Retorn Capital")
+    .reduce((sum, row) => sum + Math.abs(row.eur), 0);
+  const netFlow = totalPaidBack - totalCalls;
+  const chartData = useMemo(() => {
+    const map = new Map();
+    visibleTx.forEach((row) => {
+      const month = String(row?.data ?? "").slice(0, 7);
+      const match = month.match(/^(\d{4})-(\d{2})$/);
+      if (!match) return;
+      if (!map.has(month)) {
+        map.set(month, {
+          label: `${PM_TX_MONTHS_SHORT[Number(match[2])]} '${match[1].slice(2)}`,
+          CapitalCalls: 0,
+          Retorns: 0,
+        });
+      }
+      const entry = map.get(month);
+      if (row.cat === "Capital Call" || row.eur > 0) entry.CapitalCalls += Math.abs(row.eur ?? 0);
+      if (row.cat === "Distribució" || row.cat === "Retorn Capital" || row.eur < 0) entry.Retorns += Math.abs(row.eur ?? 0);
+    });
+    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value);
+  }, [visibleTx]);
+  const cards = [
+    ...(totalCompr > 0 ? [{
+      label: "Compromís",
+      value: fmtM(totalCompr),
+      accent: tc.navyLight,
+    }] : []),
+    { label: "Capital Cridat", value: fmtM(totalCalls), accent: tc.navy },
+    { label: "Total Rebut", value: fmtM(totalPaidBack), accent: tc.green },
+    {
+      label: "Flux Net",
+      value: `${netFlow > 0 ? "+" : ""}${fmtM(netFlow)}`,
+      accent: netFlow >= 0 ? tc.greenDark : tc.navyLight,
+      sub: netFlow >= 0 ? "saldo positiu" : "pendent",
+    },
+  ];
+
+  const toggleSort = (k) => {
+    setSort((prev) => prev.k === k ? { k, d: prev.d === "desc" ? "asc" : "desc" } : { k, d: "desc" });
+  };
+  React.useEffect(() => {
+    setPage(0);
+  }, [query, sort]);
+  React.useEffect(() => {
+    if (page > pageCount - 1) setPage(Math.max(0, pageCount - 1));
+  }, [page, pageCount]);
+  const Arr = ({ k }) => (
+    <span style={{ marginLeft: 3, opacity: sort.k === k ? 1 : 0.25, fontSize: 9 }}>
+      {sort.k === k && sort.d === "asc" ? "▲" : "▼"}
+    </span>
+  );
+  const th = {
+    padding: "8px 10px",
+    fontSize: 10,
+    letterSpacing: "0.09em",
+    color: tc.textLight,
+    textTransform: "uppercase",
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+    userSelect: "none",
+    cursor: "pointer",
+    borderBottom: `2px solid ${tc.border}`,
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
+        <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight, textTransform: "uppercase", marginBottom: 14, fontWeight: 600 }}>
+          Flux Mensual · Mercats Privats
+        </div>
+        {chartData.length === 0 ? (
+          <div style={{ padding: "24px 0 8px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>Cap transacció</div>
+        ) : (() => {
+          const t = ecTheme(tc);
+          const option = {
+            grid: { top: 8, right: 8, bottom: 56, left: 0, containLabel: true },
+            tooltip: {
+              ...t.tooltip,
+              trigger: "axis",
+              axisPointer: { type: "shadow" },
+              formatter: (params) => {
+                const label = params[0]?.axisValue ?? "";
+                let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
+                params.forEach((point) => {
+                  if (!point.value) return;
+                  html += `<div>${point.marker}${point.seriesName}: ${fmtM(point.value)}</div>`;
+                });
+                return html;
+              },
+            },
+            legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
+            xAxis: {
+              type: "category",
+              data: chartData.map((row) => row.label),
+              axisLabel: { fontSize: 9, color: tc.textLight, rotate: -40 },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            yAxis: {
+              type: "value",
+              axisLabel: { fontSize: 10, color: tc.textLight, formatter: (value) => fmtM(value) },
+              splitLine: { lineStyle: { color: tc.border } },
+              axisLine: { show: false },
+              axisTick: { show: false },
+            },
+            series: [
+              {
+                name: "Capital Calls",
+                type: "bar",
+                data: chartData.map((row) => row.CapitalCalls ?? null),
+                itemStyle: { color: tc.navy, borderRadius: [4, 4, 0, 0] },
+                barMaxWidth: 28,
+                barGap: "10%",
+              },
+              {
+                name: "Retorns",
+                type: "bar",
+                data: chartData.map((row) => row.Retorns ?? null),
+                itemStyle: { color: tc.green, borderRadius: [4, 4, 0, 0] },
+                barMaxWidth: 28,
+              },
+            ],
+          };
+          return <ReactECharts option={option} style={{ width: "100%", height: 220 }} opts={{ renderer: "canvas" }} />;
+        })()}
+      </div>
+
+      <div className="grid-4" style={{ gap: 12 }}>
+        {cards.map((card) => (
+          <div key={card.label} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 18px", borderTop: `3px solid ${card.accent}`, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+            <div style={{ fontSize: 10, letterSpacing: "0.11em", color: tc.textLight, textTransform: "uppercase", marginBottom: 4, fontWeight: 600 }}>{card.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: card.accent, fontFamily: "'DM Mono',monospace" }}>{card.value}</div>
+            {card.sub ? <div style={{ fontSize: 11, color: tc.textLight, marginTop: 2 }}>{card.sub}</div> : null}
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.11em", textTransform: "uppercase", color: tc.textLight }}>{title}</div>
+          {canEdit ? (
+            <button
+              onClick={onAdd}
+              style={{ padding: "5px 14px", borderRadius: 6, border: `1.5px solid ${tc.green}`, background: dark ? "#0A2010" : "#E8F8E8", color: tc.green, cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 700 }}
+            >
+              ＋ Afegeix moviment
+            </button>
+          ) : null}
+        </div>
+
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: tc.bgAlt }}>
+                {[
+                  { k: "data", label: "Data" },
+                  { k: "fons", label: "Vehicle" },
+                  { k: "tipus", label: "Tipus" },
+                  { k: "cat", label: "Categoria" },
+                  { k: "eur", label: "Import EUR", right: true },
+                  { k: "fy", label: "FY" },
+                  { k: "vcpe", label: "Tipus" },
+                  { k: "est", label: "Estratègia" },
+                ].map((head) => (
+                  <th key={head.k} onClick={() => toggleSort(head.k)} style={{ ...th, textAlign: head.right ? "right" : "left" }}>
+                    {head.label}<Arr k={head.k} />
+                  </th>
+                ))}
+                {canEdit ? <th style={{ ...th, textAlign: "center", cursor: "default" }}>Accions</th> : null}
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.length === 0 ? (
+                <tr>
+                  <td colSpan={canEdit ? 9 : 8} style={{ padding: "24px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>Cap transacció</td>
+                </tr>
+              ) : null}
+              {pagedRows.map((row, index) => {
+                const isIn = row.eur > 0;
+                const cat = catCfg[row.cat] || {};
+                return (
+                  <tr key={row._rowId ?? `${row.fons}-${row.data}-${currentPage}-${index}`} style={{ borderBottom: `1px solid ${tc.bgAlt}`, background: index % 2 === 0 ? tc.card : tc.bgAlt }}>
+                    <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.data}</td>
+                    <td style={{ padding: "8px 10px", fontWeight: 600, color: tc.text, fontSize: 12, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.fons}>
+                      <Link to={`/fund/${encodeURIComponent(row.id ?? slugify(row.fons))}`} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{row.fons}</Link>
+                    </td>
+                    <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.tipus}</td>
+                    <td style={{ padding: "8px 10px" }}>
+                      <span style={{ fontSize: 11, background: cat.bg || tc.bgAlt, color: cat.color || tc.textMid, borderRadius: 5, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap" }}>{row.cat}</span>
+                    </td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: isIn ? tc.navy : tc.green }}>
+                      {isIn ? "" : "+ "}{fmtM(Math.abs(row.eur))}
+                    </td>
+                    <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.fy}</td>
+                    <td style={{ padding: "8px 10px" }}>{row.vcpe ? <Badge label={row.vcpe} cfg={vcpeCfg[row.vcpe] || {}} /> : <span style={{ color: tc.textLight }}>—</span>}</td>
+                    <td style={{ padding: "8px 10px" }}>{row.est ? <Badge label={row.est} cfg={estCfg[row.est] || {}} /> : <span style={{ color: tc.textLight }}>—</span>}</td>
+                    {canEdit ? (
+                      <td style={{ padding: "4px 8px", textAlign: "center", whiteSpace: "nowrap" }}>
+                        {row._rowId ? (
+                          <span style={{ display: "inline-flex", gap: 4 }}>
+                            <button
+                              onClick={() => onEdit(row)}
+                              style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 10, fontFamily: "inherit" }}
+                            >
+                              Edita
+                            </button>
+                            <DeleteRowButton onDelete={() => onDelete(row)} />
+                          </span>
+                        ) : null}
+                      </td>
+                    ) : null}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {sorted.length > 0 ? (
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${tc.border}` }}>
+            <span style={{ fontSize: 12, color: tc.textLight }}>
+              {sorted.length} moviments · pàgina <b style={{ color: tc.navy }}>{currentPage + 1}</b> de {pageCount}
+            </span>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                disabled={currentPage === 0}
+                onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
+                style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 5, padding: "5px 14px", cursor: currentPage === 0 ? "not-allowed" : "pointer", color: currentPage === 0 ? tc.textLight : tc.navy, fontFamily: "inherit", fontSize: 12 }}
+              >
+                ← Anterior
+              </button>
+              <button
+                disabled={currentPage >= pageCount - 1}
+                onClick={() => setPage((prev) => Math.min(prev + 1, pageCount - 1))}
+                style={{ background: currentPage >= pageCount - 1 ? tc.bgAlt : tc.navy, border: "none", borderRadius: 5, padding: "5px 14px", cursor: currentPage >= pageCount - 1 ? "not-allowed" : "pointer", color: currentPage >= pageCount - 1 ? tc.textLight : "#fff", fontFamily: "inherit", fontSize: 12 }}
+              >
+                Següent →
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 function DashboardInner() {
   const { tc, dark, toggle: toggleDark } = useTheme();
-  const { signOut, isAdmin, isSuperuser, canEdit, deniedSections } = useAuth();
+  const { signOut, isAdmin, canAccessSection, canEditSection } = useAuth();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
@@ -50,11 +381,14 @@ function DashboardInner() {
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
   const [activeNavItem,    setActiveNavItem]     = usePersistedState("ui_navItem", "fons");
   const [ccAddModalFons, setCcAddModalFons] = useState(null);
+  const [ccAddModalDefaults, setCcAddModalDefaults] = useState(null);
   const [ccEditModalRow, setCcEditModalRow] = useState(null);
 
   // Editable app state starts from localStorage.
   const [rawCC,   setRawCC]   = useState(()=>readStoredJSON(LS_CC, []));
   const [funds0,  setFunds0]  = useState(()=>readStoredJSON(LS_PL, []));
+  const [companiesData, setCompaniesData] = useState(()=>readStoredJSON("tc_portfolioCompanies", []));
+  const [searchersData, setSearchersData] = useState(()=>readStoredJSON("tc_allSearchers", []));
   const [loadedAt,setLoadedAt]= useState(()=>readStoredJSON(LS_TS, null));
   const [eurUsd,  setEurUsd]  = useState(null);
 
@@ -78,8 +412,14 @@ function DashboardInner() {
           setFunds0(data.funds0);
           writeStoredJSON(LS_PL, data.funds0);
         }
-        if (Array.isArray(data.companies)) writeStoredJSON("tc_portfolioCompanies", data.companies);
-        if (Array.isArray(data.searchers)) writeStoredJSON("tc_allSearchers", data.searchers);
+        if (Array.isArray(data.companies)) {
+          setCompaniesData(data.companies);
+          writeStoredJSON("tc_portfolioCompanies", data.companies);
+        }
+        if (Array.isArray(data.searchers)) {
+          setSearchersData(data.searchers);
+          writeStoredJSON("tc_allSearchers", data.searchers);
+        }
         if (Array.isArray(data.fundMeta)) writeStoredJSON("tc_fundMeta", data.fundMeta);
         setLoadedAt(now);
         writeStoredJSON(LS_TS, now);
@@ -89,19 +429,37 @@ function DashboardInner() {
       });
   }, []);
 
+  const ccNameOptions = useMemo(() => dedupeOptionValues([
+    ...rawCC.map((row) => row.fons),
+    ...companiesData.map((row) => row.nom),
+    ...searchersData.map((row) => row.nom),
+  ]), [companiesData, rawCC, searchersData]);
+  const ccTipusOptions = useMemo(() => dedupeOptionValues([
+    ...CAPITAL_CALL_TIPUS_OPTIONS,
+    ...rawCC.map((row) => row.tipus),
+  ]), [rawCC]);
+
+  function openCcAddModal(defaults = {}) {
+    setCcAddModalDefaults(defaults);
+    setCcAddModalFons(defaults.fons ?? "");
+  }
+
   // ── Capital call row CRUD ─────────────────────────────────
   async function handleCCInsert(values, setError) {
     if (!values.fons || !values.data || !values.eur) { setError("Fons, data i import són obligatoris."); return; }
-    const { data, error } = await insertCapitalCall({ ...values, eur: parseFloat(values.eur) });
+    const payload = sanitizeCapitalCallValues({ ...values, eur: parseFloat(values.eur) });
+    const { data, error } = await insertCapitalCall(payload);
     if (error) { setError(error.message); return; }
     const fresh = await loadCapitalCalls();
     if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
     setCcAddModalFons(null);
+    setCcAddModalDefaults(null);
   }
 
   async function handleCCUpdate(values, setError) {
     if (!values.data || !values.eur) { setError("Data i import són obligatoris."); return; }
-    const { error } = await updateCapitalCall(ccEditModalRow._rowId, { ...values, eur: parseFloat(values.eur) });
+    const payload = sanitizeCapitalCallValues({ ...values, eur: parseFloat(values.eur) });
+    const { error } = await updateCapitalCall(ccEditModalRow._rowId, payload);
     if (error) { setError(error.message); return; }
     const fresh = await loadCapitalCalls();
     if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
@@ -254,8 +612,14 @@ function DashboardInner() {
           const qs = byNom.get(c.nom);
           return qs ? { ...c, quarters: qs } : c;
         });
+        const baseSearchers = rows.searchers || readStoredJSON("tc_allSearchers", searchersData);
+        const baseRawCC = rows.cc ?? readStoredJSON(LS_CC, rawCC);
+        const searchFundTx = normalizePrivateWorkbookRows(rows.ccSearchFunds || [], baseSearchers, mergedCompanies);
+        const mergedRawCC = rows.cc != null || searchFundTx.length
+          ? mergeCapitalCallRows(baseRawCC, searchFundTx)
+          : null;
         const bundle = {
-          rawCC: rows.cc ?? null,
+          rawCC: mergedRawCC,
           funds0: rows.pl ?? null,
           companies: mergedCompanies,
           searchers: rows.searchers ?? null,
@@ -271,8 +635,12 @@ function DashboardInner() {
           setFunds0(bundle.funds0);
           writeStoredJSON(LS_PL, bundle.funds0);
         }
+        setCompaniesData(bundle.companies);
         writeStoredJSON("tc_portfolioCompanies", bundle.companies);
-        if (bundle.searchers != null) writeStoredJSON("tc_allSearchers", bundle.searchers);
+        if (bundle.searchers != null) {
+          setSearchersData(bundle.searchers);
+          writeStoredJSON("tc_allSearchers", bundle.searchers);
+        }
         if (bundle.fundMeta != null) writeStoredJSON("tc_fundMeta", bundle.fundMeta);
         setExcluded(new Set());
       } else if (key === "cc") {
@@ -289,10 +657,12 @@ function DashboardInner() {
       } else if (key === "companies") {
         const { error } = await saveCompanies(rows);
         if (error) throw error;
+        setCompaniesData(rows);
         writeStoredJSON("tc_portfolioCompanies", rows);
       } else if (key === "searchers") {
         const { error } = await saveSearchers(rows);
         if (error) throw error;
+        setSearchersData(rows);
         writeStoredJSON("tc_allSearchers", rows);
       } else if (key === "fundMeta") {
         const { error } = await saveFundMeta(rows);
@@ -317,23 +687,70 @@ function DashboardInner() {
   const [fEst,    setFEst]    = usePersistedState("ui_fEst",  "Tots");
   const [fCat,    setFCat]    = usePersistedState("ui_fCat",  "Tots");
   const [txSearch,setTxSearch]= usePersistedState("ui_txSearch", "");
-  const [txPage,  setTxPage]  = useState(0);
-  const [txSort,setTxSort]= usePersistedState("ui_txSort", {k:"data",d:"desc"});
+  const [, setTxPage]  = useState(0);
   const [sortFons, setSortFons] = usePersistedState("ui_sortFons", "compr");
   const [sortFonsDir, setSortFonsDir] = usePersistedState("ui_sortFonsDir", "desc");
   const [expandedFons, setExpandedFons] = useState(new Set());
   const [ccChartF, setCcChartF] = useState(null); // {type, value} per filtrar taula fons
-  const TX_PP = 30;
 
-  // Dades base filtrades per exclusió
-  const baseTx    = useMemo(()=>TRANSACTIONS.filter(r=>!excluded.has(r.fons)),[TRANSACTIONS,excluded]);
-  const baseCompr = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)),[COMPROMISOS,excluded]);
+  const syntheticSearchers = useMemo(() => buildPrivateSyntheticRows(searchersData, {
+    vcpe: "SF",
+    include: (row) => row?.statusScreening === "Invertit en fase de cerca",
+    fons: (row) => row.nom,
+    tipus: (row) => row.formEntrada || "Search Capital",
+    est: () => null,
+  }), [searchersData]);
+  const syntheticCompanies = useMemo(() => buildPrivateSyntheticRows(companiesData, {
+    vcpe: "PC",
+    include: () => true,
+    fons: (row) => row.nom,
+    tipus: (row) => row.tipus || "Participada",
+    est: () => null,
+  }), [companiesData]);
+
+  // Dades base filtrades per vcpe i exclusió
+  const baseTx      = useMemo(()=>TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[TRANSACTIONS,excluded]);
+  const baseCompr   = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[COMPROMISOS,excluded]);
+  const sfTx        = useMemo(()=>mergePrivateRows(TRANSACTIONS.filter(r=>r.vcpe==="SF"), syntheticSearchers.tx),[TRANSACTIONS, syntheticSearchers]);
+  const sfCompr     = useMemo(()=>mergePrivateRows(COMPROMISOS.filter(r=>r.vcpe==="SF"), syntheticSearchers.compr),[COMPROMISOS, syntheticSearchers]);
+  const pcTx        = useMemo(()=>mergePrivateRows(TRANSACTIONS.filter(r=>r.vcpe==="PC"), syntheticCompanies.tx),[TRANSACTIONS, syntheticCompanies]);
+  const pcCompr     = useMemo(()=>mergePrivateRows(COMPROMISOS.filter(r=>r.vcpe==="PC"), syntheticCompanies.compr),[COMPROMISOS, syntheticCompanies]);
+  const { tx: reTx, compr: reCompr } = useMemo(() => splitRealEstateRows(rawCC), [rawCC]);
+  const allAltTx    = useMemo(()=>mergePrivateRows(
+    TRANSACTIONS.filter(r=>!excluded.has(r.fons)),
+    [...syntheticSearchers.tx, ...syntheticCompanies.tx].filter(r=>!excluded.has(r.fons))
+  ),[TRANSACTIONS,excluded,syntheticSearchers,syntheticCompanies]);
+  const allAltCompr = useMemo(()=>mergePrivateRows(
+    COMPROMISOS.filter(r=>!excluded.has(r.fons)),
+    [...syntheticSearchers.compr, ...syntheticCompanies.compr].filter(r=>!excluded.has(r.fons))
+  ),[COMPROMISOS,excluded,syntheticSearchers,syntheticCompanies]);
 
   // Hoisted above filtered so it can be used in the dep array without TDZ:
   const section = tab==="mercats-publics" ? "mercats-publics"
               : tab==="real-estate"     ? "real-estate"
-              : tab==="tx-alt"          ? "transaccions"
+              : tab==="tx-alt"          ? "txlog"
               : "alternatives";
+  const currentPermissionId =
+    tab === "real-estate"
+      ? (realEstateTab === "altres-vehicles" ? "re-altres" : "re-directe")
+      : tab === "mercats-publics"
+        ? (
+          mercatsPublicsTab === "rv" ? "mp-rv"
+          : mercatsPublicsTab === "rf" ? "mp-rf"
+          : mercatsPublicsTab === "posicions" ? "mp-posicions"
+          : mercatsPublicsTab === "transaccions" ? "mp-transaccions"
+          : mercatsPublicsTab === "traçabilitat" ? "mp-traçabilitat"
+          : "mp-resum"
+        )
+        : tab === "tx-alt"
+          ? "tx-alt"
+          : tab === "searchers"
+            ? "searchers"
+            : tab === "companies"
+              ? "companies"
+              : tab === "inversions"
+                ? "inversions"
+                : "fons";
 
   // Filtres addicionals
   const filtered = useMemo(()=>{
@@ -411,6 +828,7 @@ function DashboardInner() {
     });
     return Object.values(m);
   },[baseCompr,baseTx]);
+  const RE_FONS_MAP = useMemo(() => buildRealEstateFundsMap(reCompr, reTx), [reCompr, reTx]);
 
   const fonsFiltered = useMemo(()=>{
     let fl=[...FONS_MAP2];
@@ -436,18 +854,6 @@ function DashboardInner() {
       return 0;
     });
   },[FONS_MAP2,fVcpe,fEst,sortFons,sortFonsDir,ccChartF,baseTx]);
-
-  // Tx paginades
-  const txSorted = useMemo(()=>[...filtered].sort((a,b)=>{
-    const {k,d}=txSort;
-    let va=a[k],vb=b[k];
-    if(typeof va==="string") return d==="asc"?va.localeCompare(vb):vb.localeCompare(va);
-    return d==="asc"?va-vb:vb-va;
-  }),[filtered,txSort]);
-  const txPages = Math.ceil(txSorted.length/TX_PP);
-  const txSlice = txSorted.slice(txPage*TX_PP,(txPage+1)*TX_PP);
-  const sortTx = k=>{setTxSort(p=>({k,d:p.k===k&&p.d==="desc"?"asc":"desc"}));setTxPage(0);};
-  const TArr = ({k})=><span style={{marginLeft:3,opacity:txSort.k===k?1:0.2,fontSize:9}}>{txSort.k===k&&txSort.d==="asc"?"▲":"▼"}</span>;
 
   const clearFilters = ()=>{setFFy("Tots");setFVcpe(new Set());setFEst("Tots");setFCat("Tots");setTxSearch("");setTxPage(0);};
   const anyFilter = fFy!=="Tots"||fVcpe.size>0||fEst!=="Tots"||fCat!=="Tots"||txSearch.trim()!="";
@@ -476,6 +882,7 @@ function DashboardInner() {
     "Compromís":      { color:tc.navyLight, bg: dark ? "#112030" : "#E6EDF3" },
     "Altres":         { color:tc.textLight, bg: tc.bgAlt },
   };
+  const FONS_VCPE_KEYS = ["PE", "VC"];
 
   // Expanded fons row colors
   const rowExpandBg     = dark ? "#0E2412" : "#F4FBF4";
@@ -487,6 +894,7 @@ function DashboardInner() {
     {id:"resum",   label:"📊 Resum Anual"},
     {id:"mensual", label:"📈 Detall Mensual"},
     {id:"fons",    label:"🏦 Per Fons"},
+    {id:"fons-tx", label:"💸 Transaccions"},
   ];
   const SECTIONS_ALL = [
     {id:"alternatives",   label:"Alternatius"},
@@ -499,34 +907,81 @@ function DashboardInner() {
     {id:"companies",  label:"Participades"},
     {id:"inversions", label:"Totes les Posicions"},
   ];
-  // Only admins bypass permissions; superusers are segment-scoped
-  const deniedSet = useMemo(
-    () => isAdmin ? new Set() : new Set(deniedSections ?? []),
-    [isAdmin, deniedSections]
-  );
-  const SECTIONS = useMemo(() => SECTIONS_ALL.filter(s => !deniedSet.has(s.id)), [deniedSet]); // eslint-disable-line react-hooks/exhaustive-deps
-  const SUPRA = useMemo(() => SUPRA_ALL.filter(s => !deniedSet.has(s.id)), [deniedSet]); // eslint-disable-line react-hooks/exhaustive-deps
+  const SECTIONS = useMemo(() => SECTIONS_ALL.filter(s => canAccessSection(s.id)), [canAccessSection]);
+  const SUPRA = useMemo(() => SUPRA_ALL.filter(s => canAccessSection(s.id)), [canAccessSection]);
+  const REAL_ESTATE_NAV = useMemo(() => [
+    { id: "re-directe", tab: "directe" },
+    { id: "re-altres", tab: "altres-vehicles" },
+  ].filter((item) => canAccessSection(item.id)), [canAccessSection]);
+  const PUBLIC_MARKETS_NAV = useMemo(() => [
+    { id: "mp-resum", tab: "resum" },
+    { id: "mp-rv", tab: "rv" },
+    { id: "mp-rf", tab: "rf" },
+    { id: "mp-posicions", tab: "posicions" },
+    { id: "mp-transaccions", tab: "transaccions" },
+    { id: "mp-traçabilitat", tab: "traçabilitat" },
+  ].filter((item) => canAccessSection(item.id)), [canAccessSection]);
   const supra = tab==="searchers"?"searchers"
               : tab==="companies"?"companies"
               : tab==="inversions"?"inversions"
               : "fons";
   const TABS_FONS = [{id:"pipeline",label:"🎯 Current Pipeline"}, ...TABS_CC];
+  const canEdit = canEditSection(currentPermissionId);
+
+  useEffect(() => {
+    if (tab === "txlog") {
+      setTab("tx-alt");
+      setActiveNavItem("tx-alt");
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (tab === "searchers" && activeNavItem !== "searchers") setActiveNavItem("searchers");
+    else if (tab === "companies" && activeNavItem !== "companies") setActiveNavItem("companies");
+    else if (tab === "inversions" && activeNavItem !== "posicions") setActiveNavItem("posicions");
+    else if ((tab === "pipeline" || tab === "resum" || tab === "mensual" || tab === "fons" || tab === "fons-tx") && activeNavItem !== "fons") setActiveNavItem("fons");
+    else if (tab === "real-estate") {
+      const next = realEstateTab === "altres-vehicles" ? "re-altres" : "re-directe";
+      if (activeNavItem !== next) setActiveNavItem(next);
+    } else if (tab === "mercats-publics") {
+      const next = mercatsPublicsTab === "transaccions"
+        ? (activeNavItem === "tx-mp" ? "tx-mp" : "mp-transaccions")
+        : mercatsPublicsTab === "rv" ? "mp-rv"
+        : mercatsPublicsTab === "rf" ? "mp-rf"
+        : mercatsPublicsTab === "posicions" ? "mp-posicions"
+        : mercatsPublicsTab === "traçabilitat" ? "mp-traçabilitat"
+        : "mp-resum";
+      if (activeNavItem !== next) setActiveNavItem(next);
+    } else if (tab === "tx-alt" && activeNavItem !== "tx-alt") {
+      setActiveNavItem("tx-alt");
+    }
+  }, [activeNavItem, mercatsPublicsTab, realEstateTab, setActiveNavItem, tab]);
 
   // If the active section/supra is denied, redirect to first allowed
   useEffect(() => {
-    if (deniedSet.size === 0) return;
-    // Section-level check
-    if (deniedSet.has(section)) {
+    if (!canAccessSection(section)) {
       const first = SECTIONS[0];
       if (first) setTab(first.id === "alternatives" ? "pipeline" : first.id);
       return;
     }
-    // Supra-level check (within alternatives)
-    if (section === "alternatives" && deniedSet.has(supra)) {
-      const first = SUPRA[0];
-      if (first) setTab(first.id === "fons" ? "resum" : first.id);
+    if (!canAccessSection(currentPermissionId)) {
+      if (section === "alternatives") {
+        const first = SUPRA[0];
+        if (first) setTab(first.id === "fons" ? "pipeline" : first.id);
+      } else if (section === "real-estate") {
+        const first = REAL_ESTATE_NAV[0];
+        if (first) setRealEstateTab(first.tab);
+      } else if (section === "mercats-publics") {
+        const first = PUBLIC_MARKETS_NAV[0];
+        if (first) setMercatsPublicsTab(first.tab);
+      }
+      return;
     }
-  }, [deniedSet, section, supra, SECTIONS, SUPRA]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (section === "alternatives" && !canAccessSection(supra)) {
+      const first = SUPRA[0];
+      if (first) setTab(first.id === "fons" ? "pipeline" : first.id);
+    }
+  }, [canAccessSection, currentPermissionId, section, supra, SECTIONS, SUPRA, REAL_ESTATE_NAV, PUBLIC_MARKETS_NAV]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs or sections
   useEffect(() => {
@@ -534,7 +989,16 @@ function DashboardInner() {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
       if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
       const dir = e.key === "ArrowRight" ? 1 : -1;
-      if (section !== "alternatives") {
+      if (section === "transaccions") {
+        if (activeNavItem === "tx-mp") {
+          setTab("tx-alt");
+          setActiveNavItem("tx-alt");
+        } else {
+          setTab("mercats-publics");
+          setMercatsPublicsTab("transaccions");
+          setActiveNavItem("tx-mp");
+        }
+      } else if (section !== "alternatives") {
         const sectionIds = SECTIONS.map(s => s.id);
         const idx = sectionIds.indexOf(section);
         const next = sectionIds[(idx + dir + sectionIds.length) % sectionIds.length];
@@ -553,7 +1017,7 @@ function DashboardInner() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [tab, section, supra, TABS_FONS]);
+  }, [activeNavItem, section, setActiveNavItem, supra, tab, TABS_FONS, SECTIONS]);
 
   return (
     <div id="dashboard-content" style={{display:"flex",minHeight:"100vh",background:tc.bg,color:tc.text,fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,letterSpacing:"0.005em"}}>
@@ -567,6 +1031,7 @@ function DashboardInner() {
         tc={tc}
         dark={dark}
         isAdmin={isAdmin}
+        canAccessSection={canAccessSection}
       />
 
       {/* ── Main column ── */}
@@ -678,10 +1143,52 @@ function DashboardInner() {
         {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd} onDealsChange={deals=>{ setFunds0(deals); writeStoredJSON(LS_PL, deals); }}/></div>}
 
         {/* ── SEARCHERS ── */}
-        {tab==="searchers"&&<div className="tab-panel"><SearchersTab search={globalSearch} subTab={searchersSubTab}/></div>}
+        {tab==="searchers"&&searchersSubTab!=="transaccions"&&(
+          <div className="tab-panel"><SearchersTab search={globalSearch} subTab={searchersSubTab} rawCC={rawCC}/></div>
+        )}
+        {tab==="searchers"&&searchersSubTab==="transaccions"&&(
+          <div className="tab-panel">
+            <TxSection
+              tx={sfTx}
+              compr={sfCompr}
+              search={globalSearch}
+              catCfg={catCfg}
+              vcpeCfg={vcpeCfg}
+              estCfg={estCfg}
+              tc={tc}
+              dark={dark}
+              canEdit={canEdit}
+              onAdd={()=>openCcAddModal({ fons: "", vcpe: "SF", est: "", tipus: "Search Capital" })}
+              onEdit={setCcEditModalRow}
+              onDelete={(row)=>handleCCDelete(row._rowId)}
+              title="Transaccions · Searchers"
+            />
+          </div>
+        )}
 
         {/* ── COMPANIES ── */}
-        {tab==="companies"&&<div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} tipusFilter={companiesSubTab==="search-funds"?"SF":companiesSubTab==="altres"?"altres":null}/></div>}
+        {tab==="companies"&&companiesSubTab!=="transaccions"&&(
+          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} tipusFilter={companiesSubTab==="search-funds"?"SF":companiesSubTab==="altres"?"altres":null}/></div>
+        )}
+        {tab==="companies"&&companiesSubTab==="transaccions"&&(
+          <div className="tab-panel">
+            <TxSection
+              tx={pcTx}
+              compr={pcCompr}
+              search={globalSearch}
+              catCfg={catCfg}
+              vcpeCfg={vcpeCfg}
+              estCfg={estCfg}
+              tc={tc}
+              dark={dark}
+              canEdit={canEdit}
+              onAdd={()=>openCcAddModal({ fons: "", vcpe: "PC", est: "", tipus: "Aportació capital" })}
+              onEdit={setCcEditModalRow}
+              onDelete={(row)=>handleCCDelete(row._rowId)}
+              title="Transaccions · Participades"
+            />
+          </div>
+        )}
 
         {/* ── PORTFOLIO COMPANIES ── */}
 
@@ -712,10 +1219,67 @@ function DashboardInner() {
           </div>
         )}
         {tab==="real-estate"&&realEstateTab==="altres-vehicles"&&(
-          <div className="tab-panel" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 0",gap:12}}>
-            <div style={{fontSize:32}}>🏗️</div>
-            <div style={{fontSize:16,fontWeight:700,color:tc.navy}}>Real Estate · Altres Vehicles</div>
-            <div style={{fontSize:13,color:tc.textLight}}>Pròximament</div>
+          <div className="tab-panel">
+            <div className="grid-3w" style={{gap:12,marginBottom:18}}>
+              {[
+                {label:"Compromís", value:fmtM(reCompr.reduce((s,r)=>s+r.eur,0)), accent:tc.navyLight},
+                {label:"Cridat", value:fmtM(reTx.filter(r=>r.cat==="Capital Call").reduce((s,r)=>s+r.eur,0)), accent:tc.navy},
+                {label:"Distribuït", value:fmtM(reTx.filter(r=>r.cat==="Distribució"||r.cat==="Retorn Capital").reduce((s,r)=>s+Math.abs(r.eur),0)), accent:tc.green},
+              ].map((card)=>(
+                <div key={card.label} style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"14px 18px",borderTop:`3px solid ${card.accent}`,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
+                  <div style={{fontSize:10,letterSpacing:"0.11em",color:tc.textLight,textTransform:"uppercase",marginBottom:4,fontWeight:600}}>{card.label}</div>
+                  <div style={{fontSize:20,fontWeight:700,color:card.accent,fontFamily:"'DM Mono',monospace"}}>{card.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:18}}>
+              <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.11em",textTransform:"uppercase",color:tc.textLight,marginBottom:14}}>Vehicles Real Estate</div>
+              <div style={{overflowX:"auto"}}>
+                <table style={{width:"100%",borderCollapse:"collapse"}}>
+                  <thead>
+                    <tr style={{background:tc.bgAlt}}>
+                      {["Vehicle","Compromís","Cridat","Distribuït","Retorn","Net"].map((head)=>(
+                        <th key={head} style={{padding:"8px 12px",fontSize:10,letterSpacing:"0.09em",color:tc.textLight,textTransform:"uppercase",fontWeight:600,borderBottom:`2px solid ${tc.border}`,textAlign:head==="Vehicle"?"left":"right",whiteSpace:"nowrap"}}>{head}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {RE_FONS_MAP.length===0 ? (
+                      <tr><td colSpan={6} style={{padding:"24px",textAlign:"center",color:tc.textLight,fontSize:13}}>Cap vehicle</td></tr>
+                    ) : null}
+                    {RE_FONS_MAP.map((fund,index)=>(
+                      <tr key={fund.id ?? fund.fons} style={{borderBottom:`1px solid ${tc.bgAlt}`,background:index%2===0?tc.card:tc.bgAlt}}>
+                        <td style={{padding:"9px 12px",fontWeight:600,fontSize:13}}>
+                          <Link to={`/fund/${encodeURIComponent(fund.id ?? slugify(fund.fons))}`} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{fund.fons}</Link>
+                        </td>
+                        {[fund.compr,fund.calls,fund.dist,fund.retorn,fund.dist+fund.retorn-fund.calls].map((value, valueIndex)=>(
+                          <td key={valueIndex} style={{padding:"9px 12px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:valueIndex===4?(value>=0?tc.green:tc.navy):tc.navy}}>
+                            {valueIndex===4&&value>0?"+":""}{fmtM(value)}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <TxSection
+              tx={reTx}
+              compr={reCompr}
+              search={globalSearch}
+              catCfg={catCfg}
+              vcpeCfg={vcpeCfg}
+              estCfg={estCfg}
+              tc={tc}
+              dark={dark}
+              canEdit={canEdit}
+              onAdd={()=>openCcAddModal({ fons: "", vcpe: "RE", est: "SOCIMI", tipus: "Aportació" })}
+              onEdit={setCcEditModalRow}
+              onDelete={(row)=>handleCCDelete(row._rowId)}
+              title="Transaccions · Real Estate"
+            />
           </div>
         )}
 
@@ -764,17 +1328,17 @@ function DashboardInner() {
               <span style={{fontSize:10,color:tc.textLight,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase"}}>Filtres</span>
               {[
                 {label:"Any Fiscal", val:fFy,   set:v=>{setFFy(v);setTxPage(0)},   opts:["Tots",...FY_LIST]},
-                {label:"VC/PE/RE",   val:"__vcpe__", set:null, opts:null},
+                {label:"Tipus",      val:"__vcpe__", set:null, opts:null},
                 {label:"Estratègia", val:fEst,   set:v=>{setFEst(v);setTxPage(0)},  opts:["Tots","Fons Primari","Fons de Fons","SOCIMI"]},
                 {label:"Categoria",  val:fCat,   set:v=>{setFCat(v);setTxPage(0)},  opts:["Tots","Capital Call","Distribució","Retorn Capital"]},
               ].map(f=>{
                 if(f.opts===null){
-                  // Multi-select pills for VC/PE/RE
+                  // Multi-select pills for Fons tipus
                   const toggleVcpe=v=>{setFVcpe(prev=>{const s=new Set(prev);s.has(v)?s.delete(v):s.add(v);return s;});setTxPage(0);};
                   return(
                     <div key={f.label} style={{display:"flex",alignItems:"center",gap:5}}>
                       <span style={{fontSize:11,color:tc.textLight}}>{f.label}:</span>
-                      {Object.keys(vcpeCfg).map(v=>(
+                      {FONS_VCPE_KEYS.map(v=>(
                         <button key={v} onClick={()=>toggleVcpe(v)}
                           style={{background:fVcpe.has(v)?tc.navy:"transparent",border:`1.5px solid ${fVcpe.has(v)?tc.navy:tc.border}`,color:fVcpe.has(v)?"#fff":tc.textMid,borderRadius:20,padding:"2px 10px",cursor:"pointer",fontSize:11,fontWeight:fVcpe.has(v)?700:400,fontFamily:"inherit"}}>
                           {v}
@@ -850,13 +1414,13 @@ function DashboardInner() {
 
           return (
           <div className="tab-panel">
-            {/* Tags VC / PE / RE */}
+            {/* Tags PE / VC */}
             {(()=>{
               const toggleVcpe=v=>{setFVcpe(prev=>{const s=new Set(prev);s.has(v)?s.delete(v):s.add(v);return s;});};
               return(
               <div style={{display:"flex",gap:6,marginBottom:14,alignItems:"center"}}>
                 <span style={{fontSize:11,color:tc.textLight,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase"}}>Tipus:</span>
-                {Object.keys(vcpeCfg).map(v=>(
+                {FONS_VCPE_KEYS.map(v=>(
                   <button key={v} onClick={()=>toggleVcpe(v)}
                     style={{background:fVcpe.has(v)?tc.navy:"transparent",border:`1.5px solid ${fVcpe.has(v)?tc.navy:tc.border}`,color:fVcpe.has(v)?"#fff":tc.textMid,borderRadius:20,padding:"4px 14px",cursor:"pointer",fontSize:12,fontWeight:fVcpe.has(v)?700:400,fontFamily:"inherit"}}>
                     {v}
@@ -1034,7 +1598,7 @@ function DashboardInner() {
                                       Moviments · {moviments.length} transaccions
                                     </div>
                                     {canEdit&&(
-                                      <button onClick={()=>setCcAddModalFons(f.fons)}
+                                      <button onClick={()=>openCcAddModal({ fons: f.fons, vcpe: f.vcpe, est: f.est, tipus: "Aportació" })}
                                         style={{padding:"3px 10px",borderRadius:5,border:`1px solid ${rowExpandBorder}`,background:"transparent",color:tc.green,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
                                         ＋ Afegeix moviment
                                       </button>
@@ -1121,56 +1685,45 @@ function DashboardInner() {
           );
         })()}
 
-        {/* ── TRANSACCIONS ── */}
-        {tab==="txlog"&&(
-          <div key="txlog" className="tab-panel" style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
-            {canEdit&&(
-              <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
-                <button onClick={()=>setCcAddModalFons("")}
-                  style={{padding:"5px 14px",borderRadius:6,border:`1.5px solid ${tc.green}`,background:dark?"#0A2010":"#E8F8E8",color:tc.green,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:700}}>
-                  ＋ Afegeix moviment
-                </button>
-              </div>
-            )}
-            <div style={{overflowX:"auto"}}>
-              <table style={{width:"100%",borderCollapse:"collapse"}}>
-                <thead>
-                  <tr style={{background:tc.bgAlt}}>
-                    {[{k:"data",l:"Data"},{k:"fons",l:"Fons"},{k:"tipus",l:"Tipus"},{k:"cat",l:"Categoria"},{k:"eur",l:"Import EUR",right:true},{k:"fy",l:"FY"},{k:"vcpe",l:"VC/PE",title:"Venture Capital / Private Equity"},{k:"est",l:"Estratègia",title:"Estructura del fons"}].map(h=>(
-                      <th key={h.k} onClick={()=>sortTx(h.k)} title={h.title} style={{...th,textAlign:h.right?"right":"left",cursor:"pointer"}}>
-                        {h.l}<TArr k={h.k}/>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {txSorted.length===0 && <tr><td colSpan={8}><EmptyState/></td></tr>}
-                  {txSlice.map((r,i)=>{
-                    const isIn=r.eur>0;
-                    const cfg=catCfg[r.cat]||{};
-                    return (
-                      <tr key={i} style={{borderBottom:`1px solid ${tc.bgAlt}`,background:i%2===0?tc.card:tc.bgAlt}}>
-                        <td style={{padding:"8px 10px",fontSize:11,color:tc.textMid,whiteSpace:"nowrap"}}>{r.data}</td>
-                        <td style={{padding:"8px 10px",fontWeight:600,color:tc.text,fontSize:12,maxWidth:210,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={r.fons}>{r.fons}</td>
-                        <td style={{padding:"8px 10px",fontSize:11,color:tc.textMid,whiteSpace:"nowrap"}}>{r.tipus}</td>
-                        <td style={{padding:"8px 10px"}}><span style={{fontSize:11,background:cfg.bg||tc.bgAlt,color:cfg.color||tc.textMid,borderRadius:5,padding:"2px 8px",fontWeight:600,whiteSpace:"nowrap"}}>{r.cat}</span></td>
-                        <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:isIn?tc.navy:tc.green}}>{!isIn&&"+ "}{fmtM(Math.abs(r.eur))}</td>
-                        <td style={{padding:"8px 10px",fontSize:11,color:tc.textMid,whiteSpace:"nowrap"}}>{r.fy}</td>
-                        <td style={{padding:"8px 10px"}}><Badge label={r.vcpe} cfg={vcpeCfg[r.vcpe]}/></td>
-                        <td style={{padding:"8px 10px"}}><Badge label={r.est}  cfg={estCfg[r.est]}/></td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:14,paddingTop:12,borderTop:`1px solid ${tc.border}`}}>
-              <span style={{fontSize:12,color:tc.textLight}}>{txSorted.length} moviments · pàgina <b style={{color:tc.navy}}>{txPage+1}</b> de {txPages}</span>
-              <div style={{display:"flex",gap:6}}>
-                <button disabled={txPage===0} onClick={()=>setTxPage(p=>p-1)} style={{background:"transparent",border:`1px solid ${tc.border}`,borderRadius:5,padding:"5px 14px",cursor:txPage===0?"not-allowed":"pointer",color:txPage===0?tc.textLight:tc.navy,fontFamily:"inherit",fontSize:12}}>← Anterior</button>
-                <button disabled={txPage>=txPages-1} onClick={()=>setTxPage(p=>p+1)} style={{background:txPage>=txPages-1?tc.bgAlt:tc.navy,border:"none",borderRadius:5,padding:"5px 14px",cursor:txPage>=txPages-1?"not-allowed":"pointer",color:txPage>=txPages-1?tc.textLight:"#fff",fontFamily:"inherit",fontSize:12}}>Següent →</button>
-              </div>
-            </div>
+        {/* ── FONS TRANSACTIONS ── */}
+        {tab==="fons-tx"&&(
+          <div className="tab-panel">
+            <TxSection
+              tx={baseTx}
+              compr={baseCompr}
+              search={globalSearch}
+              catCfg={catCfg}
+              vcpeCfg={vcpeCfg}
+              estCfg={estCfg}
+              tc={tc}
+              dark={dark}
+              canEdit={canEdit}
+              onAdd={()=>openCcAddModal({ fons: "", vcpe: "PE", est: "Fons Primari", tipus: "Aportació" })}
+              onEdit={setCcEditModalRow}
+              onDelete={(row)=>handleCCDelete(row._rowId)}
+              title="Transaccions · Fons"
+            />
+          </div>
+        )}
+
+        {/* ── TRANSACCIONS › ALTERNATIVES ── */}
+        {tab==="tx-alt"&&(
+          <div className="tab-panel">
+            <TxSection
+              tx={allAltTx}
+              compr={allAltCompr}
+              search={globalSearch}
+              catCfg={catCfg}
+              vcpeCfg={vcpeCfg}
+              estCfg={estCfg}
+              tc={tc}
+              dark={dark}
+              canEdit={canEdit}
+              onAdd={()=>openCcAddModal({ fons: "", vcpe: "PE", est: "Fons Primari", tipus: "Aportació" })}
+              onEdit={setCcEditModalRow}
+              onDelete={(row)=>handleCCDelete(row._rowId)}
+              title="Totes les Transaccions · Alternatives"
+            />
           </div>
         )}
 
@@ -1191,17 +1744,17 @@ function DashboardInner() {
         <AddRowModal
           title={ccAddModalFons ? `Nou moviment · ${ccAddModalFons}` : "Nou moviment"}
           fields={[
-            {key:"fons",label:"Fons",type:"select",options:[...new Set(rawCC.map(r=>r.fons))].sort(),defaultValue:ccAddModalFons},
+            {key:"fons",label:"Fons",type:"combo",options:ccNameOptions,defaultValue:ccAddModalFons,placeholder:"Selecciona o crea un vehicle"},
             {key:"cat",label:"Categoria",type:"select",options:CAPITAL_CALL_CAT_OPTIONS,defaultValue:CAPITAL_CALL_CAT_OPTIONS[0]},
             {key:"data",label:"Data",type:"date"},
             {key:"eur",label:"Import EUR",type:"number"},
             {key:"divisa",label:"Divisa",type:"select",options:["EUR","USD"],defaultValue:"EUR"},
-            {key:"vcpe",label:"VC/PE/RE",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:CAPITAL_CALL_VCPE_OPTIONS[0]},
-            {key:"est",label:"Estratègia",type:"select",options:CAPITAL_CALL_EST_OPTIONS,defaultValue:CAPITAL_CALL_EST_OPTIONS[0]},
-            {key:"tipus",label:"Tipus",type:"select",options:CAPITAL_CALL_TIPUS_OPTIONS,defaultValue:CAPITAL_CALL_TIPUS_OPTIONS[0]},
+            {key:"vcpe",label:"Tipus",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:ccAddModalDefaults?.vcpe ?? CAPITAL_CALL_VCPE_OPTIONS[0]},
+            {key:"est",label:"Estratègia",type:"select",options:["", ...CAPITAL_CALL_EST_OPTIONS],defaultValue:ccAddModalDefaults?.est ?? ""},
+            {key:"tipus",label:"Tipus moviment",type:"combo",options:ccTipusOptions,defaultValue:ccAddModalDefaults?.tipus ?? CAPITAL_CALL_TIPUS_OPTIONS[0],placeholder:"Selecciona o crea un tipus"},
           ]}
           onSave={handleCCInsert}
-          onClose={()=>setCcAddModalFons(null)}
+          onClose={()=>{ setCcAddModalFons(null); setCcAddModalDefaults(null); }}
         />
       )}
 
@@ -1210,14 +1763,14 @@ function DashboardInner() {
         <AddRowModal
           title={`Edita moviment · ${ccEditModalRow.fons}`}
           fields={[
-            {key:"fons",label:"Fons",type:"select",options:[...new Set(rawCC.map(r=>r.fons))].sort(),defaultValue:ccEditModalRow.fons},
+            {key:"fons",label:"Fons",type:"combo",options:ccNameOptions,defaultValue:ccEditModalRow.fons,placeholder:"Selecciona o crea un vehicle"},
             {key:"cat",label:"Categoria",type:"select",options:CAPITAL_CALL_CAT_OPTIONS,defaultValue:ccEditModalRow.cat??CAPITAL_CALL_CAT_OPTIONS[0]},
             {key:"data",label:"Data",type:"date",defaultValue:ccEditModalRow.data??""},
             {key:"eur",label:"Import EUR",type:"number",defaultValue:ccEditModalRow.eur??0},
             {key:"divisa",label:"Divisa",type:"select",options:["EUR","USD"],defaultValue:ccEditModalRow.divisa??"EUR"},
-            {key:"vcpe",label:"VC/PE/RE",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:ccEditModalRow.vcpe??CAPITAL_CALL_VCPE_OPTIONS[0]},
-            {key:"est",label:"Estratègia",type:"select",options:CAPITAL_CALL_EST_OPTIONS,defaultValue:ccEditModalRow.est??CAPITAL_CALL_EST_OPTIONS[0]},
-            {key:"tipus",label:"Tipus",type:"select",options:CAPITAL_CALL_TIPUS_OPTIONS,defaultValue:ccEditModalRow.tipus??CAPITAL_CALL_TIPUS_OPTIONS[0]},
+            {key:"vcpe",label:"Tipus",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:ccEditModalRow.vcpe??CAPITAL_CALL_VCPE_OPTIONS[0]},
+            {key:"est",label:"Estratègia",type:"select",options:["", ...CAPITAL_CALL_EST_OPTIONS],defaultValue:ccEditModalRow.est??""},
+            {key:"tipus",label:"Tipus moviment",type:"combo",options:ccTipusOptions,defaultValue:ccEditModalRow.tipus??CAPITAL_CALL_TIPUS_OPTIONS[0],placeholder:"Selecciona o crea un tipus"},
           ]}
           onSave={handleCCUpdate}
           onClose={()=>setCcEditModalRow(null)}

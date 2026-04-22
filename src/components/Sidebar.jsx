@@ -47,7 +47,7 @@ const BOTTOM_ITEMS = [
 ];
 
 // ── component ─────────────────────────────────────────────
-export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark, isAdmin }) {
+export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark, isAdmin, canAccessSection, canAccessAny }) {
   const [expanded, setExpanded] = useState(new Set(["alt","re","mp"]));
   const [popover,  setPopover]  = useState(null);
 
@@ -94,8 +94,16 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark,
 
   // ── collapsible section ──
   function Section({ sec }) {
-    const open        = expanded.has(sec.id);
-    const childActive = sec.children.some(c => c.id === activeItem);
+    const visibleChildren = sec.children.filter((child) => {
+      if (sec.id === "alt") return canAccessSection?.(child.id === "posicions" ? "inversions" : child.id) ?? true;
+      if (sec.id === "re") return canAccessSection?.(child.id) ?? true;
+      if (sec.id === "mp") return canAccessSection?.(child.id) ?? true;
+      return true;
+    });
+    if (visibleChildren.length === 0) return null;
+
+    const open = expanded.has(sec.id);
+    const childActive = visibleChildren.some(c => c.id === activeItem);
 
     return (
       <div
@@ -105,7 +113,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark,
       >
         {/* section header */}
         <button
-          onClick={() => collapsed ? onNavigate(sec.children[0].id) : toggleSec(sec.id)}
+          onClick={() => collapsed ? onNavigate(visibleChildren[0].id) : toggleSec(sec.id)}
           title={collapsed ? sec.label : undefined}
           style={{
             display:"flex", alignItems:"center", gap:9,
@@ -131,7 +139,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark,
         </button>
 
         {/* children (expanded) */}
-        {!collapsed && open && sec.children.map(c => <Leaf key={c.id} item={c} indent />)}
+        {!collapsed && open && visibleChildren.map(c => <Leaf key={c.id} item={c} indent />)}
 
         {/* popover (collapsed hover) */}
         {collapsed && popover === sec.id && (
@@ -146,7 +154,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark,
             <div style={{padding:"4px 14px 8px",fontSize:10,fontWeight:700,letterSpacing:"0.1em",textTransform:"uppercase",color:C.groupLabel}}>
               {sec.label}
             </div>
-            {sec.children.map(c => (
+            {visibleChildren.map(c => (
               <button key={c.id}
                 onClick={() => { onNavigate(c.id); setPopover(null); }}
                 style={{
@@ -181,7 +189,8 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark,
   return (
     <div style={{
       width: collapsed ? RAIL_W : SIDEBAR_W,
-      minHeight:"100vh", background:C.bg,
+      height:"100vh", background:C.bg,
+      position:"sticky", top:0, alignSelf:"flex-start",
       display:"flex", flexDirection:"column",
       transition:"width 0.2s ease", flexShrink:0, overflowX:"hidden",
       borderRight:`1px solid ${C.border}`,
@@ -207,8 +216,9 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark,
         {PORTFOLI_SECTIONS.map(sec => <Section key={sec.id} sec={sec} />)}
 
         {/* ── Transaccions group ── */}
-        <GroupLabel label="Transaccions" />
-        {TX_LEAVES.map(item => <Leaf key={item.id} item={item} />)}
+        {(canAccessSection?.("tx-alt") || canAccessSection?.("tx-mp")) ? <GroupLabel label="Transaccions" /> : null}
+        {(canAccessSection?.("tx-alt") ?? true) ? <Leaf item={TX_LEAVES[0]} /> : null}
+        {(canAccessSection?.("tx-mp") ?? true) ? <Leaf item={TX_LEAVES[1]} /> : null}
 
       </div>
 
