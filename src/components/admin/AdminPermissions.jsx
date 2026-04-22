@@ -193,7 +193,7 @@ export default function AdminPermissions() {
   const th = {
     padding: "7px 12px",
     textAlign: "left",
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: 600,
     color: tc.textLight,
     textTransform: "uppercase",

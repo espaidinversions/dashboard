@@ -29,7 +29,7 @@ function StatCard({ label, value, sub }) {
   const { tc } = useTheme();
   return (
     <div style={sharedStyles.cardPad(tc, "14px 18px")}>
-      <div style={{ fontSize: 10, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{label}</div>
       <div style={{ fontSize: 22, fontWeight: 700, color: tc.navy }}>{value}</div>
       {sub && <div style={{ fontSize: 11, color: tc.textLight, marginTop: 2 }}>{sub}</div>}
     </div>
@@ -99,7 +99,7 @@ export default function AdminSystem() {
               const cfg = ROLE_COLORS[role] ?? {};
               return (
                 <div key={role} style={sharedStyles.cardPad(tc, "14px 18px")}>
-                  <div style={{ fontSize: 10, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>Rol</div>
+                  <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>Rol</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 22, fontWeight: 700, color: tc.navy }}>{count}</span>
                     <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 5, padding: "2px 8px", background: cfg.bg, color: cfg.color }}>{role}</span>

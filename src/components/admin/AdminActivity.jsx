@@ -120,7 +120,7 @@ export default function AdminActivity() {
           { label: "Taula més modificada",   value: topTable ? `${topTable[0]} (${topTable[1]})` : "—" },
         ].map((c, i) => (
           <div key={i} style={sharedStyles.cardPad(tc, "14px 18px")}>
-            <div style={{ fontSize: 10, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{c.label}</div>
+            <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{c.label}</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: tc.navy }}>{c.value}</div>
           </div>
         ))}

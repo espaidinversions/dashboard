@@ -28,7 +28,7 @@ import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
 import { PMTraçabilitatTab } from "./PMTraçabilitatTab.jsx";
 import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
-import { buildPrivateSyntheticRows, mergePrivateRows, normalizePrivateWorkbookRows } from "../data/alternativesModel.js";
+import { normalizePrivateWorkbookRows } from "../data/alternativesModel.js";
 import { splitRealEstateRows, buildRealEstateFundsMap } from "../data/realEstateModel.js";
 
 const LS_CC = "tc_rawCC";
@@ -250,7 +250,7 @@ function TxSection({
       <div className="grid-4" style={{ gap: 12 }}>
         {cards.map((card) => (
           <div key={card.label} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 18px", borderTop: `3px solid ${card.accent}`, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
-            <div style={{ fontSize: 10, letterSpacing: "0.11em", color: tc.textLight, textTransform: "uppercase", marginBottom: 4, fontWeight: 600 }}>{card.label}</div>
+            <div style={{ fontSize: 11, letterSpacing: "0.06em", color: tc.textLight, textTransform: "uppercase", marginBottom: 4, fontWeight: 600 }}>{card.label}</div>
             <div style={{ fontSize: 20, fontWeight: 700, color: card.accent, fontFamily: "'DM Mono',monospace" }}>{card.value}</div>
             {card.sub ? <div style={{ fontSize: 11, color: tc.textLight, marginTop: 2 }}>{card.sub}</div> : null}
           </div>
@@ -693,37 +693,16 @@ function DashboardInner() {
   const [expandedFons, setExpandedFons] = useState(new Set());
   const [ccChartF, setCcChartF] = useState(null); // {type, value} per filtrar taula fons
 
-  const syntheticSearchers = useMemo(() => buildPrivateSyntheticRows(searchersData, {
-    vcpe: "SF",
-    include: (row) => row?.statusScreening === "Invertit en fase de cerca",
-    fons: (row) => row.nom,
-    tipus: (row) => row.formEntrada || "Search Capital",
-    est: () => null,
-  }), [searchersData]);
-  const syntheticCompanies = useMemo(() => buildPrivateSyntheticRows(companiesData, {
-    vcpe: "PC",
-    include: () => true,
-    fons: (row) => row.nom,
-    tipus: (row) => row.tipus || "Participada",
-    est: () => null,
-  }), [companiesData]);
-
   // Dades base filtrades per vcpe i exclusió
   const baseTx      = useMemo(()=>TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[TRANSACTIONS,excluded]);
   const baseCompr   = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[COMPROMISOS,excluded]);
-  const sfTx        = useMemo(()=>mergePrivateRows(TRANSACTIONS.filter(r=>r.vcpe==="SF"), syntheticSearchers.tx),[TRANSACTIONS, syntheticSearchers]);
-  const sfCompr     = useMemo(()=>mergePrivateRows(COMPROMISOS.filter(r=>r.vcpe==="SF"), syntheticSearchers.compr),[COMPROMISOS, syntheticSearchers]);
-  const pcTx        = useMemo(()=>mergePrivateRows(TRANSACTIONS.filter(r=>r.vcpe==="PC"), syntheticCompanies.tx),[TRANSACTIONS, syntheticCompanies]);
-  const pcCompr     = useMemo(()=>mergePrivateRows(COMPROMISOS.filter(r=>r.vcpe==="PC"), syntheticCompanies.compr),[COMPROMISOS, syntheticCompanies]);
+  const sfTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vcpe==="SF"),[TRANSACTIONS]);
+  const sfCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vcpe==="SF"),[COMPROMISOS]);
+  const pcTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vcpe==="PC"),[TRANSACTIONS]);
+  const pcCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vcpe==="PC"),[COMPROMISOS]);
   const { tx: reTx, compr: reCompr } = useMemo(() => splitRealEstateRows(rawCC), [rawCC]);
-  const allAltTx    = useMemo(()=>mergePrivateRows(
-    TRANSACTIONS.filter(r=>!excluded.has(r.fons)),
-    [...syntheticSearchers.tx, ...syntheticCompanies.tx].filter(r=>!excluded.has(r.fons))
-  ),[TRANSACTIONS,excluded,syntheticSearchers,syntheticCompanies]);
-  const allAltCompr = useMemo(()=>mergePrivateRows(
-    COMPROMISOS.filter(r=>!excluded.has(r.fons)),
-    [...syntheticSearchers.compr, ...syntheticCompanies.compr].filter(r=>!excluded.has(r.fons))
-  ),[COMPROMISOS,excluded,syntheticSearchers,syntheticCompanies]);
+  const allAltTx    = useMemo(()=>TRANSACTIONS.filter(r=>!excluded.has(r.fons)),[TRANSACTIONS,excluded]);
+  const allAltCompr = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)),[COMPROMISOS,excluded]);
 
   // Hoisted above filtered so it can be used in the dep array without TDZ:
   const section = tab==="mercats-publics" ? "mercats-publics"
@@ -862,7 +841,7 @@ function DashboardInner() {
 
   // Theme-based style objects
   const inp = {border:`1px solid ${tc.border}`,borderRadius:5,padding:"5px 8px",fontSize:12,color:tc.text,background:tc.card,outline:"none",fontFamily:"inherit",cursor:"pointer"};
-  const th  = {padding:"9px 10px",fontSize:10,letterSpacing:"0.09em",color:tc.textLight,textTransform:"uppercase",fontWeight:600,textAlign:"left",borderBottom:`2px solid ${tc.border}`,whiteSpace:"nowrap",userSelect:"none"};
+  const th  = {padding:"9px 10px",fontSize:11,letterSpacing:"0.06em",color:tc.textLight,textTransform:"uppercase",fontWeight:600,textAlign:"left",borderBottom:`2px solid ${tc.border}`,whiteSpace:"nowrap",userSelect:"none"};
 
   // Dark-aware badge configs
   const vcpeCfg = {
@@ -1046,12 +1025,18 @@ function DashboardInner() {
           borderBottom:`1px solid ${tc.border}`,
           flexShrink:0, boxShadow:"0 1px 0 rgba(0,0,0,.06)",
         }}>
-          <input
-            value={globalSearch}
-            onChange={e=>{setGlobalSearch(e.target.value);setTxPage(0);}}
-            placeholder="Cerca…"
-            style={{padding:"5px 12px",borderRadius:7,border:`1.5px solid ${tc.border}`,background:tc.bg,color:tc.text,fontSize:12,fontFamily:"inherit",width:200,outline:"none"}}
-          />
+          <div style={{position:"relative",display:"flex",alignItems:"center"}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{position:"absolute",left:9,color:tc.textLight,pointerEvents:"none",flexShrink:0}}>
+              <circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/>
+            </svg>
+            <input
+              value={globalSearch}
+              onChange={e=>{setGlobalSearch(e.target.value);setTxPage(0);}}
+              placeholder="Cerca…"
+              style={{padding:"5px 12px 5px 28px",borderRadius:7,border:`1.5px solid ${tc.border}`,background:tc.bg,color:tc.text,fontSize:12,fontFamily:"inherit",width:200,outline:"none"}}
+            />
+          </div>
           {globalSearch&&(
             <button onClick={()=>{setGlobalSearch("");setTxPage(0);}}
               style={{background:"transparent",border:"none",cursor:"pointer",fontSize:13,color:tc.textLight,padding:"0 2px",lineHeight:1,marginLeft:-4}}>
@@ -1066,24 +1051,24 @@ function DashboardInner() {
             style={{background:tc.navy,color:"#fff",border:"none",borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
             ↑ Carregar dades
           </button>
-          <button onClick={exportAll} disabled={exporting}
+          <button onClick={exportAll} disabled={exporting} className="btn-ghost"
             style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:exporting?"not-allowed":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit",opacity:exporting?0.6:1}}>
             {exporting?"…":"↓ Excel"}
           </button>
-          <button onClick={exportPDF}
+          <button onClick={exportPDF} className="btn-ghost"
             style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
             ↓ PDF
           </button>
-          <button onClick={exportPNG} disabled={exporting}
+          <button onClick={exportPNG} disabled={exporting} className="btn-ghost"
             style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:exporting?"wait":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
             {exporting?"…":"↓ PNG"}
           </button>
-          <button onClick={toggleDark}
+          <button onClick={toggleDark} className="btn-ghost"
             style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:15,color:tc.textMid,fontFamily:"inherit"}}>
             {dark?"☀️":"🌙"}
           </button>
-          <button onClick={signOut}
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit",fontWeight:600}}>
+          <button onClick={signOut} className="btn-ghost"
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
             Sortir
           </button>
         </div>

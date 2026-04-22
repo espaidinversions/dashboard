@@ -233,7 +233,10 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark,
               color:C.text, textDecoration:"none",
               fontSize:12, fontFamily:"inherit",
               justifyContent: collapsed ? "center" : "flex-start",
+              transition:"background 0.1s",
             }}
+            onMouseEnter={e => { e.currentTarget.style.background=C.bgHover; }}
+            onMouseLeave={e => { e.currentTarget.style.background="transparent"; }}
           >
             <span style={{fontSize:14,lineHeight:1}}>{item.icon}</span>
             {!collapsed && <span>{item.label}</span>}

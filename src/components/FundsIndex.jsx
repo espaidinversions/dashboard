@@ -10,7 +10,7 @@ import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
 
 export function FundsIndexInner({ inline = false, searchOverride }) {
-  const { canAccessSection, canEditSection } = useAuth();
+  const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
   const { toast } = useToast();
   const { tc } = useTheme();
   const canAccessAlternatives = canAccessSection("alternatives");
@@ -224,6 +224,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
               <tbody>
                 {sorted.map((r, i) => {
                   const rowCanEdit = getVehiclePermissionSection(r) === "real-estate" ? canEditRealEstate : canEditAlternatives;
+                  const canEditTvpi = rowCanEdit || isAdmin || isSuperuser;
                   return (
                   <tr key={r.id ?? r.fons} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
@@ -270,7 +271,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.tvpi, tc) }}>
                       <EditableCell value={r.tvpi} type="number" align="right"
                         fmt={formatMultiple} onSave={v => saveTvpi(r, v)}
-                        disabled={!rowCanEdit} />
+                        disabled={!canEditTvpi} />
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.dpi, tc) }}>
                       {formatMultiple(r.dpi)}
@@ -304,7 +305,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
               style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "flex-end",
                 background: tc.bgAlt, padding: 12, borderRadius: 10 }}>
               <div>
-                <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Nom</div>
+                <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>Nom</div>
                 <input value={newFund.fons} onChange={e => setNewFund(p => ({ ...p, fons: e.target.value }))}
                   placeholder="Nom del fons" style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
               </div>
@@ -314,7 +315,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                 { label: "Divisa", key: "divisa", options: ["EUR", "USD"] },
               ].map(f => (
                 <div key={f.key}>
-                  <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>{f.label}</div>
+                  <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>{f.label}</div>
                   <select value={newFund[f.key]} onChange={e => setNewFund(p => ({ ...p, [f.key]: e.target.value }))}
                     style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none" }}>
                     {f.options.map(o => <option key={o} value={o}>{o}</option>)}
@@ -322,7 +323,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                 </div>
               ))}
               <div>
-                <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.06em" }}>Compromís (€)</div>
+                <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>Compromís (€)</div>
                 <input type="number" value={newFund.compromis} onChange={e => setNewFund(p => ({ ...p, compromis: e.target.value }))}
                   placeholder="0" style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none", width: 100 }} />
               </div>

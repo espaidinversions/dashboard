@@ -185,13 +185,13 @@ function TransactionsTab() {
             { key: "value_eur", label: "Valor EUR", placeholder: "999.60" },
           ].map(f => (
             <div key={f.key}>
-              <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, fontWeight: 600, textTransform: "uppercase" }}>{f.label}</div>
+              <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, fontWeight: 600, textTransform: "uppercase" }}>{f.label}</div>
               <input value={draft[f.key]} onChange={e => setDraft(d => ({ ...d, [f.key]: e.target.value }))}
                 placeholder={f.placeholder} style={{ ...inp, width: 110 }} />
             </div>
           ))}
           <div>
-            <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, fontWeight: 600, textTransform: "uppercase" }}>Acció</div>
+            <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, fontWeight: 600, textTransform: "uppercase" }}>Acció</div>
             <select value={draft.action} onChange={e => setDraft(d => ({ ...d, action: e.target.value }))} style={inp}>
               <option value="buy">buy</option>
               <option value="sell">sell</option>

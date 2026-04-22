@@ -89,7 +89,7 @@ export default function AdminEntities() {
           { label: "Sense NIF real", value: fallbackCount, warn: fallbackCount > 0 },
         ].map((c, i) => (
           <div key={i} style={{ ...sharedStyles.cardPad(tc, "14px 18px"), borderLeft: c.warn ? `3px solid ${tc.red ?? "#d32f2f"}` : undefined }}>
-            <div style={{ fontSize: 10, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: 6 }}>{c.label}</div>
+            <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>{c.label}</div>
             <div style={{ fontSize: 16, fontWeight: 700, color: c.warn ? (tc.red ?? "#d32f2f") : tc.navy }}>{c.value}</div>
           </div>
         ))}

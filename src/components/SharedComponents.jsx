@@ -5,8 +5,8 @@ import { useTheme } from "../theme.js";
 export const sharedStyles = {
   card: (tc) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10 }),
   cardPad: (tc, pad = "20px 24px") => ({ ...sharedStyles.card(tc), padding: pad }),
-  th: (tc) => ({ padding: "10px 12px", fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
-  sec: (tc) => ({ fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
+  th: (tc) => ({ padding: "10px 12px", fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
+  sec: (tc) => ({ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
   badge: (tc) => ({ fontSize: 11, borderRadius: 5, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
   kpi: (tc) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 140, flex: 1 }),
   kpiLabel: (tc) => ({ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }),
@@ -271,7 +271,9 @@ export function DeleteRowButton({ onDelete }) {
   return (
     <button onClick={() => setConfirming(true)}
       style={{ background: "transparent", border: "none", cursor: "pointer",
-        color: tc.textLight, fontSize: 14, padding: "2px 4px", lineHeight: 1 }}
+        color: tc.textLight, fontSize: 14, padding: "2px 4px", lineHeight: 1, transition:"color 0.15s" }}
+      onMouseEnter={e => { e.currentTarget.style.color="#d32f2f"; }}
+      onMouseLeave={e => { e.currentTarget.style.color=tc.textLight; }}
       title="Eliminar fila">
       🗑
     </button>
@@ -426,7 +428,9 @@ export function EmptyState({ message = "Cap resultat amb els filtres actuals." }
   return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center",
       padding:"48px 24px", color:tc.textLight, gap:10 }}>
-      <span style={{ fontSize:32 }}>🔍</span>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity:0.4 }}>
+        <circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="22" y2="22" />
+      </svg>
       <span style={{ fontSize:14, fontWeight:600, color:tc.textMid }}>{message}</span>
       <span style={{ fontSize:12 }}>Prova a canviar o treure algun filtre.</span>
     </div>

@@ -371,7 +371,7 @@ function CompanyDetailInner() {
               <thead>
                 <tr>
                   {["Trimestre", "Ingressos", "EBITDA", "DFN", "Ing. Pres.", "EBITDA Pres.", "DFN Pres."].map(h => (
-                    <th key={h} style={{ fontSize: 10, letterSpacing: "0.06em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, padding: "4px 8px", textAlign: "right", whiteSpace: "nowrap" }}>{h}</th>
+                    <th key={h} style={{ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, padding: "4px 8px", textAlign: "right", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -413,14 +413,14 @@ function CompanyDetailInner() {
                 ) : (
                   <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
                     <div>
-                      <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Trimestre</div>
+                      <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Trimestre</div>
                       <select value={newQ.q} onChange={e => setNewQ(p => ({ ...p, q: e.target.value }))}
                         style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit" }}>
                         {["1","2","3","4"].map(v => <option key={v} value={v}>Q{v}</option>)}
                       </select>
                     </div>
                     <div>
-                      <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Any</div>
+                      <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Any</div>
                       <input type="number" value={newQ.year} onChange={e => setNewQ(p => ({ ...p, year: e.target.value }))}
                         style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 80 }} />
                     </div>
@@ -453,14 +453,14 @@ function CompanyDetailInner() {
               <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px" }}>
                 <div style={{ display: "flex", gap: 8, alignItems: "flex-end", flexWrap: "wrap" }}>
                   <div>
-                    <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Trimestre</div>
+                    <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Trimestre</div>
                     <select value={newQ.q} onChange={e => setNewQ(p => ({ ...p, q: e.target.value }))}
                       style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit" }}>
                       {["1","2","3","4"].map(v => <option key={v} value={v}>Q{v}</option>)}
                     </select>
                   </div>
                   <div>
-                    <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Any</div>
+                    <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase" }}>Any</div>
                     <input type="number" value={newQ.year} onChange={e => setNewQ(p => ({ ...p, year: e.target.value }))}
                       style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 80 }} />
                   </div>
