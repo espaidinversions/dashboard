@@ -893,10 +893,10 @@ function DashboardInner() {
   const rowExpandBorder = dark ? "#183820" : "#E0F0E0";
 
   const TABS_CC = [
-    {id:"resum",   label:"📊 Resum Anual"},
-    {id:"mensual", label:"📈 Detall Mensual"},
-    {id:"fons",    label:"🏦 Per Fons"},
-    {id:"fons-tx", label:"💸 Transaccions"},
+    {id:"resum",   label:"Resum Anual"},
+    {id:"mensual", label:"Detall Mensual"},
+    {id:"fons",    label:"Per Fons"},
+    {id:"fons-tx", label:"Transaccions"},
   ];
   const SECTIONS_ALL = [
     {id:"alternatives",   label:"Alternatius"},
@@ -927,7 +927,7 @@ function DashboardInner() {
               : tab==="companies"?"companies"
               : tab==="inversions"?"inversions"
               : "fons";
-  const TABS_FONS = [{id:"pipeline",label:"🎯 Current Pipeline"}, ...TABS_CC];
+  const TABS_FONS = [{id:"pipeline",label:"Current Pipeline"}, ...TABS_CC];
   const canEdit = canEditSection(currentPermissionId);
 
   useEffect(() => {
