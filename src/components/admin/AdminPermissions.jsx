@@ -62,7 +62,7 @@ const SECTION_GROUPS = [
   {
     groupLabel: "Transaccions",
     items: [
-      { id: "tx-alt", label: "Alternatives" },
+      { id: "tx-alt", label: "Alternatius" },
       { id: "tx-mp", label: "Mercats Públics" },
     ],
   },

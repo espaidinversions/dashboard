@@ -45,6 +45,7 @@ test("alternatives access caps its child sections", () => {
   assert.equal(getSectionAccessLevel(access, "alternatives"), ACCESS_NONE);
   assert.equal(getSectionAccessLevel(access, "searchers"), ACCESS_NONE);
   assert.equal(hasSectionAccess(access, "searchers"), false);
+  assert.equal(getSectionAccessLevel(access, "tx-alt"), ACCESS_NONE);
 });
 
 test("real-estate and public-markets subsection access can be restricted independently", () => {
@@ -66,15 +67,19 @@ test("real-estate and public-markets subsection access can be restricted indepen
   assert.equal(getSectionAccessLevel(access, "mp-rv"), ACCESS_USER);
 });
 
-test("transaction shortcut leaves inherit from their source subsections", () => {
+test("transaction shortcut leaves can escalate independently from display subsections", () => {
   const access = buildSectionAccessMap({
     role: "user",
     sectionRoles: {
       txlog: ACCESS_NONE,
       "mp-transaccions": ACCESS_NONE,
+      "tx-alt": ACCESS_SUPERUSER,
+      "tx-mp": ACCESS_SUPERUSER,
     },
   });
 
-  assert.equal(getSectionAccessLevel(access, "tx-alt"), ACCESS_NONE);
-  assert.equal(getSectionAccessLevel(access, "tx-mp"), ACCESS_NONE);
+  assert.equal(getSectionAccessLevel(access, "tx-alt"), ACCESS_SUPERUSER);
+  assert.equal(getSectionAccessLevel(access, "tx-mp"), ACCESS_SUPERUSER);
+  assert.equal(getSectionAccessLevel(access, "txlog"), ACCESS_NONE);
+  assert.equal(getSectionAccessLevel(access, "mp-transaccions"), ACCESS_NONE);
 });

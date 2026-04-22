@@ -230,6 +230,69 @@ function rowToDeal(r) {
   };
 }
 
+/**
+ * @param {object[]} capitalCallRows
+ * @param {Map<string, object>} entityMap
+ * @param {PortfolioCompany[]} existingCompanies
+ * @returns {PortfolioCompany[]}
+ */
+function buildFallbackCompaniesFromCapitalCalls(capitalCallRows, entityMap, existingCompanies) {
+  const rows = Array.isArray(capitalCallRows) ? capitalCallRows : [];
+  const existing = Array.isArray(existingCompanies) ? existingCompanies : [];
+  const existingIds = new Set(existing.map((row) => row.id).filter(Boolean));
+  const existingNames = new Set(existing.map((row) => row.nom).filter(Boolean));
+  const grouped = new Map();
+
+  rows.forEach((row) => {
+    if (!["PC", "SF"].includes(row?.vcpe)) return;
+    const entityId = row?.vehicle_id ?? null;
+    const companyName = getPrivateEntityName(entityMap, entityId, row?.fons);
+    if (!entityId || !companyName) return;
+    if (existingIds.has(entityId) || existingNames.has(companyName)) return;
+
+    const current = grouped.get(entityId) ?? {
+      id: entityId,
+      nom: companyName,
+      tipus: row.vcpe,
+      segment: null,
+      entrepreneurs: null,
+      origen: null,
+      geo: entityMap.get(entityId)?.country ?? null,
+      ticket: 0,
+      tvpi: null,
+      rvpiEur: null,
+      dpiEur: null,
+      rev: null,
+      ebitda: null,
+      dfn: null,
+      grossEV: null,
+      multEntry: null,
+      dataCompr: null,
+      mesosOperant: null,
+      isMock: true,
+      quarters: [],
+      sourceName: row?.fons ?? companyName,
+      workbookName: entityMap.get(entityId)?.workbook_name ?? null,
+      matchType: entityMap.get(entityId)?.match_type ?? "capital_calls_fallback",
+    };
+
+    if (row?.cat === "Capital Call" && Number(row?.eur) > 0) {
+      current.ticket += Number(row.eur);
+      const rowDate = row?.data ? String(row.data).slice(0, 10) : null;
+      if (rowDate && (!current.dataCompr || rowDate < current.dataCompr)) {
+        current.dataCompr = rowDate;
+      }
+    }
+
+    grouped.set(entityId, current);
+  });
+
+  return [...grouped.values()].map((row) => ({
+    ...row,
+    ticket: row.ticket > 0 ? row.ticket : null,
+  }));
+}
+
 async function loadPrivateEntityMap() {
   if (!supabase) return new Map();
   const { data, error } = await supabase.from("private_entities").select("*");
@@ -286,10 +349,22 @@ export async function loadAll() {
     supabase.from("searchers").select("*").order("nom"),
     supabase.from("private_entities").select("*"),
   ]);
-  if (cc.error || fm.error || pl.error || co.error || sr.error) return null;
+  if (cc.error) console.error("loadAll capital_calls failed:", cc.error);
+  if (fm.error) console.error("loadAll fund_meta failed:", fm.error);
+  if (pl.error) console.error("loadAll pipeline failed:", pl.error);
+  if (co.error) console.error("loadAll portfolio_companies failed:", co.error);
+  if (sr.error) console.error("loadAll searchers failed:", sr.error);
+  if (pe.error) console.error("loadAll private_entities failed:", pe.error);
+
   const privateEntities = pe.error || !Array.isArray(pe.data) ? [] : pe.data;
   const entityMap = new Map(privateEntities.map((row) => [row.id, row]));
-  const livePipelineDeals = pl.data.map(r => ({
+  const companies = !co.error && Array.isArray(co.data)
+    ? co.data.map((row) => rowToCompany(row, entityMap))
+    : [];
+  const fallbackCompanies = !cc.error && Array.isArray(cc.data)
+    ? buildFallbackCompaniesFromCapitalCalls(cc.data, entityMap, companies)
+    : [];
+  const livePipelineDeals = (pl.error || !Array.isArray(pl.data) ? [] : pl.data).map(r => ({
     id: r.id,
     name: r.name,
     amount: r.amount,
@@ -302,12 +377,8 @@ export async function loadAll() {
     active: r.active,
     estimatedClosing: r.estimated_closing ?? null,
   }));
-  return {
-    rawCC:      cc.data.map((row) => rowToCapitalCall(row, entityMap)),
-    fundMeta:   fm.data.map((row) => rowToFundMeta(row, entityMap)),
-    funds0:     mergePipelineDeals(livePipelineDeals),
-    companies:  co.data.map((row) => rowToCompany(row, entityMap)),
-    searchers:  sr.data.map(rowToSearcher),
+  /** @type {DashboardBundle | Partial<DashboardBundle>} */
+  const result = {
     privateEntities: privateEntities.map((row) => ({
       id: row.id,
       kind: row.kind,
@@ -317,17 +388,32 @@ export async function loadAll() {
       matchType: row.match_type,
     })),
   };
+  if (!cc.error && Array.isArray(cc.data)) result.rawCC = cc.data.map((row) => rowToCapitalCall(row, entityMap));
+  if (!fm.error && Array.isArray(fm.data)) result.fundMeta = fm.data.map((row) => rowToFundMeta(row, entityMap));
+  if (!pl.error && Array.isArray(pl.data)) result.funds0 = mergePipelineDeals(livePipelineDeals);
+  if (!co.error && Array.isArray(co.data)) result.companies = [...companies, ...fallbackCompanies];
+  if (!sr.error && Array.isArray(sr.data)) result.searchers = sr.data.map(rowToSearcher);
+
+  if (!result.rawCC && !result.fundMeta && !result.funds0 && !result.companies && !result.searchers) {
+    return null;
+  }
+  return result;
 }
 
 /** @returns {Promise<PortfolioCompany[] | null>} */
 export async function loadCompanies() {
   if (!supabase) return null;
-  const [companies, entityMap] = await Promise.all([
+  const [companies, capitalCalls, entityMap] = await Promise.all([
     supabase.from("portfolio_companies").select("*").order("nom"),
+    supabase.from("capital_calls").select("vehicle_id, fons, vcpe, cat, eur, data"),
     loadPrivateEntityMap(),
   ]);
   if (companies.error) return null;
-  return companies.data.map((row) => rowToCompany(row, entityMap));
+  const rows = companies.data.map((row) => rowToCompany(row, entityMap));
+  const fallbackRows = capitalCalls.error
+    ? []
+    : buildFallbackCompaniesFromCapitalCalls(capitalCalls.data, entityMap, rows);
+  return [...rows, ...fallbackRows];
 }
 
 /** @returns {Promise<CapitalCallRow[] | null>} */
@@ -339,6 +425,17 @@ export async function loadCapitalCalls() {
   ]);
   if (cc.error) return null;
   return cc.data.map((row) => rowToCapitalCall(row, entityMap));
+}
+
+/** @returns {Promise<FundMetaRow[] | null>} */
+export async function loadFundMeta() {
+  if (!supabase) return null;
+  const [fm, entityMap] = await Promise.all([
+    supabase.from("fund_meta").select("*"),
+    loadPrivateEntityMap(),
+  ]);
+  if (fm.error) return null;
+  return fm.data.map((row) => rowToFundMeta(row, entityMap));
 }
 
 /** @returns {Promise<Searcher[] | null>} */

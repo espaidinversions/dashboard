@@ -735,6 +735,8 @@ function DashboardInner() {
       ? (realEstateTab === "altres-vehicles" ? "re-altres" : "re-directe")
       : tab === "mercats-publics"
         ? (
+          mercatsPublicsTab === "transaccions" && activeNavItem === "tx-mp" ? "tx-mp"
+          :
           mercatsPublicsTab === "rv" ? "mp-rv"
           : mercatsPublicsTab === "rf" ? "mp-rf"
           : mercatsPublicsTab === "posicions" ? "mp-posicions"

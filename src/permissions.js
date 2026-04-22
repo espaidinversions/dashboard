@@ -39,8 +39,6 @@ const PARENT_BY_SECTION = {
   "mp-posicions": "mercats-publics",
   "mp-transaccions": "mercats-publics",
   "mp-traçabilitat": "mercats-publics",
-  "tx-alt": "txlog",
-  "tx-mp": "mp-transaccions",
 };
 const LEVEL_RANK = {
   [ACCESS_NONE]: 0,
@@ -103,7 +101,7 @@ export function buildSectionAccessMap({ role, sectionRoles, deniedSections } = {
   }
 
   if (access.alternatives === ACCESS_NONE) {
-    ALTERNATIVES_SECTION_IDS.forEach((sectionId) => {
+    [...ALTERNATIVES_SECTION_IDS, "tx-alt"].forEach((sectionId) => {
       access[sectionId] = ACCESS_NONE;
     });
   }
@@ -116,12 +114,6 @@ export function buildSectionAccessMap({ role, sectionRoles, deniedSections } = {
     [...PUBLIC_MARKETS_SUBSECTION_IDS, "tx-mp"].forEach((sectionId) => {
       access[sectionId] = ACCESS_NONE;
     });
-  }
-  if (access["mp-transaccions"] === ACCESS_NONE) {
-    access["tx-mp"] = ACCESS_NONE;
-  }
-  if (access.txlog === ACCESS_NONE) {
-    access["tx-alt"] = ACCESS_NONE;
   }
 
   return access;

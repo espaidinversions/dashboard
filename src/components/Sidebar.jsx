@@ -37,7 +37,7 @@ const PORTFOLI_SECTIONS = [
 ];
 
 const TX_LEAVES = [
-  {id:"tx-alt", label:"Alternatives",    icon:"💼"},
+  {id:"tx-alt", label:"Alternatius",    icon:"💼"},
   {id:"tx-mp",  label:"Mercats Públics", icon:"📈"},
 ];
 

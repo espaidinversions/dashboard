@@ -4,7 +4,7 @@ import { VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, readStoredJSON, writeStoredJSON, readStoredFlag, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, EditableCell, DeleteRowButton } from "./SharedComponents.jsx";
-import { upsertFundMeta, insertFund, deleteFund, loadAll, renamePrivateEntity } from "../db.js";
+import { upsertFundMeta, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
@@ -33,12 +33,11 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
   const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
 
   useEffect(() => {
-    loadAll().then((data) => {
-      if (!data) return;
-      if (Array.isArray(data.rawCC)) persistRawCC(data.rawCC);
-      if (Array.isArray(data.fundMeta)) {
-        setFundMeta(data.fundMeta);
-        writeStoredJSON("tc_fundMeta", data.fundMeta);
+    Promise.all([loadCapitalCalls(), loadFundMeta()]).then(([capitalCalls, meta]) => {
+      if (Array.isArray(capitalCalls)) persistRawCC(capitalCalls);
+      if (Array.isArray(meta)) {
+        setFundMeta(meta);
+        writeStoredJSON("tc_fundMeta", meta);
       }
     }).catch((error) => {
       console.error("Funds index refresh failed:", error);

@@ -6,7 +6,7 @@ import { CAT_CFG, VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
 import { Badge, Logo, KpiCard } from "./SharedComponents.jsx";
-import { loadAll } from "../db.js";
+import { loadCapitalCalls, loadFundMeta } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
 import { useAuth } from "../auth.jsx";
 
@@ -20,15 +20,14 @@ function FundDetailInner() {
   const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
 
   useEffect(() => {
-    loadAll().then((data) => {
-      if (!data) return;
-      if (Array.isArray(data.rawCC)) {
-        setRawCC(data.rawCC);
-        writeStoredJSON("tc_rawCC", data.rawCC);
+    Promise.all([loadCapitalCalls(), loadFundMeta()]).then(([capitalCalls, meta]) => {
+      if (Array.isArray(capitalCalls)) {
+        setRawCC(capitalCalls);
+        writeStoredJSON("tc_rawCC", capitalCalls);
       }
-      if (Array.isArray(data.fundMeta)) {
-        setFundMeta(data.fundMeta);
-        writeStoredJSON("tc_fundMeta", data.fundMeta);
+      if (Array.isArray(meta)) {
+        setFundMeta(meta);
+        writeStoredJSON("tc_fundMeta", meta);
       }
     }).catch((error) => {
       console.error("Fund detail refresh failed:", error);

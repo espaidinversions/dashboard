@@ -43,6 +43,20 @@ test("mergePrivateRows keeps real rows and skips duplicate synthetic rows", () =
   assert.equal(merged[1].fons, "Palette Capital");
 });
 
+test("mergePrivateRows prefers real rows when synthetic rows match the same bucket with rounded amounts", () => {
+  const actual = [
+    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117.02, vcpe: "SF" },
+  ];
+  const synthetic = [
+    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117, vcpe: "SF", _synthetic: true },
+  ];
+
+  const merged = mergePrivateRows(actual, synthetic);
+
+  assert.equal(merged.length, 1);
+  assert.deepEqual(merged[0], actual[0]);
+});
+
 test("normalizePrivateWorkbookRows maps workbook aliases onto canonical company names", () => {
   const workbookRows = [{ fons: "Omega Project", eur: 1000 }];
   const companies = [{ nom: "Greenfarm" }];

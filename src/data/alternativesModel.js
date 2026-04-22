@@ -42,8 +42,20 @@ export function buildPrivateSyntheticRows(rows, { vcpe, include, fons, tipus, es
 export function mergePrivateRows(actualRows, syntheticRows) {
   const actual = Array.isArray(actualRows) ? actualRows : [];
   const synthetic = Array.isArray(syntheticRows) ? syntheticRows : [];
-  const keys = new Set(actual.map((row) => `${row.fons}|${row.data}|${row.cat}|${row.eur}|${row.vcpe}`));
-  return [...actual, ...synthetic.filter((row) => !keys.has(`${row.fons}|${row.data}|${row.cat}|${row.eur}|${row.vcpe}`))];
+  const exactKeys = new Set(actual.map((row) => `${row.fons}|${row.data}|${row.cat}|${row.eur}|${row.vcpe}`));
+  const coarseKeys = new Set(actual.map((row) => `${row.fons}|${row.data}|${row.cat}|${row.vcpe}`));
+  return [
+    ...actual,
+    ...synthetic.filter((row) => {
+      const exactKey = `${row.fons}|${row.data}|${row.cat}|${row.eur}|${row.vcpe}`;
+      if (exactKeys.has(exactKey)) return false;
+      // Synthetic rows are approximations. If a real row already exists for the
+      // same fund/date/category bucket, prefer the real row even if the amount
+      // differs slightly due to rounding or source precision.
+      const coarseKey = `${row.fons}|${row.data}|${row.cat}|${row.vcpe}`;
+      return !coarseKeys.has(coarseKey);
+    }),
+  ];
 }
 
 const PRIVATE_TX_NAME_ALIASES = {
