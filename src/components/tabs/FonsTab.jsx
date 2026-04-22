@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { fmtM, slugify } from "../../utils.js";
 import { Badge, AddRowModal, DeleteRowButton } from "../SharedComponents.jsx";
 import { FY_LIST, VCPE_CFG, EST_CFG, CAPITAL_CALL_CAT_OPTIONS, CAPITAL_CALL_VCPE_OPTIONS, CAPITAL_CALL_EST_OPTIONS, CAPITAL_CALL_TIPUS_OPTIONS } from "../../config.js";
+import { makeVehicleDetailPath } from "../../data/privateRoutes.js";
 
 const DIVISA_OPTIONS = ["EUR", "USD"];
 
@@ -185,7 +186,7 @@ export function FonsTab({ tc, dark, FONS_MAP2, baseTx, vcpeCfg, estCfg, catCfg, 
                       <td style={{ padding: "10px 10px" }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                           <span style={{ color: tc.textMid, fontSize: 12 }}>{isExp ? "▼" : "▶"}</span>
-                          <Link to={`/fund/${encodeURIComponent(f.id ?? slugify(f.fons))}`} onClick={e => e.stopPropagation()}
+                          <Link to={makeVehicleDetailPath(f)} onClick={e => e.stopPropagation()}
                             style={{ color: tc.navy, fontWeight: 600, fontSize: 13, textDecoration: "none" }}>
                             {f.fons}
                           </Link>
@@ -255,7 +256,7 @@ export function FonsTab({ tc, dark, FONS_MAP2, baseTx, vcpeCfg, estCfg, catCfg, 
                             {canEdit && (
                               <div style={{ paddingTop: 8 }}>
                                 <button onClick={() => setAddModalFons(f.fons)}
-                                  style={{ padding: "4px 12px", borderRadius: 5, border: `1px solid ${rowExpandBorder}`, background: "transparent", color: tc.green, cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600 }}>
+                                  style={{ padding: "4px 12px", borderRadius: 4, border: `1px solid ${rowExpandBorder}`, background: "transparent", color: tc.green, cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600 }}>
                                   ＋ Afegeix moviment
                                 </button>
                               </div>

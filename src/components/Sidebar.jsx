@@ -147,7 +147,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark,
             position:"absolute", left:RAIL_W+6, top:0, zIndex:300,
             background: dark ? "#0d1e30" : "#1a3a5c",
             border:`1px solid ${C.border}`,
-            borderRadius:8, padding:"6px 0", minWidth:170,
+            borderRadius:10, padding:"6px 0", minWidth:170,
             boxShadow:"0 6px 24px rgba(0,0,0,.35)",
             pointerEvents:"all",
           }}>

@@ -30,6 +30,7 @@ import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
 import { normalizePrivateWorkbookRows } from "../data/alternativesModel.js";
 import { splitRealEstateRows, buildRealEstateFundsMap } from "../data/realEstateModel.js";
+import { makeVehicleDetailPath } from "../data/privateRoutes.js";
 
 const LS_CC = "tc_rawCC";
 const LS_PL = "tc_funds0";
@@ -304,11 +305,11 @@ function TxSection({
                   <tr key={row._rowId ?? `${row.fons}-${row.data}-${currentPage}-${index}`} style={{ borderBottom: `1px solid ${tc.bgAlt}`, background: index % 2 === 0 ? tc.card : tc.bgAlt }}>
                     <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.data}</td>
                     <td style={{ padding: "8px 10px", fontWeight: 600, color: tc.text, fontSize: 12, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.fons}>
-                      <Link to={`/fund/${encodeURIComponent(row.id ?? slugify(row.fons))}`} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{row.fons}</Link>
+                      <Link to={makeVehicleDetailPath(row)} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{row.fons}</Link>
                     </td>
                     <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.tipus}</td>
                     <td style={{ padding: "8px 10px" }}>
-                      <span style={{ fontSize: 11, background: cat.bg || tc.bgAlt, color: cat.color || tc.textMid, borderRadius: 5, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap" }}>{row.cat}</span>
+                      <span style={{ fontSize: 11, background: cat.bg || tc.bgAlt, color: cat.color || tc.textMid, borderRadius: 4, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap" }}>{row.cat}</span>
                     </td>
                     <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: isIn ? tc.navy : tc.green }}>
                       {isIn ? "" : "+ "}{fmtM(Math.abs(row.eur))}
@@ -346,14 +347,14 @@ function TxSection({
               <button
                 disabled={currentPage === 0}
                 onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 5, padding: "5px 14px", cursor: currentPage === 0 ? "not-allowed" : "pointer", color: currentPage === 0 ? tc.textLight : tc.navy, fontFamily: "inherit", fontSize: 12 }}
+                style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 4, padding: "5px 14px", cursor: currentPage === 0 ? "not-allowed" : "pointer", color: currentPage === 0 ? tc.textLight : tc.navy, fontFamily: "inherit", fontSize: 12 }}
               >
                 ← Anterior
               </button>
               <button
                 disabled={currentPage >= pageCount - 1}
                 onClick={() => setPage((prev) => Math.min(prev + 1, pageCount - 1))}
-                style={{ background: currentPage >= pageCount - 1 ? tc.bgAlt : tc.navy, border: "none", borderRadius: 5, padding: "5px 14px", cursor: currentPage >= pageCount - 1 ? "not-allowed" : "pointer", color: currentPage >= pageCount - 1 ? tc.textLight : "#fff", fontFamily: "inherit", fontSize: 12 }}
+                style={{ background: currentPage >= pageCount - 1 ? tc.bgAlt : tc.navy, border: "none", borderRadius: 4, padding: "5px 14px", cursor: currentPage >= pageCount - 1 ? "not-allowed" : "pointer", color: currentPage >= pageCount - 1 ? tc.textLight : "#fff", fontFamily: "inherit", fontSize: 12 }}
               >
                 Següent →
               </button>
@@ -840,7 +841,7 @@ function DashboardInner() {
   const anyFilter = fFy!=="Tots"||fVcpe.size>0||fEst!=="Tots"||fCat!=="Tots"||txSearch.trim()!="";
 
   // Theme-based style objects
-  const inp = {border:`1px solid ${tc.border}`,borderRadius:5,padding:"5px 8px",fontSize:12,color:tc.text,background:tc.card,outline:"none",fontFamily:"inherit",cursor:"pointer"};
+  const inp = {border:`1px solid ${tc.border}`,borderRadius:4,padding:"5px 8px",fontSize:12,color:tc.text,background:tc.card,outline:"none",fontFamily:"inherit",cursor:"pointer"};
   const th  = {padding:"9px 10px",fontSize:11,letterSpacing:"0.06em",color:tc.textLight,textTransform:"uppercase",fontWeight:600,textAlign:"left",borderBottom:`2px solid ${tc.border}`,whiteSpace:"nowrap",userSelect:"none"};
 
   // Dark-aware badge configs
@@ -1034,7 +1035,7 @@ function DashboardInner() {
               value={globalSearch}
               onChange={e=>{setGlobalSearch(e.target.value);setTxPage(0);}}
               placeholder="Cerca…"
-              style={{padding:"5px 12px 5px 28px",borderRadius:7,border:`1.5px solid ${tc.border}`,background:tc.bg,color:tc.text,fontSize:12,fontFamily:"inherit",width:200,outline:"none"}}
+              style={{padding:"5px 12px 5px 28px",borderRadius:6,border:`1.5px solid ${tc.border}`,background:tc.bg,color:tc.text,fontSize:12,fontFamily:"inherit",width:200,outline:"none"}}
             />
           </div>
           {globalSearch&&(
@@ -1048,27 +1049,27 @@ function DashboardInner() {
           )}
           <div style={{flex:1}}/>
           <button onClick={()=>setShowLoader(true)}
-            style={{background:tc.navy,color:"#fff",border:"none",borderRadius:7,padding:"5px 12px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
+            style={{background:tc.navy,color:"#fff",border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
             ↑ Carregar dades
           </button>
           <button onClick={exportAll} disabled={exporting} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:exporting?"not-allowed":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit",opacity:exporting?0.6:1}}>
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 10px",cursor:exporting?"not-allowed":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit",opacity:exporting?0.6:1}}>
             {exporting?"…":"↓ Excel"}
           </button>
           <button onClick={exportPDF} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
             ↓ PDF
           </button>
           <button onClick={exportPNG} disabled={exporting} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:exporting?"wait":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 10px",cursor:exporting?"wait":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
             {exporting?"…":"↓ PNG"}
           </button>
           <button onClick={toggleDark} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 8px",cursor:"pointer",fontSize:15,color:tc.textMid,fontFamily:"inherit"}}>
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 8px",cursor:"pointer",fontSize:15,color:tc.textMid,fontFamily:"inherit"}}>
             {dark?"☀️":"🌙"}
           </button>
           <button onClick={signOut} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:7,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
+            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
             Sortir
           </button>
         </div>
@@ -1238,7 +1239,7 @@ function DashboardInner() {
                     {RE_FONS_MAP.map((fund,index)=>(
                       <tr key={fund.id ?? fund.fons} style={{borderBottom:`1px solid ${tc.bgAlt}`,background:index%2===0?tc.card:tc.bgAlt}}>
                         <td style={{padding:"9px 12px",fontWeight:600,fontSize:13}}>
-                          <Link to={`/fund/${encodeURIComponent(fund.id ?? slugify(fund.fons))}`} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{fund.fons}</Link>
+                          <Link to={makeVehicleDetailPath(fund)} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{fund.fons}</Link>
                         </td>
                         {[fund.compr,fund.calls,fund.dist,fund.retorn,fund.dist+fund.retorn-fund.calls].map((value, valueIndex)=>(
                           <td key={valueIndex} style={{padding:"9px 12px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:valueIndex===4?(value>=0?tc.green:tc.navy):tc.navy}}>
@@ -1282,7 +1283,7 @@ function DashboardInner() {
         {section==="alternatives"&&supra==="fons"&&tab!=="pipeline"&&(
           <>
             {excluded.size>0&&(
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:tc.yellowLight,border:`1.5px solid ${tc.yellow}`,borderRadius:8,padding:"9px 16px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:tc.yellowLight,border:`1.5px solid ${tc.yellow}`,borderRadius:10,padding:"9px 16px"}}>
                 <span style={{fontSize:13,color:tc.yellow,fontWeight:700}}>⚠️ Anàlisi parcial:</span>
                 <span style={{fontSize:12,color:tc.text}}><b>{excluded.size} fons exclosos</b> de l'anàlisi</span>
                 <div style={{display:"flex",gap:6,flexWrap:"wrap",flex:1}}>
@@ -1291,7 +1292,7 @@ function DashboardInner() {
                   ))}
                   {excluded.size>4&&<span style={{fontSize:10,color:tc.yellow}}>+{excluded.size-4} més</span>}
                 </div>
-                <button onClick={()=>setExcluded(new Set())} style={{background:"transparent",border:`1px solid ${tc.yellow}`,borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,color:tc.yellow,fontFamily:"inherit",whiteSpace:"nowrap"}}>Restaurar tots</button>
+                <button onClick={()=>setExcluded(new Set())} style={{background:"transparent",border:`1px solid ${tc.yellow}`,borderRadius:4,padding:"3px 10px",cursor:"pointer",fontSize:11,color:tc.yellow,fontFamily:"inherit",whiteSpace:"nowrap"}}>Restaurar tots</button>
               </div>
             )}
             <div className="grid-5" style={{gap:12,marginBottom:18}}>
@@ -1302,7 +1303,7 @@ function DashboardInner() {
                 {label:"Flux Net",           value:fmtM(Math.abs(gNet)), sub:gNet>=0?"saldo positiu":"pendent",   accent:gNet>=0?tc.greenDark:tc.navyLight},
                 {label:"DPI",                value:`${(gDist/gCalls).toFixed(2)}x`, sub:"distribuït / cridat",    accent:tc.green},
               ].map((k,i)=>(
-                <div key={i} className="kpi-card card-hover" style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:12,padding:"16px 18px",borderTop:`3px solid ${k.accent}`,boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
+                <div key={i} className="kpi-card card-hover" style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"16px 18px",borderTop:`3px solid ${k.accent}`,boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
                   <div style={{fontSize:10,letterSpacing:"0.11em",color:tc.textLight,textTransform:"uppercase",marginBottom:6,fontWeight:500}}>{k.label}</div>
                   <div style={{fontSize:21,fontWeight:700,color:k.accent,marginBottom:2,letterSpacing:"-0.02em"}}>{k.value}</div>
                   <div style={{fontSize:11,color:tc.textLight}}>{k.sub}</div>
@@ -1349,7 +1350,7 @@ function DashboardInner() {
                   style={{...inp,width:160,paddingLeft:8}} />
                 {txSearch&&<button onClick={()=>{setTxSearch("");setTxPage(0);}} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:13,color:tc.textLight,padding:"0 2px",lineHeight:1}}>✕</button>}
               </div>
-              {anyFilter&&<button onClick={clearFilters} style={{background:"transparent",border:`1px solid ${tc.border}`,borderRadius:5,padding:"4px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>✕ Netejar</button>}
+              {anyFilter&&<button onClick={clearFilters} style={{background:"transparent",border:`1px solid ${tc.border}`,borderRadius:4,padding:"4px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>✕ Netejar</button>}
               <div style={{marginLeft:"auto",fontSize:12,color:tc.textLight}}>
                 <b style={{color:tc.navy}}>{filtered.length}</b> mov. ·
                 Cridat <b style={{color:tc.navy}}>{fmtS(fCalls)}</b> ·
@@ -1486,10 +1487,10 @@ function DashboardInner() {
 
             {/* Indicador filtre actiu gràfic */}
             {ccChartF&&(
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,background:tc.card,border:`1.5px solid ${tc.green}`,borderRadius:8,padding:"8px 14px"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,background:tc.card,border:`1.5px solid ${tc.green}`,borderRadius:10,padding:"8px 14px"}}>
                 <span style={{fontSize:12,color:tc.navy,fontWeight:600}}>🔍 Filtre gràfic actiu:</span>
-                <span style={{fontSize:12,color:tc.green,fontWeight:700,background:greenBadgeBg,padding:"2px 10px",borderRadius:5}}>{ccChartF.value}</span>
-                <button onClick={()=>setCcChartF(null)} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${tc.border}`,color:tc.textMid,borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>✕ Treure filtre</button>
+                <span style={{fontSize:12,color:tc.green,fontWeight:700,background:greenBadgeBg,padding:"2px 10px",borderRadius:4}}>{ccChartF.value}</span>
+                <button onClick={()=>setCcChartF(null)} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${tc.border}`,color:tc.textMid,borderRadius:4,padding:"3px 10px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>✕ Treure filtre</button>
               </div>
             )}
 
@@ -1546,7 +1547,7 @@ function DashboardInner() {
                             <td style={{padding:"10px 10px",fontSize:11,color:tc.textLight,fontWeight:600}}>{i+1}</td>
                             <td style={{padding:"10px 10px",fontWeight:700,color:isExp?tc.green:tc.text,fontSize:12,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                               <Link
-                                to={`/fund/${encodeURIComponent(f.id ?? slugify(f.fons))}`}
+                                to={makeVehicleDetailPath(f)}
                                 onClick={e => e.stopPropagation()}
                                 style={{ color: "inherit", textDecoration: "none" }}
                                 onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
@@ -1560,8 +1561,8 @@ function DashboardInner() {
                             <td style={{padding:"10px 10px",textAlign:"right"}}>
                               {pct!==null&&(
                                 <div style={{display:"flex",alignItems:"center",gap:7,justifyContent:"flex-end"}}>
-                                  <div style={{width:70,height:6,background:tc.bgAlt,borderRadius:3,overflow:"hidden"}}>
-                                    <div style={{width:`${Math.min(100,pct)}%`,height:"100%",background:pctCol(pct),borderRadius:3}}/>
+                                  <div style={{width:70,height:6,background:tc.bgAlt,borderRadius:4,overflow:"hidden"}}>
+                                    <div style={{width:`${Math.min(100,pct)}%`,height:"100%",background:pctCol(pct),borderRadius:4}}/>
                                   </div>
                                   <span style={{fontSize:11,color:pctCol(pct),minWidth:38,textAlign:"right",fontWeight:600}}>{pct.toFixed(1)}%</span>
                                 </div>
@@ -1586,7 +1587,7 @@ function DashboardInner() {
                                     </div>
                                     {canEdit&&(
                                       <button onClick={()=>openCcAddModal({ fons: f.fons, vcpe: f.vcpe, est: f.est, tipus: "Aportació" })}
-                                        style={{padding:"3px 10px",borderRadius:5,border:`1px solid ${rowExpandBorder}`,background:"transparent",color:tc.green,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
+                                        style={{padding:"3px 10px",borderRadius:4,border:`1px solid ${rowExpandBorder}`,background:"transparent",color:tc.green,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
                                         ＋ Afegeix moviment
                                       </button>
                                     )}

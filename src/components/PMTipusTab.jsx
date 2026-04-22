@@ -184,7 +184,7 @@ export function PMTipusTab({ tipus }) {
         {TOGGLES.map(t => (
           <button key={t.id} onClick={() => setToggle(t.id)}
             style={{
-              padding: "4px 10px", borderRadius: 5,
+              padding: "4px 10px", borderRadius: 4,
               border: `1.5px solid ${toggle === t.id ? tc.green : tc.border}`,
               background: toggle === t.id ? (dark ? "#0A2010" : "#E8F8E8") : "transparent",
               color: toggle === t.id ? tc.green : tc.textLight,
@@ -198,7 +198,7 @@ export function PMTipusTab({ tipus }) {
         {[{ id: "brut", label: "Brut" }, { id: "net", label: "Net TER" }].map(t => (
           <button key={t.id} onClick={() => setRetMode(t.id)}
             style={{
-              padding: "4px 10px", borderRadius: 5,
+              padding: "4px 10px", borderRadius: 4,
               border: `1.5px solid ${retMode === t.id ? tc.navy : tc.border}`,
               background: retMode === t.id ? (dark ? "#0A1A30" : "#E8F0FA") : "transparent",
               color: retMode === t.id ? tc.navy : tc.textLight,

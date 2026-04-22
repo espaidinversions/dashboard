@@ -84,7 +84,7 @@ export default function LoginPage() {
 
   const inp = {
     width: "100%", padding: "11px 14px", fontSize: 14,
-    border: "1.5px solid #D0D8E4", borderRadius: 8,
+    border: "1.5px solid #D0D8E4", borderRadius: 10,
     fontFamily: "'Outfit',system-ui,sans-serif", outline: "none",
     background: "#F8FAFB", color: "#1A2B3C", boxSizing: "border-box",
     transition: "border-color 0.15s",
@@ -97,7 +97,7 @@ export default function LoginPage() {
       fontFamily: "'Outfit',system-ui,sans-serif",
     }}>
       <div style={{
-        background: "#fff", borderRadius: 16, padding: "40px 40px 36px",
+        background: "#fff", borderRadius: 14, padding: "40px 40px 36px",
         width: 360, boxShadow: "0 4px 32px rgba(0,0,0,.10)",
       }}>
         {/* Logo */}
@@ -107,7 +107,7 @@ export default function LoginPage() {
 
         {/* Mode tabs — hidden in forgot mode */}
         {mode !== "forgot" && (
-          <div style={{ display: "flex", gap: 0, marginBottom: 24, border: "1.5px solid #D0D8E4", borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ display: "flex", gap: 0, marginBottom: 24, border: "1.5px solid #D0D8E4", borderRadius: 10, overflow: "hidden" }}>
             {["login", "register"].map(m => (
               <button key={m} type="button" onClick={() => switchMode(m)} style={{
                 flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 600, border: "none",
@@ -165,12 +165,12 @@ export default function LoginPage() {
           )}
 
           {error && (
-            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA", borderRadius: 7, padding: "9px 12px" }}>
+            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA", borderRadius: 6, padding: "9px 12px" }}>
               {error}
             </div>
           )}
           {info && (
-            <div style={{ fontSize: 12, color: "#1B5E20", background: "#E8F5E9", borderRadius: 7, padding: "9px 12px" }}>
+            <div style={{ fontSize: 12, color: "#1B5E20", background: "#E8F5E9", borderRadius: 6, padding: "9px 12px" }}>
               {info}
             </div>
           )}
@@ -187,7 +187,7 @@ export default function LoginPage() {
 
           <button type="submit" disabled={loading} style={{
             marginTop: 4, padding: "12px", background: "#2B5070", color: "#fff",
-            border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600,
+            border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600,
             fontFamily: "inherit", cursor: loading ? "not-allowed" : "pointer",
             opacity: loading ? 0.7 : 1, transition: "opacity 0.15s",
           }}>

@@ -51,14 +51,14 @@ function Code({ children }) {
 function Note({ children }) {
   const { tc } = useTheme();
   return (
-    <div style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 8, padding: "10px 14px", margin: "10px 0 14px 0", fontSize: 13, color: tc.textMid, lineHeight: 1.6 }}>
+    <div style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "10px 14px", margin: "10px 0 14px 0", fontSize: 13, color: tc.textMid, lineHeight: 1.6 }}>
       {children}
     </div>
   );
 }
 function Badge({ label, color = "#1B4F72", bg = "#E8F0F7" }) {
   return (
-    <span style={{ display: "inline-block", background: bg, color, borderRadius: 5, padding: "1px 7px", fontSize: 11, fontWeight: 700, marginLeft: 4, verticalAlign: "middle" }}>
+    <span style={{ display: "inline-block", background: bg, color, borderRadius: 4, padding: "1px 7px", fontSize: 11, fontWeight: 700, marginLeft: 4, verticalAlign: "middle" }}>
       {label}
     </span>
   );
@@ -440,7 +440,7 @@ function FlowBox({ label, sub, color = "#1B4F72", bg, width = 140, mono = false 
   const { tc } = useTheme();
   const boxBg = bg ?? tc.card;
   return (
-    <div style={{ width, textAlign: "center", border: `2px solid ${color}`, borderRadius: 8, padding: "10px 8px", background: boxBg, flexShrink: 0 }}>
+    <div style={{ width, textAlign: "center", border: `2px solid ${color}`, borderRadius: 10, padding: "10px 8px", background: boxBg, flexShrink: 0 }}>
       <div style={{ fontSize: mono ? 11 : 12, fontWeight: 700, color, fontFamily: mono ? "'DM Mono',monospace" : "inherit", lineHeight: 1.3 }}>{label}</div>
       {sub && <div style={{ fontSize: 10, color: "#888", marginTop: 3, lineHeight: 1.3 }}>{sub}</div>}
     </div>
@@ -516,7 +516,7 @@ function DataFlowDiagram() {
         </div>
 
         {/* Legend */}
-        <div style={{ marginTop: 24, padding: "12px 16px", background: tc.bgAlt, borderRadius: 8, border: `1px solid ${tc.border}` }}>
+        <div style={{ marginTop: 24, padding: "12px 16px", background: tc.bgAlt, borderRadius: 10, border: `1px solid ${tc.border}` }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: tc.navy, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 8 }}>Llegenda</div>
           <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
             {[
@@ -528,7 +528,7 @@ function DataFlowDiagram() {
               { color: "#E65100", label: "CDN / Desplegament" },
             ].map(({ color, label }) => (
               <div key={color} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: tc.textMid }}>
-                <span style={{ width: 12, height: 12, borderRadius: 3, background: color, flexShrink: 0, display: "inline-block" }} />
+                <span style={{ width: 12, height: 12, borderRadius: 4, background: color, flexShrink: 0, display: "inline-block" }} />
                 {label}
               </div>
             ))}
@@ -623,11 +623,11 @@ function UserGuideInner() {
           <Logo />
         </Link>
         <div style={{ flex: 1 }} />
-        <Link to="/" style={{ background: "transparent", border: `1.5px solid ${tc.border}`, borderRadius: 7, padding: "7px 12px", cursor: "pointer", fontSize: 12, color: tc.textMid, fontFamily: "inherit", fontWeight: 600, textDecoration: "none" }}>
+        <Link to="/" style={{ background: "transparent", border: `1.5px solid ${tc.border}`, borderRadius: 6, padding: "7px 12px", cursor: "pointer", fontSize: 12, color: tc.textMid, fontFamily: "inherit", fontWeight: 600, textDecoration: "none" }}>
           ← Tauler
         </Link>
         <button onClick={toggleDark}
-          style={{ background: "transparent", border: `1.5px solid ${tc.border}`, borderRadius: 7, padding: "7px 12px", cursor: "pointer", fontSize: 16, color: tc.textMid, fontFamily: "inherit" }}>
+          style={{ background: "transparent", border: `1.5px solid ${tc.border}`, borderRadius: 6, padding: "7px 12px", cursor: "pointer", fontSize: 16, color: tc.textMid, fontFamily: "inherit" }}>
           {dark ? "☀️" : "🌙"}
         </button>
       </div>

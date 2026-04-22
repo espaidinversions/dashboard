@@ -235,7 +235,7 @@ export default function AdminPermissions() {
       </div>
 
       {tableError && (
-        <div style={{ background: "#FFF3E0", border: "1px solid #FFB74D", borderRadius: 8, padding: "14px 18px", marginBottom: 20, fontSize: 13 }}>
+        <div style={{ background: "#FFF3E0", border: "1px solid #FFB74D", borderRadius: 10, padding: "14px 18px", marginBottom: 20, fontSize: 13 }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
             <div>
               <strong>Cal actualitzar la taula `user_permissions` a Supabase.</strong>
@@ -261,7 +261,7 @@ export default function AdminPermissions() {
       )}
 
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", background: tc.card, borderRadius: 8, overflow: "hidden" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", background: tc.card, borderRadius: 10, overflow: "hidden" }}>
           <thead>
             <tr style={{ background: tc.bgAlt }}>
               <th style={{ ...th, minWidth: 220 }} rowSpan={2}>Usuari</th>
@@ -399,7 +399,7 @@ export default function AdminPermissions() {
                         disabled={saving === user.id || !!tableError}
                         style={{
                           padding: "4px 12px",
-                          borderRadius: 5,
+                          borderRadius: 4,
                           border: "none",
                           background: tc.green,
                           color: "#fff",

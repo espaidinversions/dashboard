@@ -129,12 +129,12 @@ export function MensualTab({filtered, fFy}) {
         </div>
         <div style={{display:"flex",gap:8}}>
           <button onClick={()=>setExpanded(new Set(byMes.map(m=>m.key)))}
-            style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:5,
+            style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:4,
               padding:"4px 12px",cursor:"pointer",fontSize:11,color:TC.textMid,fontFamily:"inherit"}}>
             Expandir tots
           </button>
           <button onClick={()=>setExpanded(new Set())}
-            style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:5,
+            style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:4,
               padding:"4px 12px",cursor:"pointer",fontSize:11,color:TC.textMid,fontFamily:"inherit"}}>
             Plegar tots
           </button>

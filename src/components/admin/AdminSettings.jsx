@@ -65,7 +65,7 @@ export default function AdminSettings() {
             {/* Tag list */}
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 12, minHeight: 32 }}>
               {domains.map(d => (
-                <span key={d} style={{ display: "flex", alignItems: "center", gap: 5, background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 5, padding: "3px 10px", fontSize: 12, color: tc.text }}>
+                <span key={d} style={{ display: "flex", alignItems: "center", gap: 5, background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 4, padding: "3px 10px", fontSize: 12, color: tc.text }}>
                   {d}
                   <button onClick={() => removeDomain(d)}
                     style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, padding: 0, fontSize: 13, lineHeight: 1 }}>×</button>
@@ -80,15 +80,15 @@ export default function AdminSettings() {
             <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
               <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown}
                 placeholder="espaidinversions.com"
-                style={{ flex: 1, padding: "7px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit" }} />
+                style={{ flex: 1, padding: "7px 12px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit" }} />
               <button onClick={addDomain}
-                style={{ padding: "7px 14px", borderRadius: 7, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>
+                style={{ padding: "7px 14px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>
                 Afegir
               </button>
             </div>
 
             <button onClick={handleSave} disabled={saving}
-              style={{ padding: "8px 20px", borderRadius: 7, border: "none", background: tc.green, color: "#fff", cursor: saving ? "not-allowed" : "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
+              style={{ padding: "8px 20px", borderRadius: 6, border: "none", background: tc.green, color: "#fff", cursor: saving ? "not-allowed" : "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: 600, opacity: saving ? 0.7 : 1 }}>
               {saving ? "Desant…" : "Desar"}
             </button>
           </>

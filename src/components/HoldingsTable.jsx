@@ -65,7 +65,7 @@ function EditableCell({ value, canEdit, onSave, renderValue, td }) {
           onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); commit(); } if (e.key === "Escape") cancel(); }}
           style={{
             width: "100%", fontSize: 11, fontFamily: "'DM Mono',monospace",
-            border: "1.5px solid #4A90D9", borderRadius: 3, padding: "3px 5px",
+            border: "1.5px solid #4A90D9", borderRadius: 4, padding: "3px 5px",
             background: "transparent", color: "inherit", outline: "none",
           }}
         />
@@ -149,7 +149,7 @@ export function HoldingsTable() {
     <span title="Valor manual (override)" style={{
       fontSize: 8, fontWeight: 700, letterSpacing: "0.04em",
       background: "#FFF3E0", color: "#E65100",
-      borderRadius: 3, padding: "1px 4px", marginLeft: 4, verticalAlign: "middle",
+      borderRadius: 4, padding: "1px 4px", marginLeft: 4, verticalAlign: "middle",
     }}>OV</span>
   );
 
@@ -180,7 +180,7 @@ export function HoldingsTable() {
 
   const pillBtn = (active, onClick, label) => (
     <button onClick={onClick} style={{
-      padding: "3px 10px", borderRadius: 5, fontSize: 11,
+      padding: "3px 10px", borderRadius: 4, fontSize: 11,
       border: `1.5px solid ${active ? tc.navy : tc.border}`,
       background: active ? (dark ? "#0A1A30" : "#E8F0FA") : "transparent",
       color: active ? tc.navy : tc.textLight,

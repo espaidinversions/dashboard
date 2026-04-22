@@ -206,12 +206,12 @@ export function PMTransaccionsTab() {
           </div>
           <div style={{ display: "flex", gap: 6 }}>
             <button onClick={() => setOpenMonths(new Set(byMonth.map(([m]) => m)))}
-              style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 5,
+              style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 4,
                 padding: "4px 12px", cursor: "pointer", fontSize: 11, color: tc.textMid, fontFamily: "inherit" }}>
               Expandir tots
             </button>
             <button onClick={() => setOpenMonths(new Set())}
-              style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 5,
+              style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 4,
                 padding: "4px 12px", cursor: "pointer", fontSize: 11, color: tc.textMid, fontFamily: "inherit" }}>
               Plegar tots
             </button>
@@ -358,7 +358,7 @@ function NovaTxModal({ tc, dark, onClose, onSave }) {
 
   const inp = {
     width: "100%", padding: "7px 10px", fontSize: 13,
-    border: `1.5px solid ${tc.border}`, borderRadius: 7,
+    border: `1.5px solid ${tc.border}`, borderRadius: 6,
     background: tc.bg, color: tc.text, fontFamily: "inherit",
     outline: "none", boxSizing: "border-box",
   };
@@ -456,17 +456,17 @@ function NovaTxModal({ tc, dark, onClose, onSave }) {
           </div>
 
           {error && (
-            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA", borderRadius: 7, padding: "8px 12px" }}>{error}</div>
+            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA", borderRadius: 6, padding: "8px 12px" }}>{error}</div>
           )}
 
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
             <button type="button" onClick={onClose}
-              style={{ padding: "8px 16px", borderRadius: 7, border: `1.5px solid ${tc.border}`,
+              style={{ padding: "8px 16px", borderRadius: 6, border: `1.5px solid ${tc.border}`,
                 background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
               Cancel·lar
             </button>
             <button type="submit" disabled={saving}
-              style={{ padding: "8px 16px", borderRadius: 7, border: "none",
+              style={{ padding: "8px 16px", borderRadius: 6, border: "none",
                 background: tc.navy, color: "#fff", cursor: saving ? "wait" : "pointer",
                 fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}>
               {saving ? "Desant…" : "Afegir"}

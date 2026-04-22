@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { fmtM, slugify } from "../../utils.js";
+import { fmtM } from "../../utils.js";
 import { CAT_CFG } from "../../config.js";
+import { makeVehicleDetailPath } from "../../data/privateRoutes.js";
 
 export function TxLogTab({ tc, filtered, catCfg }) {
   const [sortK, setSortK] = useState("data");
@@ -58,7 +59,7 @@ export function TxLogTab({ tc, filtered, catCfg }) {
                   style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
                   <td style={{ padding: "10px 10px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
                   <td style={{ padding: "10px 10px", fontSize: 12 }}>
-                    <Link to={`/fund/${encodeURIComponent(r.id ?? slugify(r.fons))}`} style={{ color: tc.navy, fontWeight: 600, textDecoration: "none" }}>
+                    <Link to={makeVehicleDetailPath(r)} style={{ color: tc.navy, fontWeight: 600, textDecoration: "none" }}>
                       {r.fons}
                     </Link>
                   </td>

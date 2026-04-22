@@ -25,7 +25,7 @@ function MetricChart({ title, data, actualKey, budgetKey, ltmKey, color, view, t
         {hasMarginData && <span style={{ color: "#E8A020", fontSize: 10, fontWeight: 600, textTransform: "none", letterSpacing: 0 }}>— Marge %</span>}
       </div>
       {!hasData ? (
-        <div style={{ border: `2px dashed ${tc.border}`, borderRadius: 8, padding: "40px 0", textAlign: "center", color: tc.textLight, fontSize: 12 }}>
+        <div style={{ border: `2px dashed ${tc.border}`, borderRadius: 10, padding: "40px 0", textAlign: "center", color: tc.textLight, fontSize: 12 }}>
           Sense dades
         </div>
       ) : (
@@ -286,7 +286,7 @@ function CompanyDetailInner() {
       <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 12, boxShadow: "0 1px 0 rgba(0,0,0,.06), 0 4px 16px rgba(0,0,0,.05)" }}>
         <Link to="/" style={{ display: "flex", alignItems: "center", flexShrink: 0 }}><Logo /></Link>
         <div style={{ flex: 1 }} />
-        <button onClick={toggle} style={{ background: "transparent", border: `1.5px solid ${tc.border}`, borderRadius: 7, padding: "7px 12px", cursor: "pointer", fontSize: 16, color: tc.textMid, fontFamily: "inherit" }}>
+        <button onClick={toggle} style={{ background: "transparent", border: `1.5px solid ${tc.border}`, borderRadius: 6, padding: "7px 12px", cursor: "pointer", fontSize: 16, color: tc.textMid, fontFamily: "inherit" }}>
           {dark ? "☀️" : "🌙"}
         </button>
       </div>
@@ -337,7 +337,7 @@ function CompanyDetailInner() {
             <div style={{ display: "flex", justifyContent: "flex-end", gap: 4 }}>
               {[["quarterly", "Trimestral"], ["ltm", "LTM"], ["annual", "Anual"]].map(([v, label]) => (
                 <button key={v} onClick={() => setChartView(v)}
-                  style={{ padding: "4px 10px", borderRadius: 5, border: `1.5px solid ${chartView === v ? tc.green : tc.border}`, background: chartView === v ? (dark ? "#0A2010" : "#E8F8E8") : "transparent", color: chartView === v ? tc.green : tc.textLight, fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: chartView === v ? 700 : 400 }}>
+                  style={{ padding: "4px 10px", borderRadius: 4, border: `1.5px solid ${chartView === v ? tc.green : tc.border}`, background: chartView === v ? (dark ? "#0A2010" : "#E8F8E8") : "transparent", color: chartView === v ? tc.green : tc.textLight, fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: chartView === v ? 700 : 400 }}>
                   {label}
                 </button>
               ))}
@@ -405,7 +405,7 @@ function CompanyDetailInner() {
               <div style={{ marginTop: 12 }}>
                 {!addingQuarter ? (
                   <button onClick={() => setAddingQuarter(true)}
-                    style={{ background: "transparent", border: `1.5px dashed ${tc.border}`, borderRadius: 7,
+                    style={{ background: "transparent", border: `1.5px dashed ${tc.border}`, borderRadius: 6,
                       padding: "6px 14px", cursor: "pointer", fontSize: 12, color: tc.textMid,
                       fontFamily: "inherit", fontWeight: 600 }}>
                     + Nou trimestre
@@ -444,7 +444,7 @@ function CompanyDetailInner() {
           <div style={{ marginTop: 8 }}>
             {!addingQuarter ? (
               <button onClick={() => setAddingQuarter(true)}
-                style={{ background: "transparent", border: `1.5px dashed ${tc.border}`, borderRadius: 7,
+                style={{ background: "transparent", border: `1.5px dashed ${tc.border}`, borderRadius: 6,
                   padding: "6px 14px", cursor: "pointer", fontSize: 12, color: tc.textMid,
                   fontFamily: "inherit", fontWeight: 600 }}>
                 + Nou trimestre

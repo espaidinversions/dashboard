@@ -111,7 +111,7 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
     info:    { fontSize:11, color:TC.textLight, background:TC.bgAlt, borderRadius:6, padding:"8px 12px", marginBottom:18 },
     dropZone: (active) => ({
       border: `2px dashed ${active ? TC.navy : TC.border}`,
-      borderRadius: 8,
+      borderRadius: 10,
       padding: "12px 16px",
       display: "flex", alignItems: "center", gap: 12,
       background: active ? `${TC.navy}12` : "transparent",

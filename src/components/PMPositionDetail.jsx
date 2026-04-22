@@ -27,7 +27,7 @@ function KpiCard({ label, value, accent, tc }) {
   return (
     <div className="kpi-card card-hover" style={{
       background: tc.card, border: `1px solid ${tc.border}`,
-      borderRadius: 12, padding: "16px 18px", flex: 1,
+      borderRadius: 10, padding: "16px 18px", flex: 1,
       borderTop: `3px solid ${accent ?? tc.navy}`,
       boxShadow: "0 2px 12px rgba(0,0,0,.06)",
     }}>
@@ -79,7 +79,7 @@ function PMPositionDetail() {
       <div style={{ padding: "60px 32px", textAlign: "center" }}>
         <div style={{ fontSize: 14, color: tc.textLight, marginBottom: 16 }}>Posició no trobada</div>
         <button onClick={() => navigate(-1)}
-          style={{ background: tc.navy, color: "#fff", border: "none", borderRadius: 8,
+          style={{ background: tc.navy, color: "#fff", border: "none", borderRadius: 6,
                    padding: "8px 20px", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
           ← Tornar
         </button>
@@ -149,7 +149,7 @@ function PMPositionDetail() {
 
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card        = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
-  const tooltipStyle = { contentStyle: { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8 }, labelStyle: { color: tc.text, fontWeight: 600 } };
+  const tooltipStyle = { contentStyle: { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10 }, labelStyle: { color: tc.text, fontWeight: 600 } };
 
   const rendIniciColor = p.rendInici == null ? tc.textLight : p.rendInici > 0 ? tc.green : tc.red;
   const netIniciColor  = netInici == null ? tc.textLight : netInici > 0 ? tc.green : tc.red;
@@ -175,7 +175,7 @@ function PMPositionDetail() {
           <div style={{ fontSize: 22, fontWeight: 700, color: tc.navy, marginBottom: 8 }}>
             {displayNom}
             {metaOverride.nom && (
-              <span title="Nom manual (override)" style={{ fontSize: 9, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 3, padding: "2px 5px", marginLeft: 8, verticalAlign: "middle" }}>OV</span>
+              <span title="Nom manual (override)" style={{ fontSize: 9, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 4, padding: "2px 5px", marginLeft: 8, verticalAlign: "middle" }}>OV</span>
             )}
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -197,7 +197,7 @@ function PMPositionDetail() {
                              padding: "3px 8px", borderRadius: 4, fontWeight: 700,
                              letterSpacing: "0.06em", textTransform: "uppercase" }}>
                 {displayCustodian}
-                {metaOverride.custodian && <span title="Custodi manual (override)" style={{ fontSize: 8, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 3, padding: "1px 4px", marginLeft: 5 }}>OV</span>}
+                {metaOverride.custodian && <span title="Custodi manual (override)" style={{ fontSize: 8, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 4, padding: "1px 4px", marginLeft: 5 }}>OV</span>}
               </span>
             )}
             {p.tipus && (
@@ -430,7 +430,7 @@ function PMPositionDetail() {
                 <InfoRow label="Cost total"        value={p.costEur != null ? fmtM(p.costEur) : null} tc={tc} />
                 <InfoRow label="TER anual"
                   value={ter > 0 ? (
-                    <span>{ter.toFixed(2)}%{terOverride != null && <span title="TER manual (override)" style={{ fontSize: 8, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 3, padding: "1px 4px", marginLeft: 5 }}>OV</span>}</span>
+                    <span>{ter.toFixed(2)}%{terOverride != null && <span title="TER manual (override)" style={{ fontSize: 8, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 4, padding: "1px 4px", marginLeft: 5 }}>OV</span>}</span>
                   ) : null}
                   tc={tc} />
                 <InfoRow label="Cost anual"
@@ -577,7 +577,7 @@ function PositionMetaEditor({ p, isin, tc, dark, card, secLabel, metaOverride, t
 
   const inp = {
     width: "100%", padding: "6px 10px", fontSize: 12,
-    border: `1.5px solid ${tc.border}`, borderRadius: 7,
+    border: `1.5px solid ${tc.border}`, borderRadius: 6,
     background: tc.bg, color: tc.text, fontFamily: "inherit",
     outline: "none", boxSizing: "border-box",
   };
@@ -632,7 +632,7 @@ function PositionMetaEditor({ p, isin, tc, dark, card, secLabel, metaOverride, t
           {saved && <div style={{ fontSize: 11, color: tc.green }}>✓ Guardat</div>}
           <div style={{ display: "flex", justifyContent: "flex-end" }}>
             <button onClick={handleSave} disabled={saving} style={{
-              padding: "7px 18px", borderRadius: 7, border: "none",
+              padding: "7px 18px", borderRadius: 6, border: "none",
               background: tc.navy, color: "#fff", cursor: saving ? "default" : "pointer",
               fontFamily: "inherit", fontSize: 12, fontWeight: 600, opacity: saving ? 0.7 : 1,
             }}>{saving ? "Guardant…" : "Guardar"}</button>

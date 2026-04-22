@@ -80,7 +80,7 @@ export default function AdminSystem() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tc.navy }}>Sistema</h2>
         <button onClick={load} disabled={loading}
-          style={{ padding: "6px 14px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: loading ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit", opacity: loading ? 0.5 : 1 }}>
+          style={{ padding: "6px 14px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: loading ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit", opacity: loading ? 0.5 : 1 }}>
           {loading ? "Carregant…" : "↻ Refrescar"}
         </button>
       </div>
@@ -102,7 +102,7 @@ export default function AdminSystem() {
                   <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.07em", marginBottom: 6 }}>Rol</div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                     <span style={{ fontSize: 22, fontWeight: 700, color: tc.navy }}>{count}</span>
-                    <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 5, padding: "2px 8px", background: cfg.bg, color: cfg.color }}>{role}</span>
+                    <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 4, padding: "2px 8px", background: cfg.bg, color: cfg.color }}>{role}</span>
                   </div>
                 </div>
               );
@@ -156,7 +156,7 @@ export default function AdminSystem() {
                 {[30, 60, 90, 180, 365].map(d => <option key={d} value={d}>{d} dies</option>)}
               </select>
               <button onClick={handlePurge} disabled={purging}
-                style={{ padding: "6px 14px", borderRadius: 7, border: "none", background: "#C62828", color: "#fff", cursor: purging ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 600, opacity: purging ? 0.6 : 1 }}>
+                style={{ padding: "6px 14px", borderRadius: 6, border: "none", background: "#C62828", color: "#fff", cursor: purging ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 600, opacity: purging ? 0.6 : 1 }}>
                 {purging ? "Purgant…" : "Purgar"}
               </button>
             </div>

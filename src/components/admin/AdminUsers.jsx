@@ -154,11 +154,11 @@ export default function AdminUsers() {
                   <td style={td}>
                     {isAdmin ? (
                       <select value={getRole(u)} onChange={e => changeRole(u.id, e.target.value)}
-                        style={{ padding: "4px 8px", borderRadius: 5, border: `1px solid ${tc.border}`, background: tc.bg, color: tc.text, fontFamily: "inherit", fontSize: 12 }}>
+                        style={{ padding: "4px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: tc.bg, color: tc.text, fontFamily: "inherit", fontSize: 12 }}>
                         {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
                     ) : (
-                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 5, padding: "2px 8px", ...(ROLE_COLORS[getRole(u)] ?? {}) }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, borderRadius: 4, padding: "2px 8px", ...(ROLE_COLORS[getRole(u)] ?? {}) }}>
                         {getRole(u)}
                       </span>
                     )}
@@ -167,7 +167,7 @@ export default function AdminUsers() {
                   <td style={{ ...td, fontSize: 12, color: tc.textMid }}>{formatIsoDate(u.created_at)}</td>
                   <td style={td}>
                     <button onClick={() => deleteUser(u.id, u.email)}
-                      style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 5, padding: "3px 8px", cursor: "pointer", fontSize: 11, color: "#C62828", fontFamily: "inherit" }}>
+                      style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 4, padding: "3px 8px", cursor: "pointer", fontSize: 11, color: "#C62828", fontFamily: "inherit" }}>
                       ✕
                     </button>
                   </td>
@@ -218,11 +218,11 @@ export default function AdminUsers() {
                       <td style={td}>
                         <div style={{ display: "flex", gap: 6 }}>
                           <button onClick={() => approveUser(u.id)}
-                            style={{ padding: "4px 10px", borderRadius: 5, border: "none", background: tc.green, color: "#fff", cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600 }}>
+                            style={{ padding: "4px 10px", borderRadius: 4, border: "none", background: tc.green, color: "#fff", cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600 }}>
                             Aprovar
                           </button>
                           <button onClick={() => deleteUser(u.id, u.email)}
-                            style={{ padding: "4px 10px", borderRadius: 5, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
+                            style={{ padding: "4px 10px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
                             Rebutjar
                           </button>
                         </div>
@@ -242,12 +242,12 @@ export default function AdminUsers() {
             <label style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 }}>Email</label>
             <input type="email" value={inviteEmail} onChange={e => setInviteEmail(e.target.value)} required
               placeholder="usuari@domini.com"
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box" }} />
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box" }} />
           </div>
           <div>
             <label style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em", display: "block", marginBottom: 6 }}>Rol</label>
             <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} disabled={!isAdmin}
-              style={{ padding: "8px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit" }}>
+              style={{ padding: "8px 12px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit" }}>
               {(isAdmin ? ROLES : ["user"]).map(r => <option key={r} value={r}>{r}</option>)}
             </select>
             {!isAdmin && (
@@ -257,7 +257,7 @@ export default function AdminUsers() {
             )}
           </div>
           <button type="submit" disabled={inviting}
-            style={{ padding: "9px 20px", borderRadius: 7, border: "none", background: tc.navy, color: "#fff", cursor: inviting ? "not-allowed" : "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: 600, opacity: inviting ? 0.7 : 1, alignSelf: "flex-start" }}>
+            style={{ padding: "9px 20px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: inviting ? "not-allowed" : "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: 600, opacity: inviting ? 0.7 : 1, alignSelf: "flex-start" }}>
             {inviting ? "Enviant…" : "Enviar invitació"}
           </button>
         </form>

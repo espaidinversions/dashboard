@@ -179,7 +179,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   );
 
   // shared styles
-  const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:12, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
+  const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:10, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
   const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap", userSelect:"none" };
   const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
 
@@ -514,7 +514,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     toast({ message: "Searchers recarregats des de la base de dades." });
   };
 
-  const inp = { border:`1px solid ${TC.border}`, borderRadius:5, padding:"4px 8px", fontSize:11, color:TC.text, background:TC.card, outline:"none", fontFamily:"inherit", cursor:"pointer" };
+  const inp = { border:`1px solid ${TC.border}`, borderRadius:4, padding:"4px 8px", fontSize:11, color:TC.text, background:TC.card, outline:"none", fontFamily:"inherit", cursor:"pointer" };
 
   // ── Handlers for historic table ───────────────────────────
   const saveSearcherField = async (target, field, value) => {
@@ -613,7 +613,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
         </button>
         <input ref={csvRef} type="file" accept=".csv" style={{ display:"none" }} onChange={handleCSV} />
         <button onClick={() => csvRef.current?.click()}
-          style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:7, padding:"6px 14px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
+          style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
           ↑ Importar CSV
         </button>
       </div>
@@ -642,7 +642,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
           </div>
 
           {/* Conversations funnel strip */}
-          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16, padding:"10px 14px", background:TC.bgAlt, borderRadius:8 }}>
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16, padding:"10px 14px", background:TC.bgAlt, borderRadius:10 }}>
             {[
               { label:"Total converses", value: convStats.total,       color: TC.navy },
               { label:"SC backed",       value: convStats.scBacked,    color: "#2563A8" },
@@ -691,7 +691,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                   container: {
                     background: TC.card,
                     border: `1px solid ${TC.border}`,
-                    borderRadius: 7,
+                    borderRadius: 6,
                     fontSize: 11,
                     fontFamily: "'Outfit',system-ui,sans-serif",
                     color: TC.text,
@@ -1004,7 +1004,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
             </div>
             {canEdit && (
               <button onClick={() => setShowAddModal(true)}
-                style={{ padding: "7px 14px", borderRadius: 7, border: `1.5px solid ${TC.border}`,
+                style={{ padding: "7px 14px", borderRadius: 6, border: `1.5px solid ${TC.border}`,
                   background: "transparent", color: TC.navy, cursor: "pointer",
                   fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
                 + Nou searcher

@@ -107,7 +107,7 @@ export default function AdminActivity() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tc.navy }}>Activitat</h2>
         <button onClick={() => exportCsv(logs)} disabled={logs.length === 0}
-          style={{ padding: "6px 14px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: logs.length === 0 ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit", opacity: logs.length === 0 ? 0.5 : 1 }}>
+          style={{ padding: "6px 14px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: logs.length === 0 ? "not-allowed" : "pointer", fontSize: 12, fontFamily: "inherit", opacity: logs.length === 0 ? 0.5 : 1 }}>
           ↓ CSV
         </button>
       </div>
@@ -182,7 +182,7 @@ export default function AdminActivity() {
                             onClick={() => handleRevert(l)}
                             disabled={isReverting}
                             title="Revertir canvi"
-                            style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 5, padding: "3px 7px", cursor: isReverting ? "not-allowed" : "pointer", fontSize: 12, color: "#6A1B9A", fontFamily: "inherit", opacity: isReverting ? 0.5 : 1 }}>
+                            style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 4, padding: "3px 7px", cursor: isReverting ? "not-allowed" : "pointer", fontSize: 12, color: "#6A1B9A", fontFamily: "inherit", opacity: isReverting ? 0.5 : 1 }}>
                             ↩
                           </button>
                         )}

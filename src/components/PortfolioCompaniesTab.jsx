@@ -24,7 +24,7 @@ export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:12, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
+  const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:10, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
   const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap" };
   const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
 
@@ -182,7 +182,7 @@ export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
       <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:8, marginBottom:14 }}>
         {canEdit && (
           <button onClick={() => setShowAddModal(true)}
-            style={{ padding: "7px 14px", borderRadius: 7, border: `1.5px solid ${TC.border}`,
+            style={{ padding: "7px 14px", borderRadius: 6, border: `1.5px solid ${TC.border}`,
               background: "transparent", color: TC.navy, cursor: "pointer",
               fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
             + Nova participada
@@ -197,7 +197,7 @@ export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
         </button>
         <input ref={fileRef} type="file" accept=".json" style={{ display:"none" }} onChange={handleFile} />
         <button onClick={() => fileRef.current?.click()}
-          style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:7, padding:"6px 14px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
+          style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
           ↑ Importar JSON
         </button>
       </div>
@@ -206,7 +206,7 @@ export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
       <div style={{
         background: TC.bgAlt,
         border: `1px solid ${TC.border}`,
-        borderRadius: 8, padding:"10px 16px", marginBottom:18,
+        borderRadius: 10, padding:"10px 16px", marginBottom:18,
         display:"flex", alignItems:"center", gap:10,
         fontSize:11, color:TC.textMid,
       }}>

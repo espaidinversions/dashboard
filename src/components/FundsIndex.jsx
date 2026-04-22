@@ -8,6 +8,7 @@ import { upsertFundMeta, insertFund, deleteFund, loadAll, loadCapitalCalls, load
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
+import { makeFundRouteId } from "../data/fundDetailModel.js";
 
 export function FundsIndexInner({ inline = false, searchOverride }) {
   const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
@@ -107,9 +108,9 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
 
   const rows = useMemo(() => {
     const map = new Map();
-    for (const r of rawCC) {
-      const key = r.id ?? r.fons;
-      if (!map.has(key)) map.set(key, { id: r.id ?? null, fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, isMock: !!r.isMock });
+    for (const r of rawCC.filter((row) => row?.vcpe !== "PC")) {
+      const key = makeFundRouteId(r);
+      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, isMock: !!r.isMock });
       const f = map.get(key);
       if (r.cat === "Compromís") f.compromis += r.eur;
       if (r.cat === "Capital Call") f.calls += r.eur;
@@ -132,10 +133,14 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return rows.filter((row) => {
+    const shouldIncludeRow = (row) => {
       const sectionId = getVehiclePermissionSection(row);
-      const hasAccess = sectionId === "real-estate" ? canAccessRealEstate : canAccessAlternatives;
-      return hasAccess && row.fons.toLowerCase().includes(q);
+      if (canAccessAlternatives) return sectionId === "alternatives";
+      if (canAccessRealEstate) return sectionId === "real-estate";
+      return false;
+    };
+    return rows.filter((row) => {
+      return shouldIncludeRow(row) && row.fons.toLowerCase().includes(q);
     });
   }, [rows, search, canAccessAlternatives, canAccessRealEstate]);
 
@@ -195,7 +200,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
             <Link to="/" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Dashboard</Link>
             <div style={{ flex: 1 }} />
             <input value={searchLocal} onChange={e => setSearchLocal(e.target.value)} placeholder="Cerca per nom…"
-              style={{ padding: "6px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 200 }} />
+              style={{ padding: "6px 12px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 200 }} />
           </div>
           <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
             <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Fons</span>
@@ -226,9 +231,9 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
                   const rowCanEdit = getVehiclePermissionSection(r) === "real-estate" ? canEditRealEstate : canEditAlternatives;
                   const canEditTvpi = rowCanEdit || isAdmin || isSuperuser;
                   return (
-                  <tr key={r.id ?? r.fons} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
+                  <tr key={r.routeId ?? r.id ?? r.fons} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                      <Link to={`/fund/${encodeURIComponent(r.id ?? r.fons)}`} style={{ color: tc.navy, textDecoration: "none" }}
+                      <Link to={`/fund/${encodeURIComponent(r.routeId ?? r.id ?? r.fons)}`} style={{ color: tc.navy, textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
                         onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>
                         <EditableCell value={r.fons} type="text"
@@ -295,7 +300,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
         <div style={{ marginTop: 16 }}>
           {!addingFund ? (
             <button onClick={() => setAddingFund(true)}
-              style={{ background: "transparent", border: `1.5px dashed ${tc.border}`, borderRadius: 8,
+              style={{ background: "transparent", border: `1.5px dashed ${tc.border}`, borderRadius: 10,
                 padding: "8px 16px", cursor: "pointer", fontSize: 12, color: tc.textMid,
                 fontFamily: "inherit", fontWeight: 600 }}>
               + Nou fons

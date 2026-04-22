@@ -150,7 +150,7 @@ export default function AdminEntities() {
                           value={editValue}
                           onChange={ev => setEditValue(ev.target.value)}
                           onKeyDown={ev => { if (ev.key === "Enter") saveEdit(e.id); if (ev.key === "Escape") cancelEdit(); }}
-                          style={{ padding: "4px 8px", borderRadius: 5, border: `1.5px solid ${tc.green}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit", width: "100%", minWidth: 200 }}
+                          style={{ padding: "4px 8px", borderRadius: 4, border: `1.5px solid ${tc.green}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit", width: "100%", minWidth: 200 }}
                         />
                       ) : (
                         <span style={{ fontWeight: 500 }}>{e.canonical_name}</span>
@@ -166,17 +166,17 @@ export default function AdminEntities() {
                       {isEditing ? (
                         <span style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
                           <button onClick={() => saveEdit(e.id)} disabled={saving}
-                            style={{ padding: "3px 10px", borderRadius: 5, border: "none", background: tc.green, color: "#fff", cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600 }}>
+                            style={{ padding: "3px 10px", borderRadius: 4, border: "none", background: tc.green, color: "#fff", cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600 }}>
                             {saving ? "…" : "Desa"}
                           </button>
                           <button onClick={cancelEdit}
-                            style={{ padding: "3px 8px", borderRadius: 5, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
+                            style={{ padding: "3px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
                             ✕
                           </button>
                         </span>
                       ) : (
                         <button onClick={() => startEdit(e)}
-                          style={{ padding: "3px 10px", borderRadius: 5, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
+                          style={{ padding: "3px 10px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
                           Reanomena
                         </button>
                       )}

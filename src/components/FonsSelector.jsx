@@ -34,7 +34,7 @@ export function FonsSelector({excluded, setExcluded, rawCC = []}) {
 
   const allVisible    = visible.every(f=>!excluded.has(f.fons));
   const someExcluded  = excluded.size > 0;
-  const inp = {border:`1px solid ${TC.border}`,borderRadius:5,padding:"4px 7px",fontSize:11,color:TC.text,background:TC.card,outline:"none",fontFamily:"inherit"};
+  const inp = {border:`1px solid ${TC.border}`,borderRadius:4,padding:"4px 7px",fontSize:11,color:TC.text,background:TC.card,outline:"none",fontFamily:"inherit"};
 
   const vcpeBg = (vcpe) => dark ? (vcpe==="PE"?"#112030":vcpe==="VC"?"#0A2010":"#20163A") : (VCPE_CFG[vcpe]?.bg||TC.bgAlt);
   const estBg  = (est)  => dark ? "#112030" : (EST_CFG[est]?.bg||TC.bgAlt);
@@ -49,7 +49,7 @@ export function FonsSelector({excluded, setExcluded, rawCC = []}) {
   return (
     <div ref={ref} style={{position:"relative"}}>
       <button onClick={()=>setOpen(o=>!o)}
-        style={{display:"flex",alignItems:"center",gap:8,background:someExcluded?TC.yellowLight:TC.card,border:`1.5px solid ${someExcluded?TC.yellow:TC.border}`,borderRadius:7,padding:"7px 14px",cursor:"pointer",fontSize:12,color:someExcluded?TC.yellow:TC.textMid,fontWeight:someExcluded?700:400,fontFamily:"inherit",whiteSpace:"nowrap"}}>
+        style={{display:"flex",alignItems:"center",gap:8,background:someExcluded?TC.yellowLight:TC.card,border:`1.5px solid ${someExcluded?TC.yellow:TC.border}`,borderRadius:6,padding:"7px 14px",cursor:"pointer",fontSize:12,color:someExcluded?TC.yellow:TC.textMid,fontWeight:someExcluded?700:400,fontFamily:"inherit",whiteSpace:"nowrap"}}>
         <span>🏦 Selecció de Fons</span>
         {someExcluded && <span style={{background:TC.yellow,color:"#fff",borderRadius:10,padding:"1px 7px",fontSize:10,fontWeight:700}}>{excluded.size} exclosos</span>}
         <span style={{fontSize:10,opacity:0.5}}>{open?"▲":"▼"}</span>
@@ -74,11 +74,11 @@ export function FonsSelector({excluded, setExcluded, rawCC = []}) {
               </select>
               <div style={{marginLeft:"auto",display:"flex",gap:6}}>
                 <button onClick={toggleAll}
-                  style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:5,padding:"3px 9px",cursor:"pointer",fontSize:11,color:TC.textMid,fontFamily:"inherit"}}>
+                  style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:4,padding:"3px 9px",cursor:"pointer",fontSize:11,color:TC.textMid,fontFamily:"inherit"}}>
                   {allVisible?"Des-sel. tot":"Sel. tot"}
                 </button>
                 {someExcluded&&<button onClick={reset}
-                  style={{background:TC.yellowLight,border:`1px solid ${TC.yellow}`,borderRadius:5,padding:"3px 9px",cursor:"pointer",fontSize:11,color:TC.yellow,fontFamily:"inherit",fontWeight:700}}>
+                  style={{background:TC.yellowLight,border:`1px solid ${TC.yellow}`,borderRadius:4,padding:"3px 9px",cursor:"pointer",fontSize:11,color:TC.yellow,fontFamily:"inherit",fontWeight:700}}>
                   Reset
                 </button>}
               </div>

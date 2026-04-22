@@ -170,7 +170,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
     setFundsAndSync(p => [inserted, ...p]);
   };
 
-  const inp2={border:`1px solid ${TC.border}`,borderRadius:5,padding:"7px 10px",fontSize:13,color:TC.text,background:TC.card,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"};
+  const inp2={border:`1px solid ${TC.border}`,borderRadius:4,padding:"7px 10px",fontSize:13,color:TC.text,background:TC.card,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"};
   const th2={padding:"9px 10px",fontSize:10,letterSpacing:"0.1em",color:TC.textLight,textTransform:"uppercase",fontWeight:600,textAlign:"left",borderBottom:`2px solid ${TC.border}`,cursor:"pointer",userSelect:"none",whiteSpace:"nowrap"};
 
   const kpis=[
@@ -274,10 +274,10 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
       </div>
 
       {chartF&&(
-        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:TC.card,border:`1.5px solid ${TC.green}`,borderRadius:8,padding:"9px 16px"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:TC.card,border:`1.5px solid ${TC.green}`,borderRadius:10,padding:"9px 16px"}}>
           <span style={{fontSize:13,color:TC.navy,fontWeight:600}}>🔍 Filtre actiu:</span>
-          <span style={{fontSize:13,color:TC.green,fontWeight:700,background:greenBadgeBg,padding:"2px 10px",borderRadius:5}}>{chartF.value}</span>
-          <button onClick={()=>setChartF(null)} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${TC.border}`,color:TC.textMid,borderRadius:5,padding:"3px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>✕ Treure filtre</button>
+          <span style={{fontSize:13,color:TC.green,fontWeight:700,background:greenBadgeBg,padding:"2px 10px",borderRadius:4}}>{chartF.value}</span>
+          <button onClick={()=>setChartF(null)} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${TC.border}`,color:TC.textMid,borderRadius:4,padding:"3px 10px",cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>✕ Treure filtre</button>
         </div>
       )}
 
@@ -355,12 +355,12 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
                 </select>
               </div>
             ))}
-            <button onClick={exportExcel} style={{background:"transparent",border:`1.5px solid ${TC.border}`,color:TC.textMid,borderRadius:5,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit"}}>↓ Excel</button>
-            {canEdit && <button onClick={()=>setForm(!form)} style={{background:TC.green,border:"none",color:"#fff",borderRadius:5,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>+ Afegir Fons</button>}
+            <button onClick={exportExcel} style={{background:"transparent",border:`1.5px solid ${TC.border}`,color:TC.textMid,borderRadius:4,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit"}}>↓ Excel</button>
+            {canEdit && <button onClick={()=>setForm(!form)} style={{background:TC.green,border:"none",color:"#fff",borderRadius:4,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>+ Afegir Fons</button>}
           </div>
         </div>
         {form&& canEdit &&(
-          <div style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:8,padding:"12px",marginBottom:12}}>
+          <div style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:10,padding:"12px",marginBottom:12}}>
             <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto",gap:7,alignItems:"end"}}>
               {[
                 {label:"Nom",key:"name",type:"input"},
@@ -388,7 +388,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
                   await add(nf);
                   setNf({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",estimatedClosing:""});
                   setForm(false);
-                }} style={{background:TC.navy,border:"none",color:"#fff",borderRadius:5,padding:"8px 12px",cursor:"pointer",fontSize:14,fontWeight:700,width:"100%",fontFamily:"inherit"}}>✓</button>
+                }} style={{background:TC.navy,border:"none",color:"#fff",borderRadius:4,padding:"8px 12px",cursor:"pointer",fontSize:14,fontWeight:700,width:"100%",fontFamily:"inherit"}}>✓</button>
               </div>
             </div>
           </div>
@@ -424,8 +424,8 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
                     {cur==="EUR"?`€${toEUR(f.amount,f.currency).toFixed(2)}M`:`$${toUSD(f.amount,f.currency).toFixed(2)}M`}
                     <span style={{fontSize:10,color:TC.textLight,marginLeft:4,fontFamily:"inherit",fontWeight:400}}>({f.currency==="EUR"?"€":"$"}{f.amount}M)</span>
                   </td>
-                  <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
-                  <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:5,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>
+                  <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:4,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
+                  <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:4,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>
                   <td style={{padding:"9px 10px",fontSize:12,color:TC.textMid,whiteSpace:"nowrap"}}>{canEdit ? <EditableCell value={f.sector} options={sectorOptions} allowCustom optionsKey="p_sector" onSave={v=>upd(f.id,"sector",v)}/> : f.sector}</td>
                   <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.status} options={PIPELINE_STATUS_OPTIONS} allowCustom optionsKey="p_status" badgeCfg={STATUS_CFG} onSave={v=>upd(f.id,"status",v)}/> : <span style={{display:"block"}}>{f.status}</span>}</td>
                   <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.canal} options={PIPELINE_CANAL_OPTIONS} allowCustom optionsKey="p_canal" badgeCfg={CANAL_CFG} onSave={v=>upd(f.id,"canal",v)}/> : <span style={{display:"block"}}>{f.canal}</span>}</td>
@@ -453,7 +453,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
       <div style={{display:"flex",justifyContent:"flex-end",marginTop:10,gap:6}}>
         <span style={{fontSize:11,color:TC.textLight,alignSelf:"center"}}>Moneda:</span>
         {["EUR","USD"].map(c=>(
-          <button key={c} onClick={()=>setCur(c)} style={{background:cur===c?TC.navy:"transparent",border:`1.5px solid ${TC.navy}`,color:cur===c?"#fff":TC.navy,borderRadius:5,padding:"4px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>{c}</button>
+          <button key={c} onClick={()=>setCur(c)} style={{background:cur===c?TC.navy:"transparent",border:`1.5px solid ${TC.navy}`,color:cur===c?"#fff":TC.navy,borderRadius:4,padding:"4px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>{c}</button>
         ))}
       </div>
     </div>

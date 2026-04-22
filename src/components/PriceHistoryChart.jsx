@@ -118,7 +118,7 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, valueSeries 
 
   const hasBars = chartData.some(r => r.cumInflow != null);
   const btnStyle = (id) => ({
-    padding: "3px 10px", borderRadius: 5, fontSize: 11,
+    padding: "3px 10px", borderRadius: 4, fontSize: 11,
     cursor: "pointer", fontFamily: "inherit",
     border: `1.5px solid ${mode === id ? tc.navy : tc.border}`,
     background: mode === id ? (dark ? "#0A1A30" : "#E8F0FA") : "transparent",

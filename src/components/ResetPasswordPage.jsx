@@ -19,7 +19,7 @@ export default function ResetPasswordPage() {
 
   const inp = {
     width: "100%", padding: "11px 14px", fontSize: 14,
-    border: "1.5px solid #D0D8E4", borderRadius: 8,
+    border: "1.5px solid #D0D8E4", borderRadius: 10,
     fontFamily: "'Outfit',system-ui,sans-serif", outline: "none",
     background: "#F8FAFB", color: "#1A2B3C", boxSizing: "border-box",
     transition: "border-color 0.15s",
@@ -54,7 +54,7 @@ export default function ResetPasswordPage() {
       fontFamily: "'Outfit',system-ui,sans-serif",
     }}>
       <div style={{
-        background: "#fff", borderRadius: 16, padding: "40px 40px 36px",
+        background: "#fff", borderRadius: 14, padding: "40px 40px 36px",
         width: 360, boxShadow: "0 4px 32px rgba(0,0,0,.10)",
       }}>
         <div style={{ textAlign: "center", marginBottom: 28 }}>
@@ -88,14 +88,14 @@ export default function ResetPasswordPage() {
           </div>
 
           {error && (
-            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA", borderRadius: 7, padding: "9px 12px" }}>
+            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA", borderRadius: 6, padding: "9px 12px" }}>
               {error}
             </div>
           )}
 
           <button type="submit" disabled={loading} style={{
             marginTop: 4, padding: "12px", background: "#2B5070", color: "#fff",
-            border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600,
+            border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600,
             fontFamily: "inherit", cursor: loading ? "not-allowed" : "pointer",
             opacity: loading ? 0.7 : 1, transition: "opacity 0.15s",
           }}>

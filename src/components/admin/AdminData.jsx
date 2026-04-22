@@ -35,7 +35,7 @@ export default function AdminData() {
   };
 
   const sectionStyle = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", marginBottom: 20 };
-  const linkBtn = { display: "inline-block", padding: "8px 16px", borderRadius: 7, background: tc.navy, color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 600 };
+  const linkBtn = { display: "inline-block", padding: "8px 16px", borderRadius: 6, background: tc.navy, color: "#fff", textDecoration: "none", fontSize: 13, fontWeight: 600 };
 
   return (
     <div>
@@ -77,14 +77,14 @@ export default function AdminData() {
       {/* Confirm dialog */}
       {confirmTable && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ background: tc.card, borderRadius: 12, padding: 28, maxWidth: 380, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
+          <div style={{ background: tc.card, borderRadius: 10, padding: 28, maxWidth: 380, width: "100%", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
             <h3 style={{ margin: "0 0 12px", color: tc.navy }}>Confirmar esborrament</h3>
             <p style={{ margin: "0 0 16px", fontSize: 13, color: tc.textMid }}>
               Escriu <strong>{confirmTable}</strong> per confirmar:
             </p>
             <input value={confirmText} onChange={e => setConfirmText(e.target.value)}
               placeholder={confirmTable}
-              style={{ width: "100%", padding: "8px 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 16 }} />
+              style={{ width: "100%", padding: "8px 12px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", boxSizing: "border-box", marginBottom: 16 }} />
             <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
               <button onClick={() => setConfirmTable(null)}
                 style={{ padding: "7px 16px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>

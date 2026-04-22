@@ -112,7 +112,7 @@ export function PublicMarketsTablesSection({
                                         {disc ? (
                                           <span style={{ fontWeight: 500, color: tc.textLight }}>
                                             {position.nom}
-                                            <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: tc.red, background: tc.red + "18", borderRadius: 3, padding: "1px 4px" }}>DISC.</span>
+                                            <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: tc.red, background: tc.red + "18", borderRadius: 4, padding: "1px 4px" }}>DISC.</span>
                                           </span>
                                         ) : (
                                           <Link to={`/mercats-publics/${makePmPositionRouteId(position)}`} style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>

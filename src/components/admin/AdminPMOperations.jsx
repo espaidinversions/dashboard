@@ -136,7 +136,7 @@ function TransactionsTab() {
 
   const th = { ...sharedStyles.th(tc), padding: "8px 10px", textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
   const td = { padding: "8px 10px", borderBottom: `1px solid ${tc.border}`, fontSize: 12 };
-  const inp = { padding: "5px 8px", borderRadius: 5, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit" };
+  const inp = { padding: "5px 8px", borderRadius: 4, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit" };
 
   const chip = (label, active, onClick) => (
     <button key={label} onClick={onClick} style={{
@@ -173,7 +173,7 @@ function TransactionsTab() {
       </div>
 
       {showAdd && (
-        <form onSubmit={handleAdd} style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, padding: "14px 16px", background: tc.bgAlt, borderRadius: 8, border: `1px solid ${tc.border}` }}>
+        <form onSubmit={handleAdd} style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16, padding: "14px 16px", background: tc.bgAlt, borderRadius: 10, border: `1px solid ${tc.border}` }}>
           {[
             { key: "isin", label: "ISIN", placeholder: "IE00B4L5Y983" },
             { key: "date", label: "Data", placeholder: "2024-03-15" },

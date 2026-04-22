@@ -7,7 +7,7 @@ export const sharedStyles = {
   cardPad: (tc, pad = "20px 24px") => ({ ...sharedStyles.card(tc), padding: pad }),
   th: (tc) => ({ padding: "10px 12px", fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
   sec: (tc) => ({ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
-  badge: (tc) => ({ fontSize: 11, borderRadius: 5, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
+  badge: (tc) => ({ fontSize: 11, borderRadius: 4, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
   kpi: (tc) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 140, flex: 1 }),
   kpiLabel: (tc) => ({ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }),
   kpiValue: (tc, valueColor) => ({ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }),
@@ -71,7 +71,7 @@ export function Logo() {
 export function Badge({label,cfg}) {
   const { tc: TC } = useTheme();
   const s=cfg||{color:TC.textMid,bg:TC.bgAlt};
-  return <span style={{fontSize:11,background:s.bg,color:s.color,borderRadius:5,padding:"2px 8px",fontWeight:600,whiteSpace:"nowrap",display:"inline-block"}}>{label}</span>;
+  return <span style={{fontSize:11,background:s.bg,color:s.color,borderRadius:4,padding:"2px 8px",fontWeight:600,whiteSpace:"nowrap",display:"inline-block"}}>{label}</span>;
 }
 
 // ── EditableCell ──────────────────────────────────────────
@@ -203,14 +203,14 @@ export function EditableCell({ value, onSave, type = "text", options, fmt, style
     const s = badgeCfg[value] || { bg: tc.bgAlt, color: tc.textMid, border: tc.border };
     if (disabled) {
       return (
-        <span style={{ fontSize: 12, background: s.bg, color: s.color, borderRadius: 5, padding: "3px 9px", fontWeight: 600, border: `1px solid ${s.border || s.bg}`, display: "inline-block" }}>
+        <span style={{ fontSize: 12, background: s.bg, color: s.color, borderRadius: 4, padding: "3px 9px", fontWeight: 600, border: `1px solid ${s.border || s.bg}`, display: "inline-block" }}>
           {display}
         </span>
       );
     }
     return (
       <span onClick={start} title="Fes clic per editar"
-        style={{ fontSize: 12, background: s.bg, color: s.color, borderRadius: 5, padding: "3px 9px", fontWeight: 600, cursor: "pointer", border: `1px solid ${s.border || s.bg}`, display: "inline-block", userSelect: "none" }}>
+        style={{ fontSize: 12, background: s.bg, color: s.color, borderRadius: 4, padding: "3px 9px", fontWeight: 600, cursor: "pointer", border: `1px solid ${s.border || s.bg}`, display: "inline-block", userSelect: "none" }}>
         {display} <span style={{ fontSize: 9, opacity: 0.6 }}>✎</span>
       </span>
     );
@@ -229,7 +229,7 @@ export function EditableCell({ value, onSave, type = "text", options, fmt, style
   return (
     <span onClick={start} title="Fes clic per editar"
       style={{ cursor: "text", display: "inline-block", textAlign: align,
-        borderRadius: 3, padding: "2px 4px", minWidth: 70,
+        borderRadius: 4, padding: "2px 4px", minWidth: 70,
         color: isEmpty ? tc.textLight : tc.text,
         ...style,
       }}>
@@ -260,7 +260,7 @@ export function DeleteRowButton({ onDelete }) {
         style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
         <span style={{ fontSize: 11, color: tc.textMid }}>Eliminar?</span>
         <button onClick={onDelete}
-          style={{ fontSize: 11, padding: "2px 8px", borderRadius: 5, border: "none",
+          style={{ fontSize: 11, padding: "2px 8px", borderRadius: 4, border: "none",
             background: tc.red ?? "#C62828", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontWeight: 600 }}>
           Confirmar
         </button>
@@ -297,7 +297,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
 
   const inp = {
     width: "100%", padding: "7px 10px", fontSize: 13,
-    border: `1.5px solid ${tc.border}`, borderRadius: 7,
+    border: `1.5px solid ${tc.border}`, borderRadius: 6,
     background: tc.bg, color: tc.text, fontFamily: "inherit",
     outline: "none", boxSizing: "border-box",
   };
@@ -352,7 +352,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                         <button
                           type="button"
                           onClick={() => setCustom(f.key, true)}
-                          style={{ padding: "0 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit" }}
+                          style={{ padding: "0 12px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit" }}
                         >
                           Edita
                         </button>
@@ -370,7 +370,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                       <button
                         type="button"
                         onClick={() => setCustom(f.key, false)}
-                        style={{ padding: "0 12px", borderRadius: 7, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit" }}
+                        style={{ padding: "0 12px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontFamily: "inherit" }}
                       >
                         Llista
                       </button>
@@ -401,17 +401,17 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
           ))}
           {error && (
             <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA",
-              borderRadius: 7, padding: "8px 12px" }}>{error}</div>
+              borderRadius: 6, padding: "8px 12px" }}>{error}</div>
           )}
           <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
             <button type="button" onClick={handleClose}
-              style={{ padding: "8px 16px", borderRadius: 7, border: `1.5px solid ${tc.border}`,
+              style={{ padding: "8px 16px", borderRadius: 6, border: `1.5px solid ${tc.border}`,
                 background: "transparent", color: tc.textMid, cursor: "pointer",
                 fontFamily: "inherit", fontSize: 13 }}>
               Cancel·lar
             </button>
             <button type="submit"
-              style={{ padding: "8px 16px", borderRadius: 7, border: "none",
+              style={{ padding: "8px 16px", borderRadius: 6, border: "none",
                 background: tc.navy, color: "#fff", cursor: "pointer",
                 fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}>
               Afegir
