@@ -108,7 +108,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
 
   const rows = useMemo(() => {
     const map = new Map();
-    for (const r of rawCC.filter((row) => row?.vcpe !== "PC")) {
+    for (const r of rawCC.filter((row) => row?.vcpe === "PE" || row?.vcpe === "VC" || row?.vcpe === "RE")) {
       const key = makeFundRouteId(r);
       if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, isMock: !!r.isMock });
       const f = map.get(key);

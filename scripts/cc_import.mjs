@@ -91,11 +91,44 @@ const CAT_MAP = {
 };
 
 const VCPE_SET = new Set(["PE", "VC", "RE"]);
+const VEHICLE_OVERRIDES = {
+  "meridia real estate fund v ficc": { vcpe: "RE", est: "Fons Primari" },
+  "tectum iii": { vcpe: "RE", est: "Fons Primari" },
+};
+const EXCLUDED_VEHICLES = new Set(["castelnau capital"]);
 
 function excelDateToISO(serial) {
   const d = XLSX.SSF.parse_date_code(serial);
   if (!d || d.y < 2010) return null;
   return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
+}
+
+function parseFundMetaExcel(filePath) {
+  const wb = XLSX.readFile(filePath);
+  const ws = wb.Sheets["Valoracions"];
+  if (!ws) throw new Error('Sheet "Valoracions" not found');
+
+  const raw = XLSX.utils.sheet_to_json(ws, { defval: "", header: 1 });
+  const NAME_COL = 3;
+  const TVPI_COL = 15; // "Múltiplo Total (MOIC)" in the first block
+  const firstBlockRows = [];
+
+  for (let i = 8; i < raw.length; i++) {
+    const row = raw[i];
+    const fons = String(row?.[NAME_COL] ?? "").trim();
+    const tvpi = Number(row?.[TVPI_COL]);
+    if (!fons || !Number.isFinite(tvpi) || tvpi <= 0) continue;
+    if (EXCLUDED_VEHICLES.has(fons.toLowerCase())) continue;
+    // Skip aggregate rows such as "Fons de Fons"
+    if (/^(fons de fons|grand total|total|\d{4})$/i.test(fons)) continue;
+    firstBlockRows.push({ fons, tvpi });
+  }
+
+  const deduped = new Map();
+  firstBlockRows.forEach((row) => {
+    if (!deduped.has(row.fons.toLowerCase())) deduped.set(row.fons.toLowerCase(), row);
+  });
+  return [...deduped.values()];
 }
 
 // ── Parse Excel ───────────────────────────────────────────────────────────────
@@ -117,8 +150,11 @@ function parseExcel(filePath) {
 
     const fons = String(r[2] ?? "").trim();
     if (fons) lastFons = fons;
+    if (EXCLUDED_VEHICLES.has(lastFons.trim().toLowerCase())) continue;
 
-    const vcpe = r[13];
+    const rawVcpe = String(r[13] ?? "").trim();
+    const override = VEHICLE_OVERRIDES[lastFons.trim().toLowerCase()] ?? null;
+    const vcpe = override?.vcpe ?? rawVcpe;
     if (!VCPE_SET.has(vcpe)) { skipped.noVcpe++; continue; }
 
     const tipusRaw = r[3];
@@ -137,6 +173,7 @@ function parseExcel(filePath) {
     const importEur   = Number(r[15]);                          // "Import en EUR" column
     const divisa      = String(r[7] || "EUR").trim();
     const eur         = divisa === "EUR" ? importLocal : (importEur || importLocal);
+    const est         = override?.est ?? (String(r[16] ?? "").trim() || null);
 
     const mes = Number(r[10]) || Number(data.slice(5, 7));
     const any = Number(r[11]) || Number(data.slice(0, 4));
@@ -148,9 +185,9 @@ function parseExcel(filePath) {
       data,
       eur,
       divisa,
-      vcpe:   String(vcpe),
-      est:    String(vcpe),   // fallback: same as vcpe
-      tipus:  String(vcpe),
+      vcpe,
+      est,
+      tipus,
       mes,
       any,
       fy,
@@ -205,6 +242,8 @@ if (dryRun) console.log("🔍 DRY RUN — no changes will be written\n");
 
 const rows = parseExcel(absPath);
 console.log(`✓ Parsed ${rows.length} rows from Excel`);
+const fundMetaRows = parseFundMetaExcel(absPath);
+console.log(`✓ Parsed ${fundMetaRows.length} TVPI rows from Valoracions`);
 
 // Summary by fund
 const fundCounts = new Map();
@@ -219,8 +258,13 @@ let mockCount = 0;
 const dbRows = rows.map(r => {
   const vehicle_id = resolveVehicleId(r.fons, fundNifMap);
   if (vehicle_id.startsWith("MOCKNIF:")) mockCount++;
-  return { vehicle_id, fons: r.fons, vcpe: r.vcpe, est: r.est, cat: r.cat, eur: r.eur, divisa: r.divisa, mes: r.mes, year: r.any, fy: r.fy, data: r.data };
+  return { vehicle_id, fons: r.fons, tipus: r.tipus, vcpe: r.vcpe, est: r.est, cat: r.cat, eur: r.eur, divisa: r.divisa, mes: r.mes, year: r.any, fy: r.fy, data: r.data };
 });
+const fundMetaDbRows = fundMetaRows.map((row) => ({
+  vehicle_id: resolveVehicleId(row.fons, fundNifMap),
+  fons: row.fons,
+  tvpi: row.tvpi,
+}));
 
 if (mockCount) console.log(`⚠ ${mockCount} rows will use mock vehicle_id (fund name not found in DB)`);
 
@@ -231,11 +275,13 @@ if (mockFunds.length) console.log("  Mock funds:", mockFunds.join(", "));
 if (dryRun) {
   console.log("\nSample rows (last 5):");
   dbRows.slice(-5).forEach(r => console.log(" ", JSON.stringify(r)));
+  console.log("\nSample TVPI rows (last 5):");
+  fundMetaDbRows.slice(-5).forEach(r => console.log(" ", JSON.stringify(r)));
   process.exit(0);
 }
 
 // Upsert any missing vehicle entities (mock) so FK constraint doesn't fail
-const mockRows = dbRows.filter(r => r.vehicle_id.startsWith("MOCKNIF:"));
+const mockRows = [...dbRows, ...fundMetaDbRows].filter(r => r.vehicle_id.startsWith("MOCKNIF:"));
 if (mockRows.length) {
   const mockEntities = [...new Map(mockRows.map(r => [r.vehicle_id, { id: r.vehicle_id, kind: "vehicle", canonical_name: r.fons, match_type: "mock", country: null }])).values()];
   const { error: upsertErr } = await sb.from("private_entities").upsert(mockEntities, { onConflict: "id" });
@@ -263,3 +309,13 @@ for (let i = 0; i < dbRows.length; i += BATCH) {
   process.stdout.write(`\r  Inserted ${inserted}/${dbRows.length}...`);
 }
 console.log(`\n✓ Import complet: ${inserted} moviments`);
+
+// Upsert Fund Meta TVPI values parsed from Valoracions
+if (fundMetaDbRows.length) {
+  const { error: fmErr } = await sb.from("fund_meta").upsert(fundMetaDbRows, { onConflict: "vehicle_id" });
+  if (fmErr) {
+    console.error("Fund Meta upsert failed:", fmErr.message);
+    process.exit(1);
+  }
+  console.log(`✓ Upserted ${fundMetaDbRows.length} TVPI rows into fund_meta`);
+}

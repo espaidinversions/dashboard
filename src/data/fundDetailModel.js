@@ -1,14 +1,26 @@
 import { slugify } from "../utils.js";
 
 export function makeFundRouteId(row) {
+  if (row?.id && row?.vcpe) return `${row.vcpe}:${row.id}`;
   return row?.id ?? slugify(row?.fons ?? "");
 }
 
 export function findFundRowsByRouteId(rows, routeId) {
   const decodedId = decodeURIComponent(routeId ?? "");
-  return (Array.isArray(rows) ? rows : []).filter(
+  const match = /^([A-Z]{2,3}):(.*)$/u.exec(decodedId);
+  const source = Array.isArray(rows) ? rows : [];
+  if (match) {
+    const [, vcpe, entityId] = match;
+    return source.filter((row) => row?.id === entityId && row?.vcpe === vcpe);
+  }
+
+  const hits = source.filter(
     (row) => (row?.id && row.id === decodedId) || slugify(row?.fons) === decodedId,
   );
+  if (hits.length === 0) return [];
+
+  const nonCompanyHits = hits.filter((row) => row?.vcpe !== "PC");
+  return nonCompanyHits.length > 0 ? nonCompanyHits : hits;
 }
 
 export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {

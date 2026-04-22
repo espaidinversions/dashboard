@@ -300,6 +300,25 @@ async function loadPrivateEntityMap() {
   return new Map(data.map((row) => [row.id, row]));
 }
 
+const CAPITAL_CALLS_PAGE_SIZE = 1000;
+
+async function fetchAllCapitalCallRows() {
+  if (!supabase) return { data: null, error: new Error("Supabase unavailable") };
+  const rows = [];
+  for (let from = 0; ; from += CAPITAL_CALLS_PAGE_SIZE) {
+    const to = from + CAPITAL_CALLS_PAGE_SIZE - 1;
+    const { data, error } = await supabase
+      .from("capital_calls")
+      .select("*")
+      .order("data")
+      .range(from, to);
+    if (error) return { data: null, error };
+    rows.push(...(data ?? []));
+    if (!data || data.length < CAPITAL_CALLS_PAGE_SIZE) break;
+  }
+  return { data: rows, error: null };
+}
+
 /**
  * @param {PrivateEntity[]} rows
  */
@@ -342,7 +361,7 @@ async function logAudit(action, tableName, recordId, changes) {
 export async function loadAll() {
   if (!supabase) return null;
   const [cc, fm, pl, co, sr, pe] = await Promise.all([
-    supabase.from("capital_calls").select("*").order("data"),
+    fetchAllCapitalCallRows(),
     supabase.from("fund_meta").select("*"),
     supabase.from("pipeline").select("*").order("id"),
     supabase.from("portfolio_companies").select("*").order("nom"),
@@ -405,7 +424,7 @@ export async function loadCompanies() {
   if (!supabase) return null;
   const [companies, capitalCalls, entityMap] = await Promise.all([
     supabase.from("portfolio_companies").select("*").order("nom"),
-    supabase.from("capital_calls").select("vehicle_id, fons, vcpe, cat, eur, data"),
+    fetchAllCapitalCallRows(),
     loadPrivateEntityMap(),
   ]);
   if (companies.error) return null;
@@ -420,7 +439,7 @@ export async function loadCompanies() {
 export async function loadCapitalCalls() {
   if (!supabase) return null;
   const [cc, entityMap] = await Promise.all([
-    supabase.from("capital_calls").select("*").order("data"),
+    fetchAllCapitalCallRows(),
     loadPrivateEntityMap(),
   ]);
   if (cc.error) return null;

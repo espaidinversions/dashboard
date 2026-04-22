@@ -273,23 +273,34 @@ export function mesosBg(m) {
 
 // ── XLSX row mappers ───────────────────────────────────────
 export function mapCapitalCallsRows(rows) {
-  return rows.map(r => ({
-    fons:   String(r["Fons"] ?? ""),
-    tipus:  String(r["Tipus"] ?? ""),
-    cat:    String(r["Categoria"] ?? ""),
-    data:   String(r["Data"] ?? ""),
-    mes:    Number(r["Mes"]),
-    any:    Number(r["Any"]),
-    fy:     String(r["FY"] ?? ""),
-    vcpe:   String(r["VCPE"] ?? ""),
-    est:    String(r["Estructura"] ?? ""),
-    eur:    Number(r["Import (€)"]),
-    divisa: String(r["Divisa"] ?? ""),
-  }));
+  return rows.map(r => {
+    const data = excelSerialToIsoDate(r["Data"]);
+    const yearFromDate = data ? Number(data.slice(0, 4)) : NaN;
+    const monthFromDate = data ? Number(data.slice(5, 7)) : NaN;
+    const any = Number(r["Any"]);
+    const mes = Number(r["Mes"]);
+    const fy = String(r["FY"] ?? "").trim();
+    return {
+      fons:   String(r["Fons"] ?? ""),
+      tipus:  String(r["Tipus"] ?? ""),
+      cat:    String(r["Categoria"] ?? ""),
+      data,
+      mes:    Number.isFinite(mes) && mes > 0 ? mes : monthFromDate,
+      any:    Number.isFinite(any) && any > 0 ? any : yearFromDate,
+      fy:     fy || (Number.isFinite(yearFromDate) ? `FY ${yearFromDate}` : ""),
+      vcpe:   String(r["VCPE"] ?? ""),
+      est:    String(r["Estructura"] ?? ""),
+      eur:    Number(r["Import (€)"]),
+      divisa: String(r["Divisa"] ?? ""),
+    };
+  });
 }
 
 function excelSerialToIsoDate(value) {
   if (value == null || value === "") return "";
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
   if (typeof value === "number" && Number.isFinite(value)) {
     const epoch = Date.UTC(1899, 11, 30);
     const date = new Date(epoch + Math.round(value) * 86400000);
@@ -298,6 +309,15 @@ function excelSerialToIsoDate(value) {
   const text = String(value).trim();
   if (!text || /pendent desemborsar/i.test(text)) return "";
   if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  const dmyMatch = text.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/);
+  if (dmyMatch) {
+    const day = Number(dmyMatch[1]);
+    const month = Number(dmyMatch[2]);
+    const year = Number(dmyMatch[3]);
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${year.toString().padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+  }
   const parsed = new Date(text);
   return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
 }

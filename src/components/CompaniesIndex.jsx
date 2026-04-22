@@ -4,6 +4,7 @@ import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, formatMultiple, multipleColor, readStoredFlag, usePersistedState } from "../utils.js";
 import { Badge } from "./SharedComponents.jsx";
 import { loadCompanies } from "../db.js";
+import { isActualCompany } from "../data/privateCompanyModel.js";
 
 const TIPUS_CFG = {
   "SF": { color: "#28A029", bg: "#E8F8E8" },
@@ -27,7 +28,7 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
   }, [setCompanies]);
 
   const rows = useMemo(() =>
-    companies.map(c => ({
+    companies.filter(isActualCompany).map(c => ({
       ...c,
       dpiMultiple: c.ticket > 0 && c.dpiEur != null ? c.dpiEur / c.ticket : null,
       rvpiMultiple: c.ticket > 0 && c.rvpiEur != null ? c.rvpiEur / c.ticket : null,

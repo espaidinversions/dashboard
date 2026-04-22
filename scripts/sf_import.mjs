@@ -48,6 +48,7 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
+const EXCLUDED_SEARCH_FUNDS = new Set(["castelnau capital"]);
 
 // ── Category mapping ──────────────────────────────────────────────────────────
 const CAT_MAP = {
@@ -122,6 +123,7 @@ function parseExcel(filePath) {
     const fons = String(r[0] ?? "").trim();
     if (fons) lastFons = fons;
     if (!lastFons) continue;
+    if (EXCLUDED_SEARCH_FUNDS.has(lastFons.toLowerCase())) continue;
 
     const tipusRaw = String(r[1] ?? "").trim();
     if (!tipusRaw) continue;
@@ -140,7 +142,7 @@ function parseExcel(filePath) {
     const any    = Number(r[9]) || Number(data.slice(0, 4));
     const fy     = String(r[11] || `FY ${any}`).trim();
 
-    rows.push({ fons: lastFons, cat, data, eur, divisa, mes, any, fy });
+    rows.push({ fons: lastFons, tipus: tipusRaw, cat, data, eur, divisa, mes, any, fy });
   }
 
   if (skipped.noCat.size) console.log("⚠ Skipped unknown categories:", [...skipped.noCat].sort().join(", "));
@@ -222,6 +224,7 @@ for (const r of rows) {
     sfRows.push({
       vehicle_id: id,
       fons: r.fons,
+      tipus: r.tipus,
       vcpe: "SF",
       est: "SF",
       cat: r.cat,

@@ -95,7 +95,10 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark,
   // ── collapsible section ──
   function Section({ sec }) {
     const visibleChildren = sec.children.filter((child) => {
-      if (sec.id === "alt") return canAccessSection?.(child.id === "posicions" ? "inversions" : child.id) ?? true;
+      if (sec.id === "alt") {
+        if (child.id === "searchers") return canAccessSection?.("alternatives") ?? true;
+        return canAccessSection?.(child.id === "posicions" ? "inversions" : child.id) ?? true;
+      }
       if (sec.id === "re") return canAccessSection?.(child.id) ?? true;
       if (sec.id === "mp") return canAccessSection?.(child.id) ?? true;
       return true;

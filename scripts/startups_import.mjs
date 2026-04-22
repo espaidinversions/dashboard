@@ -139,7 +139,7 @@ function parseExcel(filePath) {
     const any    = Number(r[10]) || Number(data.slice(0, 4));
     const fy     = String(r[12] || `FY ${any}`).trim();
 
-    rows.push({ fons: lastFons, cat, data, eur, divisa, vcpe: "PC", est: "PC", tipus: "PC", mes, any, fy });
+    rows.push({ fons: lastFons, cat, data, eur, divisa, vcpe: "PC", est: "PC", tipus: tipusRaw || "PC", mes, any, fy });
   }
 
   if (skipped.noCat.size) console.log("⚠ Skipped unknown categories:", [...skipped.noCat].sort().join(", "));
@@ -175,6 +175,15 @@ function resolveCompanyId(fons, entityMap) {
   return `MOCKNIF:COMPANY:${fons.toUpperCase().replace(/\s+/g, "_").slice(0, 60)}`;
 }
 
+function makeDuplicateKey(row) {
+  return [
+    row.vehicle_id ?? "",
+    row.data ?? "",
+    row.cat ?? "",
+    Number(row.eur ?? 0).toFixed(2),
+  ].join("|");
+}
+
 // ── Main ──────────────────────────────────────────────────────────────────────
 const [,, filePath, flag] = process.argv;
 if (!filePath) {
@@ -197,16 +206,33 @@ console.log("Loading company entities from DB...");
 const entityMap = await buildCompanyEntityMap();
 
 let mockCount = 0;
-const dbRows = rows.map(r => {
+const mappedRows = rows.map(r => {
   const vehicle_id = resolveCompanyId(r.fons, entityMap);
   if (vehicle_id.startsWith("MOCKNIF:")) mockCount++;
-  return { vehicle_id, fons: r.fons, vcpe: r.vcpe, est: r.est, cat: r.cat, eur: r.eur, divisa: r.divisa, mes: r.mes, year: r.any, fy: r.fy, data: r.data };
+  return { vehicle_id, fons: r.fons, tipus: r.tipus, vcpe: r.vcpe, est: r.est, cat: r.cat, eur: r.eur, divisa: r.divisa, mes: r.mes, year: r.any, fy: r.fy, data: r.data };
 });
+
+const { data: sfRows, error: sfErr } = await sb
+  .from("capital_calls")
+  .select("vehicle_id, data, cat, eur")
+  .eq("vcpe", "SF");
+if (sfErr) {
+  console.error("Failed to load existing SF rows:", sfErr.message);
+  process.exit(1);
+}
+
+const sfDuplicateKeys = new Set((sfRows ?? []).map(makeDuplicateKey));
+const dbRows = mappedRows.filter((row) => !sfDuplicateKeys.has(makeDuplicateKey(row)));
 
 if (mockCount) {
   console.log(`⚠ ${mockCount} rows will use mock vehicle_id`);
   const mockNames = [...new Set(dbRows.filter(r => r.vehicle_id.startsWith("MOCKNIF:")).map(r => r.fons))];
   console.log("  Unresolved startups:", mockNames.join(", "));
+}
+
+const skippedDuplicates = mappedRows.length - dbRows.length;
+if (skippedDuplicates) {
+  console.log(`⚠ Skipped ${skippedDuplicates} PC rows duplicated by existing SF movements`);
 }
 
 if (dryRun) {

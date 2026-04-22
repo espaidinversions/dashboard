@@ -31,6 +31,7 @@ import { Sidebar } from "./Sidebar.jsx";
 import { normalizePrivateWorkbookRows } from "../data/alternativesModel.js";
 import { splitRealEstateRows, buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { makeVehicleDetailPath } from "../data/privateRoutes.js";
+import { isActualCompany, isSearchFundShell } from "../data/privateCompanyModel.js";
 
 const LS_CC = "tc_rawCC";
 const LS_PL = "tc_funds0";
@@ -694,6 +695,10 @@ function DashboardInner() {
   const [expandedFons, setExpandedFons] = useState(new Set());
   const [ccChartF, setCcChartF] = useState(null); // {type, value} per filtrar taula fons
 
+  const actualCompanies = useMemo(() => (Array.isArray(companiesData) ? companiesData.filter(isActualCompany) : []), [companiesData]);
+  const actualCompanyIds = useMemo(() => new Set(actualCompanies.map((company) => company.id).filter(Boolean)), [actualCompanies]);
+  const searcherShellIds = useMemo(() => new Set((Array.isArray(companiesData) ? companiesData : []).filter(isSearchFundShell).map((company) => company.id).filter(Boolean)), [companiesData]);
+
   // Dades base filtrades per vcpe i exclusió
   const baseTx      = useMemo(()=>TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[TRANSACTIONS,excluded]);
   const baseCompr   = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[COMPROMISOS,excluded]);
@@ -701,6 +706,8 @@ function DashboardInner() {
   const sfCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vcpe==="SF"),[COMPROMISOS]);
   const pcTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vcpe==="PC"),[TRANSACTIONS]);
   const pcCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vcpe==="PC"),[COMPROMISOS]);
+  const searcherTx  = useMemo(()=>sfTx.filter((row) => !actualCompanyIds.has(row.id)),[sfTx, actualCompanyIds]);
+  const searcherCompr = useMemo(()=>sfCompr.filter((row) => !actualCompanyIds.has(row.id)),[sfCompr, actualCompanyIds]);
   const { tx: reTx, compr: reCompr } = useMemo(() => splitRealEstateRows(rawCC), [rawCC]);
   const allAltTx    = useMemo(()=>TRANSACTIONS.filter(r=>!excluded.has(r.fons)),[TRANSACTIONS,excluded]);
   const allAltCompr = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)),[COMPROMISOS,excluded]);
@@ -727,7 +734,7 @@ function DashboardInner() {
         : tab === "tx-alt"
           ? "tx-alt"
           : tab === "searchers"
-            ? "searchers"
+            ? "alternatives"
             : tab === "companies"
               ? "companies"
               : tab === "inversions"
@@ -890,7 +897,9 @@ function DashboardInner() {
     {id:"inversions", label:"Totes les Posicions"},
   ];
   const SECTIONS = useMemo(() => SECTIONS_ALL.filter(s => canAccessSection(s.id)), [canAccessSection]);
-  const SUPRA = useMemo(() => SUPRA_ALL.filter(s => canAccessSection(s.id)), [canAccessSection]);
+  const SUPRA = useMemo(() => SUPRA_ALL.filter(s =>
+    s.id === "searchers" ? canAccessSection("alternatives") : canAccessSection(s.id)
+  ), [canAccessSection]);
   const REAL_ESTATE_NAV = useMemo(() => [
     { id: "re-directe", tab: "directe" },
     { id: "re-altres", tab: "altres-vehicles" },
@@ -959,7 +968,8 @@ function DashboardInner() {
       }
       return;
     }
-    if (section === "alternatives" && !canAccessSection(supra)) {
+    const supraAccessId = supra === "searchers" ? "alternatives" : supra;
+    if (section === "alternatives" && !canAccessSection(supraAccessId)) {
       const first = SUPRA[0];
       if (first) setTab(first.id === "fons" ? "pipeline" : first.id);
     }
@@ -1091,7 +1101,7 @@ function DashboardInner() {
         {/* ── Sub-tab bar (Searchers) ── */}
         {section==="alternatives"&&supra==="searchers"&&(
         <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
-          {[{id:"tots",label:"Tots"},{id:"actius",label:"Actius"},{id:"transaccions",label:"Transaccions"}].map(s=>(
+          {[{id:"portfolio",label:"Portfolio"},{id:"tots",label:"Tots"},{id:"actius",label:"Actius"},{id:"transaccions",label:"Transaccions"}].map(s=>(
             <button key={s.id} onClick={()=>setSearchersSubTab(s.id)}
               style={{background:"none",border:"none",borderBottom:`2px solid ${searchersSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:searchersSubTab===s.id?600:400,color:searchersSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
               {s.label}
@@ -1103,7 +1113,7 @@ function DashboardInner() {
         {/* ── Sub-tab bar (Participades) ── */}
         {section==="alternatives"&&supra==="companies"&&(
         <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
-          {[{id:"totes",label:"Totes"},{id:"search-funds",label:"Search Funds"},{id:"altres",label:"Altres"},{id:"transaccions",label:"Transaccions"}].map(s=>(
+          {[{id:"totes",label:"Totes"},{id:"via-sf",label:"Via Search Fund"},{id:"pe-directe",label:"PE Directe"},{id:"transaccions",label:"Transaccions"}].map(s=>(
             <button key={s.id} onClick={()=>setCompaniesSubTab(s.id)}
               style={{background:"none",border:"none",borderBottom:`2px solid ${companiesSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:companiesSubTab===s.id?600:400,color:companiesSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
               {s.label}
@@ -1115,7 +1125,7 @@ function DashboardInner() {
         {/* ── Sub-tab bar (Totes les Posicions) ── */}
         {section==="alternatives"&&supra==="inversions"&&(
         <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
-          {[{id:"fons",label:"Fons"},{id:"companies",label:"Participades"}].map(s=>(
+          {[{id:"fons",label:"Fons"},{id:"companies",label:"Participades"},{id:"searchers",label:"Searchers"}].map(s=>(
             <button key={s.id} onClick={()=>setInversionsSubTab(s.id)}
               style={{background:"none",border:"none",borderBottom:`2px solid ${inversionsSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:inversionsSubTab===s.id?600:400,color:inversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
               {s.label}
@@ -1131,14 +1141,17 @@ function DashboardInner() {
         {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd} onDealsChange={deals=>{ setFunds0(deals); writeStoredJSON(LS_PL, deals); }}/></div>}
 
         {/* ── SEARCHERS ── */}
-        {tab==="searchers"&&searchersSubTab!=="transaccions"&&(
+        {tab==="searchers"&&searchersSubTab==="portfolio"&&(
+          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} forShells/></div>
+        )}
+        {tab==="searchers"&&searchersSubTab!=="transaccions"&&searchersSubTab!=="portfolio"&&(
           <div className="tab-panel"><SearchersTab search={globalSearch} subTab={searchersSubTab} rawCC={rawCC}/></div>
         )}
         {tab==="searchers"&&searchersSubTab==="transaccions"&&(
           <div className="tab-panel">
             <TxSection
-              tx={sfTx}
-              compr={sfCompr}
+              tx={searcherTx}
+              compr={searcherCompr}
               search={globalSearch}
               catCfg={catCfg}
               vcpeCfg={vcpeCfg}
@@ -1155,14 +1168,20 @@ function DashboardInner() {
         )}
 
         {/* ── COMPANIES ── */}
-        {tab==="companies"&&companiesSubTab!=="transaccions"&&(
-          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} tipusFilter={companiesSubTab==="search-funds"?"SF":companiesSubTab==="altres"?"altres":null}/></div>
+        {tab==="companies"&&companiesSubTab==="totes"&&(
+          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} categoryFilter="totes"/></div>
+        )}
+        {tab==="companies"&&companiesSubTab==="via-sf"&&(
+          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} categoryFilter="via-sf"/></div>
+        )}
+        {tab==="companies"&&companiesSubTab==="pe-directe"&&(
+          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} categoryFilter="pe-directe"/></div>
         )}
         {tab==="companies"&&companiesSubTab==="transaccions"&&(
           <div className="tab-panel">
             <TxSection
-              tx={pcTx}
-              compr={pcCompr}
+              tx={[...sfTx.filter((row) => actualCompanyIds.has(row.id)), ...pcTx]}
+              compr={[...sfCompr.filter((row) => actualCompanyIds.has(row.id)), ...pcCompr]}
               search={globalSearch}
               catCfg={catCfg}
               vcpeCfg={vcpeCfg}
@@ -1277,6 +1296,9 @@ function DashboardInner() {
         )}
         {tab==="inversions"&&inversionsSubTab==="companies"&&(
           <div className="tab-panel"><CompaniesIndexInner inline searchOverride={globalSearch}/></div>
+        )}
+        {tab==="inversions"&&inversionsSubTab==="searchers"&&(
+          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} forShells/></div>
         )}
 
         {/* ── CAPITAL CALLS: KPIs ── */}

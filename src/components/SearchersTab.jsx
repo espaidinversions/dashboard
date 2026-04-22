@@ -10,6 +10,7 @@ import { useAuth } from "../auth.jsx";
 import { upsertSearcher, insertSearcher, deleteSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
 import { useToast } from "../toast.jsx";
 import * as XLSX from "xlsx";
+import { isSfBackedCompany } from "../data/privateCompanyModel.js";
 
 // ── constants ──────────────────────────────────────────────
 
@@ -323,7 +324,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     const eg   = real.filter(r => r.formEntrada === "Equity Gap");
 
     const scBacked   = sc.filter(r => r.statusScreening === "Invertit en fase de cerca").length;
-    const scAcq      = companies.filter(c => c.tipus === "SF" && c.origen === "Search Capital").length;
+    const scAcq      = companies.filter(c => isSfBackedCompany(c) && c.origen === "Search Capital").length;
     const scCercant  = Math.max(scBacked - scAcq, 0);
     const egInvertit = eg.filter(r =>
       r.statusScreening === "Invertit en fase d'adquisició" ||

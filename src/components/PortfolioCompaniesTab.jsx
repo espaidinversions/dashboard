@@ -9,6 +9,7 @@ import { Link } from "react-router-dom";
 import { upsertCompany, insertCompany, deleteCompany, saveCompanies, loadCompanies } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
+import { getCompanyCategoryLabel, isActualCompany, isDirectPeCompany, isSfBackedCompany, isSearchFundShell, matchesCompanyCategory } from "../data/privateCompanyModel.js";
 
 const ORIG_COLORS = {
   "Equity Gap":    "#3DC83E",
@@ -17,7 +18,7 @@ const ORIG_COLORS = {
 };
 const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D","#2563A8","#8A6400","#007A8A"];
 
-export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
+export function PortfolioCompaniesTab({ search = "", categoryFilter = null, forShells = false }) {
   const { tc: TC, dark } = useTheme();
   const { canEditSection } = useAuth();
   const canEdit = canEditSection("companies");
@@ -131,16 +132,16 @@ export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
   );
 
   const filtered = companies
-    .filter(r => !tipusFilter ? true : tipusFilter === "altres" ? r.tipus !== "SF" : r.tipus === tipusFilter)
+    .filter(forShells ? isSearchFundShell : isActualCompany)
+    .filter(r => !forShells && categoryFilter ? matchesCompanyCategory(r, categoryFilter) : true)
     .filter(r => !search.trim() ? true :
       r.nom.toLowerCase().includes(search.toLowerCase()) ||
       (r.segment||"").toLowerCase().includes(search.toLowerCase())
     );
 
   const total    = filtered.reduce((s,r) => s + r.ticket, 0);
-  const totalAll = companies.reduce((s,r) => s + r.ticket, 0);
-  const sfCompanies = filtered.filter(r => r.tipus === "SF");
-  const peCompanies = filtered.filter(r => r.tipus === "PE");
+  const sfCompanies = filtered.filter(isSfBackedCompany);
+  const peCompanies = filtered.filter(isDirectPeCompany);
 
   const valuedAll = filtered.filter(r => r.tvpi != null);
   const totalTicketValued = valuedAll.reduce((s,r) => s + r.ticket, 0);
@@ -211,14 +212,16 @@ export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
         fontSize:11, color:TC.textMid,
       }}>
         <span style={{fontSize:14, flexShrink:0}}>ℹ</span>
-        <span>Valoració basada en última disponible (2025Q1 / 2024Q4). Dates d'entrada PE directes aproximades. <b style={{color:TC.text}}>{valuedAll.length}/{companies.length}</b> participades valorades.</span>
+        <span>{forShells ? <>Search funds amb ticket invertit però sense empresa adquirida. <b style={{color:TC.text}}>{filtered.length}</b> vehicles en cartera.</> : <>Valoració basada en última disponible (2025Q1 / 2025Q4 Search Funds). <b style={{color:TC.text}}>{valuedAll.length}/{filtered.length}</b> companyies visibles valorades.</>}</span>
       </div>
 
       {/* KPIs */}
       <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
         {[
-          { label:"Participades",  value: filtered.length,
-            sub:`${sfCompanies.length} SF · ${peCompanies.length} PE directes`,     accent:TC.navy },
+          { label: forShells ? "Searchers en Cerca" : "Participades",
+            value: filtered.length,
+            sub: forShells ? "search funds sense adquisició" : `${sfCompanies.length} via SF · ${peCompanies.length} PE directe`,
+            accent: TC.navy },
           { label:"Capital Desplegat",    value: fmtM(total),
             sub:"total compromisos",                                                 accent:TC.green },
           { label:"TVPI Mig Ponderat",    value: wtTvpi.toFixed(2)+"x",
@@ -369,12 +372,12 @@ export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
 
       {/* Table */}
       <div style={{ ...card, marginBottom:14 }}>
-        <div style={sec}>Participades</div>
+        <div style={sec}>{forShells ? "Searchers en Cerca" : "Companyies"}</div>
         <div style={{ overflowX:"auto" }}>
           <table style={{ width:"100%", borderCollapse:"collapse", fontSize:11 }}>
             <thead>
               <tr>
-                {["Empresa","ID","Tipus","Segment","Empresaris","Origen","País","Ticket","TVPI","Rev LTM","EBITDA LTM","Data","Mesos"].map(h=>(
+                {["Empresa","ID","Categoria","Segment","Empresaris","Origen","País","Ticket","TVPI","Rev LTM","EBITDA LTM","Data","Mesos"].map(h=>(
                   <th key={h} style={th}>{h}</th>
                 ))}
                 {canEdit && <th style={{ ...th, width: 40 }} />}
@@ -409,7 +412,7 @@ export function PortfolioCompaniesTab({ search = "", tipusFilter = null }) {
           title="Nova participada"
           fields={[
             { key: "nom", label: "Nom", type: "text", placeholder: "Nom de l'empresa" },
-            { key: "tipus", label: "Tipus", type: "select", options: ["", ...COMPANY_TIPUS_OPTIONS], defaultValue: "" },
+            { key: "tipus", label: "Categoria", type: "select", options: ["", ...COMPANY_TIPUS_OPTIONS], defaultValue: "" },
             { key: "segment", label: "Segment", type: "text" },
             { key: "origen", label: "Origen", type: "select", options: ["", ...COMPANY_ORIGEN_OPTIONS], defaultValue: "" },
             { key: "geo", label: "Geografia", type: "text", placeholder: "ES, FR, ..." },
@@ -450,7 +453,7 @@ function PortRow({ r, i, TC, canEdit, saveField, handleDelete, segmentOptions = 
           onSave={v => saveField(r, "tipus", v)}
           disabled={!canEdit}
           fmt={v => (
-            <span style={{ background:v==="SF"?"#E6EDF3":"#F3EEF8", color:v==="SF"?TC.navy:"#6A4C8A", borderRadius:20, padding:"1px 8px", fontSize:9, fontWeight:700, letterSpacing:"0.05em" }}>{v}</span>
+            <span style={{ background:v==="SF"?"#E6EDF3":"#F3EEF8", color:v==="SF"?TC.navy:"#6A4C8A", borderRadius:20, padding:"1px 8px", fontSize:9, fontWeight:700, letterSpacing:"0.05em" }}>{getCompanyCategoryLabel(r)}</span>
           )} />
       </td>
       <td style={{ ...tdBase, fontSize:10 }}>
