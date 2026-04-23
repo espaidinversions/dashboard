@@ -3,7 +3,7 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
-import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState, formatIsoDateDMY, readStoredJSON } from "../utils.js";
+import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState, formatIsoDateDMY, readStoredJSON, tvpiColor, tvpiBg, formatMultiple } from "../utils.js";
 import { GEO_NAME, SEARCHER_STATUS_CFG, SEARCHER_STATUS_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_FORM_ENTRADA_OPTIONS } from "../config.js";
 import { FlagImg, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
@@ -875,6 +875,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                   { label:"Pais", k:"geo" },
                   { label:"Fase", k:"stage" },
                   { label:"Ticket", k:"ticket", right:true },
+                  { label:"TVPI", k:"tvpi", right:true },
                   { label:"Any Inv.", k:"investmentYear", center:true },
                   { label:"Data Compromis", k:"dataCompr" },
                   { label:"Mesos Cercant", k:"mesosCercant", center:true },
@@ -955,6 +956,12 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                         ? <EditableCell value={r.ticket} type="number" align="right" fmt={fmtM} onSave={v => saveSearcherField(r, "ticket", v)} />
                         : fmtM(r.ticket)}
                     </td>
+                    <td style={{ padding:"9px 10px", textAlign:"center" }}>
+                      <EditableCell value={r.tvpi} type="number" align="center"
+                        fmt={v => v != null ? <span style={{ background:tvpiBg(v), color:tvpiColor(v), borderRadius:20, padding:"2px 8px", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:11, whiteSpace:"nowrap" }}>{formatMultiple(v)}</span> : <span style={{ color:TC.textLight, fontSize:10, fontStyle:"italic" }}>Pendent</span>}
+                        onSave={v => saveSearcherField(r, "tvpi", v)}
+                        disabled={!canEdit} />
+                    </td>
                     <td style={{ padding:"9px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", color:TC.textMid }}>
                       {r.investmentYear || "—"}
                     </td>
@@ -989,7 +996,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
               <tr style={{ borderTop:`2px solid ${TC.border}` }}>
                 <td colSpan={6} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({displayedSearchers.length}{search.trim() || activeGeoFilter !== "Tots" || activeEntryFilter !== "Tots" ? `/${activeRows.length}` : ""} searchers)</td>
                 <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.navy }}>{fmtM(displayedSearchersTicket)}</td>
-                <td colSpan={4} />
+                <td colSpan={5} />
               </tr>
             </tfoot>
           </table>

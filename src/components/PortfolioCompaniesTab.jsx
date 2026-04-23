@@ -487,10 +487,10 @@ function PortRow({ r, i, TC, canEdit, saveField, handleDelete, segmentOptions = 
           disabled={!canEdit} />
       </td>
       <td style={{ ...tdBase, textAlign:"center" }}>
-        {r.tvpi != null
-          ? <span style={{ background:tvpiBg(r.tvpi), color:tvpiColor(r.tvpi), borderRadius:20, padding:"2px 8px", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:11, whiteSpace:"nowrap" }}>{formatMultiple(r.tvpi)}</span>
-          : <span style={{ color:TC.textLight, fontSize:10, fontStyle:"italic" }}>Pendent</span>
-        }
+        <EditableCell value={r.tvpi} type="number" align="center"
+          fmt={v => v != null ? <span style={{ background:tvpiBg(v), color:tvpiColor(v), borderRadius:20, padding:"2px 8px", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:11, whiteSpace:"nowrap" }}>{formatMultiple(v)}</span> : <span style={{ color:TC.textLight, fontSize:10, fontStyle:"italic" }}>Pendent</span>}
+          onSave={v => saveField(r, "tvpi", v)}
+          disabled={!canEdit} />
       </td>
       <td style={{ ...tdBase, textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:10, color:TC.textMid }}>
         <EditableCell value={r.rev} type="number" align="right"
