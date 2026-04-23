@@ -19,8 +19,9 @@ const PORTFOLI_SECTIONS = [
   {
     id:"re", label:"Real Estate", icon:"🏠",
     children:[
-      {id:"re-directe", label:"Directe"},
-      {id:"re-altres",  label:"Altres Vehicles"},
+      {id:"re-directe",    label:"Directe"},
+      {id:"re-altres",     label:"Altres Vehicles"},
+      {id:"re-inversions", label:"Totes les Posicions"},
     ],
   },
   {

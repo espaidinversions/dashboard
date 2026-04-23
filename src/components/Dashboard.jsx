@@ -377,6 +377,7 @@ function DashboardInner() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [inversionsSubTab, setInversionsSubTab] = useState("fons");
   const [realEstateTab, setRealEstateTab] = useState("directe");
+  const [realEstateInversionsSubTab, setRealEstateInversionsSubTab] = useState("fons");
   const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
   const [searchersSubTab, setSearchersSubTab] = useState("tots");
   const [companiesSubTab, setCompaniesSubTab] = useState("totes");
@@ -484,6 +485,7 @@ function DashboardInner() {
       case "posicions":      setTab("inversions"); break;
       case "re-directe":     setTab("real-estate");     setRealEstateTab("directe"); break;
       case "re-altres":      setTab("real-estate");     setRealEstateTab("altres-vehicles"); break;
+      case "re-inversions":  setTab("real-estate");     setRealEstateTab("inversions"); break;
       case "mp-resum":       setTab("mercats-publics"); setMercatsPublicsTab("resum"); break;
       case "mp-rv":          setTab("mercats-publics"); setMercatsPublicsTab("rv"); break;
       case "mp-rf":          setTab("mercats-publics"); setMercatsPublicsTab("rf"); break;
@@ -903,6 +905,7 @@ function DashboardInner() {
   const REAL_ESTATE_NAV = useMemo(() => [
     { id: "re-directe", tab: "directe" },
     { id: "re-altres", tab: "altres-vehicles" },
+    { id: "re-inversions", tab: "inversions" },
   ].filter((item) => canAccessSection(item.id)), [canAccessSection]);
   const PUBLIC_MARKETS_NAV = useMemo(() => [
     { id: "mp-resum", tab: "resum" },
@@ -932,7 +935,7 @@ function DashboardInner() {
     else if (tab === "inversions" && activeNavItem !== "posicions") setActiveNavItem("posicions");
     else if ((tab === "pipeline" || tab === "resum" || tab === "mensual" || tab === "fons" || tab === "fons-tx") && activeNavItem !== "fons") setActiveNavItem("fons");
     else if (tab === "real-estate") {
-      const next = realEstateTab === "altres-vehicles" ? "re-altres" : "re-directe";
+      const next = realEstateTab === "altres-vehicles" ? "re-altres" : realEstateTab === "inversions" ? "re-inversions" : "re-directe";
       if (activeNavItem !== next) setActiveNavItem(next);
     } else if (tab === "mercats-publics") {
       const next = mercatsPublicsTab === "transaccions"
@@ -1101,7 +1104,7 @@ function DashboardInner() {
         {/* ── Sub-tab bar (Searchers) ── */}
         {section==="alternatives"&&supra==="searchers"&&(
         <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
-          {[{id:"portfolio",label:"Portfolio"},{id:"tots",label:"Tots"},{id:"actius",label:"Actius"},{id:"transaccions",label:"Transaccions"}].map(s=>(
+          {[{id:"fons",label:"Fons"},{id:"portfolio",label:"Portfolio"},{id:"tots",label:"Tots"},{id:"actius",label:"Actius"},{id:"transaccions",label:"Transaccions"}].map(s=>(
             <button key={s.id} onClick={()=>setSearchersSubTab(s.id)}
               style={{background:"none",border:"none",borderBottom:`2px solid ${searchersSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:searchersSubTab===s.id?600:400,color:searchersSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
               {s.label}
@@ -1113,7 +1116,7 @@ function DashboardInner() {
         {/* ── Sub-tab bar (Participades) ── */}
         {section==="alternatives"&&supra==="companies"&&(
         <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
-          {[{id:"totes",label:"Totes"},{id:"via-sf",label:"Via Search Fund"},{id:"pe-directe",label:"PE Directe"},{id:"transaccions",label:"Transaccions"}].map(s=>(
+          {[{id:"fons",label:"Fons"},{id:"totes",label:"Totes"},{id:"via-sf",label:"Via Search Fund"},{id:"pe-directe",label:"PE Directe"},{id:"transaccions",label:"Transaccions"}].map(s=>(
             <button key={s.id} onClick={()=>setCompaniesSubTab(s.id)}
               style={{background:"none",border:"none",borderBottom:`2px solid ${companiesSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:companiesSubTab===s.id?600:400,color:companiesSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
               {s.label}
@@ -1134,6 +1137,18 @@ function DashboardInner() {
         </div>
         )}
 
+        {/* ── Sub-tab bar (Real Estate Totes les Posicions) ── */}
+        {tab==="real-estate"&&realEstateTab==="inversions"&&(
+        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
+          {[{id:"fons",label:"Fons"}].map(s=>(
+            <button key={s.id} onClick={()=>setRealEstateInversionsSubTab(s.id)}
+              style={{background:"none",border:"none",borderBottom:`2px solid ${realEstateInversionsSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:realEstateInversionsSubTab===s.id?600:400,color:realEstateInversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
+              {s.label}
+            </button>
+          ))}
+        </div>
+        )}
+
         {/* ── Content area ── */}
         <div className="page-pad" style={{flex:1,overflowY:"auto",padding:"22px 28px 60px"}}>
 
@@ -1141,10 +1156,13 @@ function DashboardInner() {
         {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd} onDealsChange={deals=>{ setFunds0(deals); writeStoredJSON(LS_PL, deals); }}/></div>}
 
         {/* ── SEARCHERS ── */}
+        {tab==="searchers"&&searchersSubTab==="fons"&&(
+          <div className="tab-panel"><FundsIndexInner inline searchOverride={globalSearch} vcpeTypes={["SF"]}/></div>
+        )}
         {tab==="searchers"&&searchersSubTab==="portfolio"&&(
           <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} forShells/></div>
         )}
-        {tab==="searchers"&&searchersSubTab!=="transaccions"&&searchersSubTab!=="portfolio"&&(
+        {tab==="searchers"&&searchersSubTab!=="transaccions"&&searchersSubTab!=="portfolio"&&searchersSubTab!=="fons"&&(
           <div className="tab-panel"><SearchersTab search={globalSearch} subTab={searchersSubTab} rawCC={rawCC}/></div>
         )}
         {tab==="searchers"&&searchersSubTab==="transaccions"&&(
@@ -1168,6 +1186,9 @@ function DashboardInner() {
         )}
 
         {/* ── COMPANIES ── */}
+        {tab==="companies"&&companiesSubTab==="fons"&&(
+          <div className="tab-panel"><FundsIndexInner inline searchOverride={globalSearch} vcpeTypes={["PE","VC","PC"]}/></div>
+        )}
         {tab==="companies"&&companiesSubTab==="totes"&&(
           <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} categoryFilter="totes"/></div>
         )}
@@ -1288,6 +1309,11 @@ function DashboardInner() {
               title="Transaccions · Real Estate"
             />
           </div>
+        )}
+
+        {/* ── REAL ESTATE TOTES LES POSICIONS ── */}
+        {tab==="real-estate"&&realEstateTab==="inversions"&&(
+          <div className="tab-panel"><FundsIndexInner inline searchOverride={globalSearch} vcpeTypes={["RE"]}/></div>
         )}
 
         {/* ── DETALL PER INVERSIÓ ── */}

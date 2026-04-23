@@ -10,7 +10,7 @@ import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
 import { makeFundRouteId } from "../data/fundDetailModel.js";
 
-export function FundsIndexInner({ inline = false, searchOverride }) {
+export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
   const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
   const { toast } = useToast();
   const { tc } = useTheme();
@@ -108,7 +108,8 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
 
   const rows = useMemo(() => {
     const map = new Map();
-    for (const r of rawCC.filter((row) => row?.vcpe === "PE" || row?.vcpe === "VC" || row?.vcpe === "RE")) {
+    const vcpeSet = vcpeTypes ?? ["PE", "VC", "RE"];
+    for (const r of rawCC.filter((row) => vcpeSet.includes(row?.vcpe))) {
       const key = makeFundRouteId(r);
       if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, isMock: !!r.isMock });
       const f = map.get(key);
@@ -129,7 +130,7 @@ export function FundsIndexInner({ inline = false, searchOverride }) {
         rvpi,
       };
     });
-  }, [rawCC, fundMeta]);
+  }, [rawCC, fundMeta, vcpeTypes]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
