@@ -39,13 +39,16 @@ const twemojiUrl = (isoCode) => {
   return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${cp1}-${cp2}.svg`;
 };
 
-export const FlagImg = ({ geo, size=22 }) => (
-  <img
-    src={twemojiUrl(geo)}
-    alt={geo}
-    style={{ width:size, height:size, verticalAlign:"middle" }}
-  />
-);
+export const FlagImg = ({ geo, size=22 }) => {
+  if (!geo) return null;
+  return (
+    <img
+      src={twemojiUrl(geo)}
+      alt={geo}
+      style={{ width:size, height:size, verticalAlign:"middle" }}
+    />
+  );
+};
 
 // SVG <image> version for use inside Recharts pie chart labels
 export const FlagSvgLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, geo }) => {
