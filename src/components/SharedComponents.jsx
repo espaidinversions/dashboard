@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useTheme } from "../theme.js";
+import { readStoredJSON, writeStoredJSON } from "../utils.js";
 
 // ── Shared style helpers ──────────────────────────────────
 export const sharedStyles = {
@@ -12,6 +13,88 @@ export const sharedStyles = {
   kpiLabel: (tc) => ({ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }),
   kpiValue: (tc, valueColor) => ({ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }),
   kpiSub: (tc) => ({ fontSize: 11, color: tc.textLight, marginTop: 4 }),
+};
+
+export const indexPageStyles = {
+  page: (tc, inline = false) => ({
+    minHeight: inline ? undefined : "100vh",
+    background: tc.bg,
+    color: tc.text,
+    fontFamily: "'Outfit',system-ui,sans-serif",
+    fontSize: 14,
+  }),
+  topBar: (tc) => ({
+    background: tc.card,
+    borderBottom: `1px solid ${tc.border}`,
+    padding: "12px 32px",
+    display: "flex",
+    alignItems: "center",
+    gap: 16,
+  }),
+  searchInput: (tc) => ({
+    padding: "6px 12px",
+    borderRadius: 6,
+    border: `1.5px solid ${tc.border}`,
+    background: tc.bg,
+    color: tc.text,
+    fontSize: 13,
+    fontFamily: "inherit",
+    width: 200,
+  }),
+  navRow: (tc, inline = false) => ({
+    background: tc.card,
+    borderBottom: `1px solid ${tc.border}`,
+    padding: inline ? "0" : "0 32px",
+    display: "flex",
+    overflowX: "auto",
+  }),
+  navItem: (tc, active = false) => ({
+    background: "none",
+    border: "none",
+    borderBottom: `2px solid ${active ? tc.green : "transparent"}`,
+    padding: "11px 20px",
+    fontSize: 12,
+    fontWeight: active ? 600 : 400,
+    color: active ? tc.navy : tc.textMid,
+    textDecoration: "none",
+    fontFamily: "inherit",
+    whiteSpace: "nowrap",
+    cursor: "pointer",
+    flexShrink: 0,
+  }),
+  contentWrap: {
+    padding: "24px 32px",
+  },
+  panel: (tc) => ({
+    background: tc.card,
+    border: `1px solid ${tc.border}`,
+    borderRadius: 12,
+    boxShadow: "0 2px 10px rgba(15, 23, 42, 0.04)",
+    overflow: "hidden",
+  }),
+  tableScroll: {
+    overflowX: "auto",
+  },
+  filterControl: (tc) => ({
+    width: "100%",
+    padding: "4px 6px",
+    borderRadius: 4,
+    border: `1px solid ${tc.border}`,
+    background: tc.bg,
+    color: tc.text,
+    fontSize: 11,
+    fontFamily: "inherit",
+  }),
+  clearButton: (tc) => ({
+    background: "transparent",
+    border: `1px solid ${tc.border}`,
+    borderRadius: 4,
+    padding: "2px 8px",
+    cursor: "pointer",
+    fontSize: 10,
+    color: tc.textMid,
+    fontFamily: "inherit",
+  }),
 };
 
 // ── KPI Card ─────────────────────────────────────────────
@@ -100,13 +183,13 @@ export function EditableCell({ value, onSave, type = "text", options, fmt, style
 
   const getCustomOpts = () => {
     if (!optionsKey) return [];
-    try { return JSON.parse(localStorage.getItem(`copts_${optionsKey}`) || "[]"); } catch { return []; }
+    return readStoredJSON(`copts_${optionsKey}`, []);
   };
   const saveCustomOpt = (val) => {
     if (!optionsKey) return;
     const existing = getCustomOpts();
     if (!existing.includes(val)) {
-      localStorage.setItem(`copts_${optionsKey}`, JSON.stringify([...existing, val]));
+      writeStoredJSON(`copts_${optionsKey}`, [...existing, val]);
     }
   };
 
@@ -297,6 +380,17 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
 
   const set = (key, val) => setValues(v => ({ ...v, [key]: val }));
   const setCustom = (key, val) => setCustomOpen(v => ({ ...v, [key]: val }));
+  const applyFieldChange = (field, nextValue) => {
+    setValues((current) => {
+      const next = { ...current, [field.key]: nextValue };
+      if (typeof field.onChange === "function") {
+        return field.onChange(nextValue, next, {
+          setValue: (targetKey, targetValue) => { next[targetKey] = targetValue; },
+        }) ?? next;
+      }
+      return next;
+    });
+  };
 
   const inp = {
     width: "100%", padding: "7px 10px", fontSize: 13,
@@ -322,14 +416,14 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
           fontFamily: "'Outfit',system-ui,sans-serif" }}>
         <div style={{ fontSize: 16, fontWeight: 700, color: tc.navy, marginBottom: 20 }}>{title}</div>
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-          {fields.map(f => (
+          {fields.filter(f => !f.visible || f.visible(values)).map(f => (
             <div key={f.key}>
               <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight,
                 letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
                 {f.label}
               </label>
               {f.type === "select" ? (
-                <select value={values[f.key]} onChange={e => set(f.key, e.target.value)} style={inp}>
+                <select value={values[f.key]} onChange={e => applyFieldChange(f, e.target.value)} style={inp} disabled={f.disabled}>
                   {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               ) : f.type === "combo" ? (
@@ -342,10 +436,11 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                           if (e.target.value === "__custom__") {
                             setCustom(f.key, true);
                           } else {
-                            set(f.key, e.target.value);
+                            applyFieldChange(f, e.target.value);
                           }
                         }}
                         style={{ ...inp, flex: 1 }}
+                        disabled={f.disabled}
                       >
                         <option value="" disabled>{f.placeholder ?? "Selecciona una opció"}</option>
                         {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
@@ -366,9 +461,10 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                       <input
                         type="text"
                         value={values[f.key]}
-                        onChange={e => set(f.key, e.target.value)}
+                        onChange={e => applyFieldChange(f, e.target.value)}
                         placeholder={f.placeholder ?? ""}
                         style={{ ...inp, flex: 1 }}
+                        disabled={f.disabled}
                       />
                       <button
                         type="button"
@@ -385,10 +481,11 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                   <input
                     type="text"
                     value={values[f.key]}
-                    onChange={e => set(f.key, e.target.value)}
+                    onChange={e => applyFieldChange(f, e.target.value)}
                     placeholder={f.placeholder ?? ""}
                     list={`addrow-${f.key}`}
                     style={inp}
+                    disabled={f.disabled}
                   />
                   <datalist id={`addrow-${f.key}`}>
                     {(f.options ?? []).map(o => <option key={o} value={o} />)}
@@ -396,9 +493,10 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                 </>
               ) : (
                 <input type={f.type ?? "text"} value={values[f.key]}
-                  onChange={e => set(f.key, e.target.value)}
+                  onChange={e => applyFieldChange(f, e.target.value)}
                   placeholder={f.placeholder ?? ""}
-                  style={inp} />
+                  style={inp}
+                  disabled={f.disabled} />
               )}
             </div>
           ))}
