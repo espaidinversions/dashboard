@@ -224,7 +224,7 @@ function FundDetailInner() {
         {/* Transaction log */}
         <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
           <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 16 }}>
-            Transaccions · {txLog.length}
+            Transaccions · {(txLog ?? []).length}
           </div>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
@@ -236,7 +236,7 @@ function FundDetailInner() {
               <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
                 <th style={{ padding: "6px 12px" }}><input value={txFilters.data} onChange={(e) => setTxFilters((v) => ({ ...v, data: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 12px" }}><input value={txFilters.tipus} onChange={(e) => setTxFilters((v) => ({ ...v, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-                <th style={{ padding: "6px 12px" }}><select value={txFilters.categoria} onChange={(e) => setTxFilters((v) => ({ ...v, categoria: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots", ...Array.from(new Set(txLog.map(r => r.cat).filter(Boolean))).sort()].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+                <th style={{ padding: "6px 12px" }}><select value={txFilters.categoria} onChange={(e) => setTxFilters((v) => ({ ...v, categoria: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots", ...Array.from(new Set((txLog ?? []).map(r => r.cat).filter(Boolean))).sort()].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
                 <th style={{ padding: "6px 12px" }}><input value={txFilters.import} onChange={(e) => setTxFilters((v) => ({ ...v, import: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 12px" }} />
               </tr>

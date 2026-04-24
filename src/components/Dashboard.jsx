@@ -93,7 +93,7 @@ function Dashboard() {
       const fund = r.fons;
       if (!fund) continue;
       if (!map[fund]) map[fund] = 0;
-      if ((r.cat === "Distribució" || r.cat === "Retorn Capital") && r.recallable) {
+      if (r.cat === "Distribució" && r.recallable) {
         map[fund] += Number(r.recallable);
       }
       if (r.cat === "Capital Call" && r.from_recallable) {
@@ -122,7 +122,7 @@ function Dashboard() {
   function handleNavigate(itemId) {
     setActiveNavItem(itemId);
     switch (itemId) {
-      case "fons":           setTab("pipeline"); break;
+      case "fons":           setTab("inversions"); setInversionsSubTab("fons"); break;
       case "searchers":      setTab("searchers"); break;
       case "companies":      setTab("companies"); break;
       case "posicions":      setTab("inversions"); break;

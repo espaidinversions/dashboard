@@ -104,6 +104,9 @@ export function capitalCallToRow(row) {
     est: row.est,
     eur: row.eur,
     divisa: row.divisa,
+    recallable:      (row.recallable      !== "" && row.recallable      != null) ? Number(row.recallable)      : null,
+    non_recallable:  (row.non_recallable  !== "" && row.non_recallable  != null) ? Number(row.non_recallable)  : null,
+    from_recallable: (row.from_recallable !== "" && row.from_recallable != null) ? Number(row.from_recallable) : null,
   };
 }
 

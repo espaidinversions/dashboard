@@ -38,7 +38,7 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
     .filter((row) => row.cat === "Distribució" || row.cat === "Retorn Capital")
     .reduce((sum, row) => sum + Math.abs(row.eur), 0);
   const recallablePool = txs.reduce((sum, row) => {
-    if ((row.cat === "Distribució" || row.cat === "Retorn Capital") && row.recallable) {
+    if (row.cat === "Distribució" && row.recallable) {
       return sum + Number(row.recallable);
     }
     if (row.cat === "Capital Call" && row.from_recallable) {

@@ -255,10 +255,10 @@ BEGIN
     DELETE FROM capital_calls;
   END IF;
   IF p_cc_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_cc_rows), 0) > 0 THEN
-    INSERT INTO capital_calls (vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa)
-    SELECT vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa
+    INSERT INTO capital_calls (vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa, recallable, non_recallable, from_recallable)
+    SELECT vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa, recallable, non_recallable, from_recallable
     FROM jsonb_to_recordset(COALESCE(p_cc_rows, '[]'::jsonb))
-    AS x(vehicle_id TEXT, fons TEXT, tipus TEXT, cat TEXT, data TEXT, mes INTEGER, year INTEGER, fy TEXT, vcpe TEXT, est TEXT, eur NUMERIC, divisa TEXT);
+    AS x(vehicle_id TEXT, fons TEXT, tipus TEXT, cat TEXT, data TEXT, mes INTEGER, year INTEGER, fy TEXT, vcpe TEXT, est TEXT, eur NUMERIC, divisa TEXT, recallable NUMERIC, non_recallable NUMERIC, from_recallable NUMERIC);
   END IF;
 
   IF p_pl_rows IS NOT NULL THEN
