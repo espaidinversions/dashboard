@@ -28,7 +28,10 @@ CREATE TABLE IF NOT EXISTS capital_calls (
   vcpe    TEXT,
   est     TEXT,
   eur     NUMERIC,
-  divisa  TEXT
+  divisa  TEXT,
+  recallable      NUMERIC,
+  non_recallable  NUMERIC,
+  from_recallable NUMERIC
 );
 
 -- ── Fund metadata (TVPI etc.) ─────────────────────────────
@@ -85,18 +88,31 @@ CREATE TABLE IF NOT EXISTS searchers (
   tipus             TEXT,
   modalitat         TEXT,
   geo               TEXT,
+  status_screening_code INTEGER,
   status_screening  TEXT,
+  status_cerca_code INTEGER,
+  status_cerca      TEXT,
+  status_adquisicio_code INTEGER,
+  status_adquisicio TEXT,
   form_entrada      TEXT,
   intro_per         TEXT,
+  companyia_adquirida TEXT,
   searcher1         TEXT,
   searcher2         TEXT,
   escola1           TEXT,
   escola2           TEXT,
+  web               TEXT,
+  comentaris        TEXT,
   ticket            NUMERIC,
+  tvpi              NUMERIC,
   data_inici        DATE,
+  database_intro_date DATE,
   data_compr        DATE,
   mesos_cercant     INTEGER,
+  irr               NUMERIC,
+  dpi               NUMERIC,
   equity_stake      NUMERIC,
+  nif               TEXT,
   is_mock           BOOLEAN DEFAULT false
 );
 
@@ -280,17 +296,37 @@ BEGIN
   END IF;
   IF p_searchers_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_searchers_rows), 0) > 0 THEN
     INSERT INTO searchers (
-      nom, tipus, modalitat, geo, status_screening, form_entrada, intro_per, searcher1, searcher2,
-      escola1, escola2, ticket, data_inici, data_compr, mesos_cercant, equity_stake, is_mock
+      nom, tipus, modalitat, geo,
+      status_screening_code, status_screening,
+      status_cerca_code, status_cerca,
+      status_adquisicio_code, status_adquisicio,
+      form_entrada, intro_per, companyia_adquirida,
+      searcher1, searcher2, escola1, escola2,
+      web, comentaris, ticket, tvpi,
+      data_inici, database_intro_date, data_compr,
+      mesos_cercant, irr, dpi, equity_stake, nif, is_mock
     )
     SELECT
-      nom, tipus, modalitat, geo, status_screening, form_entrada, intro_per, searcher1, searcher2,
-      escola1, escola2, ticket, data_inici, data_compr, mesos_cercant, equity_stake, is_mock
+      nom, tipus, modalitat, geo,
+      status_screening_code, status_screening,
+      status_cerca_code, status_cerca,
+      status_adquisicio_code, status_adquisicio,
+      form_entrada, intro_per, companyia_adquirida,
+      searcher1, searcher2, escola1, escola2,
+      web, comentaris, ticket, tvpi,
+      data_inici, database_intro_date, data_compr,
+      mesos_cercant, irr, dpi, equity_stake, nif, is_mock
     FROM jsonb_to_recordset(COALESCE(p_searchers_rows, '[]'::jsonb))
     AS x(
-      nom TEXT, tipus TEXT, modalitat TEXT, geo TEXT, status_screening TEXT, form_entrada TEXT, intro_per TEXT,
-      searcher1 TEXT, searcher2 TEXT, escola1 TEXT, escola2 TEXT, ticket NUMERIC, data_inici TEXT, data_compr TEXT,
-      mesos_cercant INTEGER, equity_stake NUMERIC, is_mock BOOLEAN
+      nom TEXT, tipus TEXT, modalitat TEXT, geo TEXT,
+      status_screening_code INTEGER, status_screening TEXT,
+      status_cerca_code INTEGER, status_cerca TEXT,
+      status_adquisicio_code INTEGER, status_adquisicio TEXT,
+      form_entrada TEXT, intro_per TEXT, companyia_adquirida TEXT,
+      searcher1 TEXT, searcher2 TEXT, escola1 TEXT, escola2 TEXT,
+      web TEXT, comentaris TEXT, ticket NUMERIC, tvpi NUMERIC,
+      data_inici TEXT, database_intro_date TEXT, data_compr TEXT,
+      mesos_cercant INTEGER, irr NUMERIC, dpi NUMERIC, equity_stake NUMERIC, nif TEXT, is_mock BOOLEAN
     );
   END IF;
 
