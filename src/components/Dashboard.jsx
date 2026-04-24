@@ -1,24 +1,20 @@
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import html2canvas from "html2canvas";
-import ReactECharts from "../ReactECharts.jsx";
-import { ecTheme } from "../echartsTheme.js";
 import {
-  FY_LIST, MESOS, CAT_CFG, VCPE_CFG, EST_CFG,
-  CAPITAL_CALL_CAT_OPTIONS, CAPITAL_CALL_VCPE_OPTIONS, CAPITAL_CALL_EST_OPTIONS, CAPITAL_CALL_TIPUS_OPTIONS,
+  FY_LIST, MESOS,
+  CAPITAL_CALL_TIPUS_OPTIONS,
 } from "../config.js";
-import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtS, usePersistedState, slugify, exportMultiXLSX, mapKpiRows, mergeCapitalCallRows, readStoredJSON, writeStoredJSON, readStoredFlag, writeStoredFlag } from "../utils.js";
-import { loadAll, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls } from "../db.js";
-import { apiFetchJson } from "../apiClient.js";
-import { Badge, EmptyState, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
+import { useTheme } from "../theme.js";
+import { fmtM, usePersistedState, exportMultiXLSX, readStoredJSON, writeStoredJSON } from "../utils.js";
+import { Badge, AddRowModal } from "./SharedComponents.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
 import { MensualTab } from "./MensualTab.jsx";
 import { SearchersTab } from "./SearchersTab.jsx";
+import { SearchersIndexInner } from "./SearchersIndex.jsx";
 import { PortfolioCompaniesTab } from "./PortfolioCompaniesTab.jsx";
 import { FundsIndexInner } from "./FundsIndex.jsx";
 import { CompaniesIndexInner } from "./CompaniesIndex.jsx";
-import { Link } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { DataLoader } from "./DataLoader.jsx";
 import { PublicMarketsTab } from "./PublicMarketsTab.jsx";
@@ -28,26 +24,11 @@ import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
 import { PMTraçabilitatTab } from "./PMTraçabilitatTab.jsx";
 import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
-import { normalizePrivateWorkbookRows } from "../data/alternativesModel.js";
-import { splitRealEstateRows, buildRealEstateFundsMap } from "../data/realEstateModel.js";
-import { makeVehicleDetailPath } from "../data/privateRoutes.js";
-import { isActualCompany, isSearchFundShell } from "../data/privateCompanyModel.js";
+import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
+import { useDashboardData } from "./hooks/useDashboardData.js";
+import { TxSection } from "./TxSection.jsx";
 
 const LS_CC = "tc_rawCC";
-const LS_PL = "tc_funds0";
-const LS_TS = "tc_loadedAt";
-const PM_TX_MONTHS_SHORT = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
-
-function sanitizeCapitalCallValues(values) {
-  return {
-    ...values,
-    fons: String(values?.fons ?? "").trim(),
-    tipus: String(values?.tipus ?? "").trim() || null,
-    est: String(values?.est ?? "").trim() || null,
-    divisa: values?.divisa || "EUR",
-    vcpe: values?.vcpe || null,
-  };
-}
 
 function normalizeOptionValue(value) {
   return String(value ?? "")
@@ -69,307 +50,10 @@ function dedupeOptionValues(values) {
   return [...seen.values()].sort((a, b) => String(a).localeCompare(String(b), "ca", { sensitivity: "base" }));
 }
 
-// ══════════════════════════════════════════════════════════
-function TxSection({
-  tx,
-  compr = [],
-  search = "",
-  catCfg,
-  vcpeCfg,
-  estCfg,
-  tc,
-  dark,
-  canEdit,
-  onAdd,
-  onEdit,
-  onDelete,
-  title,
-}) {
-  const [sort, setSort] = React.useState({ k: "data", d: "desc" });
-  const [page, setPage] = React.useState(0);
-  const TX_PP = 25;
-
-  const query = search.trim().toLowerCase();
-  const visibleTx = useMemo(() => {
-    if (!query) return tx;
-    return tx.filter((row) => (
-      (row.fons || "").toLowerCase().includes(query) ||
-      (row.tipus || "").toLowerCase().includes(query) ||
-      (row.cat || "").toLowerCase().includes(query) ||
-      (row.fy || "").toLowerCase().includes(query)
-    ));
-  }, [query, tx]);
-  const visibleCompr = useMemo(() => {
-    if (!query) return compr;
-    return compr.filter((row) => (row.fons || "").toLowerCase().includes(query));
-  }, [compr, query]);
-
-  const sorted = useMemo(() => [...visibleTx].sort((a, b) => {
-    const av = a?.[sort.k] ?? "";
-    const bv = b?.[sort.k] ?? "";
-    if (typeof av === "string" || typeof bv === "string") {
-      return sort.d === "asc"
-        ? String(av).localeCompare(String(bv), "ca", { sensitivity: "base" })
-        : String(bv).localeCompare(String(av), "ca", { sensitivity: "base" });
-    }
-    return sort.d === "asc" ? Number(av) - Number(bv) : Number(bv) - Number(av);
-  }), [sort, visibleTx]);
-  const pageCount = Math.max(1, Math.ceil(sorted.length / TX_PP));
-  const currentPage = Math.min(page, pageCount - 1);
-  const pagedRows = sorted.slice(currentPage * TX_PP, (currentPage + 1) * TX_PP);
-
-  const totalCompr = visibleCompr.reduce((sum, row) => sum + row.eur, 0);
-  const totalCalls = visibleTx.filter((row) => row.cat === "Capital Call").reduce((sum, row) => sum + row.eur, 0);
-  const totalPaidBack = visibleTx
-    .filter((row) => row.cat === "Distribució" || row.cat === "Retorn Capital")
-    .reduce((sum, row) => sum + Math.abs(row.eur), 0);
-  const netFlow = totalPaidBack - totalCalls;
-  const chartData = useMemo(() => {
-    const map = new Map();
-    visibleTx.forEach((row) => {
-      const month = String(row?.data ?? "").slice(0, 7);
-      const match = month.match(/^(\d{4})-(\d{2})$/);
-      if (!match) return;
-      if (!map.has(month)) {
-        map.set(month, {
-          label: `${PM_TX_MONTHS_SHORT[Number(match[2])]} '${match[1].slice(2)}`,
-          CapitalCalls: 0,
-          Retorns: 0,
-        });
-      }
-      const entry = map.get(month);
-      if (row.cat === "Capital Call" || row.eur > 0) entry.CapitalCalls += Math.abs(row.eur ?? 0);
-      if (row.cat === "Distribució" || row.cat === "Retorn Capital" || row.eur < 0) entry.Retorns += Math.abs(row.eur ?? 0);
-    });
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value);
-  }, [visibleTx]);
-  const cards = [
-    ...(totalCompr > 0 ? [{
-      label: "Compromís",
-      value: fmtM(totalCompr),
-      accent: tc.navyLight,
-    }] : []),
-    { label: "Capital Cridat", value: fmtM(totalCalls), accent: tc.navy },
-    { label: "Total Rebut", value: fmtM(totalPaidBack), accent: tc.green },
-    {
-      label: "Flux Net",
-      value: `${netFlow > 0 ? "+" : ""}${fmtM(netFlow)}`,
-      accent: netFlow >= 0 ? tc.greenDark : tc.navyLight,
-      sub: netFlow >= 0 ? "saldo positiu" : "pendent",
-    },
-  ];
-
-  const toggleSort = (k) => {
-    setSort((prev) => prev.k === k ? { k, d: prev.d === "desc" ? "asc" : "desc" } : { k, d: "desc" });
-  };
-  React.useEffect(() => {
-    setPage(0);
-  }, [query, sort]);
-  React.useEffect(() => {
-    if (page > pageCount - 1) setPage(Math.max(0, pageCount - 1));
-  }, [page, pageCount]);
-  const Arr = ({ k }) => (
-    <span style={{ marginLeft: 3, opacity: sort.k === k ? 1 : 0.25, fontSize: 9 }}>
-      {sort.k === k && sort.d === "asc" ? "▲" : "▼"}
-    </span>
-  );
-  const th = {
-    padding: "8px 10px",
-    fontSize: 10,
-    letterSpacing: "0.09em",
-    color: tc.textLight,
-    textTransform: "uppercase",
-    fontWeight: 600,
-    whiteSpace: "nowrap",
-    userSelect: "none",
-    cursor: "pointer",
-    borderBottom: `2px solid ${tc.border}`,
-  };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight, textTransform: "uppercase", marginBottom: 14, fontWeight: 600 }}>
-          Flux Mensual · Mercats Privats
-        </div>
-        {chartData.length === 0 ? (
-          <div style={{ padding: "24px 0 8px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>Cap transacció</div>
-        ) : (() => {
-          const t = ecTheme(tc);
-          const option = {
-            grid: { top: 8, right: 8, bottom: 56, left: 0, containLabel: true },
-            tooltip: {
-              ...t.tooltip,
-              trigger: "axis",
-              axisPointer: { type: "shadow" },
-              formatter: (params) => {
-                const label = params[0]?.axisValue ?? "";
-                let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
-                params.forEach((point) => {
-                  if (!point.value) return;
-                  html += `<div>${point.marker}${point.seriesName}: ${fmtM(point.value)}</div>`;
-                });
-                return html;
-              },
-            },
-            legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
-            xAxis: {
-              type: "category",
-              data: chartData.map((row) => row.label),
-              axisLabel: { fontSize: 9, color: tc.textLight, rotate: -40 },
-              axisLine: { show: false },
-              axisTick: { show: false },
-            },
-            yAxis: {
-              type: "value",
-              axisLabel: { fontSize: 10, color: tc.textLight, formatter: (value) => fmtM(value) },
-              splitLine: { lineStyle: { color: tc.border } },
-              axisLine: { show: false },
-              axisTick: { show: false },
-            },
-            series: [
-              {
-                name: "Capital Calls",
-                type: "bar",
-                data: chartData.map((row) => row.CapitalCalls ?? null),
-                itemStyle: { color: tc.navy, borderRadius: [4, 4, 0, 0] },
-                barMaxWidth: 28,
-                barGap: "10%",
-              },
-              {
-                name: "Retorns",
-                type: "bar",
-                data: chartData.map((row) => row.Retorns ?? null),
-                itemStyle: { color: tc.green, borderRadius: [4, 4, 0, 0] },
-                barMaxWidth: 28,
-              },
-            ],
-          };
-          return <ReactECharts option={option} style={{ width: "100%", height: 220 }} opts={{ renderer: "canvas" }} />;
-        })()}
-      </div>
-
-      <div className="grid-4" style={{ gap: 12 }}>
-        {cards.map((card) => (
-          <div key={card.label} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 18px", borderTop: `3px solid ${card.accent}`, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.06em", color: tc.textLight, textTransform: "uppercase", marginBottom: 4, fontWeight: 600 }}>{card.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: card.accent, fontFamily: "'DM Mono',monospace" }}>{card.value}</div>
-            {card.sub ? <div style={{ fontSize: 11, color: tc.textLight, marginTop: 2 }}>{card.sub}</div> : null}
-          </div>
-        ))}
-      </div>
-
-      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 12 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.11em", textTransform: "uppercase", color: tc.textLight }}>{title}</div>
-          {canEdit ? (
-            <button
-              onClick={onAdd}
-              style={{ padding: "5px 14px", borderRadius: 6, border: `1.5px solid ${tc.green}`, background: dark ? "#0A2010" : "#E8F8E8", color: tc.green, cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 700 }}
-            >
-              ＋ Afegeix moviment
-            </button>
-          ) : null}
-        </div>
-
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: tc.bgAlt }}>
-                {[
-                  { k: "data", label: "Data" },
-                  { k: "fons", label: "Vehicle" },
-                  { k: "tipus", label: "Tipus" },
-                  { k: "cat", label: "Categoria" },
-                  { k: "eur", label: "Import EUR", right: true },
-                  { k: "fy", label: "FY" },
-                  { k: "vcpe", label: "Tipus" },
-                  { k: "est", label: "Estratègia" },
-                ].map((head) => (
-                  <th key={head.k} onClick={() => toggleSort(head.k)} style={{ ...th, textAlign: head.right ? "right" : "left" }}>
-                    {head.label}<Arr k={head.k} />
-                  </th>
-                ))}
-                {canEdit ? <th style={{ ...th, textAlign: "center", cursor: "default" }}>Accions</th> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.length === 0 ? (
-                <tr>
-                  <td colSpan={canEdit ? 9 : 8} style={{ padding: "24px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>Cap transacció</td>
-                </tr>
-              ) : null}
-              {pagedRows.map((row, index) => {
-                const isIn = row.eur > 0;
-                const cat = catCfg[row.cat] || {};
-                return (
-                  <tr key={row._rowId ?? `${row.fons}-${row.data}-${currentPage}-${index}`} style={{ borderBottom: `1px solid ${tc.bgAlt}`, background: index % 2 === 0 ? tc.card : tc.bgAlt }}>
-                    <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.data}</td>
-                    <td style={{ padding: "8px 10px", fontWeight: 600, color: tc.text, fontSize: 12, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.fons}>
-                      <Link to={makeVehicleDetailPath(row)} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{row.fons}</Link>
-                    </td>
-                    <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.tipus}</td>
-                    <td style={{ padding: "8px 10px" }}>
-                      <span style={{ fontSize: 11, background: cat.bg || tc.bgAlt, color: cat.color || tc.textMid, borderRadius: 4, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap" }}>{row.cat}</span>
-                    </td>
-                    <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: isIn ? tc.navy : tc.green }}>
-                      {isIn ? "" : "+ "}{fmtM(Math.abs(row.eur))}
-                    </td>
-                    <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.fy}</td>
-                    <td style={{ padding: "8px 10px" }}>{row.vcpe ? <Badge label={row.vcpe} cfg={vcpeCfg[row.vcpe] || {}} /> : <span style={{ color: tc.textLight }}>—</span>}</td>
-                    <td style={{ padding: "8px 10px" }}>{row.est ? <Badge label={row.est} cfg={estCfg[row.est] || {}} /> : <span style={{ color: tc.textLight }}>—</span>}</td>
-                    {canEdit ? (
-                      <td style={{ padding: "4px 8px", textAlign: "center", whiteSpace: "nowrap" }}>
-                        {row._rowId ? (
-                          <span style={{ display: "inline-flex", gap: 4 }}>
-                            <button
-                              onClick={() => onEdit(row)}
-                              style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 10, fontFamily: "inherit" }}
-                            >
-                              Edita
-                            </button>
-                            <DeleteRowButton onDelete={() => onDelete(row)} />
-                          </span>
-                        ) : null}
-                      </td>
-                    ) : null}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        {sorted.length > 0 ? (
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 14, paddingTop: 12, borderTop: `1px solid ${tc.border}` }}>
-            <span style={{ fontSize: 12, color: tc.textLight }}>
-              {sorted.length} moviments · pàgina <b style={{ color: tc.navy }}>{currentPage + 1}</b> de {pageCount}
-            </span>
-            <div style={{ display: "flex", gap: 6 }}>
-              <button
-                disabled={currentPage === 0}
-                onClick={() => setPage((prev) => Math.max(prev - 1, 0))}
-                style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 4, padding: "5px 14px", cursor: currentPage === 0 ? "not-allowed" : "pointer", color: currentPage === 0 ? tc.textLight : tc.navy, fontFamily: "inherit", fontSize: 12 }}
-              >
-                ← Anterior
-              </button>
-              <button
-                disabled={currentPage >= pageCount - 1}
-                onClick={() => setPage((prev) => Math.min(prev + 1, pageCount - 1))}
-                style={{ background: currentPage >= pageCount - 1 ? tc.bgAlt : tc.navy, border: "none", borderRadius: 4, padding: "5px 14px", cursor: currentPage >= pageCount - 1 ? "not-allowed" : "pointer", color: currentPage >= pageCount - 1 ? tc.textLight : "#fff", fontFamily: "inherit", fontSize: 12 }}
-              >
-                Següent →
-              </button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-function DashboardInner() {
-  const { tc, dark, toggle: toggleDark } = useTheme();
-  const { signOut, isAdmin, canAccessSection, canEditSection } = useAuth();
+function Dashboard() {
+  const { tc, dark } = useTheme();
+  const { isAdmin, canAccessSection, canEditSection } = useAuth();
+  const d = useDashboardData();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
@@ -377,7 +61,6 @@ function DashboardInner() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [inversionsSubTab, setInversionsSubTab] = useState("fons");
   const [realEstateTab, setRealEstateTab] = useState("directe");
-  const [realEstateInversionsSubTab, setRealEstateInversionsSubTab] = useState("fons");
   const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
   const [searchersSubTab, setSearchersSubTab] = useState("tots");
   const [companiesSubTab, setCompaniesSubTab] = useState("totes");
@@ -387,93 +70,50 @@ function DashboardInner() {
   const [ccAddModalDefaults, setCcAddModalDefaults] = useState(null);
   const [ccEditModalRow, setCcEditModalRow] = useState(null);
 
-  // Editable app state starts from localStorage.
-  const [rawCC,   setRawCC]   = useState(()=>readStoredJSON(LS_CC, []));
-  const [funds0,  setFunds0]  = useState(()=>readStoredJSON(LS_PL, []));
-  const [companiesData, setCompaniesData] = useState(()=>readStoredJSON("tc_portfolioCompanies", []));
-  const [searchersData, setSearchersData] = useState(()=>readStoredJSON("tc_allSearchers", []));
-  const [loadedAt,setLoadedAt]= useState(()=>readStoredJSON(LS_TS, null));
-  const [eurUsd,  setEurUsd]  = useState(null);
-
-  useEffect(() => {
-    apiFetchJson("/api/eur-usd")
-      .then(({ rate }) => setEurUsd(rate))
-      .catch(() => {});
-  }, []);
-
-  // Refresh persisted state from Supabase on mount.
-  useEffect(() => {
-    loadAll()
-      .then(data => {
-        if (!data) return;
-        const now = new Date().toLocaleDateString("ca-ES");
-        if (Array.isArray(data.rawCC)) {
-          setRawCC(data.rawCC);
-          writeStoredJSON(LS_CC, data.rawCC);
-        }
-        if (Array.isArray(data.funds0)) {
-          setFunds0(data.funds0);
-          writeStoredJSON(LS_PL, data.funds0);
-        }
-        if (Array.isArray(data.companies)) {
-          setCompaniesData(data.companies);
-          writeStoredJSON("tc_portfolioCompanies", data.companies);
-        }
-        if (Array.isArray(data.searchers)) {
-          setSearchersData(data.searchers);
-          writeStoredJSON("tc_allSearchers", data.searchers);
-        }
-        if (Array.isArray(data.fundMeta)) writeStoredJSON("tc_fundMeta", data.fundMeta);
-        setLoadedAt(now);
-        writeStoredJSON(LS_TS, now);
-      })
-      .catch(err => {
-        console.error("Initial dashboard load failed:", err);
-      });
-  }, []);
-
   const ccNameOptions = useMemo(() => dedupeOptionValues([
-    ...rawCC.map((row) => row.fons),
-    ...companiesData.map((row) => row.nom),
-    ...searchersData.map((row) => row.nom),
-  ]), [companiesData, rawCC, searchersData]);
+    ...d.rawCC.map((row) => row.fons),
+    ...d.companiesData.map((row) => row.nom),
+    ...d.searchersData.map((row) => row.nom),
+  ]), [d.companiesData, d.rawCC, d.searchersData]);
   const ccTipusOptions = useMemo(() => dedupeOptionValues([
     ...CAPITAL_CALL_TIPUS_OPTIONS,
-    ...rawCC.map((row) => row.tipus),
-  ]), [rawCC]);
+  ]), []);
+  const vehicleCurrencyMap = useMemo(() => {
+    const map = new Map();
+    d.rawCC.forEach((row) => {
+      const key = normalizeOptionValue(row?.fons);
+      const currency = String(row?.divisa ?? "").trim();
+      if (key && currency && !map.has(key)) map.set(key, currency);
+    });
+    return map;
+  }, [d.rawCC]);
+  const recallablePoolByFund = useMemo(() => {
+    const map = {};
+    for (const r of d.rawCC) {
+      const fund = r.fons;
+      if (!fund) continue;
+      if (!map[fund]) map[fund] = 0;
+      if ((r.cat === "Distribució" || r.cat === "Retorn Capital") && r.recallable) {
+        map[fund] += Number(r.recallable);
+      }
+      if (r.cat === "Capital Call" && r.from_recallable) {
+        map[fund] -= Number(r.from_recallable);
+      }
+    }
+    return map;
+  }, [d.rawCC]);
+  const defaultVehicleCurrency = useCallback((vehicleName) => {
+    const key = normalizeOptionValue(vehicleName);
+    return vehicleCurrencyMap.get(key) ?? "EUR";
+  }, [vehicleCurrencyMap]);
 
   function openCcAddModal(defaults = {}) {
-    setCcAddModalDefaults(defaults);
-    setCcAddModalFons(defaults.fons ?? "");
-  }
-
-  // ── Capital call row CRUD ─────────────────────────────────
-  async function handleCCInsert(values, setError) {
-    if (!values.fons || !values.data || !values.eur) { setError("Fons, data i import són obligatoris."); return; }
-    const payload = sanitizeCapitalCallValues({ ...values, eur: parseFloat(values.eur) });
-    const { data, error } = await insertCapitalCall(payload);
-    if (error) { setError(error.message); return; }
-    const fresh = await loadCapitalCalls();
-    if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
-    setCcAddModalFons(null);
-    setCcAddModalDefaults(null);
-  }
-
-  async function handleCCUpdate(values, setError) {
-    if (!values.data || !values.eur) { setError("Data i import són obligatoris."); return; }
-    const payload = sanitizeCapitalCallValues({ ...values, eur: parseFloat(values.eur) });
-    const { error } = await updateCapitalCall(ccEditModalRow._rowId, payload);
-    if (error) { setError(error.message); return; }
-    const fresh = await loadCapitalCalls();
-    if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
-    setCcEditModalRow(null);
-  }
-
-  async function handleCCDelete(rowId) {
-    const { error } = await deleteCapitalCall(rowId);
-    if (error) { console.error(error); return; }
-    const fresh = await loadCapitalCalls();
-    if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
+    const fons = defaults.fons ?? "";
+    setCcAddModalDefaults({
+      ...defaults,
+      divisa: defaults.divisa ?? defaultVehicleCurrency(fons),
+    });
+    setCcAddModalFons(fons);
   }
 
   function handleNavigate(itemId) {
@@ -500,9 +140,7 @@ function DashboardInner() {
 
   const [exporting, setExporting] = useState(false);
 
-  const exportPDF = useCallback(() => {
-    window.print();
-  }, []);
+  const exportPDF = useCallback(() => { window.print(); }, []);
 
   const exportPNG = useCallback(async () => {
     const el = document.getElementById("dashboard-content");
@@ -514,9 +152,7 @@ function DashboardInner() {
       a.href = canvas.toDataURL("image/png");
       a.download = `dashboard-${new Date().toISOString().slice(0,10)}.png`;
       a.click();
-    } finally {
-      setExporting(false);
-    }
+    } finally { setExporting(false); }
   }, []);
 
   const exportAll = useCallback(async () => {
@@ -573,7 +209,6 @@ function DashboardInner() {
           ["Deute Net (€M)",       "dfn"],
           ["DFN Pres. (€M)",       "dfnBudget"],
         ];
-        // Collect all quarters across all companies, sorted chronologically
         const allQs = [...new Set(companies.flatMap(c => (c.quarters || []).map(q => q.q)))]
           .sort((a, b) => {
             const [, qa, ya] = a.match(/Q(\d) (\d+)/) || [, "0", "0"];
@@ -585,9 +220,7 @@ function DashboardInner() {
           const row = { "Nom": c.nom };
           allQs.forEach(q => {
             const data = byQ[q] || {};
-            KPI_FIELDS.forEach(([label, key]) => {
-              row[`${q} | ${label}`] = fmtN(data[key] ?? null);
-            });
+            KPI_FIELDS.forEach(([label, key]) => { row[`${q} | ${label}`] = fmtN(data[key] ?? null); });
           });
           return row;
         });
@@ -606,115 +239,21 @@ function DashboardInner() {
     } finally { setExporting(false); }
   }, []);
 
-  const handleLoad = async (key, rows) => {
-    const now = new Date().toLocaleDateString("ca-ES");
-    try {
-      if (key === "xlsx") {
-        const byNom = rows.kpiTrimestral instanceof Map ? rows.kpiTrimestral : mapKpiRows(rows.kpiTrimestral || []);
-        const existingCompanies = rows.companies || readStoredJSON("tc_portfolioCompanies", []);
-        const mergedCompanies = existingCompanies.map(c => {
-          const qs = byNom.get(c.nom);
-          return qs ? { ...c, quarters: qs } : c;
-        });
-        const baseSearchers = rows.searchers || readStoredJSON("tc_allSearchers", searchersData);
-        const baseRawCC = rows.cc ?? readStoredJSON(LS_CC, rawCC);
-        const searchFundTx = normalizePrivateWorkbookRows(rows.ccSearchFunds || [], baseSearchers, mergedCompanies);
-        const mergedRawCC = rows.cc != null || searchFundTx.length
-          ? mergeCapitalCallRows(baseRawCC, searchFundTx)
-          : null;
-        const bundle = {
-          rawCC: mergedRawCC,
-          funds0: rows.pl ?? null,
-          companies: mergedCompanies,
-          searchers: rows.searchers ?? null,
-          fundMeta: rows.fundMeta ?? null,
-        };
-        const { error } = await saveDashboardBundle(bundle);
-        if (error) throw error;
-        if (bundle.rawCC != null) {
-          setRawCC(bundle.rawCC);
-          writeStoredJSON(LS_CC, bundle.rawCC);
-        }
-        if (bundle.funds0 != null) {
-          setFunds0(bundle.funds0);
-          writeStoredJSON(LS_PL, bundle.funds0);
-        }
-        setCompaniesData(bundle.companies);
-        writeStoredJSON("tc_portfolioCompanies", bundle.companies);
-        if (bundle.searchers != null) {
-          setSearchersData(bundle.searchers);
-          writeStoredJSON("tc_allSearchers", bundle.searchers);
-        }
-        if (bundle.fundMeta != null) writeStoredJSON("tc_fundMeta", bundle.fundMeta);
-        setExcluded(new Set());
-      } else if (key === "cc") {
-        const { error } = await saveCapitalCalls(rows);
-        if (error) throw error;
-        setRawCC(rows);
-        setExcluded(new Set());
-        writeStoredJSON(LS_CC, rows);
-      } else if (key === "pl") {
-        const { error } = await savePipeline(rows);
-        if (error) throw error;
-        setFunds0(rows);
-        writeStoredJSON(LS_PL, rows);
-      } else if (key === "companies") {
-        const { error } = await saveCompanies(rows);
-        if (error) throw error;
-        setCompaniesData(rows);
-        writeStoredJSON("tc_portfolioCompanies", rows);
-      } else if (key === "searchers") {
-        const { error } = await saveSearchers(rows);
-        if (error) throw error;
-        setSearchersData(rows);
-        writeStoredJSON("tc_allSearchers", rows);
-      } else if (key === "fundMeta") {
-        const { error } = await saveFundMeta(rows);
-        if (error) throw error;
-        writeStoredJSON("tc_fundMeta", rows);
-      }
-      setLoadedAt(now);
-      writeStoredJSON(LS_TS, now);
-    } catch (err) {
-      console.error("Load failed:", err);
-      throw err;
-    }
-  };
-
-  // Derivar TRANSACTIONS i COMPROMISOS del rawCC en estat
-  const TRANSACTIONS = useMemo(()=>rawCC.filter(r=>r.cat!=="Compromís"),[rawCC]);
-  const COMPROMISOS  = useMemo(()=>rawCC.filter(r=>r.cat==="Compromís"),[rawCC]);
-
-  // Filtres Capital Calls
   const [fFy,     setFFy]     = usePersistedState("ui_fFy",  "Tots");
   const [fVcpe,   setFVcpe]   = usePersistedState("ui_fVcpe", new Set(), { isSet: true });
   const [fEst,    setFEst]    = usePersistedState("ui_fEst",  "Tots");
   const [fCat,    setFCat]    = usePersistedState("ui_fCat",  "Tots");
   const [txSearch,setTxSearch]= usePersistedState("ui_txSearch", "");
-  const [, setTxPage]  = useState(0);
   const [sortFons, setSortFons] = usePersistedState("ui_sortFons", "compr");
   const [sortFonsDir, setSortFonsDir] = usePersistedState("ui_sortFonsDir", "desc");
   const [expandedFons, setExpandedFons] = useState(new Set());
-  const [ccChartF, setCcChartF] = useState(null); // {type, value} per filtrar taula fons
+  const [ccChartF, setCcChartF] = useState(null);
 
-  const actualCompanies = useMemo(() => (Array.isArray(companiesData) ? companiesData.filter(isActualCompany) : []), [companiesData]);
-  const actualCompanyIds = useMemo(() => new Set(actualCompanies.map((company) => company.id).filter(Boolean)), [actualCompanies]);
-  const searcherShellIds = useMemo(() => new Set((Array.isArray(companiesData) ? companiesData : []).filter(isSearchFundShell).map((company) => company.id).filter(Boolean)), [companiesData]);
+  const baseTx      = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.TRANSACTIONS,excluded]);
+  const baseCompr   = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.COMPROMISOS,excluded]);
+  const allAltTx    = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)),[d.TRANSACTIONS,excluded]);
+  const allAltCompr = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)),[d.COMPROMISOS,excluded]);
 
-  // Dades base filtrades per vcpe i exclusió
-  const baseTx      = useMemo(()=>TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[TRANSACTIONS,excluded]);
-  const baseCompr   = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[COMPROMISOS,excluded]);
-  const sfTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vcpe==="SF"),[TRANSACTIONS]);
-  const sfCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vcpe==="SF"),[COMPROMISOS]);
-  const pcTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vcpe==="PC"),[TRANSACTIONS]);
-  const pcCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vcpe==="PC"),[COMPROMISOS]);
-  const searcherTx  = useMemo(()=>sfTx.filter((row) => !actualCompanyIds.has(row.id)),[sfTx, actualCompanyIds]);
-  const searcherCompr = useMemo(()=>sfCompr.filter((row) => !actualCompanyIds.has(row.id)),[sfCompr, actualCompanyIds]);
-  const { tx: reTx, compr: reCompr } = useMemo(() => splitRealEstateRows(rawCC), [rawCC]);
-  const allAltTx    = useMemo(()=>TRANSACTIONS.filter(r=>!excluded.has(r.fons)),[TRANSACTIONS,excluded]);
-  const allAltCompr = useMemo(()=>COMPROMISOS.filter(r=>!excluded.has(r.fons)),[COMPROMISOS,excluded]);
-
-  // Hoisted above filtered so it can be used in the dep array without TDZ:
   const section = tab==="mercats-publics" ? "mercats-publics"
               : tab==="real-estate"     ? "real-estate"
               : tab==="tx-alt"          ? "txlog"
@@ -743,34 +282,26 @@ function DashboardInner() {
                 ? "inversions"
                 : "fons";
 
-  // Filtres addicionals
   const filtered = useMemo(()=>{
-    let d=baseTx;
-    if(fFy  !=="Tots") d=d.filter(r=>r.fy===fFy);
-    if(fVcpe.size>0) d=d.filter(r=>fVcpe.has(r.vcpe));
-    if(fEst !=="Tots") d=d.filter(r=>r.est===fEst);
-    if(fCat !=="Tots") d=d.filter(r=>r.cat===fCat);
+    let dat=baseTx;
+    if(fFy  !=="Tots") dat=dat.filter(r=>r.fy===fFy);
+    if(fVcpe.size>0) dat=dat.filter(r=>fVcpe.has(r.vcpe));
+    if(fEst !=="Tots") dat=dat.filter(r=>r.est===fEst);
+    if(fCat !=="Tots") dat=dat.filter(r=>r.cat===fCat);
     if(txSearch.trim()) {
       const q=txSearch.trim().toLowerCase();
-      d=d.filter(r=>(r.fons||"").toLowerCase().includes(q)||(r.tipus||"").toLowerCase().includes(q)||(r.cat||"").toLowerCase().includes(q));
+      dat=dat.filter(r=>(r.fons||"").toLowerCase().includes(q)||(r.tipus||"").toLowerCase().includes(q)||(r.cat||"").toLowerCase().includes(q));
     }
     if(section==="alternatives"&&globalSearch.trim()) {
       const q=globalSearch.trim().toLowerCase();
-      d=d.filter(r=>(r.fons||"").toLowerCase().includes(q));
+      dat=dat.filter(r=>(r.fons||"").toLowerCase().includes(q));
     }
-    return d;
+    return dat;
   },[baseTx,fFy,fVcpe,fEst,fCat,txSearch,globalSearch,section]);
-
-  // KPIs
-  const gCompr = useMemo(()=>baseCompr.reduce((s,r)=>s+r.eur,0),[baseCompr]);
-  const gCalls = useMemo(()=>baseTx.filter(r=>r.cat==="Capital Call").reduce((s,r)=>s+r.eur,0),[baseTx]);
-  const gDist  = useMemo(()=>baseTx.filter(r=>r.cat==="Distribució"||r.cat==="Retorn Capital").reduce((s,r)=>s+Math.abs(r.eur),0),[baseTx]);
-  const gNet   = gDist - gCalls;
 
   const fCalls = useMemo(()=>filtered.filter(r=>r.cat==="Capital Call").reduce((s,r)=>s+r.eur,0),[filtered]);
   const fDist  = useMemo(()=>filtered.filter(r=>r.cat==="Distribució"||r.cat==="Retorn Capital").reduce((s,r)=>s+Math.abs(r.eur),0),[filtered]);
 
-  // Gràfics
   const byFy = useMemo(()=>FY_LIST.map(fy=>{
     const rows=filtered.filter(r=>r.fy===fy);
     const calls=rows.filter(r=>r.cat==="Capital Call").reduce((s,r)=>s+r.eur,0);
@@ -806,7 +337,6 @@ function DashboardInner() {
     return Object.entries(m).map(([name,value])=>({name,value:+value.toFixed(0),pct:((value/tot)*100).toFixed(1)}));
   },[filtered]);
 
-  // Fons taula
   const FONS_MAP2 = useMemo(()=>{
     const m={};
     baseCompr.forEach(r=>{m[r.id ?? r.fons]={id:r.id ?? null,fons:r.fons,compr:r.eur,vcpe:r.vcpe,est:r.est,calls:0,dist:0,retorn:0};});
@@ -819,7 +349,7 @@ function DashboardInner() {
     });
     return Object.values(m);
   },[baseCompr,baseTx]);
-  const RE_FONS_MAP = useMemo(() => buildRealEstateFundsMap(reCompr, reTx), [reCompr, reTx]);
+  const RE_FONS_MAP = useMemo(() => buildRealEstateFundsMap(d.reCompr, d.reTx), [d.reCompr, d.reTx]);
 
   const fonsFiltered = useMemo(()=>{
     let fl=[...FONS_MAP2];
@@ -846,14 +376,9 @@ function DashboardInner() {
     });
   },[FONS_MAP2,fVcpe,fEst,sortFons,sortFonsDir,ccChartF,baseTx]);
 
-  const clearFilters = ()=>{setFFy("Tots");setFVcpe(new Set());setFEst("Tots");setFCat("Tots");setTxSearch("");setTxPage(0);};
+  const clearFilters = ()=>{setFFy("Tots");setFVcpe(new Set());setFEst("Tots");setFCat("Tots");setTxSearch("");};
   const anyFilter = fFy!=="Tots"||fVcpe.size>0||fEst!=="Tots"||fCat!=="Tots"||txSearch.trim()!="";
 
-  // Theme-based style objects
-  const inp = {border:`1px solid ${tc.border}`,borderRadius:4,padding:"5px 8px",fontSize:12,color:tc.text,background:tc.card,outline:"none",fontFamily:"inherit",cursor:"pointer"};
-  const th  = {padding:"9px 10px",fontSize:11,letterSpacing:"0.06em",color:tc.textLight,textTransform:"uppercase",fontWeight:600,textAlign:"left",borderBottom:`2px solid ${tc.border}`,whiteSpace:"nowrap",userSelect:"none"};
-
-  // Dark-aware badge configs
   const vcpeCfg = {
     "PE": { color:tc.navy,               bg: dark ? "#112030" : "#E6EDF3" },
     "VC": { color:tc.green,              bg: dark ? "#0A2010" : "#E8F8E8" },
@@ -873,20 +398,7 @@ function DashboardInner() {
     "Compromís":      { color:tc.navyLight, bg: dark ? "#112030" : "#E6EDF3" },
     "Altres":         { color:tc.textLight, bg: tc.bgAlt },
   };
-  const FONS_VCPE_KEYS = ["PE", "VC"];
 
-  // Expanded fons row colors
-  const rowExpandBg     = dark ? "#0E2412" : "#F4FBF4";
-  const rowExpandHeader = dark ? "#0A1E0C" : "#E8F8E8";
-  const rowExpandAlt    = dark ? "#091C0B" : "#F0FBF0";
-  const rowExpandBorder = dark ? "#183820" : "#E0F0E0";
-
-  const TABS_CC = [
-    {id:"resum",   label:"Resum Anual"},
-    {id:"mensual", label:"Detall Mensual"},
-    {id:"fons",    label:"Per Fons"},
-    {id:"fons-tx", label:"Transaccions"},
-  ];
   const SECTIONS_ALL = [
     {id:"alternatives",   label:"Alternatius"},
     {id:"real-estate",    label:"Real Estate"},
@@ -902,6 +414,18 @@ function DashboardInner() {
   const SUPRA = useMemo(() => SUPRA_ALL.filter(s =>
     s.id === "searchers" ? canAccessSection("alternatives") : canAccessSection(s.id)
   ), [canAccessSection]);
+  const SEARCHERS_SUBTABS = useMemo(() => ([
+    { id: "resum", label: "Resum" },
+    { id: "tots", label: "Tots" },
+    { id: "actius", label: "Actius" },
+    { id: "transaccions", label: "Transaccions" },
+  ]), []);
+  const COMPANIES_SUBTABS = useMemo(() => ([
+    { id: "totes", label: "Totes" },
+    { id: "via-sf", label: "Via Search Fund" },
+    { id: "pe-directe", label: "PE Directe" },
+    { id: "transaccions", label: "Transaccions" },
+  ]), []);
   const REAL_ESTATE_NAV = useMemo(() => [
     { id: "re-directe", tab: "directe" },
     { id: "re-altres", tab: "altres-vehicles" },
@@ -915,943 +439,242 @@ function DashboardInner() {
     { id: "mp-transaccions", tab: "transaccions" },
     { id: "mp-traçabilitat", tab: "traçabilitat" },
   ].filter((item) => canAccessSection(item.id)), [canAccessSection]);
-  const supra = tab==="searchers"?"searchers"
-              : tab==="companies"?"companies"
-              : tab==="inversions"?"inversions"
-              : "fons";
-  const TABS_FONS = [{id:"pipeline",label:"Current Pipeline"}, ...TABS_CC];
-  const canEdit = canEditSection(currentPermissionId);
 
   useEffect(() => {
-    if (tab === "txlog") {
-      setTab("tx-alt");
-      setActiveNavItem("tx-alt");
-    }
+    if (tab !== "searchers") return;
+    if (!SEARCHERS_SUBTABS.some((item) => item.id === searchersSubTab)) setSearchersSubTab("tots");
+  }, [tab, searchersSubTab, SEARCHERS_SUBTABS]);
+
+  useEffect(() => {
+    if (tab !== "companies") return;
+    if (!COMPANIES_SUBTABS.some((item) => item.id === companiesSubTab)) setCompaniesSubTab("totes");
+  }, [tab, companiesSubTab, COMPANIES_SUBTABS]);
+
+  useEffect(() => {
+    if (tab === "txlog") { setTab("tx-alt"); setActiveNavItem("tx-alt"); }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (tab === "searchers" && activeNavItem !== "searchers") setActiveNavItem("searchers");
-    else if (tab === "companies" && activeNavItem !== "companies") setActiveNavItem("companies");
-    else if (tab === "inversions" && activeNavItem !== "posicions") setActiveNavItem("posicions");
-    else if ((tab === "pipeline" || tab === "resum" || tab === "mensual" || tab === "fons" || tab === "fons-tx") && activeNavItem !== "fons") setActiveNavItem("fons");
-    else if (tab === "real-estate") {
-      const next = realEstateTab === "altres-vehicles" ? "re-altres" : realEstateTab === "inversions" ? "re-inversions" : "re-directe";
-      if (activeNavItem !== next) setActiveNavItem(next);
-    } else if (tab === "mercats-publics") {
-      const next = mercatsPublicsTab === "transaccions"
-        ? (activeNavItem === "tx-mp" ? "tx-mp" : "mp-transaccions")
-        : mercatsPublicsTab === "rv" ? "mp-rv"
-        : mercatsPublicsTab === "rf" ? "mp-rf"
-        : mercatsPublicsTab === "posicions" ? "mp-posicions"
-        : mercatsPublicsTab === "traçabilitat" ? "mp-traçabilitat"
-        : "mp-resum";
-      if (activeNavItem !== next) setActiveNavItem(next);
-    } else if (tab === "tx-alt" && activeNavItem !== "tx-alt") {
-      setActiveNavItem("tx-alt");
-    }
-  }, [activeNavItem, mercatsPublicsTab, realEstateTab, setActiveNavItem, tab]);
+    if (tab === "companies" && activeNavItem !== "companies") setActiveNavItem("companies");
+    if (tab === "inversions" && activeNavItem !== "posicions") setActiveNavItem("posicions");
+    if (tab === "pipeline" && activeNavItem !== "fons") setActiveNavItem("fons");
+  }, [tab, activeNavItem, setActiveNavItem]);
 
-  // If the active section/supra is denied, redirect to first allowed
-  useEffect(() => {
-    if (!canAccessSection(section)) {
-      const first = SECTIONS[0];
-      if (first) setTab(first.id === "alternatives" ? "pipeline" : first.id);
-      return;
-    }
-    if (!canAccessSection(currentPermissionId)) {
-      if (section === "alternatives") {
-        const first = SUPRA[0];
-        if (first) setTab(first.id === "fons" ? "pipeline" : first.id);
-      } else if (section === "real-estate") {
-        const first = REAL_ESTATE_NAV[0];
-        if (first) setRealEstateTab(first.tab);
-      } else if (section === "mercats-publics") {
-        const first = PUBLIC_MARKETS_NAV[0];
-        if (first) setMercatsPublicsTab(first.tab);
-      }
-      return;
-    }
-    const supraAccessId = supra === "searchers" ? "alternatives" : supra;
-    if (section === "alternatives" && !canAccessSection(supraAccessId)) {
-      const first = SUPRA[0];
-      if (first) setTab(first.id === "fons" ? "pipeline" : first.id);
-    }
-  }, [canAccessSection, currentPermissionId, section, supra, SECTIONS, SUPRA, REAL_ESTATE_NAV, PUBLIC_MARKETS_NAV]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Keyboard navigation: ArrowLeft/ArrowRight cycle sub-tabs (fons) or supra tabs or sections
-  useEffect(() => {
-    const onKey = (e) => {
-      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA" || e.target.tagName === "SELECT") return;
-      if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-      const dir = e.key === "ArrowRight" ? 1 : -1;
-      if (section === "transaccions") {
-        if (activeNavItem === "tx-mp") {
-          setTab("tx-alt");
-          setActiveNavItem("tx-alt");
-        } else {
-          setTab("mercats-publics");
-          setMercatsPublicsTab("transaccions");
-          setActiveNavItem("tx-mp");
-        }
-      } else if (section !== "alternatives") {
-        const sectionIds = SECTIONS.map(s => s.id);
-        const idx = sectionIds.indexOf(section);
-        const next = sectionIds[(idx + dir + sectionIds.length) % sectionIds.length];
-        setTab(next === "alternatives" ? "pipeline" : next);
-      } else if (supra === "fons") {
-        const idx = TABS_FONS.findIndex(t => t.id === tab);
-        const next = TABS_FONS[(idx + dir + TABS_FONS.length) % TABS_FONS.length];
-        setTab(next.id);
-      } else {
-        const supraIds = SUPRA.map(s => s.id);
-        const idx = supraIds.indexOf(supra);
-        const nextSupra = supraIds[(idx + dir + supraIds.length) % supraIds.length];
-        setTab(nextSupra === "fons" ? "pipeline" : nextSupra);
-      }
-      e.preventDefault();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [activeNavItem, section, setActiveNavItem, supra, tab, TABS_FONS, SECTIONS]);
+  const canEdit = canEditSection(currentPermissionId);
 
   return (
-    <div id="dashboard-content" style={{display:"flex",minHeight:"100vh",background:tc.bg,color:tc.text,fontFamily:"'Outfit',system-ui,sans-serif",fontSize:14,letterSpacing:"0.005em"}}>
-
-      {/* ── Sidebar ── */}
+    <div className={`dashboard-wrapper ${dark ? "dark-theme" : "light-theme"}`} style={{ display: "flex", minHeight: "100vh", background: tc.bg }}>
       <Sidebar
         collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(c => !c)}
-        activeItem={activeNavItem}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        activeNavItem={activeNavItem}
         onNavigate={handleNavigate}
-        tc={tc}
-        dark={dark}
-        isAdmin={isAdmin}
-        canAccessSection={canAccessSection}
+        sections={SECTIONS}
+        realEstateNav={REAL_ESTATE_NAV}
+        publicMarketsNav={PUBLIC_MARKETS_NAV}
+        supra={SUPRA}
       />
 
-      {/* ── Main column ── */}
-      <div style={{flex:1, display:"flex", flexDirection:"column", minWidth:0}}>
-
-        {/* ── Slim top bar ── */}
-        <div className="no-print" style={{
-          height:44, display:"flex", alignItems:"center", gap:8,
-          padding:"0 18px", background:tc.card,
-          borderBottom:`1px solid ${tc.border}`,
-          flexShrink:0, boxShadow:"0 1px 0 rgba(0,0,0,.06)",
-        }}>
-          <div style={{position:"relative",display:"flex",alignItems:"center"}}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-              style={{position:"absolute",left:9,color:tc.textLight,pointerEvents:"none",flexShrink:0}}>
-              <circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/>
-            </svg>
-            <input
-              value={globalSearch}
-              onChange={e=>{setGlobalSearch(e.target.value);setTxPage(0);}}
-              placeholder="Cerca…"
-              style={{padding:"5px 12px 5px 28px",borderRadius:6,border:`1.5px solid ${tc.border}`,background:tc.bg,color:tc.text,fontSize:12,fontFamily:"inherit",width:200,outline:"none"}}
-            />
-          </div>
-          {globalSearch&&(
-            <button onClick={()=>{setGlobalSearch("");setTxPage(0);}}
-              style={{background:"transparent",border:"none",cursor:"pointer",fontSize:13,color:tc.textLight,padding:"0 2px",lineHeight:1,marginLeft:-4}}>
-              ✕
-            </button>
-          )}
-          {section==="alternatives"&&supra==="fons"&&tab!=="pipeline"&&(
-            <FonsSelector excluded={excluded} setExcluded={setExcluded} rawCC={rawCC}/>
-          )}
-          <div style={{flex:1}}/>
-          <button onClick={()=>setShowLoader(true)}
-            style={{background:tc.navy,color:"#fff",border:"none",borderRadius:6,padding:"5px 12px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>
-            ↑ Carregar dades
-          </button>
-          <button onClick={exportAll} disabled={exporting} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 10px",cursor:exporting?"not-allowed":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit",opacity:exporting?0.6:1}}>
-            {exporting?"…":"↓ Excel"}
-          </button>
-          <button onClick={exportPDF} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
-            ↓ PDF
-          </button>
-          <button onClick={exportPNG} disabled={exporting} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 10px",cursor:exporting?"wait":"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
-            {exporting?"…":"↓ PNG"}
-          </button>
-          <button onClick={toggleDark} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 8px",cursor:"pointer",fontSize:15,color:tc.textMid,fontFamily:"inherit"}}>
-            {dark?"☀️":"🌙"}
-          </button>
-          <button onClick={signOut} className="btn-ghost"
-            style={{background:"transparent",border:`1.5px solid ${tc.border}`,borderRadius:6,padding:"5px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>
-            Sortir
-          </button>
-        </div>
-
-        {/* ── Sub-tab bar (Fons) ── */}
-        {section==="alternatives"&&supra==="fons"&&(
-        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex",gap:0,alignItems:"center"}}>
-          <div style={{display:"flex",flex:1}}>
-            {TABS_FONS.map(t=>(
-              <button key={t.id} onClick={()=>setTab(t.id)}
-                style={{background:"none",border:"none",borderBottom:`2px solid ${tab===t.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:tab===t.id?600:400,color:tab===t.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap",letterSpacing:"0.01em"}}>
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        )}
-
-        {/* ── Sub-tab bar (Searchers) ── */}
-        {section==="alternatives"&&supra==="searchers"&&(
-        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
-          {[{id:"fons",label:"Fons"},{id:"portfolio",label:"Portfolio"},{id:"tots",label:"Tots"},{id:"actius",label:"Actius"},{id:"transaccions",label:"Transaccions"}].map(s=>(
-            <button key={s.id} onClick={()=>setSearchersSubTab(s.id)}
-              style={{background:"none",border:"none",borderBottom:`2px solid ${searchersSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:searchersSubTab===s.id?600:400,color:searchersSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-        )}
-
-        {/* ── Sub-tab bar (Participades) ── */}
-        {section==="alternatives"&&supra==="companies"&&(
-        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
-          {[{id:"fons",label:"Fons"},{id:"totes",label:"Totes"},{id:"via-sf",label:"Via Search Fund"},{id:"pe-directe",label:"PE Directe"},{id:"transaccions",label:"Transaccions"}].map(s=>(
-            <button key={s.id} onClick={()=>setCompaniesSubTab(s.id)}
-              style={{background:"none",border:"none",borderBottom:`2px solid ${companiesSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:companiesSubTab===s.id?600:400,color:companiesSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-        )}
-
-        {/* ── Sub-tab bar (Totes les Posicions) ── */}
-        {section==="alternatives"&&supra==="inversions"&&(
-        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
-          {[{id:"fons",label:"Fons"},{id:"companies",label:"Participades"},{id:"searchers",label:"Searchers"}].map(s=>(
-            <button key={s.id} onClick={()=>setInversionsSubTab(s.id)}
-              style={{background:"none",border:"none",borderBottom:`2px solid ${inversionsSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:inversionsSubTab===s.id?600:400,color:inversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-        )}
-
-        {/* ── Sub-tab bar (Real Estate Totes les Posicions) ── */}
-        {tab==="real-estate"&&realEstateTab==="inversions"&&(
-        <div className="tab-bar no-print" style={{background:tc.card,borderBottom:`1px solid ${tc.border}`,padding:"0 24px",display:"flex"}}>
-          {[{id:"fons",label:"Fons"}].map(s=>(
-            <button key={s.id} onClick={()=>setRealEstateInversionsSubTab(s.id)}
-              style={{background:"none",border:"none",borderBottom:`2px solid ${realEstateInversionsSubTab===s.id?tc.green:"transparent"}`,padding:"10px 18px",cursor:"pointer",fontSize:12,fontWeight:realEstateInversionsSubTab===s.id?600:400,color:realEstateInversionsSubTab===s.id?tc.navy:tc.textMid,fontFamily:"inherit",whiteSpace:"nowrap"}}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-        )}
-
-        {/* ── Content area ── */}
-        <div className="page-pad" style={{flex:1,overflowY:"auto",padding:"22px 28px 60px"}}>
-
-        {/* ── PIPELINE ── */}
-        {tab==="pipeline"&&<div className="tab-panel"><PipelineFY26 initialFunds={funds0} eurUsd={eurUsd} onDealsChange={deals=>{ setFunds0(deals); writeStoredJSON(LS_PL, deals); }}/></div>}
-
-        {/* ── SEARCHERS ── */}
-        {tab==="searchers"&&searchersSubTab==="fons"&&(
-          <div className="tab-panel"><FundsIndexInner inline searchOverride={globalSearch} vcpeTypes={["SF"]}/></div>
-        )}
-        {tab==="searchers"&&searchersSubTab==="portfolio"&&(
-          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} forShells/></div>
-        )}
-        {tab==="searchers"&&searchersSubTab!=="transaccions"&&searchersSubTab!=="portfolio"&&searchersSubTab!=="fons"&&(
-          <div className="tab-panel"><SearchersTab search={globalSearch} subTab={searchersSubTab} rawCC={rawCC}/></div>
-        )}
-        {tab==="searchers"&&searchersSubTab==="transaccions"&&(
-          <div className="tab-panel">
-            <TxSection
-              tx={searcherTx}
-              compr={searcherCompr}
-              search={globalSearch}
-              catCfg={catCfg}
-              vcpeCfg={vcpeCfg}
-              estCfg={estCfg}
-              tc={tc}
-              dark={dark}
-              canEdit={canEdit}
-              onAdd={()=>openCcAddModal({ fons: "", vcpe: "SF", est: "", tipus: "Search Capital" })}
-              onEdit={setCcEditModalRow}
-              onDelete={(row)=>handleCCDelete(row._rowId)}
-              title="Transaccions · Searchers"
-            />
-          </div>
-        )}
-
-        {/* ── COMPANIES ── */}
-        {tab==="companies"&&companiesSubTab==="fons"&&(
-          <div className="tab-panel"><FundsIndexInner inline searchOverride={globalSearch} vcpeTypes={["PE","VC","PC"]}/></div>
-        )}
-        {tab==="companies"&&companiesSubTab==="totes"&&(
-          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} categoryFilter="totes"/></div>
-        )}
-        {tab==="companies"&&companiesSubTab==="via-sf"&&(
-          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} categoryFilter="via-sf"/></div>
-        )}
-        {tab==="companies"&&companiesSubTab==="pe-directe"&&(
-          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} categoryFilter="pe-directe"/></div>
-        )}
-        {tab==="companies"&&companiesSubTab==="transaccions"&&(
-          <div className="tab-panel">
-            <TxSection
-              tx={[...sfTx.filter((row) => actualCompanyIds.has(row.id)), ...pcTx]}
-              compr={[...sfCompr.filter((row) => actualCompanyIds.has(row.id)), ...pcCompr]}
-              search={globalSearch}
-              catCfg={catCfg}
-              vcpeCfg={vcpeCfg}
-              estCfg={estCfg}
-              tc={tc}
-              dark={dark}
-              canEdit={canEdit}
-              onAdd={()=>openCcAddModal({ fons: "", vcpe: "PC", est: "", tipus: "Aportació capital" })}
-              onEdit={setCcEditModalRow}
-              onDelete={(row)=>handleCCDelete(row._rowId)}
-              title="Transaccions · Participades"
-            />
-          </div>
-        )}
-
-        {/* ── PORTFOLIO COMPANIES ── */}
-
-        {/* ── ALTERNATIVES ── */}
-        {tab==="mercats-publics"&&mercatsPublicsTab==="resum"&&(
-          <div className="tab-panel"><PublicMarketsTab/></div>
-        )}
-        {tab==="mercats-publics"&&mercatsPublicsTab==="rv"&&(
-          <div className="tab-panel"><PMTipusTab tipus="RV"/></div>
-        )}
-        {tab==="mercats-publics"&&mercatsPublicsTab==="rf"&&(
-          <div className="tab-panel"><PMTipusTab tipus="RF"/></div>
-        )}
-        {tab==="mercats-publics"&&mercatsPublicsTab==="posicions"&&(
-          <div className="tab-panel"><HoldingsTable/></div>
-        )}
-        {tab==="mercats-publics"&&mercatsPublicsTab==="transaccions"&&(
-          <div className="tab-panel"><PMTransaccionsTab/></div>
-        )}
-        {tab==="mercats-publics"&&mercatsPublicsTab==="traçabilitat"&&(
-          <div className="tab-panel"><PMTraçabilitatTab/></div>
-        )}
-        {tab==="real-estate"&&realEstateTab==="directe"&&(
-          <div className="tab-panel" style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"80px 0",gap:12}}>
-            <div style={{fontSize:32}}>🏗️</div>
-            <div style={{fontSize:16,fontWeight:700,color:tc.navy}}>Real Estate · Directe</div>
-            <div style={{fontSize:13,color:tc.textLight}}>Pròximament</div>
-          </div>
-        )}
-        {tab==="real-estate"&&realEstateTab==="altres-vehicles"&&(
-          <div className="tab-panel">
-            <div className="grid-3w" style={{gap:12,marginBottom:18}}>
-              {[
-                {label:"Compromís", value:fmtM(reCompr.reduce((s,r)=>s+r.eur,0)), accent:tc.navyLight},
-                {label:"Cridat", value:fmtM(reTx.filter(r=>r.cat==="Capital Call").reduce((s,r)=>s+r.eur,0)), accent:tc.navy},
-                {label:"Distribuït", value:fmtM(reTx.filter(r=>r.cat==="Distribució"||r.cat==="Retorn Capital").reduce((s,r)=>s+Math.abs(r.eur),0)), accent:tc.green},
-              ].map((card)=>(
-                <div key={card.label} style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"14px 18px",borderTop:`3px solid ${card.accent}`,boxShadow:"0 2px 8px rgba(0,0,0,.06)"}}>
-                  <div style={{fontSize:10,letterSpacing:"0.11em",color:tc.textLight,textTransform:"uppercase",marginBottom:4,fontWeight:600}}>{card.label}</div>
-                  <div style={{fontSize:20,fontWeight:700,color:card.accent,fontFamily:"'DM Mono',monospace"}}>{card.value}</div>
-                </div>
-              ))}
+      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+        <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
+              {tab === "mercats-publics" ? "Mercats Públics" : tab === "real-estate" ? "Real Estate" : "Mercats Privats"}
             </div>
-
-            <div style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,.06)",marginBottom:18}}>
-              <div style={{fontSize:11,fontWeight:700,letterSpacing:"0.11em",textTransform:"uppercase",color:tc.textLight,marginBottom:14}}>Vehicles Real Estate</div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse"}}>
-                  <thead>
-                    <tr style={{background:tc.bgAlt}}>
-                      {["Vehicle","Compromís","Cridat","Distribuït","Retorn","Net"].map((head)=>(
-                        <th key={head} style={{padding:"8px 12px",fontSize:10,letterSpacing:"0.09em",color:tc.textLight,textTransform:"uppercase",fontWeight:600,borderBottom:`2px solid ${tc.border}`,textAlign:head==="Vehicle"?"left":"right",whiteSpace:"nowrap"}}>{head}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {RE_FONS_MAP.length===0 ? (
-                      <tr><td colSpan={6} style={{padding:"24px",textAlign:"center",color:tc.textLight,fontSize:13}}>Cap vehicle</td></tr>
-                    ) : null}
-                    {RE_FONS_MAP.map((fund,index)=>(
-                      <tr key={fund.id ?? fund.fons} style={{borderBottom:`1px solid ${tc.bgAlt}`,background:index%2===0?tc.card:tc.bgAlt}}>
-                        <td style={{padding:"9px 12px",fontWeight:600,fontSize:13}}>
-                          <Link to={makeVehicleDetailPath(fund)} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{fund.fons}</Link>
-                        </td>
-                        {[fund.compr,fund.calls,fund.dist,fund.retorn,fund.dist+fund.retorn-fund.calls].map((value, valueIndex)=>(
-                          <td key={valueIndex} style={{padding:"9px 12px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:valueIndex===4?(value>=0?tc.green:tc.navy):tc.navy}}>
-                            {valueIndex===4&&value>0?"+":""}{fmtM(value)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <TxSection
-              tx={reTx}
-              compr={reCompr}
-              search={globalSearch}
-              catCfg={catCfg}
-              vcpeCfg={vcpeCfg}
-              estCfg={estCfg}
-              tc={tc}
-              dark={dark}
-              canEdit={canEdit}
-              onAdd={()=>openCcAddModal({ fons: "", vcpe: "RE", est: "SOCIMI", tipus: "Aportació" })}
-              onEdit={setCcEditModalRow}
-              onDelete={(row)=>handleCCDelete(row._rowId)}
-              title="Transaccions · Real Estate"
-            />
+            {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
           </div>
-        )}
 
-        {/* ── REAL ESTATE TOTES LES POSICIONS ── */}
-        {tab==="real-estate"&&realEstateTab==="inversions"&&(
-          <div className="tab-panel"><FundsIndexInner inline searchOverride={globalSearch} vcpeTypes={["RE"]}/></div>
-        )}
-
-        {/* ── DETALL PER INVERSIÓ ── */}
-        {tab==="inversions"&&inversionsSubTab==="fons"&&(
-          <div className="tab-panel"><FundsIndexInner inline searchOverride={globalSearch}/></div>
-        )}
-        {tab==="inversions"&&inversionsSubTab==="companies"&&(
-          <div className="tab-panel"><CompaniesIndexInner inline searchOverride={globalSearch}/></div>
-        )}
-        {tab==="inversions"&&inversionsSubTab==="searchers"&&(
-          <div className="tab-panel"><PortfolioCompaniesTab search={globalSearch} forShells/></div>
-        )}
-
-        {/* ── CAPITAL CALLS: KPIs ── */}
-        {section==="alternatives"&&supra==="fons"&&tab!=="pipeline"&&(
-          <>
-            {excluded.size>0&&(
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14,background:tc.yellowLight,border:`1.5px solid ${tc.yellow}`,borderRadius:10,padding:"9px 16px"}}>
-                <span style={{fontSize:13,color:tc.yellow,fontWeight:700}}>⚠️ Anàlisi parcial:</span>
-                <span style={{fontSize:12,color:tc.text}}><b>{excluded.size} fons exclosos</b> de l'anàlisi</span>
-                <div style={{display:"flex",gap:6,flexWrap:"wrap",flex:1}}>
-                  {[...excluded].slice(0,4).map(f=>(
-                    <span key={f} style={{fontSize:10,background:tc.card,border:`1px solid ${tc.yellow}`,borderRadius:4,padding:"1px 7px",color:tc.yellow,fontWeight:600}}>{f}</span>
-                  ))}
-                  {excluded.size>4&&<span style={{fontSize:10,color:tc.yellow}}>+{excluded.size-4} més</span>}
-                </div>
-                <button onClick={()=>setExcluded(new Set())} style={{background:"transparent",border:`1px solid ${tc.yellow}`,borderRadius:4,padding:"3px 10px",cursor:"pointer",fontSize:11,color:tc.yellow,fontFamily:"inherit",whiteSpace:"nowrap"}}>Restaurar tots</button>
-              </div>
-            )}
-            <div className="grid-5" style={{gap:12,marginBottom:18}}>
-              {[
-                {label:"Compromís Total",    value:fmtM(gCompr),  sub:`${FONS_MAP2.length} fons`,                 accent:tc.navyLight},
-                {label:"Capital Cridat",     value:fmtM(gCalls),  sub:`${(gCalls/gCompr*100).toFixed(1)}% cridat`, accent:tc.navy},
-                {label:"Total Distribuït",   value:fmtM(gDist),   sub:"distribucions + retorns",                  accent:tc.green},
-                {label:"Flux Net",           value:fmtM(Math.abs(gNet)), sub:gNet>=0?"saldo positiu":"pendent",   accent:gNet>=0?tc.greenDark:tc.navyLight},
-                {label:"DPI",                value:`${(gDist/gCalls).toFixed(2)}x`, sub:"distribuït / cridat",    accent:tc.green},
-              ].map((k,i)=>(
-                <div key={i} className="kpi-card card-hover" style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"16px 18px",borderTop:`3px solid ${k.accent}`,boxShadow:"0 2px 12px rgba(0,0,0,.06)"}}>
-                  <div style={{fontSize:10,letterSpacing:"0.11em",color:tc.textLight,textTransform:"uppercase",marginBottom:6,fontWeight:500}}>{k.label}</div>
-                  <div style={{fontSize:21,fontWeight:700,color:k.accent,marginBottom:2,letterSpacing:"-0.02em"}}>{k.value}</div>
-                  <div style={{fontSize:11,color:tc.textLight}}>{k.sub}</div>
-                </div>
-              ))}
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <div style={{ position: "relative", width: 280 }}>
+              <input value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} placeholder="Cerca global..." style={{ width: "100%", padding: "8px 12px 8px 36px", borderRadius: 8, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, outline: "none", transition: "all 0.2s" }} />
+              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}>🔍</span>
+              {globalSearch && <button onClick={() => setGlobalSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 14, opacity: 0.5 }}>✕</button>}
             </div>
+            <button onClick={() => setShowLoader(true)} style={{ background: tc.navy, color: "#fff", border: "none", borderRadius: 8, padding: "8px 16px", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Gestió Dades</button>
+          </div>
+        </header>
 
-            {/* Filtres */}
-            <div style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"12px 18px",marginBottom:18,display:"flex",gap:12,alignItems:"center",flexWrap:"wrap"}}>
-              <span style={{fontSize:10,color:tc.textLight,fontWeight:700,letterSpacing:"0.12em",textTransform:"uppercase"}}>Filtres</span>
-              {[
-                {label:"Any Fiscal", val:fFy,   set:v=>{setFFy(v);setTxPage(0)},   opts:["Tots",...FY_LIST]},
-                {label:"Tipus",      val:"__vcpe__", set:null, opts:null},
-                {label:"Estratègia", val:fEst,   set:v=>{setFEst(v);setTxPage(0)},  opts:["Tots","Fons Primari","Fons de Fons","SOCIMI"]},
-                {label:"Categoria",  val:fCat,   set:v=>{setFCat(v);setTxPage(0)},  opts:["Tots","Capital Call","Distribució","Retorn Capital"]},
-              ].map(f=>{
-                if(f.opts===null){
-                  // Multi-select pills for Fons tipus
-                  const toggleVcpe=v=>{setFVcpe(prev=>{const s=new Set(prev);s.has(v)?s.delete(v):s.add(v);return s;});setTxPage(0);};
-                  return(
-                    <div key={f.label} style={{display:"flex",alignItems:"center",gap:5}}>
-                      <span style={{fontSize:11,color:tc.textLight}}>{f.label}:</span>
-                      {FONS_VCPE_KEYS.map(v=>(
-                        <button key={v} onClick={()=>toggleVcpe(v)}
-                          style={{background:fVcpe.has(v)?tc.navy:"transparent",border:`1.5px solid ${fVcpe.has(v)?tc.navy:tc.border}`,color:fVcpe.has(v)?"#fff":tc.textMid,borderRadius:20,padding:"2px 10px",cursor:"pointer",fontSize:11,fontWeight:fVcpe.has(v)?700:400,fontFamily:"inherit"}}>
-                          {v}
-                        </button>
-                      ))}
-                    </div>
-                  );
-                }
-                return(
-                <div key={f.label} style={{display:"flex",alignItems:"center",gap:5}}>
-                  <span style={{fontSize:11,color:tc.textLight}}>{f.label}:</span>
-                  <select value={f.val} onChange={e=>f.set(e.target.value)} style={inp}>
-                    {f.opts.map(o=><option key={o}>{o}</option>)}
-                  </select>
-                </div>
-                );
-              })}
-              <div style={{display:"flex",alignItems:"center",gap:6,marginLeft:4}}>
-                <span style={{fontSize:11,color:tc.textLight}}>Cerca:</span>
-                <input value={txSearch} onChange={e=>{setTxSearch(e.target.value);setTxPage(0);}} placeholder="fons, tipus…"
-                  style={{...inp,width:160,paddingLeft:8}} />
-                {txSearch&&<button onClick={()=>{setTxSearch("");setTxPage(0);}} style={{background:"transparent",border:"none",cursor:"pointer",fontSize:13,color:tc.textLight,padding:"0 2px",lineHeight:1}}>✕</button>}
-              </div>
-              {anyFilter&&<button onClick={clearFilters} style={{background:"transparent",border:`1px solid ${tc.border}`,borderRadius:4,padding:"4px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>✕ Netejar</button>}
-              <div style={{marginLeft:"auto",fontSize:12,color:tc.textLight}}>
-                <b style={{color:tc.navy}}>{filtered.length}</b> mov. ·
-                Cridat <b style={{color:tc.navy}}>{fmtS(fCalls)}</b> ·
-                Rebut <b style={{color:tc.green}}>{fmtS(fDist)}</b>
-                {anyFilter&&<span style={{marginLeft:6,fontSize:10,color:tc.green,background:dark?"#0A2010":"#E8F8E8",padding:"1px 7px",borderRadius:4,fontWeight:600}}>FILTRE ACTIU</span>}
-              </div>
-            </div>
-          </>
-        )}
+        <main id="dashboard-content" style={{ flex: 1, padding: "24px 32px" }}>
+          {tab === "resum" && <ResumTab TRANSACTIONS={d.TRANSACTIONS} COMPROMISOS={d.COMPROMISOS} fonsFiltered={FONS_MAP2} rawCC={d.rawCC} onNavigate={setTab} onExcloure={setExcluded} excluded={excluded} />}
 
-        {/* ── RESUM ANUAL ── */}
-        {tab==="resum"&&(<div key="resum" className="tab-panel"><ResumTab tc={tc} byFy={byFy} byVcpe={byVcpe} byEst={byEst} vcpeCfg={VCPE_CFG} /></div>)}
+          {tab === "mensual" && <MensualTab TRANSACTIONS={d.TRANSACTIONS} COMPROMISOS={d.COMPROMISOS} onNavigate={setTab} onExcloure={setExcluded} excluded={excluded} />}
 
-        {/* ── MENSUAL ── */}
-        {tab==="mensual"&&(<div key="mensual" className="tab-panel"><MensualTab filtered={filtered} fFy={fFy}/></div>)}
+          {tab === "pipeline" && <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />}
 
-        {/* ── PER FONS ── */}
-        {tab==="fons"&&(()=>{
-          const clickCcChart = (type,val) => setCcChartF(p=>p&&p.type===type&&p.value===val?null:{type,value:val});
-          const isCcHl = (type,val) => !ccChartF||(ccChartF.type===type&&ccChartF.value===val);
-          const toggleExpand = fons => setExpandedFons(p=>{const n=new Set(p);n.has(fons)?n.delete(fons):n.add(fons);return n;});
-          const sortFonsBy = k=>{if(sortFons===k)setSortFonsDir(d=>d==="asc"?"desc":"asc");else{setSortFons(k);setSortFonsDir("desc");}};
-          const FAr = ({k})=><span style={{marginLeft:3,opacity:sortFons===k?1:0.2,fontSize:9}}>{sortFons===k&&sortFonsDir==="asc"?"▲":"▼"}</span>;
-          const pctCol = p=>`hsl(${Math.round(Math.min(p,100)*1.3)},60%,38%)`;
-
-          // Dades gràfics per Fons tab (basats en baseTx + filtres actuals)
-          const ccByFy = FY_LIST.map(fy=>{
-            const rows=baseTx.filter(r=>r.fy===fy);
-            const calls=rows.filter(r=>r.cat==="Capital Call").reduce((s,r)=>s+r.eur,0);
-            const dist =rows.filter(r=>r.cat==="Distribució"||r.cat==="Retorn Capital").reduce((s,r)=>s+Math.abs(r.eur),0);
-            return {fy:fy.replace("FY ",""),"Capital Call":+calls.toFixed(0),"Retornat":+dist.toFixed(0)};
-          }).filter(r=>r["Capital Call"]||r["Retornat"]);
-
-          const ccByVcpe = (()=>{
-            const m={};
-            baseTx.filter(r=>r.cat==="Capital Call").forEach(r=>{m[r.vcpe]=(m[r.vcpe]||0)+r.eur;});
-            const tot=Object.values(m).reduce((s,v)=>s+v,0);
-            return Object.entries(m).map(([name,value])=>({name,value:+value.toFixed(0),pct:((value/tot)*100).toFixed(1)}));
-          })();
-
-          const ccByEst = (()=>{
-            const m={};
-            baseTx.filter(r=>r.cat==="Capital Call"&&r.est).forEach(r=>{m[r.est]=(m[r.est]||0)+r.eur;});
-            const tot=Object.values(m).reduce((s,v)=>s+v,0);
-            return Object.entries(m).map(([name,value])=>({name,value:+value.toFixed(0),pct:((value/tot)*100).toFixed(1)}));
-          })();
-
-          const greenBadgeBg = dark ? "#0A2010" : "#E8F8E8";
-
-          return (
-          <div className="tab-panel">
-            {/* Tags PE / VC */}
-            {(()=>{
-              const toggleVcpe=v=>{setFVcpe(prev=>{const s=new Set(prev);s.has(v)?s.delete(v):s.add(v);return s;});};
-              return(
-              <div style={{display:"flex",gap:6,marginBottom:14,alignItems:"center"}}>
-                <span style={{fontSize:11,color:tc.textLight,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase"}}>Tipus:</span>
-                {FONS_VCPE_KEYS.map(v=>(
-                  <button key={v} onClick={()=>toggleVcpe(v)}
-                    style={{background:fVcpe.has(v)?tc.navy:"transparent",border:`1.5px solid ${fVcpe.has(v)?tc.navy:tc.border}`,color:fVcpe.has(v)?"#fff":tc.textMid,borderRadius:20,padding:"4px 14px",cursor:"pointer",fontSize:12,fontWeight:fVcpe.has(v)?700:400,fontFamily:"inherit"}}>
-                    {v}
-                  </button>
+          {tab === "searchers" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
+                {SEARCHERS_SUBTABS.map(st => (
+                  <button key={st.id} onClick={() => setSearchersSubTab(st.id)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: searchersSubTab === st.id ? `2px solid ${tc.navy}` : "2px solid transparent", color: searchersSubTab === st.id ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{st.label}</button>
                 ))}
-                {fVcpe.size>0&&<button onClick={()=>setFVcpe(new Set())} style={{background:"transparent",border:`1px solid ${tc.border}`,borderRadius:20,padding:"4px 10px",cursor:"pointer",fontSize:11,color:tc.textMid,fontFamily:"inherit"}}>✕</button>}
               </div>
-              );
-            })()}
-            {/* Gràfics interactius */}
-            <div className="grid-3w" style={{gap:14,marginBottom:14}}>
-              {/* Barres per any */}
-              <div style={{background:tc.card,border:`1.5px solid ${ccChartF?.type==="fy"?tc.green:tc.border}`,borderRadius:10,padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,.08)",transition:"border-color 0.2s"}}>
-                <div style={{fontSize:10,letterSpacing:"0.13em",color:tc.textLight,textTransform:"uppercase",marginBottom:12,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                  Capital Cridat per Any Fiscal
-                  <span style={{fontSize:9,color:tc.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
-                </div>
-                {(()=>{
-                  const t = ecTheme(tc);
-                  const option = {
-                    grid: { top: 8, right: 8, bottom: 32, left: 0, containLabel: true },
-                    tooltip: { ...t.tooltip, trigger: "axis", axisPointer: { type: "shadow" } },
-                    legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
-                    xAxis: { type: "category", data: ccByFy.map(d=>d.fy), axisLabel: { ...t.axisLabel, color: tc.textMid, fontSize: 10 }, axisLine: t.axisLine, axisTick: t.axisTick },
-                    yAxis: { type: "value", axisLabel: { ...t.axisLabel, formatter: v=>fmtS(v) }, splitLine: t.splitLine, axisLine: t.axisLine, axisTick: t.axisTick },
-                    series: [
-                      {
-                        name: "Capital Call",
-                        type: "bar",
-                        data: ccByFy.map(d=>({ value: d["Capital Call"], itemStyle: { color: tc.navy, opacity: isCcHl("fy",d.fy)?1:0.25, borderRadius: [4,4,0,0] } })),
-                        cursor: "pointer",
-                      },
-                      {
-                        name: "Retornat",
-                        type: "bar",
-                        data: ccByFy.map(d=>({ value: d["Retornat"], itemStyle: { color: tc.green, opacity: isCcHl("fy",d.fy)?1:0.25, borderRadius: [4,4,0,0] } })),
-                        cursor: "pointer",
-                      },
-                    ],
-                  };
-                  return <ReactECharts option={option} style={{ width: "100%", height: 160 }} opts={{ renderer: "canvas" }}
-                    onEvents={{ click: p => p?.name && clickCcChart("fy", p.name) }} />;
-                })()}
-              </div>
-              {/* Pastís VC/PE/RE */}
-              {[
-                {title:"Per Tipus",     data:ccByVcpe, colorFn:n=>vcpeCfg[n]?.color||tc.navy, type:"vcpe"},
-                {title:"Per Estratègia",data:ccByEst,  colorFn:n=>estCfg[n]?.color||tc.navy,  type:"est"},
-              ].map((ch,ci)=>(
-                <div key={ci} style={{background:tc.card,border:`1.5px solid ${ccChartF?.type===ch.type?tc.green:tc.border}`,borderRadius:10,padding:"16px 18px",boxShadow:"0 2px 8px rgba(0,0,0,.08)",transition:"border-color 0.2s"}}>
-                  <div style={{fontSize:10,letterSpacing:"0.13em",color:tc.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    {ch.title}<span style={{fontSize:9,color:tc.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
-                  </div>
-                  {(()=>{
-                    const t = ecTheme(tc);
-                    const option = {
-                      tooltip: { ...t.tooltip, trigger: "item", formatter: p=>`${p.marker}${p.name}: ${fmtS(p.value)} (${p.percent}%)` },
-                      legend: { orient: "vertical", right: 8, top: "center", textStyle: { fontSize: 10, color: tc.textLight } },
-                      series: [{
-                        type: "pie",
-                        radius: ["38%", "68%"],
-                        center: ["38%", "50%"],
-                        data: ch.data.map(d=>({ name: d.name, value: d.value, itemStyle: { color: ch.colorFn(d.name), opacity: isCcHl(ch.type,d.name)?1:0.25 } })),
-                        label: { show: false },
-                        emphasis: { itemStyle: { shadowBlur: 8, shadowColor: "rgba(0,0,0,0.15)" } },
-                        cursor: "pointer",
-                      }],
-                    };
-                    return <ReactECharts option={option} style={{ width: "100%", height: 160 }} opts={{ renderer: "canvas" }}
-                      onEvents={{ click: p => clickCcChart(ch.type, p.name) }} />;
-                  })()}
-                </div>
-              ))}
+              {searchersSubTab === "resum" ? <SearchersTab search={globalSearch} subTab="resum" rawCC={d.rawCC} /> : <SearchersIndexInner search={globalSearch} subTab={searchersSubTab} rawCC={d.rawCC} />}
             </div>
+          )}
 
-
-            {/* Indicador filtre actiu gràfic */}
-            {ccChartF&&(
-              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:12,background:tc.card,border:`1.5px solid ${tc.green}`,borderRadius:10,padding:"8px 14px"}}>
-                <span style={{fontSize:12,color:tc.navy,fontWeight:600}}>🔍 Filtre gràfic actiu:</span>
-                <span style={{fontSize:12,color:tc.green,fontWeight:700,background:greenBadgeBg,padding:"2px 10px",borderRadius:4}}>{ccChartF.value}</span>
-                <button onClick={()=>setCcChartF(null)} style={{marginLeft:"auto",background:"transparent",border:`1px solid ${tc.border}`,color:tc.textMid,borderRadius:4,padding:"3px 10px",cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>✕ Treure filtre</button>
+          {tab === "companies" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
+                {COMPANIES_SUBTABS.map(st => (
+                  <button key={st.id} onClick={() => setCompaniesSubTab(st.id)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: companiesSubTab === st.id ? `2px solid ${tc.navy}` : "2px solid transparent", color: companiesSubTab === st.id ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{st.label}</button>
+                ))}
               </div>
-            )}
-
-            {/* Taula */}
-            <div style={{background:tc.card,border:`1px solid ${tc.border}`,borderRadius:10,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
-              <div style={{display:"flex",gap:8,marginBottom:10,alignItems:"center"}}>
-                <span style={{fontSize:12,color:tc.textLight}}>
-                  <b style={{color:tc.navy}}>{fonsFiltered.length}</b> fons ·
-                  <span style={{fontSize:10,color:tc.textLight,marginLeft:6}}>Clica la capçalera per ordenar · Clica el nom per veure moviments</span>
-                </span>
-              </div>
-              <div style={{overflowX:"auto"}}>
-                <table style={{width:"100%",borderCollapse:"collapse"}}>
-                  <thead>
-                    <tr style={{background:tc.bgAlt}}>
-                      <th style={{...th,width:30}}></th>
-                      <th style={th}>#</th>
-                      <th style={{...th,cursor:"pointer"}} onClick={()=>sortFonsBy("fons")}>Fons<FAr k="fons"/></th>
-                      <th style={{...th,textAlign:"right",cursor:"pointer"}} onClick={()=>sortFonsBy("compr")}>Compromís<FAr k="compr"/></th>
-                      <th style={{...th,textAlign:"right",cursor:"pointer"}} onClick={()=>sortFonsBy("calls")}>Capital Cridat<FAr k="calls"/></th>
-                      <th style={{...th,textAlign:"right",minWidth:110,cursor:"pointer"}} onClick={()=>sortFonsBy("pct")}>% Cridat<FAr k="pct"/></th>
-                      <th style={{...th,textAlign:"right",cursor:"pointer"}} onClick={()=>sortFonsBy("dist")}>Distribucions<FAr k="dist"/></th>
-                      <th style={{...th,textAlign:"right",cursor:"pointer"}} onClick={()=>sortFonsBy("retorn")}>Retorn Capital<FAr k="retorn"/></th>
-                      <th style={{...th,textAlign:"right",cursor:"pointer"}} onClick={()=>sortFonsBy("rebut")}>Total Rebut<FAr k="rebut"/></th>
-                      <th style={{...th,textAlign:"right",cursor:"pointer"}} onClick={()=>sortFonsBy("net")}>Flux Net<FAr k="net"/></th>
-                      <th style={{...th,cursor:"pointer"}} onClick={()=>sortFonsBy("vcpe")} title="Venture Capital / Private Equity">Tipus<FAr k="vcpe"/></th>
-                      <th style={{...th,cursor:"pointer"}} onClick={()=>sortFonsBy("est")} title="Estructura del fons">Estratègia<FAr k="est"/></th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {fonsFiltered.length===0 && <tr><td colSpan={10}><EmptyState/></td></tr>}
-                    {fonsFiltered.map((f,i)=>{
-                      const pct=f.compr>0?(f.calls/f.compr*100):null;
-                      const rebut=f.dist+f.retorn;
-                      const net=rebut-f.calls;
-                      const isExp=expandedFons.has(f.fons);
-                      const rowBg=i%2===0?tc.card:tc.bgAlt;
-
-                      // Moviments d'aquest fons (filtrats per filtres actius)
-                      const moviments = baseTx
-                        .filter(r=>r.fons===f.fons)
-                        .filter(r=>fFy!=="Tots"?r.fy===fFy:true)
-                        .filter(r=>fCat!=="Tots"?r.cat===fCat:true)
-                        .sort((a,b)=>b.data.localeCompare(a.data));
-
-                      return (
-                        <>
-                          {/* Fila principal */}
-                          <tr key={`row-${i}`} style={{borderBottom:isExp?"none":`1px solid ${tc.bgAlt}`,background:isExp?rowExpandBg:rowBg,cursor:"pointer"}}
-                            onClick={()=>toggleExpand(f.fons)}>
-                            <td style={{padding:"10px 8px 10px 12px",textAlign:"center"}}>
-                              <span style={{fontSize:14,color:tc.green,fontWeight:700,lineHeight:1,display:"inline-block",transition:"transform 0.2s",transform:isExp?"rotate(90deg)":"rotate(0deg)"}}>▶</span>
-                            </td>
-                            <td style={{padding:"10px 10px",fontSize:11,color:tc.textLight,fontWeight:600}}>{i+1}</td>
-                            <td style={{padding:"10px 10px",fontWeight:700,color:isExp?tc.green:tc.text,fontSize:12,maxWidth:220,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                              <Link
-                                to={makeVehicleDetailPath(f)}
-                                onClick={e => e.stopPropagation()}
-                                style={{ color: "inherit", textDecoration: "none" }}
-                                onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
-                                onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}
-                              >
-                                {f.fons}
-                              </Link>
-                            </td>
-                            <td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:tc.navyLight}}>{f.compr?fmtM(f.compr):"—"}</td>
-                            <td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:tc.navy}}>{fmtM(f.calls)}</td>
-                            <td style={{padding:"10px 10px",textAlign:"right"}}>
-                              {pct!==null&&(
-                                <div style={{display:"flex",alignItems:"center",gap:7,justifyContent:"flex-end"}}>
-                                  <div style={{width:70,height:6,background:tc.bgAlt,borderRadius:4,overflow:"hidden"}}>
-                                    <div style={{width:`${Math.min(100,pct)}%`,height:"100%",background:pctCol(pct),borderRadius:4}}/>
-                                  </div>
-                                  <span style={{fontSize:11,color:pctCol(pct),minWidth:38,textAlign:"right",fontWeight:600}}>{pct.toFixed(1)}%</span>
-                                </div>
-                              )}
-                            </td>
-                            <td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:tc.green}}>{f.dist?fmtM(f.dist):"—"}</td>
-                            <td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,color:tc.greenDark}}>{f.retorn?fmtM(f.retorn):"—"}</td>
-                            <td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:tc.green}}>{rebut?fmtM(rebut):"—"}</td>
-                            <td style={{padding:"10px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:net>=0?tc.greenDark:tc.navy}}>{net>=0?"+":""}{fmtM(net)}</td>
-                            <td style={{padding:"10px 10px"}}><Badge label={f.vcpe} cfg={vcpeCfg[f.vcpe]}/></td>
-                            <td style={{padding:"10px 10px"}}><Badge label={f.est}  cfg={estCfg[f.est]}/></td>
-                          </tr>
-
-                          {/* Fila desplegable: moviments */}
-                          {isExp&&(
-                            <tr key={`exp-${i}`} style={{borderBottom:`2px solid ${tc.green}`}}>
-                              <td colSpan={12} style={{padding:0,background:rowExpandBg}}>
-                                <div style={{padding:"0 16px 14px 52px"}}>
-                                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 0 8px"}}>
-                                    <div style={{fontSize:10,letterSpacing:"0.12em",color:tc.green,textTransform:"uppercase",fontWeight:700}}>
-                                      Moviments · {moviments.length} transaccions
-                                    </div>
-                                    {canEdit&&(
-                                      <button onClick={()=>openCcAddModal({ fons: f.fons, vcpe: f.vcpe, est: f.est, tipus: "Aportació" })}
-                                        style={{padding:"3px 10px",borderRadius:4,border:`1px solid ${rowExpandBorder}`,background:"transparent",color:tc.green,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
-                                        ＋ Afegeix moviment
-                                      </button>
-                                    )}
-                                  </div>
-                                  {moviments.length===0
-                                    ? <div style={{fontSize:12,color:tc.textLight,padding:"8px 0"}}>Cap moviment amb els filtres actuals.</div>
-                                    : <table style={{width:"100%",borderCollapse:"collapse"}}>
-                                        <thead>
-                                          <tr style={{background:rowExpandHeader}}>
-                                            {["Data","Tipus","Categoria","FY","Import EUR",...(canEdit?[""]:[])] .map(h=>(
-                                              <th key={h} style={{padding:"6px 10px",fontSize:10,letterSpacing:"0.08em",color:tc.greenDark,textTransform:"uppercase",fontWeight:600,textAlign:h==="Import EUR"?"right":"left",whiteSpace:"nowrap",borderBottom:`1px solid ${rowExpandBorder}`}}>{h}</th>
-                                            ))}
-                                          </tr>
-                                        </thead>
-                                        <tbody>
-                                          {moviments.map((r,mi)=>{
-                                            const isIn=r.eur>0;
-                                            const cfg=catCfg[r.cat]||{};
-                                            return (
-                                              <tr key={mi} style={{borderBottom:`1px solid ${rowExpandBorder}`,background:mi%2===0?"transparent":rowExpandAlt}}>
-                                                <td style={{padding:"6px 10px",fontSize:11,color:tc.textMid,whiteSpace:"nowrap"}}>{r.data}</td>
-                                                <td style={{padding:"6px 10px",fontSize:11,color:tc.textMid,whiteSpace:"nowrap"}}>{r.tipus}</td>
-                                                <td style={{padding:"6px 10px"}}>
-                                                  <span style={{fontSize:10,background:cfg.bg||tc.bgAlt,color:cfg.color||tc.textMid,borderRadius:4,padding:"1px 7px",fontWeight:600}}>{r.cat}</span>
-                                                </td>
-                                                <td style={{padding:"6px 10px",fontSize:11,color:tc.textLight}}>{r.fy}</td>
-                                                <td style={{padding:"6px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:isIn?tc.navy:tc.green}}>
-                                                  {!isIn&&"+ "}{fmtM(Math.abs(r.eur))}
-                                                </td>
-                                                {canEdit&&(
-                                                  <td style={{padding:"4px 8px",whiteSpace:"nowrap"}}>
-                                                    {r._rowId&&(
-                                                      <span style={{display:"flex",gap:4}}>
-                                                        <button onClick={()=>setCcEditModalRow(r)}
-                                                          style={{padding:"2px 8px",borderRadius:4,border:`1px solid ${rowExpandBorder}`,background:"transparent",color:tc.textMid,cursor:"pointer",fontSize:10,fontFamily:"inherit"}}>
-                                                          Edita
-                                                        </button>
-                                                        <DeleteRowButton onDelete={()=>handleCCDelete(r._rowId)}/>
-                                                      </span>
-                                                    )}
-                                                  </td>
-                                                )}
-                                              </tr>
-                                            );
-                                          })}
-                                        </tbody>
-                                        <tfoot>
-                                          <tr style={{borderTop:`1px solid ${rowExpandBorder}`,background:rowExpandHeader}}>
-                                            <td colSpan={4} style={{padding:"6px 10px",fontSize:11,fontWeight:700,color:tc.greenDark}}>Total period</td>
-                                            <td style={{padding:"6px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontSize:12,fontWeight:700,color:tc.navy}}>
-                                              {fmtM(moviments.filter(r=>r.eur>0).reduce((s,r)=>s+r.eur,0))} cridat
-                                              {moviments.filter(r=>r.eur<0).length>0&&<span style={{color:tc.green,marginLeft:8}}>{fmtM(moviments.filter(r=>r.eur<0).reduce((s,r)=>s+Math.abs(r.eur),0))} rebut</span>}
-                                            </td>
-                                          </tr>
-                                        </tfoot>
-                                      </table>
-                                  }
-                                </div>
-                              </td>
-                            </tr>
-                          )}
-                        </>
-                      );
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr style={{borderTop:`2px solid ${tc.border}`,background:tc.bgAlt}}>
-                      <td colSpan={3} style={{padding:"9px 10px",fontSize:12,fontWeight:700}}>TOTAL ({fonsFiltered.length} fons)</td>
-                      <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700,color:tc.navyLight,fontSize:12}}>{fmtM(fonsFiltered.reduce((s,f)=>s+f.compr,0))}</td>
-                      <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700,color:tc.navy,fontSize:12}}>{fmtM(fonsFiltered.reduce((s,f)=>s+f.calls,0))}</td>
-                      <td style={{padding:"9px 10px",textAlign:"right",fontSize:11,color:tc.textMid}}>{(()=>{const tcc=fonsFiltered.reduce((s,f)=>s+f.calls,0),tco=fonsFiltered.reduce((s,f)=>s+f.compr,0);return tco>0?(tcc/tco*100).toFixed(1)+"%":"—";})()}</td>
-                      <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700,color:tc.green,fontSize:12}}>{fmtM(fonsFiltered.reduce((s,f)=>s+f.dist,0))}</td>
-                      <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700,color:tc.greenDark,fontSize:12}}>{fmtM(fonsFiltered.reduce((s,f)=>s+f.retorn,0))}</td>
-                      <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700,color:tc.green,fontSize:12}}>{fmtM(fonsFiltered.reduce((s,f)=>s+f.dist+f.retorn,0))}</td>
-                      <td style={{padding:"9px 10px",textAlign:"right",fontFamily:"'DM Mono',monospace",fontWeight:700,fontSize:12}}>{(()=>{const net=fonsFiltered.reduce((s,f)=>s+(f.dist+f.retorn-f.calls),0);return(net>=0?"+":"")+fmtM(net);})()}</td>
-                      <td colSpan={2}></td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              {companiesSubTab === "transaccions" ? (
+                <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "PC" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} title="Transaccions Participades (PC)" />
+              ) : <CompaniesIndexInner search={globalSearch} subTab={companiesSubTab} />}
             </div>
-          </div>
-          );
-        })()}
+          )}
 
-        {/* ── FONS TRANSACTIONS ── */}
-        {tab==="fons-tx"&&(
-          <div className="tab-panel">
-            <TxSection
-              tx={baseTx}
-              compr={baseCompr}
-              search={globalSearch}
-              catCfg={catCfg}
-              vcpeCfg={vcpeCfg}
-              estCfg={estCfg}
-              tc={tc}
-              dark={dark}
-              canEdit={canEdit}
-              onAdd={()=>openCcAddModal({ fons: "", vcpe: "PE", est: "Fons Primari", tipus: "Aportació" })}
-              onEdit={setCcEditModalRow}
-              onDelete={(row)=>handleCCDelete(row._rowId)}
-              title="Transaccions · Fons"
-            />
-          </div>
-        )}
+          {tab === "inversions" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
+                <button onClick={() => setInversionsSubTab("fons")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "fons" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "fons" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Per Vehicle</button>
+                <button onClick={() => setInversionsSubTab("tx")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "tx" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "tx" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Transaccions</button>
+              </div>
+              {inversionsSubTab === "fons" ? <FundsIndexInner search={globalSearch} /> : <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} title="Totes les Transaccions" />}
+            </div>
+          )}
 
-        {/* ── TRANSACCIONS › ALTERNATIVES ── */}
-        {tab==="tx-alt"&&(
-          <div className="tab-panel">
-            <TxSection
-              tx={allAltTx}
-              compr={allAltCompr}
-              search={globalSearch}
-              catCfg={catCfg}
-              vcpeCfg={vcpeCfg}
-              estCfg={estCfg}
-              tc={tc}
-              dark={dark}
-              canEdit={canEdit}
-              onAdd={()=>openCcAddModal({ fons: "", vcpe: "PE", est: "Fons Primari", tipus: "Aportació" })}
-              onEdit={setCcEditModalRow}
-              onDelete={(row)=>handleCCDelete(row._rowId)}
-              title="Totes les Transaccions · Alternatives"
-            />
-          </div>
-        )}
+          {tab === "real-estate" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
+                {REAL_ESTATE_NAV.map(item => (
+                  <button key={item.id} onClick={() => setRealEstateTab(item.tab)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: realEstateTab === item.tab ? `2px solid ${tc.navy}` : "2px solid transparent", color: realEstateTab === item.tab ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{item.tab === "directe" ? "RE Directe" : item.tab === "altres-vehicles" ? "Altres Vehicles" : "Totes les Posicions"}</button>
+                ))}
+              </div>
+              {realEstateTab === "inversions" ? <FundsIndexInner search={globalSearch} vcpeFilter="RE" /> : <TxSection tx={d.reTx.filter(r => realEstateTab === "directe" ? r.est === "Directe" : r.est !== "Directe")} compr={d.reCompr.filter(r => realEstateTab === "directe" ? r.est === "Directe" : r.est !== "Directe")} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: realEstateTab === "directe" ? "Directe" : "SOCIMI" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} title={`Transaccions Real Estate — ${realEstateTab === "directe" ? "Directe" : "Altres"}`} />}
+            </div>
+          )}
 
-        </div>{/* page-pad */}
-      </div>{/* main column */}
+          {tab === "mercats-publics" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+              {mercatsPublicsTab === "resum" && <PublicMarketsTab />}
+              {mercatsPublicsTab === "rv" && <HoldingsTable assetClass="RV" title="Renda Variable" />}
+              {mercatsPublicsTab === "rf" && <HoldingsTable assetClass="RF" title="Renda Fixa" />}
+              {mercatsPublicsTab === "posicions" && <PMTipusTab />}
+              {mercatsPublicsTab === "transaccions" && <PMTransaccionsTab search={globalSearch} />}
+              {mercatsPublicsTab === "traçabilitat" && <PMTraçabilitatTab />}
+            </div>
+          )}
 
-      {/* ── Data Loader Modal ── */}
-      {showLoader&&(
+          {tab === "tx-alt" && <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} title="Registre de Transaccions (Alternatius)" />}
+        </main>
+      </div>
+
+      {showLoader && (
         <DataLoader
-          onLoad={handleLoad}
-          onClose={()=>setShowLoader(false)}
-          dataInfo={{ccRows:rawCC.length, plRows:funds0.length, loaded:loadedAt}}
+          onClose={() => setShowLoader(false)}
+          onLoad={(key, rows) => d.handleLoad(key, rows, () => setExcluded(new Set()))}
+          exportAll={exportAll}
+          exportPDF={exportPDF}
+          exportPNG={exportPNG}
+          exporting={exporting}
+          loadedAt={d.loadedAt}
         />
       )}
 
-      {/* ── Capital Call Add Modal ── */}
-      {ccAddModalFons!=null&&(
+      {ccAddModalFons !== null && (
         <AddRowModal
-          title={ccAddModalFons ? `Nou moviment · ${ccAddModalFons}` : "Nou moviment"}
+          title="Afegeix moviment"
           fields={[
-            {key:"fons",label:"Fons",type:"combo",options:ccNameOptions,defaultValue:ccAddModalFons,placeholder:"Selecciona o crea un vehicle"},
-            {key:"cat",label:"Categoria",type:"select",options:CAPITAL_CALL_CAT_OPTIONS,defaultValue:CAPITAL_CALL_CAT_OPTIONS[0]},
-            {key:"data",label:"Data",type:"date"},
-            {key:"eur",label:"Import EUR",type:"number"},
-            {key:"divisa",label:"Divisa",type:"select",options:["EUR","USD"],defaultValue:"EUR"},
-            {key:"vcpe",label:"Tipus",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:ccAddModalDefaults?.vcpe ?? CAPITAL_CALL_VCPE_OPTIONS[0]},
-            {key:"est",label:"Estratègia",type:"select",options:["", ...CAPITAL_CALL_EST_OPTIONS],defaultValue:ccAddModalDefaults?.est ?? ""},
-            {key:"tipus",label:"Tipus moviment",type:"combo",options:ccTipusOptions,defaultValue:ccAddModalDefaults?.tipus ?? CAPITAL_CALL_TIPUS_OPTIONS[0],placeholder:"Selecciona o crea un tipus"},
+            {
+              key: "fons",
+              label: "Vehicle",
+              type: "combo",
+              options: ccNameOptions,
+              defaultValue: ccAddModalFons,
+              onChange: (value, nextValues, { setValue }) => {
+                setValue("divisa", defaultVehicleCurrency(value));
+                return nextValues;
+              },
+            },
+            { key: "tipus", label: "Tipus Moviment", type: "combo", options: ccTipusOptions, defaultValue: ccAddModalDefaults?.tipus ?? "" },
+            { key: "cat", label: "Categoria", type: "select", options: ["Capital Call", "Distribució", "Retorn Capital", "Compromís", "Altres"], defaultValue: ccAddModalDefaults?.cat ?? "Capital Call" },
+            { key: "data", label: "Data", type: "date", defaultValue: new Date().toISOString().slice(0, 10) },
+            { key: "eur", label: "Import EUR", type: "number" },
+            {
+              key: "divisa",
+              label: "Divisa",
+              type: "select",
+              options: ["EUR", "USD"],
+              defaultValue: ccAddModalDefaults?.divisa ?? defaultVehicleCurrency(ccAddModalFons),
+            },
+            { key: "vcpe", label: "VCPE", type: "select", options: ["PE", "VC", "RE", "SF", "PC"], defaultValue: ccAddModalDefaults?.vcpe ?? "PE" },
+            { key: "est", label: "Estratègia", type: "select", options: ["Fons Primari", "Fons de Fons", "Directe", "SOCIMI"], defaultValue: ccAddModalDefaults?.est ?? "Fons Primari" },
+            { key: "recallable", label: "Recallable (€)", type: "number", visible: v => v.cat === "Distribució" },
+            { key: "non_recallable", label: "No Recallable (€)", type: "number", visible: v => v.cat === "Distribució" },
+            {
+              key: "from_recallable",
+              label: `Des de pool recallable (€) — disponible: ${fmtM(recallablePoolByFund[ccAddModalFons] ?? 0)}`,
+              type: "number",
+              visible: v => v.cat === "Capital Call",
+            },
           ]}
-          onSave={handleCCInsert}
-          onClose={()=>{ setCcAddModalFons(null); setCcAddModalDefaults(null); }}
+          onSave={(values, setError) => {
+            if (values.cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
+              const rec = Number(values.recallable);
+              const nonRec = values.non_recallable !== "" && values.non_recallable != null
+                ? Number(values.non_recallable)
+                : Number(values.eur) - rec;
+              const total = rec + nonRec;
+              if (Math.abs(total - Number(values.eur)) > 0.01) {
+                setError(`Recallable (${rec}) + No recallable (${nonRec}) = ${total}, però l'import total és ${values.eur}`);
+                return;
+              }
+              d.handleCCInsert({ ...values, non_recallable: nonRec }, setError);
+            } else {
+              d.handleCCInsert(values, setError);
+            }
+          }}
+          onClose={() => setCcAddModalFons(null)}
         />
       )}
 
-      {/* ── Capital Call Edit Modal ── */}
-      {ccEditModalRow&&(
+      {ccEditModalRow && (
         <AddRowModal
-          title={`Edita moviment · ${ccEditModalRow.fons}`}
+          title="Edita moviment"
           fields={[
-            {key:"fons",label:"Fons",type:"combo",options:ccNameOptions,defaultValue:ccEditModalRow.fons,placeholder:"Selecciona o crea un vehicle"},
-            {key:"cat",label:"Categoria",type:"select",options:CAPITAL_CALL_CAT_OPTIONS,defaultValue:ccEditModalRow.cat??CAPITAL_CALL_CAT_OPTIONS[0]},
-            {key:"data",label:"Data",type:"date",defaultValue:ccEditModalRow.data??""},
-            {key:"eur",label:"Import EUR",type:"number",defaultValue:ccEditModalRow.eur??0},
-            {key:"divisa",label:"Divisa",type:"select",options:["EUR","USD"],defaultValue:ccEditModalRow.divisa??"EUR"},
-            {key:"vcpe",label:"Tipus",type:"select",options:CAPITAL_CALL_VCPE_OPTIONS,defaultValue:ccEditModalRow.vcpe??CAPITAL_CALL_VCPE_OPTIONS[0]},
-            {key:"est",label:"Estratègia",type:"select",options:["", ...CAPITAL_CALL_EST_OPTIONS],defaultValue:ccEditModalRow.est??""},
-            {key:"tipus",label:"Tipus moviment",type:"combo",options:ccTipusOptions,defaultValue:ccEditModalRow.tipus??CAPITAL_CALL_TIPUS_OPTIONS[0],placeholder:"Selecciona o crea un tipus"},
+            { key: "fons", label: "Vehicle", type: "text", defaultValue: ccEditModalRow.fons, disabled: true },
+            { key: "tipus", label: "Tipus Moviment", type: "combo", options: ccTipusOptions, defaultValue: ccEditModalRow.tipus },
+            { key: "cat", label: "Categoria", type: "select", options: ["Capital Call", "Distribució", "Retorn Capital", "Compromís", "Altres"], defaultValue: ccEditModalRow.cat },
+            { key: "data", label: "Data", type: "date", defaultValue: ccEditModalRow.data },
+            { key: "eur", label: "Import EUR", type: "number", defaultValue: ccEditModalRow.eur },
+            { key: "divisa", label: "Divisa", type: "select", options: ["EUR", "USD"], defaultValue: ccEditModalRow.divisa },
+            { key: "vcpe", label: "VCPE", type: "select", options: ["PE", "VC", "RE", "SF", "PC"], defaultValue: ccEditModalRow.vcpe },
+            { key: "est", label: "Estratègia", type: "select", options: ["Fons Primari", "Fons de Fons", "Directe", "SOCIMI"], defaultValue: ccEditModalRow.est },
+            { key: "recallable", label: "Recallable (€)", type: "number", defaultValue: ccEditModalRow.recallable ?? "", visible: v => v.cat === "Distribució" },
+            { key: "non_recallable", label: "No Recallable (€)", type: "number", defaultValue: ccEditModalRow.non_recallable ?? "", visible: v => v.cat === "Distribució" },
+            {
+              key: "from_recallable",
+              label: `Des de pool recallable (€) — disponible: ${fmtM(recallablePoolByFund[ccEditModalRow.fons] ?? 0)}`,
+              type: "number",
+              defaultValue: ccEditModalRow.from_recallable ?? "",
+              visible: v => v.cat === "Capital Call",
+            },
           ]}
-          onSave={handleCCUpdate}
-          onClose={()=>setCcEditModalRow(null)}
+          onSave={(values, setError) => {
+            if (values.cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
+              const rec = Number(values.recallable);
+              const nonRec = values.non_recallable !== "" && values.non_recallable != null
+                ? Number(values.non_recallable)
+                : Number(values.eur) - rec;
+              const total = rec + nonRec;
+              if (Math.abs(total - Number(values.eur)) > 0.01) {
+                setError(`Recallable (${rec}) + No recallable (${nonRec}) = ${total}, però l'import total és ${values.eur}`);
+                return;
+              }
+              d.handleCCUpdate(ccEditModalRow._rowId, { ...values, non_recallable: nonRec }, setError);
+            } else {
+              d.handleCCUpdate(ccEditModalRow._rowId, values, setError);
+            }
+          }}
+          onClose={() => setCcEditModalRow(null)}
         />
       )}
     </div>
   );
 }
 
-// In production, poll /api/data-version and reload if src/data files change.
-// In dev, Vite HMR handles this automatically.
-function useDataReload() {
-  useEffect(() => {
-    if (!import.meta.env.PROD) return;
-    let version = null;
-    const id = setInterval(async () => {
-      try {
-        const { version: v } = await apiFetchJson("/api/data-version");
-        if (version === null) { version = v; return; }
-        if (v !== version) window.location.reload();
-      } catch { /* server unreachable, ignore */ }
-    }, 10_000);
-    return () => clearInterval(id);
-  }, []);
-}
-
-export default function Dashboard() {
-  useDataReload();
-  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
-  const tc = dark ? TC_DARK : TC_LIGHT;
-  const toggleDark = () => {
-    setDark(d => {
-      const next = !d;
-      writeStoredFlag("tc_dark", next);
-      return next;
-    });
-  };
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = dark ? "dark" : "light";
-  }, [dark]);
-
-  return (
-    <ThemeContext.Provider value={{ tc, dark, toggle: toggleDark }}>
-      <DashboardInner />
-    </ThemeContext.Provider>
-  );
-}
+export { Dashboard };
+export default Dashboard;
