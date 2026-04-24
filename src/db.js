@@ -719,6 +719,9 @@ export async function insertCapitalCall(cc) {
     est: cc.est ?? null,
     eur: cc.eur,
     divisa: cc.divisa ?? "EUR",
+    recallable:      (cc.recallable      !== "" && cc.recallable      != null) ? Number(cc.recallable)      : null,
+    non_recallable:  (cc.non_recallable  !== "" && cc.non_recallable  != null) ? Number(cc.non_recallable)  : null,
+    from_recallable: (cc.from_recallable !== "" && cc.from_recallable != null) ? Number(cc.from_recallable) : null,
   };
   const { data, error } = await supabase.from("capital_calls").insert(row).select().single();
   if (!error) logAudit("insert", "capital_calls", String(data?.id), row);
@@ -729,6 +732,11 @@ export async function updateCapitalCall(rowId, fields) {
   if (!supabase) return { error: null };
   const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
   const updates = { ...fields };
+  for (const col of ["recallable", "non_recallable", "from_recallable"]) {
+    if (Object.prototype.hasOwnProperty.call(updates, col)) {
+      updates[col] = (updates[col] !== "" && updates[col] != null) ? Number(updates[col]) : null;
+    }
+  }
   if (Object.prototype.hasOwnProperty.call(fields, "tipus")) {
     updates.tipus = normalizeCapitalCallTipus(fields.tipus) ?? null;
   }
