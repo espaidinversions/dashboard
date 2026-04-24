@@ -100,6 +100,9 @@ function Dashboard() {
         map[fund] -= Number(r.from_recallable);
       }
     }
+    for (const k of Object.keys(map)) {
+      map[k] = Math.round(map[k] * 100) / 100;
+    }
     return map;
   }, [d.rawCC]);
   const defaultVehicleCurrency = useCallback((vehicleName) => {
@@ -612,6 +615,13 @@ function Dashboard() {
             },
           ]}
           onSave={(values, setError) => {
+            if (values.cat === "Capital Call" && values.from_recallable !== "" && values.from_recallable != null) {
+              const pool = recallablePoolByFund[values.fons] ?? 0;
+              if (Number(values.from_recallable) > pool + 0.01) {
+                setError(`El pool recallable disponible és ${fmtM(pool)}`);
+                return;
+              }
+            }
             if (values.cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
               const rec = Number(values.recallable);
               const nonRec = values.non_recallable !== "" && values.non_recallable != null
@@ -654,6 +664,13 @@ function Dashboard() {
             },
           ]}
           onSave={(values, setError) => {
+            if (values.cat === "Capital Call" && values.from_recallable !== "" && values.from_recallable != null) {
+              const pool = recallablePoolByFund[values.fons] ?? 0;
+              if (Number(values.from_recallable) > pool + 0.01) {
+                setError(`El pool recallable disponible és ${fmtM(pool)}`);
+                return;
+              }
+            }
             if (values.cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
               const rec = Number(values.recallable);
               const nonRec = values.non_recallable !== "" && values.non_recallable != null
