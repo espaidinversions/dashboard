@@ -37,6 +37,15 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
   const dist = txs
     .filter((row) => row.cat === "Distribució" || row.cat === "Retorn Capital")
     .reduce((sum, row) => sum + Math.abs(row.eur), 0);
+  const recallablePool = txs.reduce((sum, row) => {
+    if ((row.cat === "Distribució" || row.cat === "Retorn Capital") && row.recallable) {
+      return sum + Number(row.recallable);
+    }
+    if (row.cat === "Capital Call" && row.from_recallable) {
+      return sum - Number(row.from_recallable);
+    }
+    return sum;
+  }, 0);
   const net = dist - calls;
   const utilPct = compromis > 0 ? `${(calls / compromis * 100).toFixed(1)}%` : null;
 
@@ -63,5 +72,6 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
     tvpiFund,
     dpiFund,
     rvpiFund,
+    recallablePool,
   };
 }
