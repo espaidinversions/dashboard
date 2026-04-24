@@ -1,297 +1,39 @@
 import { supabase } from "./supabase.js";
 import {
   buildPrivateEntitiesFromDashboardBundle,
-  getPrivateEntityName,
   resolvePrivateEntity,
 } from "./data/privateEntities.js";
 import { mergePipelineDeals } from "./data/pipelineCatalog.js";
+import {
+  parseDateParts,
+  privateEntityToRow,
+  companyToRow,
+  rowToCompany,
+  capitalCallToRow,
+  rowToCapitalCall,
+  fundMetaToRow,
+  rowToFundMeta,
+  searcherToRow,
+  rowToSearcher,
+  dealToRow,
+  rowToDeal,
+} from "./data/mappers.js";
+import { mergeSearchersWithCapitalCalls } from "./data/searcherModel.js";
+import { buildFallbackCompaniesFromCapitalCalls } from "./data/privateCompanyModel.js";
+import { normalizeCapitalCallTipus } from "./data/capitalCallTipusModel.js";
 
 /** @typedef {import("./data/dashboardTypes.js").CapitalCallRow} CapitalCallRow */
 /** @typedef {import("./data/dashboardTypes.js").DashboardBundle} DashboardBundle */
 /** @typedef {import("./data/dashboardTypes.js").FundMetaRow} FundMetaRow */
 /** @typedef {import("./data/dashboardTypes.js").PipelineDeal} PipelineDeal */
-/** @typedef {import("./data/dashboardTypes.js").PipelineDealRow} PipelineDealRow */
 /** @typedef {import("./data/dashboardTypes.js").PrivateEntity} PrivateEntity */
 /** @typedef {import("./data/dashboardTypes.js").PortfolioCompany} PortfolioCompany */
-/** @typedef {import("./data/dashboardTypes.js").PortfolioCompanyRow} PortfolioCompanyRow */
 /** @typedef {import("./data/dashboardTypes.js").Searcher} Searcher */
-/** @typedef {import("./data/dashboardTypes.js").SearcherRow} SearcherRow */
 /** @typedef {import("./data/publicMarketsTypes.js").PMOverrides} PMOverrides */
 /** @typedef {import("./data/publicMarketsTypes.js").PMPositionMeta} PMPositionMeta */
 /** @typedef {import("./data/publicMarketsTypes.js").PMTransactionDraft} PMTransactionDraft */
 
 // ── Helpers ───────────────────────────────────────────────
-
-/**
- * @param {PrivateEntity} entity
- */
-function privateEntityToRow(entity) {
-  return {
-    id: entity.id,
-    kind: entity.kind,
-    canonical_name: entity.canonicalName,
-    source_name: entity.sourceName ?? entity.canonicalName,
-    workbook_name: entity.workbookName ?? null,
-    match_type: entity.matchType ?? null,
-    isin: entity.isin ?? null,
-    country: entity.country ?? null,
-    first_investment_date: entity.firstInvestmentDate ?? null,
-    active: entity.active ?? true,
-    notes: entity.notes ?? null,
-    updated_at: new Date().toISOString(),
-  };
-}
-
-/**
- * @param {PortfolioCompany} c
- * @returns {PortfolioCompanyRow}
- */
-function companyToRow(c) {
-  const resolved = resolvePrivateEntity("company", c.nom, c.id ?? null);
-  return {
-    entity_id: resolved.id,
-    nom: c.nom, tipus: c.tipus, segment: c.segment || null,
-    entrepreneurs: c.entrepreneurs || null, origen: c.origen || null, geo: c.geo || null,
-    ticket: c.ticket ?? null, tvpi: c.tvpi ?? null,
-    rvpi_eur: c.rvpiEur ?? null, dpi_eur: c.dpiEur ?? null,
-    rev: c.rev ?? null, ebitda: c.ebitda ?? null, dfn: c.dfn ?? null,
-    gross_ev: c.grossEV ?? null, mult_entry: c.multEntry ?? null,
-    data_compr: c.dataCompr || null, mesos_operant: c.mesosOperant ?? null,
-    is_mock: c.isMock ?? false,
-    quarters: c.quarters ?? [],
-  };
-}
-
-/**
- * @param {PortfolioCompanyRow & { id?: number }} r
- * @param {Map<string, object>} entityMap
- * @returns {PortfolioCompany}
- */
-function rowToCompany(r, entityMap) {
-  const entityId = r.entity_id ?? String(r.id ?? "");
-  const name = getPrivateEntityName(entityMap, entityId, r.nom);
-  const entity = entityMap.get(entityId);
-  return {
-    id: entityId, nom: name, tipus: r.tipus, segment: r.segment,
-    entrepreneurs: r.entrepreneurs, origen: r.origen, geo: r.geo,
-    ticket: r.ticket, tvpi: r.tvpi,
-    rvpiEur: r.rvpi_eur, dpiEur: r.dpi_eur,
-    rev: r.rev, ebitda: r.ebitda, dfn: r.dfn,
-    grossEV: r.gross_ev, multEntry: r.mult_entry,
-    dataCompr: r.data_compr, mesosOperant: r.mesos_operant,
-    isMock: r.is_mock,
-    quarters: r.quarters ?? [],
-    sourceName: r.nom,
-    workbookName: entity?.workbook_name ?? null,
-    matchType: entity?.match_type ?? null,
-  };
-}
-
-/** Derive mes/year/fy from an ISO date string (YYYY-MM-DD). */
-function parseDateParts(data) {
-  if (!data) return { mes: null, year: null, fy: null };
-  const s = String(data).slice(0, 10); // handles Date objects too
-  const [y, m] = s.split("-").map(Number);
-  if (!y || !m) return { mes: null, year: null, fy: null };
-  return { mes: m, year: y, fy: `FY ${y}` };
-}
-
-/**
- * @param {CapitalCallRow} row
- */
-function capitalCallToRow(row) {
-  const resolved = resolvePrivateEntity("vehicle", row.fons, row.id ?? null);
-  const { mes, year, fy } = parseDateParts(row.data);
-  return {
-    vehicle_id: resolved.id,
-    fons: row.fons,
-    tipus: row.tipus,
-    cat: row.cat,
-    data: row.data,
-    mes,
-    year,
-    fy,
-    vcpe: row.vcpe,
-    est: row.est,
-    eur: row.eur,
-    divisa: row.divisa,
-  };
-}
-
-/**
- * @param {object} row
- * @param {Map<string, object>} entityMap
- * @returns {CapitalCallRow}
- */
-function rowToCapitalCall(row, entityMap) {
-  const entityId = row.vehicle_id ?? null;
-  const dataStr = row.data ? String(row.data).slice(0, 10) : null;
-  const { mes, year, fy } = parseDateParts(dataStr);
-  return {
-    _rowId: row.id,
-    id: entityId ?? undefined,
-    fons: getPrivateEntityName(entityMap, entityId, row.fons),
-    tipus: row.tipus,
-    cat: row.cat,
-    data: dataStr,
-    mes,
-    any: year,
-    fy,
-    vcpe: row.vcpe,
-    est: row.est,
-    eur: row.eur,
-    divisa: row.divisa,
-  };
-}
-
-/**
- * @param {FundMetaRow} row
- */
-function fundMetaToRow(row) {
-  const resolved = resolvePrivateEntity("vehicle", row.fons, row.id ?? null);
-  return {
-    vehicle_id: resolved.id,
-    fons: row.fons,
-    tvpi: row.tvpi ?? null,
-  };
-}
-
-/**
- * @param {object} row
- * @param {Map<string, object>} entityMap
- * @returns {FundMetaRow}
- */
-function rowToFundMeta(row, entityMap) {
-  const entityId = row.vehicle_id ?? null;
-  return {
-    id: entityId ?? undefined,
-    fons: getPrivateEntityName(entityMap, entityId, row.fons),
-    tvpi: row.tvpi,
-  };
-}
-
-/**
- * @param {Searcher} s
- * @returns {SearcherRow}
- */
-function searcherToRow(s) {
-  return {
-    nom: s.nom, tipus: s.tipus, modalitat: s.modalitat, geo: s.geo,
-    status_screening: s.statusScreening, form_entrada: s.formEntrada,
-    intro_per: s.introPer, searcher1: s.searcher1 || null, searcher2: s.searcher2 || null,
-    escola1: s.escola1 || null, escola2: s.escola2 || null,
-    ticket: s.ticket ?? null, tvpi: s.tvpi ?? null, data_inici: s.dataInici || null,
-    data_compr: s.dataCompr || null, mesos_cercant: s.mesosCercant ?? null,
-    equity_stake: s.equityStake ?? null, is_mock: s.isMock ?? false,
-    nif: s.nif ?? null,
-  };
-}
-
-/**
- * @param {SearcherRow} r
- * @returns {Searcher}
- */
-function rowToSearcher(r) {
-  return {
-    id: r.id, nom: r.nom, tipus: r.tipus, modalitat: r.modalitat, geo: r.geo,
-    statusScreening: r.status_screening, formEntrada: r.form_entrada,
-    introPer: r.intro_per, searcher1: r.searcher1 || "", searcher2: r.searcher2 || "",
-    escola1: r.escola1 || "", escola2: r.escola2 || "",
-    ticket: r.ticket, tvpi: r.tvpi ?? null, dataInici: r.data_inici,
-    dataCompr: r.data_compr, mesosCercant: r.mesos_cercant,
-    equityStake: r.equity_stake, isMock: r.is_mock ?? false,
-    nif: r.nif ?? null,
-  };
-}
-
-/**
- * @param {PipelineDeal} d
- * @returns {PipelineDealRow}
- */
-function dealToRow(d) {
-  return {
-    name: d.name, amount: d.amount, currency: d.currency,
-    geography: d.geography, strategy: d.strategy, sector: d.sector,
-    status: d.status, canal: d.canal, active: d.active ?? true,
-    estimated_closing: d.estimatedClosing ?? null,
-  };
-}
-
-/**
- * @param {PipelineDealRow} r
- * @returns {PipelineDeal}
- */
-function rowToDeal(r) {
-  return {
-    id: r.id, name: r.name, amount: r.amount, currency: r.currency,
-    geography: r.geography, strategy: r.strategy, sector: r.sector,
-    status: r.status, canal: r.canal, active: r.active,
-    estimatedClosing: r.estimated_closing ?? null,
-  };
-}
-
-/**
- * @param {object[]} capitalCallRows
- * @param {Map<string, object>} entityMap
- * @param {PortfolioCompany[]} existingCompanies
- * @returns {PortfolioCompany[]}
- */
-function buildFallbackCompaniesFromCapitalCalls(capitalCallRows, entityMap, existingCompanies) {
-  const rows = Array.isArray(capitalCallRows) ? capitalCallRows : [];
-  const existing = Array.isArray(existingCompanies) ? existingCompanies : [];
-  const existingIds = new Set(existing.map((row) => row.id).filter(Boolean));
-  const existingNames = new Set(existing.map((row) => row.nom).filter(Boolean));
-  const grouped = new Map();
-
-  rows.forEach((row) => {
-    if (!["PC", "SF"].includes(row?.vcpe)) return;
-    const entityId = row?.vehicle_id ?? null;
-    const companyName = getPrivateEntityName(entityMap, entityId, row?.fons);
-    if (!entityId || !companyName) return;
-    if (existingIds.has(entityId) || existingNames.has(companyName)) return;
-
-    const current = grouped.get(entityId) ?? {
-      id: entityId,
-      nom: companyName,
-      tipus: row.vcpe,
-      segment: null,
-      entrepreneurs: null,
-      origen: null,
-      geo: entityMap.get(entityId)?.country ?? null,
-      ticket: 0,
-      tvpi: null,
-      rvpiEur: null,
-      dpiEur: null,
-      rev: null,
-      ebitda: null,
-      dfn: null,
-      grossEV: null,
-      multEntry: null,
-      dataCompr: null,
-      mesosOperant: null,
-      isMock: true,
-      quarters: [],
-      sourceName: row?.fons ?? companyName,
-      workbookName: entityMap.get(entityId)?.workbook_name ?? null,
-      matchType: entityMap.get(entityId)?.match_type ?? "capital_calls_fallback",
-    };
-
-    if (row?.cat === "Capital Call" && Number(row?.eur) > 0) {
-      current.ticket += Number(row.eur);
-      const rowDate = row?.data ? String(row.data).slice(0, 10) : null;
-      if (rowDate && (!current.dataCompr || rowDate < current.dataCompr)) {
-        current.dataCompr = rowDate;
-      }
-    }
-
-    grouped.set(entityId, current);
-  });
-
-  return [...grouped.values()].map((row) => ({
-    ...row,
-    ticket: row.ticket > 0 ? row.ticket : null,
-  }));
-}
 
 async function loadPrivateEntityMap() {
   if (!supabase) return new Map();
@@ -383,19 +125,7 @@ export async function loadAll() {
   const fallbackCompanies = !cc.error && Array.isArray(cc.data)
     ? buildFallbackCompaniesFromCapitalCalls(cc.data, entityMap, companies)
     : [];
-  const livePipelineDeals = (pl.error || !Array.isArray(pl.data) ? [] : pl.data).map(r => ({
-    id: r.id,
-    name: r.name,
-    amount: r.amount,
-    currency: r.currency,
-    geography: r.geography,
-    strategy: r.strategy,
-    sector: r.sector,
-    status: r.status,
-    canal: r.canal,
-    active: r.active,
-    estimatedClosing: r.estimated_closing ?? null,
-  }));
+  const livePipelineDeals = (pl.error || !Array.isArray(pl.data) ? [] : pl.data).map(rowToDeal);
   /** @type {DashboardBundle | Partial<DashboardBundle>} */
   const result = {
     privateEntities: privateEntities.map((row) => ({
@@ -411,7 +141,10 @@ export async function loadAll() {
   if (!fm.error && Array.isArray(fm.data)) result.fundMeta = fm.data.map((row) => rowToFundMeta(row, entityMap));
   if (!pl.error && Array.isArray(pl.data)) result.funds0 = mergePipelineDeals(livePipelineDeals);
   if (!co.error && Array.isArray(co.data)) result.companies = [...companies, ...fallbackCompanies];
-  if (!sr.error && Array.isArray(sr.data)) result.searchers = sr.data.map(rowToSearcher);
+  if (!sr.error && Array.isArray(sr.data)) {
+    const searchers = sr.data.map(rowToSearcher);
+    result.searchers = mergeSearchersWithCapitalCalls(searchers, cc.data);
+  }
 
   if (!result.rawCC && !result.fundMeta && !result.funds0 && !result.companies && !result.searchers) {
     return null;
@@ -460,9 +193,12 @@ export async function loadFundMeta() {
 /** @returns {Promise<Searcher[] | null>} */
 export async function loadSearchers() {
   if (!supabase) return null;
-  const { data, error } = await supabase.from("searchers").select("*").order("nom");
-  if (error) return null;
-  return data.map(rowToSearcher);
+  const [searchers, capitalCalls] = await Promise.all([
+    supabase.from("searchers").select("*").order("nom"),
+    fetchAllCapitalCallRows(),
+  ]);
+  if (searchers.error || capitalCalls.error) return null;
+  return mergeSearchersWithCapitalCalls(searchers.data.map(rowToSearcher), capitalCalls.data);
 }
 
 // ── Save individual tables ────────────────────────────────
@@ -501,10 +237,17 @@ export async function savePipeline(rows) {
   if (delError) return { error: delError };
   if (rows.length) {
     const { error } = await supabase.from("pipeline").insert(rows.map(r => ({
-    id:r.id, name:r.name, amount:r.amount, currency:r.currency,
-    geography:r.geography, strategy:r.strategy, sector:r.sector,
-    status:r.status, canal:r.canal, active:r.active,
-    estimated_closing: r.estimatedClosing ?? null,
+      id: r.id,
+      name: r.name,
+      amount: r.amount,
+      currency: r.currency,
+      geography: r.geography,
+      strategy: r.strategy,
+      sector: r.sector,
+      status: r.status,
+      canal: r.canal,
+      active: r.active,
+      estimated_closing: r.estimatedClosing ?? null,
     })));
     if (error) return { error };
   }
@@ -547,20 +290,23 @@ export async function saveDashboardBundle(bundle) {
   const privateEntities = bundle?.privateEntities ?? buildPrivateEntitiesFromDashboardBundle({ companies, rawCC, fundMeta });
   const { error } = await supabase.rpc("replace_dashboard_bundle", {
     p_private_entities_rows: privateEntities == null ? null : privateEntities.map(privateEntityToRow),
-    p_cc_rows: rawCC == null ? null : rawCC.map(r => ({
-      vehicle_id: capitalCallToRow(r).vehicle_id,
-      fons: r.fons,
-      tipus: r.tipus,
-      cat: r.cat,
-      data: r.data,
-      mes: r.mes,
-      year: r.any,
-      fy: r.fy,
-      vcpe: r.vcpe,
-      est: r.est,
-      eur: r.eur,
-      divisa: r.divisa,
-    })),
+    p_cc_rows: rawCC == null ? null : rawCC.map(r => {
+      const row = capitalCallToRow(r);
+      return {
+        vehicle_id: row.vehicle_id,
+        fons: r.fons,
+        tipus: r.tipus,
+        cat: r.cat,
+        data: r.data,
+        mes: r.mes,
+        year: r.any,
+        fy: r.fy,
+        vcpe: r.vcpe,
+        est: r.est,
+        eur: r.eur,
+        divisa: r.divisa,
+      };
+    }),
     p_pl_rows: funds0 == null ? null : funds0.map(r => ({
       id: r.id,
       name: r.name,
@@ -623,6 +369,9 @@ export async function upsertCompany(company) {
  */
 export async function upsertSearcher(searcher) {
   if (!supabase) return { data: searcher, error: null };
+  try {
+    await supabase.auth.refreshSession();
+  } catch {}
   const row = searcherToRow(searcher);
   const query = supabase.from("searchers");
   const { data, error } = searcher.id
@@ -655,22 +404,6 @@ export async function insertCompany(company) {
   logAudit("insert", "portfolio_companies", resolved.id, { nom: data.nom });
   const entityMap = await loadPrivateEntityMap();
   return rowToCompany(data, entityMap);
-}
-
-/**
- * @param {Searcher} searcher
- * @returns {Promise<Searcher | null>}
- */
-export async function insertSearcher(searcher) {
-  if (!supabase) return null;
-  const { data, error } = await supabase
-    .from("searchers")
-    .insert(searcherToRow(searcher))
-    .select()
-    .single();
-  if (error) { console.error(error); return null; }
-  logAudit("insert", "searchers", data.id, { nom: data.nom });
-  return rowToSearcher(data);
 }
 
 export async function loadPipelineDeals() {
@@ -715,7 +448,7 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
     vehicle_id: resolved.id,
     fons: resolved.canonicalName,
     vcpe, est, cat: "Compromís", eur: compromisEur, divisa,
-    mes, year, fy, tipus: vcpe, data: data_iso,
+    mes, year, fy, tipus: "Compromís", data: data_iso,
   });
   if (ccErr) { console.error(ccErr); return null; }
 
@@ -724,7 +457,7 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
 
   logAudit("insert", "capital_calls", resolved.id, { fons: resolved.canonicalName, vcpe, est });
   // Return in rawCC shape (key `any`, not `year`)
-  return { id: resolved.id, fons: resolved.canonicalName, vcpe, est, cat: "Compromís", eur: compromisEur, divisa, mes, any: year, fy, tipus: vcpe, data: data_iso };
+  return { id: resolved.id, fons: resolved.canonicalName, vcpe, est, cat: "Compromís", eur: compromisEur, divisa, mes, any: year, fy, tipus: "Compromís", data: data_iso };
 }
 
 export async function loadPrivateEntities() {
@@ -804,7 +537,7 @@ export async function deleteFund(fund) {
 export async function upsertPipelineDeal(deal) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("pipeline")
-    .upsert({ id: deal.id, ...dealToRow(deal) }, { onConflict: "id" });
+    .upsert(dealToRow(deal), { onConflict: "id" });
   if (!error) logAudit("update", "pipeline", deal.id, { name: deal.name });
   return { error };
 }
@@ -976,7 +709,7 @@ export async function insertCapitalCall(cc) {
   const row = {
     vehicle_id: resolved.id,
     fons: resolved.canonicalName,
-    tipus: cc.tipus ?? cc.vcpe ?? null,
+    tipus: normalizeCapitalCallTipus(cc.tipus) ?? null,
     cat: cc.cat,
     data: cc.data,
     mes,
@@ -996,6 +729,9 @@ export async function updateCapitalCall(rowId, fields) {
   if (!supabase) return { error: null };
   const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
   const updates = { ...fields };
+  if (Object.prototype.hasOwnProperty.call(fields, "tipus")) {
+    updates.tipus = normalizeCapitalCallTipus(fields.tipus) ?? null;
+  }
   if (fields.fons) {
     const resolved = resolvePrivateEntity("vehicle", fields.fons, old?.vehicle_id ?? null);
     const { error: entityError } = await upsertPrivateEntities([resolved]);
