@@ -16,9 +16,13 @@ function FundDetailInner() {
   const { canAccessSection } = useAuth();
   const navigate = useNavigate();
 
+  // 1. All useState calls — hoisted unconditionally before any return
   const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
   const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
+  const [txFilters, setTxFilters] = useState({ data: "", tipus: "", categoria: "Tots", import: "" });
+  const [chartView, setChartView] = useState("quarterly");
 
+  // 2. All useEffect / useMemo calls — hoisted unconditionally before any return
   useEffect(() => {
     Promise.all([loadCapitalCalls(), loadFundMeta()]).then(([capitalCalls, meta]) => {
       if (Array.isArray(capitalCalls)) {
@@ -36,35 +40,17 @@ function FundDetailInner() {
 
   const detail = useMemo(() => buildFundDetailSnapshot(rawCC, fundMeta, id), [rawCC, fundMeta, id]);
   const txs = detail?.txs ?? [];
-  const [txFilters, setTxFilters] = useState({ data: "", tipus: "", categoria: "Tots", import: "" });
 
-  if (txs.length === 0) {
-    return (
-      <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", padding: 32 }}>
-        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 13, fontFamily: "inherit", padding: 0 }}>← Inversions</button>
-        <div style={{ marginTop: 48, textAlign: "center", color: tc.textLight }}>Fons no trobat.</div>
-      </div>
-    );
-  }
+  // Destructure with ?? {} so these are safe before detail loads
+  const { fundName, fundId, vcpe, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, txLog, recallablePool } = detail ?? {};
 
-  const { fundName, fundId, vcpe, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, txLog, recallablePool } = detail;
-  const filteredTxLog = useMemo(() => txLog.filter((r) => {
+  const filteredTxLog = useMemo(() => (txLog ?? []).filter((r) => {
     if (txFilters.data && !String(r.data ?? "").includes(txFilters.data)) return false;
     if (txFilters.tipus && !String(r.tipus ?? "").toLowerCase().includes(txFilters.tipus.toLowerCase())) return false;
     if (txFilters.categoria !== "Tots" && r.cat !== txFilters.categoria) return false;
     if (txFilters.import && !String(r.eur ?? "").includes(txFilters.import)) return false;
     return true;
   }), [txFilters, txLog]);
-  const canAccessFund = vcpe === "RE" ? canAccessSection("real-estate") : canAccessSection("alternatives");
-  if (!canAccessFund) {
-    return (
-      <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", padding: 32 }}>
-        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 13, fontFamily: "inherit", padding: 0 }}>← Inversions</button>
-        <div style={{ marginTop: 48, textAlign: "center", color: tc.textLight }}>No tens accés a aquest vehicle.</div>
-      </div>
-    );
-  }
-  const [chartView, setChartView] = useState("quarterly");
 
   // J-curve data: grouped by quarter or year; bars = period flows, line = cumulative net
   const jCurveData = useMemo(() => {
@@ -89,6 +75,26 @@ function FundDetailInner() {
       return { period: p.period, calls: -p.calls, dist: p.dist, cumNet };
     });
   }, [txs, chartView]);
+
+  // 3. Conditional returns — all hooks are above this point
+  if (txs.length === 0) {
+    return (
+      <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", padding: 32 }}>
+        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 13, fontFamily: "inherit", padding: 0 }}>← Inversions</button>
+        <div style={{ marginTop: 48, textAlign: "center", color: tc.textLight }}>Fons no trobat.</div>
+      </div>
+    );
+  }
+
+  const canAccessFund = vcpe === "RE" ? canAccessSection("real-estate") : canAccessSection("alternatives");
+  if (!canAccessFund) {
+    return (
+      <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", padding: 32 }}>
+        <button onClick={() => navigate(-1)} style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 13, fontFamily: "inherit", padding: 0 }}>← Inversions</button>
+        <div style={{ marginTop: 48, textAlign: "center", color: tc.textLight }}>No tens accés a aquest vehicle.</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
