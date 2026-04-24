@@ -19,6 +19,9 @@
  * @property {string} est
  * @property {number} eur
  * @property {string} divisa
+ * @property {number|null} [recallable]
+ * @property {number|null} [non_recallable]
+ * @property {number|null} [from_recallable]
  */
 
 /**
@@ -127,18 +130,31 @@
  * @property {string} tipus
  * @property {string|null} [modalitat]
  * @property {string|null} [geo]
+ * @property {number|null} [statusScreeningCode]
  * @property {string|null} [statusScreening]
+ * @property {number|null} [statusCercaCode]
+ * @property {string|null} [statusCerca]
+ * @property {number|null} [statusAdquisicioCode]
+ * @property {string|null} [statusAdquisicio]
  * @property {string|null} [formEntrada]
  * @property {string|null} [introPer]
+ * @property {string|null} [companiaAdquirida]
  * @property {string} [searcher1]
  * @property {string} [searcher2]
  * @property {string} [escola1]
  * @property {string} [escola2]
  * @property {number|null} [ticket]
+ * @property {string|null} [web]
+ * @property {string|null} [comentaris]
+ * @property {number|null} [tvpi]
  * @property {string|null} [dataInici]
+ * @property {string|null} [databaseIntroDate]
  * @property {string|null} [dataCompr]
  * @property {number|null} [mesosCercant]
+ * @property {number|null} [irr]
+ * @property {number|null} [dpi]
  * @property {number|null} [equityStake]
+ * @property {string|null} [nif]
  * @property {boolean} [isMock]
  */
 
@@ -149,18 +165,31 @@
  * @property {string} tipus
  * @property {string|null} modalitat
  * @property {string|null} geo
+ * @property {number|null} status_screening_code
  * @property {string|null} status_screening
+ * @property {number|null} status_cerca_code
+ * @property {string|null} status_cerca
+ * @property {number|null} status_adquisicio_code
+ * @property {string|null} status_adquisicio
  * @property {string|null} form_entrada
  * @property {string|null} intro_per
+ * @property {string|null} companyia_adquirida
  * @property {string|null} searcher1
  * @property {string|null} searcher2
  * @property {string|null} escola1
  * @property {string|null} escola2
  * @property {number|null} ticket
+ * @property {string|null} web
+ * @property {string|null} comentaris
+ * @property {number|null} tvpi
  * @property {string|null} data_inici
+ * @property {string|null} database_intro_date
  * @property {string|null} data_compr
  * @property {number|null} mesos_cercant
+ * @property {number|null} irr
+ * @property {number|null} dpi
  * @property {number|null} equity_stake
+ * @property {string|null} nif
  * @property {boolean} is_mock
  */
 

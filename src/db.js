@@ -305,6 +305,9 @@ export async function saveDashboardBundle(bundle) {
         est: r.est,
         eur: r.eur,
         divisa: r.divisa,
+        recallable:      (r.recallable      !== "" && r.recallable      != null) ? Number(r.recallable)      : null,
+        non_recallable:  (r.non_recallable  !== "" && r.non_recallable  != null) ? Number(r.non_recallable)  : null,
+        from_recallable: (r.from_recallable !== "" && r.from_recallable != null) ? Number(r.from_recallable) : null,
       };
     }),
     p_pl_rows: funds0 == null ? null : funds0.map(r => ({
