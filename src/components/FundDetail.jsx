@@ -36,6 +36,7 @@ function FundDetailInner() {
 
   const detail = useMemo(() => buildFundDetailSnapshot(rawCC, fundMeta, id), [rawCC, fundMeta, id]);
   const txs = detail?.txs ?? [];
+  const [txFilters, setTxFilters] = useState({ data: "", tipus: "", categoria: "Tots", import: "" });
 
   if (txs.length === 0) {
     return (
@@ -46,7 +47,14 @@ function FundDetailInner() {
     );
   }
 
-  const { fundName, fundId, vcpe, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, txLog } = detail;
+  const { fundName, fundId, vcpe, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, txLog, recallablePool } = detail;
+  const filteredTxLog = useMemo(() => txLog.filter((r) => {
+    if (txFilters.data && !String(r.data ?? "").includes(txFilters.data)) return false;
+    if (txFilters.tipus && !String(r.tipus ?? "").toLowerCase().includes(txFilters.tipus.toLowerCase())) return false;
+    if (txFilters.categoria !== "Tots" && r.cat !== txFilters.categoria) return false;
+    if (txFilters.import && !String(r.eur ?? "").includes(txFilters.import)) return false;
+    return true;
+  }), [txFilters, txLog]);
   const canAccessFund = vcpe === "RE" ? canAccessSection("real-estate") : canAccessSection("alternatives");
   if (!canAccessFund) {
     return (
@@ -114,6 +122,9 @@ function FundDetailInner() {
           <KpiCard label="TVPI" value={formatMultiple(tvpiFund)} sub="Inputat manualment" valueColor={multipleColor(tvpiFund, tc)} tc={tc} />
           <KpiCard label="DPI"  value={formatMultiple(dpiFund)}  valueColor={multipleColor(dpiFund, tc)}  tc={tc} />
           <KpiCard label="RVPI" value={formatMultiple(rvpiFund)} valueColor={multipleColor(rvpiFund, tc)} tc={tc} />
+          {recallablePool > 0 && (
+            <KpiCard label="Pool Recallable" value={fmtM(recallablePool)} valueColor={tc.green} tc={tc} />
+          )}
         </div>
 
         {/* J-curve */}
@@ -212,13 +223,20 @@ function FundDetailInner() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: tc.bgAlt }}>
-                {["Data", "Tipus", "Categoria", "Import"].map(h => (
-                  <th key={h} style={{ padding: "10px 12px", textAlign: h === "Import" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
+                {["Data", "Tipus", "Categoria", "Import", "Recallable"].map(h => (
+                  <th key={h} style={{ padding: "10px 12px", textAlign: h === "Import" || h === "Recallable" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
                 ))}
+              </tr>
+              <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
+                <th style={{ padding: "6px 12px" }}><input value={txFilters.data} onChange={(e) => setTxFilters((v) => ({ ...v, data: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding: "6px 12px" }}><input value={txFilters.tipus} onChange={(e) => setTxFilters((v) => ({ ...v, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding: "6px 12px" }}><select value={txFilters.categoria} onChange={(e) => setTxFilters((v) => ({ ...v, categoria: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots", ...Array.from(new Set(txLog.map(r => r.cat).filter(Boolean))).sort()].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+                <th style={{ padding: "6px 12px" }}><input value={txFilters.import} onChange={(e) => setTxFilters((v) => ({ ...v, import: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding: "6px 12px" }} />
               </tr>
             </thead>
             <tbody>
-              {txLog.map((r, i) => {
+              {filteredTxLog.map((r, i) => {
                 const cfg = CAT_CFG[r.cat] || {};
                 return (
                   <tr key={`${r.data}-${r.cat}-${r.eur}`} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
@@ -231,6 +249,13 @@ function FundDetailInner() {
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: r.eur > 0 ? tc.navy : tc.green }}>
                       {r.eur < 0 && "+ "}{fmtM(Math.abs(r.eur))}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight }}>
+                      {(r.cat === "Distribució" || r.cat === "Retorn Capital") && r.recallable != null
+                        ? `${fmtM(r.recallable)} rec / ${fmtM(r.non_recallable ?? 0)} no rec`
+                        : r.cat === "Capital Call" && r.from_recallable
+                        ? `${fmtM(r.from_recallable)} del pool`
+                        : "—"}
                     </td>
                   </tr>
                 );
