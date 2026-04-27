@@ -105,6 +105,19 @@ function Dashboard() {
     }
     return map;
   }, [d.rawCC]);
+  const uncalledByFund = useMemo(() => {
+    const map = {};
+    for (const r of d.rawCC) {
+      const fund = r.fons;
+      if (!fund) continue;
+      if (!map[fund]) map[fund] = { compromis: 0, calls: 0 };
+      if (r.cat === "Compromís") map[fund].compromis += Number(r.eur);
+      if (r.cat === "Capital Call") map[fund].calls += Number(r.eur);
+    }
+    return Object.fromEntries(
+      Object.entries(map).map(([k, v]) => [k, Math.max(0, Math.round((v.compromis - v.calls) * 100) / 100)])
+    );
+  }, [d.rawCC]);
   const defaultVehicleCurrency = useCallback((vehicleName) => {
     const key = normalizeOptionValue(vehicleName);
     return vehicleCurrencyMap.get(key) ?? "EUR";
@@ -605,31 +618,74 @@ function Dashboard() {
             },
             { key: "vcpe", label: "VCPE", type: "select", options: ["PE", "VC", "RE", "SF", "PC"], defaultValue: ccAddModalDefaults?.vcpe ?? "PE" },
             { key: "est", label: "Estratègia", type: "select", options: ["Fons Primari", "Fons de Fons", "Directe", "SOCIMI"], defaultValue: ccAddModalDefaults?.est ?? "Fons Primari" },
-            { key: "recallable", label: "Recallable (€)", type: "number", visible: v => v.cat === "Distribució" },
-            { key: "non_recallable", label: "No Recallable (€)", type: "number", visible: v => v.cat === "Distribució" },
+            {
+              key: "recallable",
+              label: "Recallable (€)",
+              type: "number",
+              visible: v => v.cat === "Distribució",
+              onChange: (value, nextValues, { setValue }) => {
+                if (value !== "" && value != null && nextValues.eur !== "" && nextValues.eur != null) {
+                  const rec = Number(value);
+                  const eur = Number(nextValues.eur);
+                  if (!isNaN(rec) && !isNaN(eur)) {
+                    setValue("non_recallable", String(Math.round((eur - rec) * 100) / 100));
+                  }
+                }
+                return nextValues;
+              },
+            },
+            {
+              key: "non_recallable",
+              label: "No Recallable (€)",
+              type: "number",
+              visible: v => v.cat === "Distribució",
+              hint: (values) => {
+                const rec = values.recallable !== "" && values.recallable != null ? Number(values.recallable) : null;
+                const nonRec = values.non_recallable !== "" && values.non_recallable != null ? Number(values.non_recallable) : null;
+                if (rec == null && nonRec == null) return null;
+                const r = rec ?? 0;
+                const nr = nonRec ?? 0;
+                const total = r + nr;
+                const eur = Number(values.eur) || 0;
+                return { text: `${fmtM(r)} rec + ${fmtM(nr)} no rec = ${fmtM(total)}`, valid: Math.abs(total - eur) <= 0.01 };
+              },
+            },
             {
               key: "from_recallable",
-              label: `Des de pool recallable (€) — disponible: ${fmtM(recallablePoolByFund[ccAddModalFons] ?? 0)}`,
+              label: `Des de pool recallable (€) — pool: ${fmtM(recallablePoolByFund[ccAddModalFons] ?? 0)} · pendent: ${fmtM(uncalledByFund[ccAddModalFons] ?? 0)}`,
               type: "number",
               visible: v => v.cat === "Capital Call",
             },
           ]}
           onSave={(values, setError) => {
             if (values.cat === "Capital Call" && values.from_recallable !== "" && values.from_recallable != null) {
+              if (Number(values.from_recallable) < 0) {
+                setError("El valor 'des de pool recallable' no pot ser negatiu.");
+                return;
+              }
               const pool = recallablePoolByFund[values.fons] ?? 0;
               if (Number(values.from_recallable) > pool + 0.01) {
-                setError(`El pool recallable disponible és ${fmtM(pool)}`);
-                return;
+                setError(`Advertiment: pool recallable disponible és ${fmtM(pool)}. El moviment s'ha guardat igualment.`);
+                // soft warning — fall through, do not return
               }
             }
             if (values.cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
               const rec = Number(values.recallable);
+              if (rec < 0) {
+                setError("El recallable no pot ser negatiu.");
+                return;
+              }
+              const eur = Number(values.eur) || 0;
+              if (rec > eur + 0.01) {
+                setError(`El recallable (${fmtM(rec)}) no pot superar l'import total (${fmtM(eur)}).`);
+                return;
+              }
               const nonRec = values.non_recallable !== "" && values.non_recallable != null
                 ? Number(values.non_recallable)
-                : Number(values.eur) - rec;
+                : eur - rec;
               const total = rec + nonRec;
-              if (Math.abs(total - Number(values.eur)) > 0.01) {
-                setError(`Recallable (${rec}) + No recallable (${nonRec}) = ${total}, però l'import total és ${values.eur}`);
+              if (Math.abs(total - eur) > 0.01) {
+                setError(`Recallable (${fmtM(rec)}) + No recallable (${fmtM(nonRec)}) = ${fmtM(total)}, però l'import total és ${fmtM(eur)}`);
                 return;
               }
               d.handleCCInsert({ ...values, non_recallable: nonRec }, setError);
@@ -653,11 +709,48 @@ function Dashboard() {
             { key: "divisa", label: "Divisa", type: "select", options: ["EUR", "USD"], defaultValue: ccEditModalRow.divisa },
             { key: "vcpe", label: "VCPE", type: "select", options: ["PE", "VC", "RE", "SF", "PC"], defaultValue: ccEditModalRow.vcpe },
             { key: "est", label: "Estratègia", type: "select", options: ["Fons Primari", "Fons de Fons", "Directe", "SOCIMI"], defaultValue: ccEditModalRow.est },
-            { key: "recallable", label: "Recallable (€)", type: "number", defaultValue: ccEditModalRow.recallable ?? "", visible: v => v.cat === "Distribució" },
-            { key: "non_recallable", label: "No Recallable (€)", type: "number", defaultValue: ccEditModalRow.non_recallable ?? "", visible: v => v.cat === "Distribució" },
+            {
+              key: "recallable",
+              label: "Recallable (€)",
+              type: "number",
+              defaultValue: ccEditModalRow.recallable ?? "",
+              visible: v => v.cat === "Distribució",
+              onChange: (value, nextValues, { setValue }) => {
+                if (value !== "" && value != null && nextValues.eur !== "" && nextValues.eur != null) {
+                  const rec = Number(value);
+                  const eur = Number(nextValues.eur);
+                  if (!isNaN(rec) && !isNaN(eur)) {
+                    setValue("non_recallable", String(Math.round((eur - rec) * 100) / 100));
+                  }
+                }
+                return nextValues;
+              },
+            },
+            {
+              key: "non_recallable",
+              label: "No Recallable (€)",
+              type: "number",
+              defaultValue: ccEditModalRow.non_recallable ?? "",
+              visible: v => v.cat === "Distribució",
+              hint: (values) => {
+                const rec = values.recallable !== "" && values.recallable != null ? Number(values.recallable) : null;
+                const nonRec = values.non_recallable !== "" && values.non_recallable != null ? Number(values.non_recallable) : null;
+                if (rec == null && nonRec == null) return null;
+                const r = rec ?? 0;
+                const nr = nonRec ?? 0;
+                const total = r + nr;
+                const eur = Number(values.eur) || 0;
+                return { text: `${fmtM(r)} rec + ${fmtM(nr)} no rec = ${fmtM(total)}`, valid: Math.abs(total - eur) <= 0.01 };
+              },
+            },
             {
               key: "from_recallable",
-              label: `Des de pool recallable (€) — disponible: ${fmtM(recallablePoolByFund[ccEditModalRow.fons] ?? 0)}`,
+              // pool balance: add back current row's existing draw so the edit-path sees the "net of this row" available
+              label: (() => {
+                const existingDraw = ccEditModalRow.from_recallable ?? 0;
+                const pool = Math.round(((recallablePoolByFund[ccEditModalRow.fons] ?? 0) + Number(existingDraw)) * 100) / 100;
+                return `Des de pool recallable (€) — pool: ${fmtM(pool)} · pendent: ${fmtM(uncalledByFund[ccEditModalRow.fons] ?? 0)}`;
+              })(),
               type: "number",
               defaultValue: ccEditModalRow.from_recallable ?? "",
               visible: v => v.cat === "Capital Call",
@@ -665,20 +758,35 @@ function Dashboard() {
           ]}
           onSave={(values, setError) => {
             if (values.cat === "Capital Call" && values.from_recallable !== "" && values.from_recallable != null) {
-              const pool = recallablePoolByFund[values.fons] ?? 0;
-              if (Number(values.from_recallable) > pool + 0.01) {
-                setError(`El pool recallable disponible és ${fmtM(pool)}`);
+              if (Number(values.from_recallable) < 0) {
+                setError("El valor 'des de pool recallable' no pot ser negatiu.");
                 return;
+              }
+              // add back existing draw to get pool available for this edit
+              const existingDraw = ccEditModalRow.from_recallable ?? 0;
+              const pool = Math.round(((recallablePoolByFund[values.fons] ?? 0) + Number(existingDraw)) * 100) / 100;
+              if (Number(values.from_recallable) > pool + 0.01) {
+                setError(`Advertiment: pool recallable disponible és ${fmtM(pool)}. El moviment s'ha guardat igualment.`);
+                // soft warning — fall through, do not return
               }
             }
             if (values.cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
               const rec = Number(values.recallable);
+              if (rec < 0) {
+                setError("El recallable no pot ser negatiu.");
+                return;
+              }
+              const eur = Number(values.eur) || 0;
+              if (rec > eur + 0.01) {
+                setError(`El recallable (${fmtM(rec)}) no pot superar l'import total (${fmtM(eur)}).`);
+                return;
+              }
               const nonRec = values.non_recallable !== "" && values.non_recallable != null
                 ? Number(values.non_recallable)
-                : Number(values.eur) - rec;
+                : eur - rec;
               const total = rec + nonRec;
-              if (Math.abs(total - Number(values.eur)) > 0.01) {
-                setError(`Recallable (${rec}) + No recallable (${nonRec}) = ${total}, però l'import total és ${values.eur}`);
+              if (Math.abs(total - eur) > 0.01) {
+                setError(`Recallable (${fmtM(rec)}) + No recallable (${fmtM(nonRec)}) = ${fmtM(total)}, però l'import total és ${fmtM(eur)}`);
                 return;
               }
               d.handleCCUpdate(ccEditModalRow._rowId, { ...values, non_recallable: nonRec }, setError);

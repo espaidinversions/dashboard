@@ -498,6 +498,16 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                   style={inp}
                   disabled={f.disabled} />
               )}
+              {f.hint && (() => {
+                const h = typeof f.hint === "function" ? f.hint(values) : f.hint;
+                if (!h) return null;
+                const { text, valid } = typeof h === "string" ? { text: h, valid: true } : h;
+                return (
+                  <div style={{ fontSize: 11, marginTop: 4, color: valid ? tc.textLight : "#C62828", fontFamily: "'DM Mono',monospace" }}>
+                    {text}
+                  </div>
+                );
+              })()}
             </div>
           ))}
           {error && (

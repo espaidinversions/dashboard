@@ -257,8 +257,8 @@ function FundDetailInner() {
                       {r.eur < 0 && "+ "}{fmtM(Math.abs(r.eur))}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight }}>
-                      {(r.cat === "Distribució" || r.cat === "Retorn Capital") && r.recallable != null
-                        ? `${fmtM(r.recallable)} rec / ${fmtM(r.non_recallable ?? 0)} no rec`
+                      {r.cat === "Distribució" && r.recallable != null
+                        ? `${fmtM(r.recallable)} rec / ${r.non_recallable != null ? fmtM(r.non_recallable) : "—"} no rec`
                         : r.cat === "Capital Call" && r.from_recallable
                         ? `${fmtM(r.from_recallable)} del pool`
                         : "—"}
