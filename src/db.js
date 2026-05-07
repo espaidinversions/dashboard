@@ -20,7 +20,9 @@ import {
 } from "./data/mappers.js";
 import { mergeSearchersWithCapitalCalls } from "./data/searcherModel.js";
 import { buildFallbackCompaniesFromCapitalCalls } from "./data/privateCompanyModel.js";
-import { normalizeCapitalCallTipus } from "./data/capitalCallTipusModel.js";
+import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "./data/capitalCallTipusModel.js";
+import { defaultCapitalCallStrategyForVcpe, normalizeCapitalCallStrategy } from "./data/capitalCallStrategyModel.js";
+import { computeFundIrrFromRows } from "./data/fundDetailModel.js";
 
 /** @typedef {import("./data/dashboardTypes.js").CapitalCallRow} CapitalCallRow */
 /** @typedef {import("./data/dashboardTypes.js").DashboardBundle} DashboardBundle */
@@ -40,6 +42,27 @@ async function loadPrivateEntityMap() {
   const { data, error } = await supabase.from("private_entities").select("*");
   if (error || !Array.isArray(data)) return new Map();
   return new Map(data.map((row) => [row.id, row]));
+}
+
+async function upsertFundMetaComputed(vehicleId, fallbackName = "") {
+  if (!supabase || !vehicleId) return { error: null };
+  const [{ data: ccRows, error: ccError }, { data: metaRow, error: metaError }] = await Promise.all([
+    supabase.from("capital_calls").select("*").eq("vehicle_id", vehicleId).order("data"),
+    supabase.from("fund_meta").select("*").eq("vehicle_id", vehicleId).maybeSingle(),
+  ]);
+  if (ccError) return { error: ccError };
+  if (metaError) return { error: metaError };
+
+  const entityMap = await loadPrivateEntityMap();
+  const rawRows = (ccRows ?? []).map((row) => rowToCapitalCall(row, entityMap));
+  const tvpi = metaRow?.tvpi ?? null;
+  const irr = computeFundIrrFromRows(rawRows, tvpi);
+  const name = metaRow?.fons ?? rawRows[0]?.fons ?? fallbackName;
+
+  const { error } = await supabase
+    .from("fund_meta")
+    .upsert({ vehicle_id: vehicleId, fons: name, tvpi, irr }, { onConflict: "vehicle_id" });
+  return { error };
 }
 
 const CAPITAL_CALLS_PAGE_SIZE = 1000;
@@ -209,10 +232,36 @@ export async function saveCapitalCalls(rows) {
   const entities = buildPrivateEntitiesFromDashboardBundle({ rawCC: rows });
   const { error: entitiesError } = await upsertPrivateEntities(entities);
   if (entitiesError) return { error: entitiesError };
+  const { data: existingMeta, error: metaReadError } = await supabase.from("fund_meta").select("*");
+  if (metaReadError) return { error: metaReadError };
   const { error: delError } = await supabase.from("capital_calls").delete().neq("id", 0);
   if (delError) return { error: delError };
   if (rows.length) {
     const { error } = await supabase.from("capital_calls").insert(rows.map(capitalCallToRow));
+    if (error) return { error };
+  }
+  const metaByVehicle = new Map((existingMeta ?? []).map((row) => [row.vehicle_id ?? row.fons, row]));
+  const grouped = new Map();
+  rows.forEach((row) => {
+    const key = row.id ?? row.fons;
+    if (!key) return;
+    if (!grouped.has(key)) grouped.set(key, []);
+    grouped.get(key).push(row);
+  });
+  const nextMetaRows = [...grouped.entries()].map(([key, fundRows]) => {
+    const existing = metaByVehicle.get(key) ?? metaByVehicle.get(fundRows[0]?.fons) ?? {};
+    const tvpi = existing.tvpi ?? null;
+    return {
+      id: fundRows[0]?.id ?? undefined,
+      fons: fundRows[0]?.fons ?? existing.fons ?? "",
+      tvpi,
+      irr: computeFundIrrFromRows(fundRows, tvpi),
+    };
+  });
+  if (nextMetaRows.length > 0) {
+    const { error } = await supabase
+      .from("fund_meta")
+      .upsert(nextMetaRows.map(fundMetaToRow), { onConflict: "vehicle_id" });
     if (error) return { error };
   }
   return { error: null };
@@ -288,6 +337,15 @@ export async function saveDashboardBundle(bundle) {
   const { rawCC, funds0, companies, searchers, fundMeta } = bundle ?? {};
   if (!supabase) return { error: null };
   const privateEntities = bundle?.privateEntities ?? buildPrivateEntitiesFromDashboardBundle({ companies, rawCC, fundMeta });
+  const tablesReplaced = [
+    rawCC       != null && "capital_calls",
+    funds0      != null && "pipeline",
+    companies   != null && "portfolio_companies",
+    searchers   != null && "searchers",
+    fundMeta    != null && "fund_meta",
+    bundle?.privateEntities != null && "private_entities",
+  ].filter(Boolean);
+  logAudit("replace", "dashboard_bundle", "bulk", { tables: tablesReplaced });
   const { error } = await supabase.rpc("replace_dashboard_bundle", {
     p_private_entities_rows: privateEntities == null ? null : privateEntities.map(privateEntityToRow),
     p_cc_rows: rawCC == null ? null : rawCC.map(r => {
@@ -295,16 +353,20 @@ export async function saveDashboardBundle(bundle) {
       return {
         vehicle_id: row.vehicle_id,
         fons: r.fons,
-        tipus: r.tipus,
-        cat: r.cat,
+        tipus: row.tipus,
+        cat: row.cat,
         data: r.data,
         mes: r.mes,
         year: r.any,
         fy: r.fy,
         vcpe: r.vcpe,
-        est: r.est,
-        eur: r.eur,
+        est: row.est,
+        eur: row.eur,
         divisa: r.divisa,
+        comentaris: r.comentaris ?? null,
+        amount_native: row.amount_native ?? null,
+        fx_rate: row.fx_rate ?? null,
+        fx_source: row.fx_source ?? null,
         recallable:      (r.recallable      !== "" && r.recallable      != null) ? Number(r.recallable)      : null,
         non_recallable:  (r.non_recallable  !== "" && r.non_recallable  != null) ? Number(r.non_recallable)  : null,
         from_recallable: (r.from_recallable !== "" && r.from_recallable != null) ? Number(r.from_recallable) : null,
@@ -336,7 +398,7 @@ export async function saveDashboardBundle(bundle) {
  * @param {string | { id?: string | null, fons?: string | null, nom?: string | null }} fund
  * @param {number | null | undefined} tvpi
  */
-export async function upsertFundMeta(fund, tvpi) {
+export async function upsertFundMeta(fund, tvpi, irr = null) {
   if (!supabase) return { error: null };
   const name = typeof fund === "string" ? fund : fund?.fons ?? fund?.nom ?? "";
   const resolved = resolvePrivateEntity("vehicle", name, typeof fund === "string" ? null : fund?.id ?? null);
@@ -344,8 +406,8 @@ export async function upsertFundMeta(fund, tvpi) {
   if (entityError) return { error: entityError };
   const { error } = await supabase
     .from("fund_meta")
-    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: tvpi ?? null }, { onConflict: "vehicle_id" });
-  if (!error) logAudit("update", "fund_meta", resolved.id, { fons: resolved.canonicalName, tvpi });
+    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: tvpi ?? null, irr }, { onConflict: "vehicle_id" });
+  if (!error) logAudit("update", "fund_meta", resolved.id, { fons: resolved.canonicalName, tvpi, irr });
   return { error };
 }
 
@@ -437,30 +499,53 @@ export async function insertPipelineDeal(deal) {
  * @param {string} est
  * @param {number} compromisEur
  * @param {string} divisa
+ * @param {{ amountNative?: number | null, fxRate?: number | null, fxSource?: string | null, comentaris?: string | null }} [options]
  * @returns {Promise<CapitalCallRow | null>}
  */
-export async function insertFund(fons, vcpe, est, compromisEur, divisa) {
+export async function insertFund(fons, vcpe, est, compromisEur, divisa, options = {}) {
   if (!supabase) return null;
   const resolved = resolvePrivateEntity("vehicle", fons);
   const { error: entityError } = await upsertPrivateEntities([resolved]);
   if (entityError) { console.error(entityError); return null; }
   const data_iso = new Date().toISOString().slice(0, 10);
   const { mes, year, fy } = parseDateParts(data_iso);
+  const normalizedEst = normalizeCapitalCallStrategy(est, vcpe, { fons }) ?? defaultCapitalCallStrategyForVcpe(vcpe);
 
   const { error: ccErr } = await supabase.from("capital_calls").insert({
     vehicle_id: resolved.id,
     fons: resolved.canonicalName,
-    vcpe, est, cat: "Compromís", eur: compromisEur, divisa,
+    vcpe, est: normalizedEst, cat: "Compromís", eur: compromisEur, divisa,
+    comentaris: options.comentaris ?? null,
+    amount_native: options.amountNative ?? (divisa === "EUR" ? compromisEur : null),
+    fx_rate: options.fxRate ?? (divisa === "EUR" ? 1 : null),
+    fx_source: options.fxSource ?? (divisa === "EUR" ? "identity" : null),
     mes, year, fy, tipus: "Compromís", data: data_iso,
   });
   if (ccErr) { console.error(ccErr); return null; }
 
   await supabase.from("fund_meta")
-    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: null }, { onConflict: "vehicle_id" });
+    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: null, irr: null }, { onConflict: "vehicle_id" });
 
-  logAudit("insert", "capital_calls", resolved.id, { fons: resolved.canonicalName, vcpe, est });
+  logAudit("insert", "capital_calls", resolved.id, { fons: resolved.canonicalName, vcpe, est: normalizedEst });
   // Return in rawCC shape (key `any`, not `year`)
-  return { id: resolved.id, fons: resolved.canonicalName, vcpe, est, cat: "Compromís", eur: compromisEur, divisa, mes, any: year, fy, tipus: "Compromís", data: data_iso };
+  return {
+    id: resolved.id,
+    fons: resolved.canonicalName,
+    vcpe,
+    est: normalizedEst,
+    cat: "Compromís",
+    eur: compromisEur,
+    divisa,
+    comentaris: options.comentaris ?? null,
+    amountNative: options.amountNative ?? (divisa === "EUR" ? compromisEur : null),
+    fxRate: options.fxRate ?? (divisa === "EUR" ? 1 : null),
+    fxSource: options.fxSource ?? (divisa === "EUR" ? "identity" : null),
+    mes,
+    any: year,
+    fy,
+    tipus: "Compromís",
+    data: data_iso,
+  };
 }
 
 export async function loadPrivateEntities() {
@@ -499,15 +584,6 @@ export async function deleteCompany(id) {
   const { data: old } = await supabase.from("portfolio_companies").select("*").eq("entity_id", id).single();
   const { error } = await supabase.from("portfolio_companies").delete().eq("entity_id", id);
   if (!error) logAudit("delete", "portfolio_companies", id, { old: old ?? null });
-  return { error };
-}
-
-/** @param {number} id */
-export async function deleteSearcher(id) {
-  if (!supabase) return { error: null };
-  const { data: old } = await supabase.from("searchers").select("*").eq("id", id).single();
-  const { error } = await supabase.from("searchers").delete().eq("id", id);
-  if (!error) logAudit("delete", "searchers", id, { old: old ?? null });
   return { error };
 }
 
@@ -670,10 +746,7 @@ export async function loadPMPositionOverrides() {
   return new Map(data.map(r => [r.isin, {
     valorMercat: r.valor_mercat,
     rendInici:   r.rend_inici,
-    rend2026:    r.rend2026,
-    rend2025:    r.rend2025,
-    rend2024:    r.rend2024,
-    rend2023:    r.rend2023,
+    rendiment:   r.rendiment ?? {},
     costAnual:   r.cost_anual,
   }]));
 }
@@ -687,12 +760,9 @@ export async function upsertPMPositionOverride(isin, fields) {
   const row = { isin, updated_at: new Date().toISOString() };
   if (fields.valorMercat != null) row.valor_mercat = fields.valorMercat;
   if (fields.rendInici   != null) row.rend_inici   = fields.rendInici;
-  if (fields.rend2026    != null) row.rend2026      = fields.rend2026;
-  if (fields.rend2025    != null) row.rend2025      = fields.rend2025;
-  if (fields.rend2024    != null) row.rend2024      = fields.rend2024;
-  if (fields.rend2023    != null) row.rend2023      = fields.rend2023;
-  if (fields.costAnual   != null) row.cost_anual    = fields.costAnual;
-  if (fields.notes       != null) row.notes         = fields.notes;
+  if (fields.rendiment   != null) row.rendiment    = fields.rendiment;
+  if (fields.costAnual   != null) row.cost_anual   = fields.costAnual;
+  if (fields.notes       != null) row.notes        = fields.notes;
   const { error } = await supabase.from("pm_position_overrides")
     .upsert(row, { onConflict: "isin" });
   if (!error) logAudit("update", "pm_position_overrides", isin, fields);
@@ -709,25 +779,35 @@ export async function insertCapitalCall(cc) {
   const { error: entityError } = await upsertPrivateEntities([resolved]);
   if (entityError) return { data: null, error: entityError };
   const { mes, year, fy } = parseDateParts(cc.data);
+  const tipus = normalizeCapitalCallTipus(cc.tipus) ?? null;
+  const eur = normalizeCapitalCallSignedAmount(tipus, cc.eur);
   const row = {
     vehicle_id: resolved.id,
     fons: resolved.canonicalName,
-    tipus: normalizeCapitalCallTipus(cc.tipus) ?? null,
-    cat: cc.cat,
+    tipus,
+    cat: cc.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
     data: cc.data,
     mes,
     year,
     fy,
     vcpe: cc.vcpe ?? null,
-    est: cc.est ?? null,
-    eur: cc.eur,
+    est: normalizeCapitalCallStrategy(cc.est, cc.vcpe, cc) ?? null,
+    eur,
     divisa: cc.divisa ?? "EUR",
+    comentaris: cc.comentaris ?? null,
+    amount_native: cc.amountNative ?? (cc.divisa === "EUR" ? eur : null),
+    fx_rate: cc.fxRate ?? (cc.divisa === "EUR" ? 1 : null),
+    fx_source: cc.fxSource ?? (cc.divisa === "EUR" ? "identity" : null),
     recallable:      (cc.recallable      !== "" && cc.recallable      != null) ? Number(cc.recallable)      : null,
     non_recallable:  (cc.non_recallable  !== "" && cc.non_recallable  != null) ? Number(cc.non_recallable)  : null,
     from_recallable: (cc.from_recallable !== "" && cc.from_recallable != null) ? Number(cc.from_recallable) : null,
   };
   const { data, error } = await supabase.from("capital_calls").insert(row).select().single();
   if (!error) logAudit("insert", "capital_calls", String(data?.id), row);
+  if (!error) {
+    const metaResult = await upsertFundMetaComputed(resolved.id, resolved.canonicalName);
+    if (metaResult.error) return { data, error: metaResult.error };
+  }
   return { data, error };
 }
 
@@ -735,13 +815,46 @@ export async function updateCapitalCall(rowId, fields) {
   if (!supabase) return { error: null };
   const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
   const updates = { ...fields };
-  for (const col of ["recallable", "non_recallable", "from_recallable"]) {
+  if (Object.prototype.hasOwnProperty.call(updates, "amountNative")) {
+    updates.amount_native = updates.amountNative;
+    delete updates.amountNative;
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, "fxRate")) {
+    updates.fx_rate = updates.fxRate;
+    delete updates.fxRate;
+  }
+  if (Object.prototype.hasOwnProperty.call(updates, "fxSource")) {
+    updates.fx_source = updates.fxSource;
+    delete updates.fxSource;
+  }
+  for (const col of ["recallable", "non_recallable", "from_recallable", "amount_native", "fx_rate"]) {
     if (Object.prototype.hasOwnProperty.call(updates, col)) {
       updates[col] = (updates[col] !== "" && updates[col] != null) ? Number(updates[col]) : null;
     }
   }
+  if (Object.prototype.hasOwnProperty.call(updates, "comentaris")) {
+    updates.comentaris = String(updates.comentaris ?? "").trim() || null;
+  }
   if (Object.prototype.hasOwnProperty.call(fields, "tipus")) {
     updates.tipus = normalizeCapitalCallTipus(fields.tipus) ?? null;
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, "eur")) {
+    const nextTipus = Object.prototype.hasOwnProperty.call(updates, "tipus") ? updates.tipus : old?.tipus;
+    updates.eur = normalizeCapitalCallSignedAmount(nextTipus, fields.eur);
+  }
+  if (Object.prototype.hasOwnProperty.call(fields, "est") || Object.prototype.hasOwnProperty.call(fields, "vcpe")) {
+    const nextVcpe = Object.prototype.hasOwnProperty.call(updates, "vcpe") ? updates.vcpe : old?.vcpe ?? null;
+    const nextEst = Object.prototype.hasOwnProperty.call(updates, "est") ? updates.est : old?.est;
+    const nextFons = Object.prototype.hasOwnProperty.call(updates, "fons") ? updates.fons : old?.fons;
+    updates.est = normalizeCapitalCallStrategy(nextEst, nextVcpe, { fons: nextFons });
+  }
+  if (
+    !Object.prototype.hasOwnProperty.call(fields, "cat")
+    && (Object.prototype.hasOwnProperty.call(fields, "tipus") || Object.prototype.hasOwnProperty.call(fields, "eur"))
+  ) {
+    const nextTipus = Object.prototype.hasOwnProperty.call(updates, "tipus") ? updates.tipus : old?.tipus;
+    const nextEur = Object.prototype.hasOwnProperty.call(updates, "eur") ? updates.eur : old?.eur;
+    updates.cat = inferCapitalCallCategoryFromTipus(nextTipus, nextEur);
   }
   if (fields.fons) {
     const resolved = resolvePrivateEntity("vehicle", fields.fons, old?.vehicle_id ?? null);
@@ -756,6 +869,12 @@ export async function updateCapitalCall(rowId, fields) {
   }
   const { error } = await supabase.from("capital_calls").update(updates).eq("id", rowId);
   if (!error) logAudit("update", "capital_calls", String(rowId), { old: old ?? null, new: updates });
+  if (!error) {
+    const vehicleId = updates.vehicle_id ?? old?.vehicle_id ?? null;
+    const fundName = updates.fons ?? old?.fons ?? "";
+    const metaResult = await upsertFundMetaComputed(vehicleId, fundName);
+    if (metaResult.error) return { error: metaResult.error };
+  }
   return { error };
 }
 
@@ -763,6 +882,10 @@ export async function deleteCapitalCall(rowId) {
   if (!supabase) return { error: null };
   const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
   const { error } = await supabase.from("capital_calls").delete().eq("id", rowId);
+  if (!error && old?.vehicle_id) {
+    const metaResult = await upsertFundMetaComputed(old.vehicle_id, old.fons ?? "");
+    if (metaResult.error) return { error: metaResult.error };
+  }
   if (!error) logAudit("delete", "capital_calls", String(rowId), { old: old ?? null });
   return { error };
 }

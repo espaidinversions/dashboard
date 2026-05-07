@@ -24,7 +24,7 @@ export function makeClosedPositionRouteId(position = null) {
   return `closed:${isin}:${routeSlug(position?.custodian)}:${position?.any ?? "unknown"}`;
 }
 
-export function parseClosedPositionRouteId(routeId) {
+function parseClosedPositionRouteId(routeId) {
   const match = /^closed:([^:]+):([^:]*):([^:]*)$/u.exec(String(routeId ?? ""));
   if (!match) return null;
   return {

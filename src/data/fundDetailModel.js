@@ -1,4 +1,10 @@
-import { slugify } from "../utils.js";
+import { slugify, xirr } from "../utils.js";
+import {
+  inferCapitalCallCategoryFromTipus,
+  normalizeCapitalCallSignedAmount,
+  normalizeCapitalCallTipus,
+} from "./capitalCallTipusModel.js";
+import { normalizeCapitalCallStrategy } from "./capitalCallStrategyModel.js";
 
 export function makeFundRouteId(row) {
   if (row?.id && row?.vcpe) return `${row.vcpe}:${row.id}`;
@@ -23,8 +29,38 @@ export function findFundRowsByRouteId(rows, routeId) {
   return nonCompanyHits.length > 0 ? nonCompanyHits : hits;
 }
 
+function normalizeFundDetailRow(row) {
+  const tipus = normalizeCapitalCallTipus(row?.tipus);
+  const eur = normalizeCapitalCallSignedAmount(tipus, row?.eur);
+  return {
+    ...row,
+    tipus,
+    eur,
+    cat: row?.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
+    est: normalizeCapitalCallStrategy(row?.est, row?.vcpe, row),
+  };
+}
+
+export function computeFundIrrFromRows(txs, tvpi, asOfDate = new Date().toISOString().slice(0, 10)) {
+  const sourceRows = (Array.isArray(txs) ? txs : []).map(normalizeFundDetailRow);
+  const calls = sourceRows
+    .filter((row) => row.cat === "Capital Call")
+    .reduce((sum, row) => sum + Number(row.eur || 0), 0);
+  const dist = sourceRows
+    .filter((row) => row.cat === "Distribució" || row.cat === "Retorn Capital")
+    .reduce((sum, row) => sum + Math.abs(Number(row.eur || 0)), 0);
+  const residualValue = tvpi != null ? Math.max((tvpi * calls) - dist, 0) : null;
+  const irrCashFlows = sourceRows
+    .filter((row) => row.cat === "Capital Call" || row.cat === "Distribució" || row.cat === "Retorn Capital")
+    .map((row) => ({ date: row.data, amount: -Number(row.eur || 0) }));
+  if (residualValue && residualValue > 0) {
+    irrCashFlows.push({ date: asOfDate, amount: residualValue });
+  }
+  return xirr(irrCashFlows);
+}
+
 export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
-  const txs = findFundRowsByRouteId(rawCC, routeId);
+  const txs = findFundRowsByRouteId(rawCC, routeId).map(normalizeFundDetailRow);
   if (txs.length === 0) return null;
 
   const fundName = txs[0].fons;
@@ -55,6 +91,7 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
   const tvpiFund = meta?.tvpi ?? null;
   const dpiFund = calls > 0 ? dist / calls : 0;
   const rvpiFund = tvpiFund != null ? tvpiFund - dpiFund : null;
+  const irrFund = meta?.irr ?? computeFundIrrFromRows(txs, tvpiFund);
   const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
 
   return {
@@ -72,6 +109,7 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
     tvpiFund,
     dpiFund,
     rvpiFund,
+    irrFund,
     recallablePool,
   };
 }

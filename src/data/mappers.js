@@ -1,5 +1,6 @@
 import { getPrivateEntityName, resolvePrivateEntity } from "./privateEntities.js";
-import { normalizeCapitalCallTipus } from "./capitalCallTipusModel.js";
+import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "./capitalCallTipusModel.js";
+import { normalizeCapitalCallStrategy } from "./capitalCallStrategyModel.js";
 
 /** @typedef {import("./dashboardTypes.js").CapitalCallRow} CapitalCallRow */
 /** @typedef {import("./dashboardTypes.js").FundMetaRow} FundMetaRow */
@@ -91,19 +92,25 @@ export function rowToCompany(r, entityMap) {
 export function capitalCallToRow(row) {
   const resolved = resolvePrivateEntity("vehicle", row.fons, row.id ?? null);
   const { mes, year, fy } = parseDateParts(row.data);
+  const tipus = normalizeCapitalCallTipus(row.tipus);
+  const eur = normalizeCapitalCallSignedAmount(tipus, row.eur);
   return {
     vehicle_id: resolved.id,
     fons: row.fons,
-    tipus: normalizeCapitalCallTipus(row.tipus),
-    cat: row.cat,
+    tipus,
+    cat: row.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
     data: row.data,
     mes,
     year,
     fy,
     vcpe: row.vcpe,
-    est: row.est,
-    eur: row.eur,
+    est: normalizeCapitalCallStrategy(row.est, row.vcpe, row),
+    eur,
     divisa: row.divisa,
+    comentaris: row.comentaris ?? null,
+    amount_native: row.amountNative ?? (row.divisa === "EUR" ? eur : null),
+    fx_rate: row.fxRate ?? (row.divisa === "EUR" ? 1 : null),
+    fx_source: row.fxSource ?? (row.divisa === "EUR" ? "identity" : null),
     recallable:      (row.recallable      !== "" && row.recallable      != null) ? Number(row.recallable)      : null,
     non_recallable:  (row.non_recallable  !== "" && row.non_recallable  != null) ? Number(row.non_recallable)  : null,
     from_recallable: (row.from_recallable !== "" && row.from_recallable != null) ? Number(row.from_recallable) : null,
@@ -119,20 +126,26 @@ export function rowToCapitalCall(row, entityMap) {
   const entityId = row.vehicle_id ?? null;
   const dataStr = row.data ? String(row.data).slice(0, 10) : null;
   const { mes, year, fy } = parseDateParts(dataStr);
+  const tipus = normalizeCapitalCallTipus(row.tipus);
+  const eur = normalizeCapitalCallSignedAmount(tipus, row.eur);
   return {
     _rowId: row.id,
     id: entityId ?? undefined,
     fons: getPrivateEntityName(entityMap, entityId, row.fons),
-    tipus: normalizeCapitalCallTipus(row.tipus),
-    cat: row.cat,
+    tipus,
+    cat: row.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
     data: dataStr,
     mes,
     any: year,
     fy,
     vcpe: row.vcpe,
-    est: row.est,
-    eur: row.eur,
+    est: normalizeCapitalCallStrategy(row.est, row.vcpe, { fons: row.fons }),
+    eur,
     divisa: row.divisa,
+    comentaris: row.comentaris ?? null,
+    amountNative: row.amount_native ?? null,
+    fxRate: row.fx_rate ?? null,
+    fxSource: row.fx_source ?? null,
     recallable:      row.recallable      ?? null,
     non_recallable:  row.non_recallable  ?? null,
     from_recallable: row.from_recallable ?? null,
@@ -148,6 +161,8 @@ export function fundMetaToRow(row) {
     vehicle_id: resolved.id,
     fons: row.fons,
     tvpi: row.tvpi ?? null,
+    irr: row.irr ?? null,
+    vehicle_tipus: row.vehicleTipus ?? null,
   };
 }
 
@@ -162,6 +177,8 @@ export function rowToFundMeta(row, entityMap) {
     id: entityId ?? undefined,
     fons: getPrivateEntityName(entityMap, entityId, row.fons),
     tvpi: row.tvpi,
+    irr: row.irr ?? null,
+    vehicleTipus: row.vehicle_tipus ?? null,
   };
 }
 

@@ -12,7 +12,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 2000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -25,7 +29,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 600000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -38,7 +46,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 200000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -51,7 +63,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 200000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -64,7 +80,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 300000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -77,7 +97,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -90,7 +114,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -103,7 +131,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -22182.26,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -116,7 +148,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -25072.98,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -129,7 +165,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -92508.9,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -142,7 +182,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -42364.21,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -155,7 +199,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -33698.8,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -168,7 +216,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -26938.98,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -181,7 +233,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -34635.83,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 4",
@@ -194,7 +250,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -48083,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -207,7 +267,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 2000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -220,7 +284,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -233,7 +301,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 300000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -246,7 +318,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 200000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -259,7 +335,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 200000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -272,7 +352,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -285,7 +369,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -298,7 +386,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -98626.35,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -311,7 +403,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 200000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ACP Secondaries 5 FCR",
@@ -324,7 +420,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 200000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Adams Street - ASP LUX RAIF Global Secondary Fund 7",
@@ -337,7 +437,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 2073515.55,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Adams Street - ASP LUX RAIF Global Secondary Fund 7",
@@ -350,7 +454,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 974912.46,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Adams Street - ASP LUX RAIF Global Secondary Fund 7",
@@ -363,7 +471,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 974912.46,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Adams Street - ASP LUX RAIF Global Secondary Fund 7",
@@ -376,7 +488,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 87782.63,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Adams Street - ASP LUX RAIF Global Secondary Fund 7",
@@ -389,7 +505,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 201483.65,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Adams Street - ASP LUX RAIF Global Secondary Fund 7",
@@ -402,7 +522,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 253924.28,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Adams Street - ASP LUX RAIF Global Secondary Fund 7",
@@ -415,7 +539,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 196533.86,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Adams Street - ASP LUX RAIF Global Secondary Fund 7",
@@ -428,7 +556,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -670452.77,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -441,7 +573,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -454,7 +590,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 573750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -467,7 +607,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 101250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -480,7 +624,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 167847,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -493,7 +641,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -506,7 +658,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -519,7 +675,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -532,7 +692,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 144285.71,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -545,7 +709,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70541.44,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aldea Ventures",
@@ -558,7 +726,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alder III (D) AB",
@@ -571,7 +743,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1200000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alder III (D) AB",
@@ -584,7 +760,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 70892.61,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alder III (D) AB",
@@ -597,7 +777,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 66069.9,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alder III (D) AB",
@@ -610,7 +794,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 59722.28,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alder III (D) AB",
@@ -623,7 +811,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 39179.09,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alder III (D) AB",
@@ -636,7 +828,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 110079.33,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alder III (D) AB",
@@ -649,7 +845,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 21825.85,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alder III (D) AB",
@@ -662,7 +862,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 60383.73,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alder III (D) AB",
@@ -675,7 +879,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5219.69,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -688,7 +896,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1183970.86,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -701,7 +913,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 107083.08,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -714,7 +930,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 51363.97,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -727,7 +947,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 19155.26,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -740,7 +964,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 95174.57,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -753,7 +981,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 25213.81,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -766,7 +998,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 56279.49,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -779,7 +1015,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 17161.99,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -792,7 +1032,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 31031.09,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Alpine Investors IX-A, LP",
@@ -805,7 +1049,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 92074,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -818,7 +1066,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -831,7 +1083,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 175000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -844,7 +1100,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -857,7 +1117,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 25000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -870,7 +1134,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 25000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -883,7 +1151,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -896,7 +1168,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -909,7 +1185,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -922,7 +1202,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -935,7 +1219,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -948,7 +1236,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -38549.18,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -961,7 +1253,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -14276.37,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -974,7 +1270,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -17131.64,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -987,7 +1287,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -11561.8,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -1000,7 +1304,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -41387.59,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -1013,7 +1321,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -29252.28,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X",
@@ -1026,7 +1338,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -17966.61,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1039,7 +1355,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1776198.93,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1052,7 +1372,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 488454.71,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1065,7 +1389,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 85763.29,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1078,7 +1406,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 41017.23,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1091,7 +1423,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 124090.01,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1104,7 +1440,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 368901.6,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1117,7 +1457,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 112813.76,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1130,7 +1474,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -154316.36,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1143,7 +1491,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -26469.81,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1156,7 +1508,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -37009.58,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1169,7 +1525,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -30076.16,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1182,7 +1542,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -82562.93,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1195,7 +1559,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -51773.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Altamar X Midmarket",
@@ -1208,7 +1576,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -82950,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1221,7 +1593,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1187214.61,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1234,7 +1610,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 17516.27,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1247,7 +1627,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 88989.2,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1260,7 +1644,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 18159.92,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1273,7 +1661,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 23948.01,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1286,7 +1678,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 45468,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1299,7 +1695,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 33154.45,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1312,7 +1712,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 32642.87,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1325,7 +1729,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 50353.05,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1338,7 +1746,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 20079.21,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1351,7 +1763,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 62468.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1364,7 +1780,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 39685.47,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "ARA Fund III-A, SCSp",
@@ -1377,7 +1797,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 45250.22,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1390,7 +1814,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1403,7 +1831,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1416,7 +1848,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1429,7 +1865,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1442,7 +1882,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 160000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1455,7 +1899,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 60000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1468,7 +1916,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 110000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1481,7 +1933,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1494,7 +1950,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1507,7 +1967,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 120000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1520,7 +1984,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1533,7 +2001,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -5681.53,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth",
@@ -1546,7 +2018,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -36000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth II 2021 SCR",
@@ -1559,7 +2035,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth II 2021 SCR",
@@ -1572,7 +2052,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 615000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth II 2021 SCR",
@@ -1585,7 +2069,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth II 2021 SCR",
@@ -1598,7 +2086,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 60000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth II 2021 SCR",
@@ -1611,7 +2103,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 105000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth II 2021 SCR",
@@ -1624,7 +2120,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 45000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth II 2021 SCR",
@@ -1637,7 +2137,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 45000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano Earth II 2021 SCR",
@@ -1650,7 +2154,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 45000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Co-Investments 2024 SCR",
@@ -1663,7 +2171,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Co-Investments 2024 SCR",
@@ -1676,7 +2188,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 300000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Co-Investments 2024 SCR",
@@ -1689,7 +2205,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 112500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Co-Investments 2024 SCR",
@@ -1702,7 +2222,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Co-Investments 2024 SCR",
@@ -1715,7 +2239,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 225000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1728,7 +2256,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1741,7 +2273,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 82500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1754,7 +2290,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1767,7 +2307,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 67500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1780,7 +2324,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 195000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1793,7 +2341,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 112500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1806,7 +2358,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1819,7 +2375,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1832,7 +2392,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 187500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1845,7 +2409,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1858,7 +2426,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 45000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1871,7 +2443,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 195000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Investments 2022 SCR SA",
@@ -1884,7 +2460,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 90000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Secondaries 2024 SCR",
@@ -1897,7 +2477,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano PE Secondaries 2024 SCR",
@@ -1910,7 +2494,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 300000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -1923,7 +2511,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -1936,7 +2528,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 97500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -1949,7 +2545,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 97500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -1962,7 +2562,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 105000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -1975,7 +2579,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -1988,7 +2596,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -2001,7 +2613,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -2014,7 +2630,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 225000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -2027,7 +2647,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -2040,7 +2664,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 180000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Arcano XII",
@@ -2053,7 +2681,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aurica Growth Fund Capital IV",
@@ -2066,7 +2698,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aurica Growth Fund Capital IV",
@@ -2079,7 +2715,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 90299,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aurica Growth Fund Capital IV",
@@ -2092,7 +2732,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 142619,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aurica Growth Fund Capital IV",
@@ -2105,7 +2749,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 131659.14,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aurica Growth Fund Capital IV",
@@ -2118,7 +2766,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 182314,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aurica Growth Fund Capital IV",
@@ -2131,7 +2783,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 115499.99,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aurica Growth Fund Capital IV",
@@ -2144,7 +2800,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 80308,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aurica Search Fund",
@@ -2157,7 +2817,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Aurica Search Fund",
@@ -2170,7 +2834,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 286457,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "BID Equity Fund III SCSp",
@@ -2183,7 +2851,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "BID Equity Fund III SCSp",
@@ -2196,7 +2868,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 234042.55,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "BID Equity Fund III SCSp",
@@ -2209,7 +2885,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -150547.99,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "BID Equity Fund III SCSp",
@@ -2222,7 +2902,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 42340.01,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "BID Equity Fund III SCSp",
@@ -2235,7 +2919,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 17908.86,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "BID Equity Fund III SCSp",
@@ -2248,7 +2936,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 21858.43,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "BID Equity Fund III SCSp",
@@ -2261,7 +2953,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 98720.11,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "BID Equity Fund III SCSp",
@@ -2274,7 +2970,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 45018.42,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2287,7 +2987,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2300,7 +3004,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 574682.25,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2313,7 +3021,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 82105.36,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2326,7 +3038,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 138440.26,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2339,7 +3055,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 135027.27,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2352,7 +3072,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 104972.73,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2365,7 +3089,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 82500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2378,7 +3106,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 57750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2391,7 +3123,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -14250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2404,7 +3140,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 82500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2417,7 +3157,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 63750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2430,7 +3174,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -77250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2443,7 +3191,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -60000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2456,7 +3208,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -13500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct V",
@@ -2469,7 +3225,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -123000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct VI SCA",
@@ -2482,7 +3242,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Mid-Market Direct VI SCA",
@@ -2495,7 +3259,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 693952.71,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Secondaries VI",
@@ -2508,7 +3276,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 2000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Secondaries VI",
@@ -2521,7 +3293,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 830000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Secondaries VI",
@@ -2534,7 +3310,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 60000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Secondaries VI",
@@ -2547,7 +3327,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Secondaries VI",
@@ -2560,7 +3344,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 90000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Secondaries VI",
@@ -2573,7 +3361,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 60000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Capital Dynamics Secondaries VI",
@@ -2586,7 +3378,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 180000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2599,7 +3395,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 3000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2612,7 +3412,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 794220.33,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2625,7 +3429,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -80549.35,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2638,7 +3446,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 141329.01,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2651,7 +3463,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -59152.22,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2664,7 +3480,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 180000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2677,7 +3497,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -12293.9,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2690,7 +3514,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 159000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2703,7 +3531,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -40510.85,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2716,7 +3548,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 141000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2729,7 +3565,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -3043.93,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2742,7 +3582,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 274500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2755,7 +3599,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -30808.67,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2768,7 +3616,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 12713.98,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2781,7 +3633,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -106013.74,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2794,7 +3650,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 191286.02,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CASF V S.L.P.",
@@ -2807,7 +3667,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -44563.97,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Chicago Pacific Founders Fund IV-A LP",
@@ -2820,7 +3684,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1060220.53,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Chicago Pacific Founders Fund IV-A LP",
@@ -2833,7 +3701,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 10004.24,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2846,7 +3718,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 1683501.68,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2859,7 +3735,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 16831.79,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2872,7 +3752,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 16694.49,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2885,7 +3769,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 5756.15,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2898,7 +3786,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 82223.32,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2911,7 +3803,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 84459.47,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2924,7 +3820,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 86363.24,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2937,7 +3837,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 88566.11,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2950,7 +3854,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 89589.68,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2963,7 +3871,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 109071.08,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2976,7 +3888,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 6652.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -2989,7 +3905,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 117912.94,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3002,7 +3922,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 116414.44,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3015,7 +3939,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 5820.72,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3028,7 +3956,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 112803.16,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3041,7 +3973,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 2905.81,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3054,7 +3990,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 110142.27,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3067,7 +4007,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 109629.09,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3080,7 +4024,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 2789.14,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3093,7 +4041,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 37397.16,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3106,7 +4058,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 36812.07,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3119,7 +4075,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 38000,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3132,7 +4092,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 38218.99,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3145,7 +4109,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 34855.35,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3158,7 +4126,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 2627.2,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3171,7 +4143,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 34267.11,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3184,7 +4160,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 34196.8,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3197,7 +4177,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 34381.98,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Climate Innovation Fund",
@@ -3210,7 +4194,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 5157.3,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3223,7 +4211,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1224489.8,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3236,7 +4228,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 12240.9,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3249,7 +4245,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 11628.86,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3262,7 +4262,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 63694.27,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3275,7 +4279,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 64772.43,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3288,7 +4296,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 66277.84,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3301,7 +4313,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 10632.64,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3314,7 +4330,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 68624.76,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3327,7 +4347,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 81929.9,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3340,7 +4364,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 86538.46,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3353,7 +4381,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 4326.92,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3366,7 +4398,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 91733.77,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3379,7 +4415,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 5648.9,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3392,7 +4432,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 84705.88,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3405,7 +4449,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 11169.02,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3418,7 +4466,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 81929.9,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3431,7 +4483,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 85380.89,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3444,7 +4500,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 83064.14,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3457,7 +4517,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 11183.6,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3470,7 +4534,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 27201.02,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3483,7 +4551,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 27530.51,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3496,7 +4568,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 28533.38,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3509,7 +4585,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 29066.95,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3522,7 +4602,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 30484.99,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3535,7 +4619,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 26272,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3548,7 +4636,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 10539.29,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "CS Seasons Global",
@@ -3561,7 +4653,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -19862.92,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US II",
@@ -3574,7 +4670,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 328137.82,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US II",
@@ -3587,7 +4687,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 196882.69,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US II",
@@ -3600,7 +4704,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 67363,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US II",
@@ -3613,7 +4721,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 67453.63,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US II",
@@ -3626,7 +4738,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -12551.38,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US III",
@@ -3639,7 +4755,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 883392.23,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US III",
@@ -3652,7 +4772,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 441813.2,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US III",
@@ -3665,7 +4789,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 181686.05,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US III",
@@ -3678,7 +4806,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 95365.25,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US III",
@@ -3691,7 +4823,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 100462.13,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US III",
@@ -3704,7 +4840,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 91315.86,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US III",
@@ -3717,7 +4857,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -73322.44,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US III",
@@ -3730,7 +4874,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -81289.7,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "EBN Pre IPO US III",
@@ -3743,7 +4891,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -12363,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Espaiactiu",
@@ -3756,7 +4908,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 2850000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Espaiactiu",
@@ -3769,7 +4925,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 114000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Espaiactiu",
@@ -3782,7 +4942,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 476170,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Espaiactiu",
@@ -3795,7 +4959,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 204155,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Espaiactiu",
@@ -3808,7 +4976,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 335956,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Espaiactiu",
@@ -3821,7 +4993,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 371479,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Espaiactiu",
@@ -3834,7 +5010,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 431862,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Espaiactiu",
@@ -3847,7 +5027,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 258979,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Espaiactiu",
@@ -3860,7 +5044,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 657399,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "FASO VI SCSp",
@@ -3873,7 +5061,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 2000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "FASO VI SCSp",
@@ -3886,7 +5078,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 130000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "FASO VI SCSp",
@@ -3899,7 +5095,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 180000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "FASO VI SCSp",
@@ -3912,7 +5112,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 200000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "FASO VI SCSp",
@@ -3925,7 +5129,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "FASO VI SCSp",
@@ -3938,7 +5146,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 114000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Frontenac XIII (Parallel)",
@@ -3951,7 +5163,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 867698.3,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -3964,7 +5180,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 1260504.2,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -3977,7 +5197,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 378119.49,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -3990,7 +5214,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 124090.01,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -4003,7 +5231,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 63599.39,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -4016,7 +5248,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 127385.4,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -4029,7 +5265,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 262054.53,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -4042,7 +5282,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 163894.45,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -4055,7 +5299,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 42597.84,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -4068,7 +5316,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 30771.18,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -4081,7 +5333,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 86870.54,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "G Squared V",
@@ -4094,7 +5350,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 27257.38,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Asia",
@@ -4107,7 +5367,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 1325088.34,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Asia",
@@ -4120,7 +5384,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 132543.96,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Asia",
@@ -4133,7 +5401,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70521.86,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Asia",
@@ -4146,7 +5418,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 84610.32,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Asia",
@@ -4159,7 +5435,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 40749.8,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Asia",
@@ -4172,7 +5452,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 67000.18,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Asia",
@@ -4185,7 +5469,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 41597.34,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Asia",
@@ -4198,7 +5486,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 85730.62,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Asia",
@@ -4211,7 +5503,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 71047.19,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4224,7 +5520,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 3750000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4237,7 +5537,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 750000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4250,7 +5554,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": -187500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4263,7 +5571,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": -187500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4276,7 +5588,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 187500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4289,7 +5605,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 412500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4302,7 +5622,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 337500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4315,7 +5639,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 375000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4328,7 +5656,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 375000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana III FCR",
@@ -4341,7 +5673,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 300000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4354,7 +5690,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 2750000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4367,7 +5707,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4380,7 +5724,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 262500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4393,7 +5741,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 137500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4406,7 +5758,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 137500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4419,7 +5775,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 275000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4432,7 +5792,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 192500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4445,7 +5809,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 137500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4458,7 +5826,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 275000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4471,7 +5843,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 412500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4484,7 +5860,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 137500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4497,7 +5877,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 137500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4510,7 +5894,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 137500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4523,7 +5911,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 165000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4536,7 +5928,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 82500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4549,7 +5945,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": -41748.83,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4562,7 +5962,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": -33508.29,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Galdana Ventures II",
@@ -4575,7 +5979,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": -28224.4,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Healthcare Activos Yield",
@@ -4588,7 +5996,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "SOCIMI",
     "eur": 12500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Healthcare Activos Yield",
@@ -4601,7 +6013,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "SOCIMI",
     "eur": 8528838.07,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Healthcare Activos Yield",
@@ -4614,7 +6030,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "SOCIMI",
     "eur": 402980.61,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Healthcare Activos Yield",
@@ -4627,7 +6047,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "SOCIMI",
     "eur": 1450730.21,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4640,7 +6064,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1250000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4653,7 +6081,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 8285.53,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4666,7 +6098,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5558.65,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4679,7 +6115,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5453.77,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4692,7 +6132,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 13816.01,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4705,7 +6149,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 90476.7,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4718,7 +6166,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 37220.44,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4731,7 +6183,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5513.7,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4744,7 +6200,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 71140.75,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4757,7 +6217,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 36824.27,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4770,7 +6234,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 63479.47,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4783,7 +6251,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 86178.92,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4796,7 +6268,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 7845.77,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4809,7 +6285,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 132078.78,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4822,7 +6302,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5468.75,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4835,7 +6319,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -185623.57,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "HG Mercury 4 (Lux), SCSp",
@@ -4848,7 +6336,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5468.75,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "IK Partners X",
@@ -4861,7 +6353,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "IK Partners X",
@@ -4874,7 +6370,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 84387.71,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "IK Partners X",
@@ -4887,7 +6387,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 82697.21,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "IK Partners X",
@@ -4900,7 +6404,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 44088.66,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "IK Partners X",
@@ -4913,7 +6421,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 43179.62,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "IK Partners X",
@@ -4926,7 +6438,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 57878.29,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "IK Partners X",
@@ -4939,7 +6455,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 89995.42,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "IK Small Cap IV Fund",
@@ -4952,7 +6472,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "IK Small Cap IV Fund",
@@ -4965,7 +6489,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 2250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -4978,7 +6506,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -4991,7 +6523,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 25000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5004,7 +6540,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5017,7 +6557,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5030,7 +6574,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 97500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5043,7 +6591,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 26700,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5056,7 +6608,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 87500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5069,7 +6625,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 42439,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5082,7 +6642,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 7350,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5095,7 +6659,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 31400,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5108,7 +6676,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 7855,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus II A S.L",
@@ -5121,7 +6693,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 33223,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5134,7 +6710,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5147,7 +6727,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 40000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5160,7 +6744,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 166000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5173,7 +6761,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 47150,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5186,7 +6778,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 199339,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5199,7 +6795,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 147889,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5212,7 +6812,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 119364,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5225,7 +6829,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 107118,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5238,7 +6846,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 109973,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva Plus III A S.L",
@@ -5251,7 +6863,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 63167,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5264,7 +6880,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5277,7 +6897,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 25000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5290,7 +6914,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5303,7 +6931,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 125000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5316,7 +6948,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 125000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5329,7 +6965,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 125000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5342,7 +6982,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": -175000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5355,7 +6999,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": -28600,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5368,7 +7016,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": -173000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5381,7 +7033,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": -24500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda",
@@ -5394,7 +7050,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": -7000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda II",
@@ -5407,7 +7067,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 375000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda II",
@@ -5420,7 +7084,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 18750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda II",
@@ -5433,7 +7101,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 52568,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda II",
@@ -5446,7 +7118,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 125597,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda II",
@@ -5459,7 +7135,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 79177,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda II",
@@ -5472,7 +7152,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 20944,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda II",
@@ -5485,7 +7169,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 56195,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Deuda II",
@@ -5498,7 +7186,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 21769,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5511,7 +7203,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5524,7 +7220,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 60000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5537,7 +7237,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 76332,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5550,7 +7254,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 23500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5563,7 +7271,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 100250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5576,7 +7288,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 73350,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5589,7 +7305,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 48642,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5602,7 +7322,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 102925,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5615,7 +7339,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 63634,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5628,7 +7356,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 57514,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5641,7 +7373,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 97449,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5654,7 +7390,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 143032,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveractiva SIA Plus IV D",
@@ -5667,7 +7407,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 112000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready HTE Infra SCR",
@@ -5680,7 +7424,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 2250000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready HTE Infra SCR",
@@ -5693,7 +7441,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready HTE Infra SCR",
@@ -5706,7 +7458,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready HTE Infra SCR",
@@ -5719,7 +7475,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 562500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready HTE Infra SCR",
@@ -5732,7 +7492,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 472500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready HTE Infra SCR",
@@ -5745,7 +7509,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 258750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready HTE Infra SCR",
@@ -5758,7 +7526,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 67500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready HTE Infra SCR",
@@ -5771,7 +7543,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -436974.07,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5784,7 +7560,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 730000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5797,7 +7577,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5810,7 +7594,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 23000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5823,7 +7611,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 54750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5836,7 +7628,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 36500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5849,7 +7645,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 36500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5862,7 +7662,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 73000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5875,7 +7679,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 73000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5888,7 +7696,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 36500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5901,7 +7713,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -30295,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5914,7 +7730,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -19162.5,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5927,7 +7747,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -48727.5,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5940,7 +7764,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -19162.5,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5953,7 +7781,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -9581.25,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5966,7 +7798,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -19162.5,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5979,7 +7815,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -17321.06,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -5992,7 +7832,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -19162.5,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Inveready VFIII",
@@ -6005,7 +7849,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -38325,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6018,7 +7866,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 400000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6031,7 +7883,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 21431,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6044,7 +7900,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 25595,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6057,7 +7917,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 23278,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6070,7 +7934,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 16066,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6083,7 +7951,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 6352,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6096,7 +7968,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 12938,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6109,7 +7985,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 14178,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6122,7 +8002,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 11342,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6135,7 +8019,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 11789,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6148,7 +8036,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 8034,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6161,7 +8053,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 18431,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6174,7 +8070,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 7631,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6187,7 +8087,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 9439,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6200,7 +8104,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 5235,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6213,7 +8121,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 23074,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6226,7 +8138,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 4476,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6239,7 +8155,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 8881,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6252,7 +8172,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 7467,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6265,7 +8189,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 9120,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6278,7 +8206,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 14507,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6291,7 +8223,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -158229.08,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6304,7 +8240,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 15632,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures",
@@ -6317,7 +8257,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 8531,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures III Parallel Fund FCRE",
@@ -6330,7 +8274,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures III Parallel Fund FCRE",
@@ -6343,7 +8291,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 6906,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures III Parallel Fund FCRE",
@@ -6356,7 +8308,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 29414,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures III Parallel Fund FCRE",
@@ -6369,7 +8325,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 39215,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Invivo Ventures III Parallel Fund FCRE",
@@ -6382,7 +8342,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 40865,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6395,7 +8359,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1013513.51,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6408,7 +8376,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 473366.91,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6421,7 +8393,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 70723.45,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6434,7 +8410,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75408.59,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6447,7 +8427,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 73623.77,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6460,7 +8444,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 343.05,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6473,7 +8461,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 63548.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6486,7 +8478,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 876.15,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6499,7 +8495,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -1227.83,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6512,7 +8512,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1248.25,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6525,7 +8529,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 85754.05,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6538,7 +8546,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1619.62,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6551,7 +8563,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -26678.22,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6564,7 +8580,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 35843.11,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6577,7 +8597,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 35463.65,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6590,7 +8614,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -13044.09,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6603,7 +8631,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 53677.43,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6616,7 +8648,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 6695.81,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6629,7 +8665,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -43960.47,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6642,7 +8682,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -89337.76,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2018",
@@ -6655,7 +8699,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -85483.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6668,7 +8716,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1267962.81,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6681,7 +8733,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 17683.42,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6694,7 +8750,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 4461.52,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6707,7 +8767,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 18812.71,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6720,7 +8784,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 24746.35,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6733,7 +8801,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1367.2,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6746,7 +8818,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 26922.86,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6759,7 +8835,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 24557.95,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6772,7 +8852,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1430.65,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6785,7 +8869,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 114668.52,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6798,7 +8886,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 79284.54,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6811,7 +8903,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1601.96,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6824,7 +8920,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -43896.73,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6837,7 +8937,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -2360.38,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6850,7 +8954,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 39308.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6863,7 +8971,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -19147.08,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6876,7 +8988,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -2545.32,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6889,7 +9005,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 52333.18,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6902,7 +9022,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 54565.29,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6915,7 +9039,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1418.05,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6928,7 +9056,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 71461.73,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6941,7 +9073,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 44292.36,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6954,7 +9090,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1779.75,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6967,7 +9107,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 76034.29,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6980,7 +9124,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1715.48,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -6993,7 +9141,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 42569.27,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7006,7 +9158,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 9937.3,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7019,7 +9175,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 69422.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7032,7 +9192,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 3616.8,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7045,7 +9209,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 71398.95,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7058,7 +9226,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 188.72,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7071,7 +9243,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 41720.4,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7084,7 +9260,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 3115.41,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7097,7 +9277,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 44586.29,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7110,7 +9294,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 44360.99,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7123,7 +9311,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 51523.4,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7136,7 +9328,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 53542.86,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2020",
@@ -7149,7 +9345,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 48760.11,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7162,7 +9362,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1549586.78,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7175,7 +9379,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 99127.14,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7188,7 +9396,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 8698.19,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7201,7 +9413,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 55902.35,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7214,7 +9430,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 2592.32,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7227,7 +9447,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 54879.72,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7240,7 +9464,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1395.96,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7253,7 +9481,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 56153.48,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7266,7 +9498,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1707.21,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7279,7 +9515,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 56706.8,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7292,7 +9532,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 71725.81,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7305,7 +9549,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 76094.75,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7318,7 +9566,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 57661.21,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7331,7 +9583,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 60635.84,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7344,7 +9600,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 56537.97,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7357,7 +9617,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 53046.76,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "JP Morgan Vintage 2022",
@@ -7370,7 +9634,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 52868.16,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "K6 Private Investors",
@@ -7383,7 +9651,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1181818.18,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "L Squared Capital Partners V",
@@ -7396,7 +9668,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1735396.6,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Lee Equity Partners Fund IV, LP",
@@ -7409,7 +9685,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 919963.2,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Lee Equity Partners Fund IV, LP",
@@ -7422,7 +9702,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 88837.27,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Lee Equity Partners Fund IV, LP",
@@ -7435,7 +9719,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 49844.66,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Lee Equity Partners Fund IV, LP",
@@ -7448,7 +9736,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 691.3,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Lee Equity Partners Fund IV, LP",
@@ -7461,7 +9753,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 117362.89,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Lee Equity Partners Fund IV, LP",
@@ -7474,7 +9770,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 72570.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Lee Equity Partners Fund IV, LP",
@@ -7487,7 +9787,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 115903.82,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Magnum Capital IV",
@@ -7500,7 +9804,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1250000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Magnum Capital IV",
@@ -7513,7 +9821,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 9815.09,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Magnum Capital IV",
@@ -7526,7 +9838,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 8019.31,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Capital VIII Coöperatief U.A.",
@@ -7539,7 +9855,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1350000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Capital VIII Coöperatief U.A.",
@@ -7552,7 +9872,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Capital VIII Coöperatief U.A.",
@@ -7565,7 +9889,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 21500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Capital VIII Coöperatief U.A.",
@@ -7578,7 +9906,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 81000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Capital VIII Coöperatief U.A.",
@@ -7591,7 +9923,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 135000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Capital VIII Coöperatief U.A.",
@@ -7604,7 +9940,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 67500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Capital VIII Coöperatief U.A.",
@@ -7617,7 +9957,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 81000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Capital VIII Coöperatief U.A.",
@@ -7630,7 +9974,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 162000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Foundation II Coöperatief U.A.",
@@ -7643,7 +9991,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1125000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Foundation II Coöperatief U.A.",
@@ -7656,7 +10008,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Foundation II Coöperatief U.A.",
@@ -7669,7 +10025,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 35000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Foundation II Coöperatief U.A.",
@@ -7682,7 +10042,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 112500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Foundation II Coöperatief U.A.",
@@ -7695,7 +10059,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 129375,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Main Foundation III Coöperatief U.A.",
@@ -7708,7 +10076,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "McWin - EBITDA Investmens Fund I SCSp",
@@ -7721,7 +10093,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "McWin - EBITDA Investmens Fund I SCSp",
@@ -7734,7 +10110,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 942000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Meridia Real Estate Fund V FICC",
@@ -7747,7 +10127,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 2000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Meridia Real Estate Fund V FICC",
@@ -7760,7 +10144,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 380600,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Meridia Real Estate Fund V FICC",
@@ -7773,7 +10161,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 239334,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Meridia Real Estate Fund V FICC",
@@ -7786,7 +10178,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 190000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Meridia Real Estate Fund V FICC",
@@ -7799,7 +10195,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": -268000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Montefiore Investment VI SLP",
@@ -7812,7 +10212,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 1250000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Montefiore Investment VI SLP",
@@ -7825,7 +10229,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 39391.22,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Montefiore Investment VI SLP",
@@ -7838,7 +10246,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Montefiore Investment VI SLP",
@@ -7851,7 +10263,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 70000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Montefiore Investment VI SLP",
@@ -7864,7 +10280,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 56250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7877,7 +10297,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 2500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7890,7 +10314,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 269655.94,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7903,7 +10331,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -257825.95,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7916,7 +10348,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 32075.17,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7929,7 +10365,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -6100.13,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7942,7 +10382,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 43599.03,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7955,7 +10399,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 81876.79,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7968,7 +10416,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 130321.78,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7981,7 +10433,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -118797.56,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -7994,7 +10450,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 17799.14,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -8007,7 +10467,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 24176.76,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -8020,7 +10484,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 105355.2,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -8033,7 +10501,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 51312,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -8046,7 +10518,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 52665.16,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -8059,7 +10535,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 235432.39,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -8072,7 +10552,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 50129.48,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V Europe SCSp",
@@ -8085,7 +10569,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 88570.47,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8098,7 +10586,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 3500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8111,7 +10603,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 26752.82,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8124,7 +10620,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 13780.88,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8137,7 +10637,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 50468.56,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8150,7 +10654,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 275729.88,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8163,7 +10671,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -15978.48,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8176,7 +10688,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -68164.24,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8189,7 +10705,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 162278.15,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8202,7 +10722,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 111448.5,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8215,7 +10739,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -76595.71,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8228,7 +10756,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 103190.49,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8241,7 +10773,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 230092.46,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8254,7 +10790,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -369995.6,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8267,7 +10807,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 42300.55,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8280,7 +10824,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 137390.71,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8293,7 +10841,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 48394.46,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8306,7 +10858,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 138408.37,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8319,7 +10875,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -17461.42,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8332,7 +10892,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 99336.42,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8345,7 +10909,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -1155.57,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8358,7 +10926,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 138113.7,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "MPEP Fund SICAV RAIF - MPEP Fund V North America SCSp",
@@ -8371,7 +10943,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -1309.42,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Nautic Partners XI-A LP",
@@ -8384,7 +10960,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 1707941.93,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Nautic Partners XI-A LP",
@@ -8397,7 +10977,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 145682.14,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Nautic Partners XI-A LP",
@@ -8410,7 +10994,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 242379.21,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Naxicap Investment Opportunities III",
@@ -8423,7 +11011,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1250000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Naxicap Investment Opportunities III",
@@ -8436,7 +11028,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 267500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Naxicap Investment Opportunities III",
@@ -8449,7 +11045,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 210000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Naxicap Investment Opportunities III",
@@ -8462,7 +11062,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -91250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Naxicap Investment Opportunities III",
@@ -8475,7 +11079,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 73750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Naxicap Investment Opportunities III",
@@ -8488,7 +11096,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 28750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Nexxus Iberia Private Equity Fund II FCR",
@@ -8501,7 +11113,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 1180000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Nexxus Iberia Private Equity Fund II FCR",
@@ -8514,7 +11130,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 79461.77,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Nexxus Iberia Private Equity Fund II FCR",
@@ -8527,7 +11147,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 58830.36,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Nexxus Iberia Private Equity Fund II FCR",
@@ -8540,7 +11164,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 65069.81,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Nexxus Iberia Private Equity Fund II FCR",
@@ -8553,7 +11181,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 94012.2,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Nexxus Iberia Private Equity Fund II FCR",
@@ -8566,7 +11198,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 88136.44,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8579,7 +11215,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1250000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8592,7 +11232,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 12756.85,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8605,7 +11249,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 58252.32,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8618,7 +11266,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 91003.6,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8631,7 +11283,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 10451.39,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8644,7 +11300,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 72505.51,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8657,7 +11317,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 12270.65,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8670,7 +11334,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -1955.78,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8683,7 +11351,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -246.51,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8696,7 +11368,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 2.53,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8709,7 +11385,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 11720.61,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8722,7 +11402,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 126055.99,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8735,7 +11419,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -949.25,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8748,7 +11436,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 50047.06,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8761,7 +11453,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 13169.75,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8774,7 +11470,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 54164.47,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor IX",
@@ -8787,7 +11487,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 72026,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Norvestor Nova I SCSp",
@@ -8800,7 +11504,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Novacap Tech VII-B",
@@ -8813,7 +11521,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 1084622.88,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Oakley Capital Origin II-B2 SCSp",
@@ -8826,7 +11538,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1250000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Oakley Capital Origin II-B2 SCSp",
@@ -8839,7 +11555,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 43750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Oakley Capital Origin II-B2 SCSp",
@@ -8852,7 +11572,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 37500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Oakley Capital Origin II-B2 SCSp",
@@ -8865,7 +11589,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 207500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Oakley Capital Origin II-B2 SCSp",
@@ -8878,7 +11606,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 108750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -8891,7 +11623,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1250000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -8904,7 +11640,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -8917,7 +11657,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -8930,7 +11674,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -8943,7 +11691,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 62500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -8956,7 +11708,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 62500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -8969,7 +11725,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 93750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -8982,7 +11742,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 62500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -8995,7 +11759,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 125000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -9008,7 +11776,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 125000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -9021,7 +11793,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 156250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -9034,7 +11810,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 125000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -9047,7 +11827,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -31808.9,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pantheon Co-inv",
@@ -9060,7 +11844,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 62500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9073,7 +11861,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 211327.13,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9086,7 +11878,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 84847.57,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9099,7 +11895,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 27607.34,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9112,7 +11912,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 32561.32,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9125,7 +11929,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 25254.49,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9138,7 +11946,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 10567.23,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9151,7 +11963,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 6870.65,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9164,7 +11980,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5412.68,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9177,7 +11997,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 9901.07,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9190,7 +12014,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -22709.44,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Co-inv IV",
@@ -9203,7 +12031,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -1568.25,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9216,7 +12048,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1423149.91,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9229,7 +12065,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 14230.15,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9242,7 +12082,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 273842.35,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9255,7 +12099,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 4214.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9268,7 +12116,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 184119.14,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9281,7 +12133,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 136552.26,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9294,7 +12150,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 38528.97,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9307,7 +12167,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 124315.36,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9320,7 +12184,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 63836.31,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9333,7 +12201,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 55302.81,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9346,7 +12218,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 101536.14,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9359,7 +12235,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 89835.61,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9372,7 +12252,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 94719.55,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9385,7 +12269,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 103307.29,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9398,7 +12286,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 74302.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9411,7 +12303,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -13429.64,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa Co-invest. V",
@@ -9424,7 +12320,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -23185.66,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9437,7 +12337,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1308900.52,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9450,7 +12354,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 158020.63,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9463,7 +12371,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75630.25,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9476,7 +12388,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 52772.21,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9489,7 +12405,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 76794.24,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9502,7 +12422,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 68822.76,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9515,7 +12439,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 35002.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9528,7 +12456,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 43786.18,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9541,7 +12473,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 88787.59,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9554,7 +12490,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 85334.59,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9567,7 +12507,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 91486.5,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9580,7 +12524,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 90225.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9593,7 +12541,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 40058.52,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9606,7 +12558,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 60766,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9619,7 +12575,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 59453.51,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9632,7 +12592,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 36001.17,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9645,7 +12609,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 35378.02,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9658,7 +12626,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -56513.36,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9671,7 +12643,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 35378.02,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9684,7 +12660,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -56513.36,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9697,7 +12677,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -16653.42,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa V",
@@ -9710,7 +12694,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -13975.07,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa VI FCR",
@@ -9723,7 +12711,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa VI FCR",
@@ -9736,7 +12728,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 11250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa VI FCR",
@@ -9749,7 +12745,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa VI FCR",
@@ -9762,7 +12762,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 37500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa VI FCR",
@@ -9775,7 +12779,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa VI FCR",
@@ -9788,7 +12796,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 66000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa VI FCR",
@@ -9801,7 +12813,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 81750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa VI FCR",
@@ -9814,7 +12830,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 45000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Monte Rosa VI FCR",
@@ -9827,7 +12847,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 67500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9840,7 +12864,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 826446.28,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9853,7 +12881,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 82644.63,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9866,7 +12898,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 65627.56,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9879,7 +12915,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 53406.71,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9892,7 +12932,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 66313.19,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9905,7 +12949,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 82715.47,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9918,7 +12966,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9931,7 +12983,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9944,7 +13000,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9957,7 +13017,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9970,7 +13034,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9983,7 +13051,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -9996,7 +13068,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -10009,7 +13085,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -10022,7 +13102,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -10035,7 +13119,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -10048,7 +13136,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -10061,7 +13153,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -10074,7 +13170,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Pictet Tech",
@@ -10087,7 +13187,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons de Fons",
     "eur": 70753.1,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Q-Energy Sustainable V FCR",
@@ -10100,7 +13204,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Q-Energy Sustainable V FCR",
@@ -10113,7 +13221,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Q-Energy Sustainable V FCR",
@@ -10126,7 +13238,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Q-Energy Sustainable V FCR",
@@ -10139,7 +13255,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 140000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Q-Energy Sustainable V FCR",
@@ -10152,7 +13272,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 80000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Q-Energy Sustainable V FCR",
@@ -10165,7 +13289,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 80000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Q-Energy Sustainable V FCR",
@@ -10178,7 +13306,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 130000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Q-Energy Sustainable V FCR",
@@ -10191,7 +13323,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -9034.87,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Q-Energy Sustainable V FCR",
@@ -10204,7 +13340,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10217,7 +13357,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10230,7 +13374,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10243,7 +13391,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10256,7 +13408,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 60000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10269,7 +13425,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 18750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10282,7 +13442,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 80000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10295,7 +13459,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10308,7 +13476,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10321,7 +13493,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 55000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10334,7 +13510,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 36250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct I SCR",
@@ -10347,7 +13527,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -77500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10360,7 +13544,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10373,7 +13561,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 250000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10386,7 +13578,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10399,7 +13595,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10412,7 +13612,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 35000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10425,7 +13629,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 60000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10438,7 +13646,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10451,7 +13663,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 110000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10464,7 +13680,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10477,7 +13697,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 110000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds Direct II A SCR",
@@ -10490,7 +13714,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 35000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10503,7 +13731,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10516,7 +13748,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 300000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10529,7 +13765,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10542,7 +13782,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10555,7 +13799,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10568,7 +13816,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -30000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10581,7 +13833,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -90000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10594,7 +13850,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10607,7 +13867,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10620,7 +13884,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 150000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds V A SCR",
@@ -10633,7 +13901,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -30000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds VI SCR A",
@@ -10646,7 +13918,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds VI SCR A",
@@ -10659,7 +13935,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 300000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds VI SCR A",
@@ -10672,7 +13952,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds VI SCR A",
@@ -10685,7 +13969,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Funds VI SCR A",
@@ -10698,7 +13986,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10711,7 +14003,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 1000000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10724,7 +14020,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 200000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10737,7 +14037,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10750,7 +14054,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10763,7 +14071,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10776,7 +14088,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -41934.27,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10789,7 +14105,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10802,7 +14122,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10815,7 +14139,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10828,7 +14156,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10841,7 +14173,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10854,7 +14190,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -35000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10867,7 +14207,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -10000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10880,7 +14224,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -70000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10893,7 +14241,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -41000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10906,7 +14258,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -28000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10919,7 +14275,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -25000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Qualitas Mutual PE Program IV",
@@ -10932,7 +14292,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": -20000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "RCP Fund XIX (EU) SCSp",
@@ -10945,7 +14309,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 2196836.56,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "RCP Fund XIX (EU) SCSp",
@@ -10958,7 +14326,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 21968.37,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "RCP Fund XIX (EU) SCSp",
@@ -10971,7 +14343,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 21968.37,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "RCP Fund XIX (EU) SCSp",
@@ -10984,7 +14360,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons de Fons",
     "eur": 116525,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -10997,7 +14377,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 900000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11010,7 +14394,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 48000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11023,7 +14411,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 20000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11036,7 +14428,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 24000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11049,7 +14445,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 48000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11062,7 +14462,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 60000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11075,7 +14479,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 48000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11088,7 +14496,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 24000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11101,7 +14513,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 40000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11114,7 +14530,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 256782.24,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Samaipata II",
@@ -11127,7 +14547,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 72000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Scipio Swanlaab SF SCR",
@@ -11140,7 +14564,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1125000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Scipio Swanlaab SF SCR",
@@ -11153,7 +14581,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 393750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11166,7 +14598,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11179,7 +14615,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 172274.08,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11192,7 +14632,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 27725.92,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11205,7 +14649,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11218,7 +14666,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -26050.76,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11231,7 +14683,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 25000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11244,7 +14700,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -13510.2,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11257,7 +14717,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 37499.12,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11270,7 +14734,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 50000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11283,7 +14751,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 50007.81,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Seaya Ventures III",
@@ -11296,7 +14768,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 19984.08,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11309,7 +14785,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 750000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11322,7 +14802,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 105000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11335,7 +14819,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 37500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11348,7 +14836,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 56250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11361,7 +14853,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 56250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11374,7 +14870,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 56250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11387,7 +14887,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 45000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11400,7 +14904,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 82500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11413,7 +14921,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 22500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11426,7 +14938,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 63750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11439,7 +14955,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 48750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11452,7 +14972,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 15000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "SeedRocket 4Founders",
@@ -11465,7 +14989,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 15000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11478,7 +15006,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11491,7 +15023,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 100000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11504,7 +15040,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11517,7 +15057,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 62500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11530,7 +15074,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -3365.38,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11543,7 +15091,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 53750,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11556,7 +15108,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 82895,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11569,7 +15125,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -82895,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11582,7 +15142,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 9350,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11595,7 +15159,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 42500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11608,7 +15176,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -2984.62,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11621,7 +15193,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 13500,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11634,7 +15210,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -2187.5,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11647,7 +15227,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 31244.44,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11660,7 +15244,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -5654,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11673,7 +15261,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 67635.46,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11686,7 +15278,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -7413.85,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11699,7 +15295,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 3785,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Suma Capital Growth II",
@@ -11712,7 +15312,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 3564,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11725,7 +15329,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 400000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11738,7 +15346,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 16760,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11751,7 +15363,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 105415.45,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11764,7 +15380,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 37840,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11777,7 +15397,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 77200,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11790,7 +15414,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 11200,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11803,7 +15431,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -21015.88,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11816,7 +15448,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -19263.89,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11829,7 +15465,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 25584.4,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11842,7 +15482,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -20539.85,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11855,7 +15499,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 49040,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11868,7 +15516,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 54960,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11881,7 +15533,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -23989.65,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "T2 Energy-B.March",
@@ -11894,7 +15550,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": -58260,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Tectum III",
@@ -11907,7 +15567,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 7500000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Tectum III",
@@ -11920,7 +15584,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 8101.35,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Tectum III",
@@ -11933,7 +15601,11 @@ export const RAW_CC = [
     "vcpe": "RE",
     "est": "Fons Primari",
     "eur": 1809525.64,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "The Extension Fund SCR-Pyme",
@@ -11946,7 +15618,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 750000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "The Extension Fund SCR-Pyme",
@@ -11959,7 +15635,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 375000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "The Extension Fund SCR-Pyme",
@@ -11972,7 +15652,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 114482.81,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "The Extension Fund SCR-Pyme",
@@ -11985,7 +15669,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": 75000,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "The Extension Fund SCR-Pyme",
@@ -11998,7 +15686,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -44550,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "The Extension Fund SCR-Pyme",
@@ -12011,7 +15703,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -74250,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "The Extension Fund SCR-Pyme",
@@ -12024,7 +15720,11 @@ export const RAW_CC = [
     "vcpe": "VC",
     "est": "Fons Primari",
     "eur": -63459,
-    "divisa": "EUR"
+    "divisa": "EUR",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Veritas IX",
@@ -12037,7 +15737,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 1096491.23,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Veritas IX",
@@ -12050,7 +15754,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 22424.59,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Veritas IX",
@@ -12063,7 +15771,11 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5999.49,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   },
   {
     "fons": "Veritas IX",
@@ -12076,6 +15788,10 @@ export const RAW_CC = [
     "vcpe": "PE",
     "est": "Fons Primari",
     "eur": 5290.64,
-    "divisa": "USD"
+    "divisa": "USD",
+    "comentaris": null,
+    "amountNative": null,
+    "fxRate": null,
+    "fxSource": null
   }
 ];

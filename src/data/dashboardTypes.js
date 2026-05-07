@@ -19,6 +19,10 @@
  * @property {string} est
  * @property {number} eur
  * @property {string} divisa
+ * @property {string|null} [comentaris]
+ * @property {number|null} [amountNative]
+ * @property {number|null} [fxRate]
+ * @property {string|null} [fxSource]
  * @property {number|null} [recallable]
  * @property {number|null} [non_recallable]
  * @property {number|null} [from_recallable]
@@ -29,6 +33,7 @@
  * @property {string} [id]
  * @property {string} fons
  * @property {number|null} tvpi
+ * @property {number|null} [irr]
  */
 
 /**
