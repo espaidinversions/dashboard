@@ -3,7 +3,8 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { Link } from "react-router-dom";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
-import { useTheme } from "../theme.js";
+import { TC_LIGHT, useTheme } from "../theme.js";
+import { CHART_PALETTE } from "../chartColors.js";
 import { fmtM, usePersistedState, yearsHeld, cagr } from "../utils.js";
 import { PM_TER } from "../generated/publicMarkets/pmTer.js";
 import { buildClosedTransactionSummaryByIsinCustodian, enrichClosedPosition } from "../data/pmClosedUtils.js";
@@ -16,12 +17,6 @@ const PM_CLOSED = PM_MODEL.holdings.closed;
 const PM_MONTHLY = PM_MODEL.series.monthly;
 const PM_VALUES = PM_MODEL.series.values;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
-
-const PM_COLORS = [
-  "#4E79A7","#F28E2B","#E15759","#76B7B2","#59A14F",
-  "#EDC948","#B07AA1","#FF9DA7","#9C755F","#BAB0AC",
-  "#D37295","#A0CBE8",
-];
 
 const TOGGLES = [
   { id: "all",        label: "Tots" },
@@ -60,7 +55,7 @@ function netRend(p, field) {
   return p.gestor === "Abel Font" ? v - getTer(p) : v;
 }
 
-function PctChip({ v, tc }) {
+function PctChip({ v, tc = TC_LIGHT }) {
   if (v == null) return <span style={{ fontSize: 11, color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
   const pos   = v > 0.005;
   const neg   = v < -0.005;
@@ -77,6 +72,7 @@ export function PMTipusTab({ tipus }) {
   const { tc, dark } = useTheme();
   const [toggle, setToggle] = usePersistedState(`pm_toggle_${tipus}`, "all");
   const [retMode, setRetMode] = useState("brut");
+  const [filters, setFilters] = useState({ nom:"", custodian:"", y2023:"", y2024:"", y2025:"", y2026:"", inici:"", cagr:"", valorMercat:"", estat:"Tots" });
 
   const secLabel     = { fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -134,6 +130,22 @@ export function PMTipusTab({ tipus }) {
       .map(p => ({ ...p, _status: "closed" }));
     return [...active, ...closed];
   }, [visible, tipus, toggle, closedSummaryByIsin]);
+  const filteredPositions = useMemo(() => allPositions.filter((p) => {
+    const rendInici = retMode === "net" ? netRendInici(p) : p.rendInici;
+    const closeDate = p.any ? `${p.any}-12-31` : null;
+    const mwr = cagr(rendInici, yearsHeld(p.dataCompra, closeDate ?? undefined));
+    if (filters.nom && !String(p.nom ?? "").toLowerCase().includes(filters.nom.toLowerCase())) return false;
+    if (filters.custodian && !String(p.custodian ?? "").toLowerCase().includes(filters.custodian.toLowerCase())) return false;
+    if (filters.y2023 && !String(retMode === "net" ? netRend(p, "rend2023") : p.rend2023).includes(filters.y2023)) return false;
+    if (filters.y2024 && !String(retMode === "net" ? netRend(p, "rend2024") : p.rend2024).includes(filters.y2024)) return false;
+    if (filters.y2025 && !String(retMode === "net" ? netRend(p, "rend2025") : p.rend2025).includes(filters.y2025)) return false;
+    if (filters.y2026 && !String(retMode === "net" ? netRend(p, "rend2026") : p.rend2026).includes(filters.y2026)) return false;
+    if (filters.inici && !String(rendInici ?? "").includes(filters.inici)) return false;
+    if (filters.cagr && !String(mwr ?? "").includes(filters.cagr)) return false;
+    if (filters.valorMercat && !String(p.valorMercat ?? "").includes(filters.valorMercat)) return false;
+    if (filters.estat !== "Tots" && ((filters.estat === "Actiu") !== (p._status === "active"))) return false;
+    return true;
+  }), [allPositions, filters, retMode]);
 
   // Transactions for this asset type
   const typeTxs = useMemo(
@@ -298,7 +310,20 @@ export function PMTipusTab({ tipus }) {
             </tr>
           </thead>
           <tbody>
-            {allPositions.map((p, i) => {
+            <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
+              <th style={{ padding: "6px 10px" }} />
+              <th style={{ padding: "6px 10px" }}><input value={filters.nom} onChange={e => setFilters(v => ({ ...v, nom: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><input value={filters.custodian} onChange={e => setFilters(v => ({ ...v, custodian: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><input value={filters.y2023} onChange={e => setFilters(v => ({ ...v, y2023: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><input value={filters.y2024} onChange={e => setFilters(v => ({ ...v, y2024: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><input value={filters.y2025} onChange={e => setFilters(v => ({ ...v, y2025: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><input value={filters.y2026} onChange={e => setFilters(v => ({ ...v, y2026: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><input value={filters.inici} onChange={e => setFilters(v => ({ ...v, inici: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><input value={filters.cagr} onChange={e => setFilters(v => ({ ...v, cagr: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><input value={filters.valorMercat} onChange={e => setFilters(v => ({ ...v, valorMercat: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><select value={filters.estat} onChange={e => setFilters(v => ({ ...v, estat: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots","Actiu","Discontinuat"].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+            </tr>
+            {filteredPositions.map((p, i) => {
               const isActive = p._status === "active";
               if (isActive) {
                 const rendInici = retMode === "net" ? netRendInici(p) : p.rendInici;
@@ -307,7 +332,7 @@ export function PMTipusTab({ tipus }) {
                 return (
                   <tr key={p.id} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}` }}>
                     <td style={{ padding: "7px 10px" }}>
-                      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: PM_COLORS[i % PM_COLORS.length] }} />
+                      <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, flexShrink: 0, background: CHART_PALETTE[i % CHART_PALETTE.length] }} />
                     </td>
                     <td style={{ padding: "7px 10px" }}>
                       <Link to={`/mercats-publics/${makePmPositionRouteId(p)}`}
@@ -389,4 +414,3 @@ export function PMTipusTab({ tipus }) {
     </div>
   );
 }
-
