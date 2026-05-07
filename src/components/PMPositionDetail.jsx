@@ -12,6 +12,7 @@ import { PriceHistoryChart } from "./PriceHistoryChart.jsx";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
 import { buildClosedTransactionSummaryByIsinCustodian, enrichClosedPosition } from "../data/pmClosedUtils.js";
 import { findActivePositionByRouteId, findClosedPositionByRouteId, makeIsinCustodianKey } from "../data/pmPositionRouting.js";
+import { SectionHeader } from "./SharedComponents.jsx";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
@@ -220,7 +221,7 @@ function PMPositionDetail() {
 
       {/* ── KPI row ── */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <KpiCard label={isClosed ? "Valor tancament" : "Valor mercat"}   value={p.valorMercat != null ? fmtM(p.valorMercat) : "—"} accent={tc.navy} tc={tc} />
+        <KpiCard label={isClosed ? "Valor tancament" : "Valor mercat"}   value={p.valorMercat != null ? fmtM(p.valorMercat) : "—"} accent={tc.navy} tc={tc} hero />
         <KpiCard label="Cost total"     value={p.costEur != null ? fmtM(p.costEur) : "—"} accent={tc.navyLight} tc={tc} />
         <KpiCard label="P&L"            value={pnl != null ? `${pnl >= 0 ? "+" : ""}${fmtM(pnl)}` : "—"} accent={pnlColor} tc={tc} />
         {p.unitats != null && (
@@ -236,10 +237,7 @@ function PMPositionDetail() {
 
       {/* ── Historial de preus · fluxos acumulats ── */}
       <div style={card}>
-        <div style={{ fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase",
-          color: tc.textLight, fontWeight: 600, marginBottom: 12 }}>
-          Historial de preus · fluxos acumulats
-        </div>
+        <SectionHeader title="Historial de preus · fluxos acumulats" tc={tc} />
         {isin && ALL_PRICE_SERIES[isin]?.length > 0 ? (
           <PriceHistoryChart
             isin={isin}
@@ -276,7 +274,7 @@ function PMPositionDetail() {
         {/* LEFT: Composition + annual returns */}
         <div style={{ ...card, flex: "1 1 55%" }}>
 
-          <div style={secLabel}>Pesos · cost vs guany</div>
+          <SectionHeader title="Pesos · cost vs guany" tc={tc} />
           <div style={{ display: "flex", height: 22, borderRadius: 4, overflow: "hidden", marginBottom: 8 }}>
             <div style={{ width: `${costPct.toFixed(1)}%`, background: "#4E79A7" }}
                  title={`Cost: ${fmtM(p.costEur ?? 0)} (${costPct.toFixed(1)}%)`} />
@@ -290,7 +288,7 @@ function PMPositionDetail() {
 
           {returnData.length > 0 && (
             <>
-              <div style={secLabel}>Rendiments anuals {isAbelFont ? "· brut vs net TER" : ""}</div>
+              <SectionHeader title={`Rendiments anuals${isAbelFont ? " · brut vs net TER" : ""}`} tc={tc} />
               <ReactECharts
                 style={{ width: "100%", height: 200 }}
                 opts={{ renderer: "canvas" }}
@@ -370,7 +368,7 @@ function PMPositionDetail() {
 
           {/* Since-inception returns: TWR + CAGR (MWR) */}
           <div style={card}>
-            <div style={secLabel}>Des d'inici</div>
+            <SectionHeader title="Des d'inici" tc={tc} />
 
             {/* TWR row */}
             <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
@@ -422,7 +420,7 @@ function PMPositionDetail() {
 
           {/* Cost breakdown */}
           <div style={{ ...card, flex: 1 }}>
-            <div style={secLabel}>Detall de cost</div>
+            <SectionHeader title="Detall de cost" tc={tc} />
             <table>
               <tbody>
                 <InfoRow label="Unitats"           value={p.unitats != null ? p.unitats.toLocaleString("ca-ES") : null} tc={tc} />
@@ -477,15 +475,16 @@ function PositionTxHistory({ isin, tc = TC_LIGHT, card, secLabel }) {
 
   return (
     <div style={card}>
-      <div style={{ display: "flex", alignItems: "center", marginBottom: 14 }}>
-        <div style={{ ...secLabel, flex: 1 }}>Moviments</div>
-        {txs.length > 0 && (
+      <SectionHeader
+        title="Moviments"
+        tc={tc}
+        action={txs.length > 0 ? (
           <button onClick={() => setSortDesc(d => !d)} style={{
             padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
             border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textLight,
           }}>{sortDesc ? "↓ Més recent" : "↑ Més antic"}</button>
-        )}
-      </div>
+        ) : undefined}
+      />
       {txs.length === 0 && (
         <div style={{ fontSize: 12, color: tc.textLight, fontStyle: "italic" }}>Sense moviments registrats.</div>
       )}
@@ -584,13 +583,16 @@ function PositionMetaEditor({ p, isin, tc = TC_LIGHT, dark, card, secLabel, meta
 
   return (
     <div style={card}>
-      <div style={{ display: "flex", alignItems: "center" }}>
-        <div style={{ ...secLabel, flex: 1 }}>Metadades</div>
-        <button onClick={open ? () => setOpen(false) : startEdit} style={{
-          padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
-          border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textLight,
-        }}>{open ? "Cancel·lar" : "✏ Editar"}</button>
-      </div>
+      <SectionHeader
+        title="Metadades"
+        tc={tc}
+        action={
+          <button onClick={open ? () => setOpen(false) : startEdit} style={{
+            padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
+            border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textLight,
+          }}>{open ? "Cancel·lar" : "✏ Editar"}</button>
+        }
+      />
 
       {!open && (
         <div style={{ fontSize: 12, color: tc.textLight, marginTop: 8 }}>
