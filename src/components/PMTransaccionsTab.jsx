@@ -29,6 +29,7 @@ export function PMTransaccionsTab() {
   const { tc, dark } = useTheme();
   const [actionFilter,   setActionFilter]   = useState("tots");
   const [custodianFilter, setCustodianFilter] = useState("tots");
+  const [columnFilters, setColumnFilters] = useState({ month:"", date:"", nom:"", tipus:"Tots", action:"Tots", units:"", nav:"", value:"", custodian:"" });
   const [showModal,  setShowModal]  = useState(false);
   const [openMonths, setOpenMonths] = useState(() => new Set());
   const [manualTxs,  setManualTxs]  = useState([]);
@@ -53,8 +54,21 @@ export function PMTransaccionsTab() {
     let rows = allTxs;
     if (actionFilter !== "tots") rows = rows.filter(t => t.action === actionFilter);
     if (custodianFilter !== "tots") rows = rows.filter(t => t.custodian === custodianFilter);
+    rows = rows.filter((t) => {
+      const month = (t.date ?? "").slice(0, 7);
+      if (columnFilters.month && !month.includes(columnFilters.month)) return false;
+      if (columnFilters.date && !String(t.date ?? "").includes(columnFilters.date)) return false;
+      if (columnFilters.nom && !String(t.nom ?? t.isin ?? "").toLowerCase().includes(columnFilters.nom.toLowerCase())) return false;
+      if (columnFilters.tipus !== "Tots" && t.tipus !== columnFilters.tipus) return false;
+      if (columnFilters.action !== "Tots" && t.action !== columnFilters.action) return false;
+      if (columnFilters.units && !String(t.units ?? "").includes(columnFilters.units)) return false;
+      if (columnFilters.nav && !String(t.nav ?? "").includes(columnFilters.nav)) return false;
+      if (columnFilters.value && !String(t.valueEur ?? "").includes(columnFilters.value)) return false;
+      if (columnFilters.custodian && !String(t.custodian ?? "").toLowerCase().includes(columnFilters.custodian.toLowerCase())) return false;
+      return true;
+    });
     return [...rows].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
-  }, [allTxs, actionFilter, custodianFilter]);
+  }, [allTxs, actionFilter, custodianFilter, columnFilters]);
 
   const byMonth = useMemo(() => {
     const map = new Map();
@@ -236,6 +250,17 @@ export function PMTransaccionsTab() {
                 ].map(({ l, align, w }) => (
                   <th key={l || "_"} style={{ ...th, textAlign: align, ...(w ? { width: w } : {}) }}>{l}</th>
                 ))}
+              </tr>
+              <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
+                <th style={{ padding: "6px 10px" }} />
+                <th style={{ padding: "6px 10px" }}><input value={columnFilters.month} onChange={e => setColumnFilters(v => ({ ...v, month: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding: "6px 10px" }}><input value={columnFilters.nom} onChange={e => setColumnFilters(v => ({ ...v, nom: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding: "6px 10px" }}><select value={columnFilters.tipus} onChange={e => setColumnFilters(v => ({ ...v, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots","RV","RF"].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+                <th style={{ padding: "6px 10px" }}><select value={columnFilters.action} onChange={e => setColumnFilters(v => ({ ...v, action: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots","buy","sell"].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+                <th style={{ padding: "6px 10px" }}><input value={columnFilters.units} onChange={e => setColumnFilters(v => ({ ...v, units: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding: "6px 10px" }}><input value={columnFilters.nav} onChange={e => setColumnFilters(v => ({ ...v, nav: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding: "6px 10px" }}><input value={columnFilters.value} onChange={e => setColumnFilters(v => ({ ...v, value: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding: "6px 10px" }}><input value={columnFilters.custodian} onChange={e => setColumnFilters(v => ({ ...v, custodian: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
               </tr>
             </thead>
             <tbody>

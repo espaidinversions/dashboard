@@ -1,161 +1,29 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
+import { SearcherYearChart, SearcherGeoPieChart, SearcherGeoBarChart } from "./SearcherCharts.jsx";
 import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
 import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState, formatIsoDateDMY, readStoredJSON, tvpiColor, tvpiBg, formatMultiple } from "../utils.js";
-import { GEO_NAME, SEARCHER_STATUS_CFG, SEARCHER_STATUS_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_FORM_ENTRADA_OPTIONS } from "../config.js";
+import { GEO_NAME, SEARCHER_STATUS_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_FORM_ENTRADA_OPTIONS } from "../config.js";
 import { FlagImg, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
-import { upsertSearcher, insertSearcher, deleteSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
+import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
 import { useToast } from "../toast.jsx";
+import { apiFetchJson } from "../apiClient.js";
 import * as XLSX from "xlsx";
 import { isSfBackedCompany } from "../data/privateCompanyModel.js";
-
-// ── constants ──────────────────────────────────────────────
-
-const StatusBadge = ({ s }) => {
-  const { tc: TC } = useTheme();
-  const cfg = SEARCHER_STATUS_CFG[s] || { bg:TC.border, color:TC.textMid };
-  return (
-    <span style={{
-      background:cfg.bg, color:cfg.color,
-      borderRadius:20, padding:"2px 9px",
-      fontSize:10, fontWeight:600, whiteSpace:"nowrap",
-    }}>{s || "—"}</span>
-  );
-};
-
-// ── Sankey node colours ────────────────────────────────────
-const SANKEY_NODE_COLORS = {
-  "Searchers":    "#2563A8",
-  "Equity Gap":   "#6B2E7E",
-  "Cercant":      "#27A55A",
-  "Acabat Cerca": "#145230",
-  "Portafoli":    "#5A3E9A",
-  "Operant":      "#2B5070",
-};
-
-const ENTRY_BADGE_CFG = {
-  "Search Capital": { bg:"#E6EDF3", color:"#2563A8", border:"#E6EDF3" },
-  "Equity Gap": { bg:"#F5F0FA", color:"#6B2E7E", border:"#F5F0FA" },
-};
-
-function searcherKey(row) {
-  return row?.id ?? row?.nom ?? null;
-}
-
-function splitSearcherNames(value) {
-  const parts = String(value ?? "")
-    .split("/")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  return {
-    searcher1: parts[0] ?? null,
-    searcher2: parts[1] ?? null,
-  };
-}
-
-function splitSchoolNames(value) {
-  const parts = String(value ?? "")
-    .split("/")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  return {
-    escola1: parts[0] ?? null,
-    escola2: parts[1] ?? null,
-  };
-}
-
-function toggleActiveFilter(currentValue, nextValue) {
-  if (!nextValue || nextValue === "Tots") return "Tots";
-  return currentValue === nextValue ? "Tots" : nextValue;
-}
-
-function sankeyNodeToEntry(nodeId) {
-  if (nodeId === "Searchers") return "Search Capital";
-  if (nodeId === "Equity Gap") return "Equity Gap";
-  return null;
-}
-
-function formatPercent(value, digits = 1) {
-  return Number.isFinite(value) ? value.toFixed(digits) : "0.0";
-}
-
-function formatEquityStake(value) {
-  return Number.isFinite(Number(value)) ? `${Number(value).toFixed(1)}%` : "—";
-}
-
-const STAGE_BADGE_CFG = {
-  "Cerca activa": { bg:"#E8F8E8", color:"#1C6B1D" },
-  "Equity Gap actiu": { bg:"#F5F0FA", color:"#6B2E7E" },
-  "En adquisició": { bg:"#D6EAD6", color:"#1C5220" },
-  "En revisió": { bg:"#FFF6DB", color:"#8A6400" },
-  "Sense plaça": { bg:"#FDECEC", color:"#B01F17" },
-  "Procés aturat": { bg:"#EEF2F7", color:"#425466" },
-  "Descartat": { bg:"#FDECEC", color:"#B01F17" },
-  "Sense classificar": { bg:"#EEF2F7", color:"#425466" },
-};
-
-function normalizeSearcherName(value) {
-  return String(value ?? "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[().,/-]/g, " ")
-    .replace(/\b(s\.?l\.?|srl|ltd|limited)\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function describeSearcherStage(row) {
-  const status = String(row?.statusScreening ?? "").trim();
-  if (status === "Invertit en fase de cerca") {
-    return row?.formEntrada === "Equity Gap"
-      ? { label: "Equity Gap actiu", order: 2 }
-      : { label: "Cerca activa", order: 1 };
-  }
-  if (status === "Invertit en fase d'adquisició") return { label: "En adquisició", order: 3 };
-  if (status === "Pendent de formalitzar" || status === "En anàlisi") return { label: "En revisió", order: 4 };
-  if (status === "Sobresuscrit") return { label: "Sense plaça", order: 5 };
-  if (status === "No tancat") return { label: "Procés aturat", order: 6 };
-  if (status === "Descartat") return { label: "Descartat", order: 7 };
-  return { label: status || "Sense classificar", order: 99 };
-}
-
-function SectionHeading({ icon, children, color }) {
-  return (
-    <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-      <span style={{
-        width:24,
-        height:24,
-        display:"inline-flex",
-        alignItems:"center",
-        justifyContent:"center",
-        borderRadius:999,
-        background:color,
-        fontSize:13,
-        lineHeight:1,
-      }}>{icon}</span>
-      <span style={{ fontSize:10, letterSpacing:"0.11em", color:"inherit", textTransform:"uppercase", fontWeight:600 }}>{children}</span>
-    </div>
-  );
-}
-
-function StageBadge({ label }) {
-  const cfg = STAGE_BADGE_CFG[label] || STAGE_BADGE_CFG["Sense classificar"];
-  return (
-    <span style={{
-      background: cfg.bg,
-      color: cfg.color,
-      borderRadius: 20,
-      padding: "2px 9px",
-      fontSize: 10,
-      fontWeight: 600,
-      whiteSpace: "nowrap",
-    }}>{label || "—"}</span>
-  );
-}
+import {
+  normalizeSearcherName,
+  describeSearcherStage,
+} from "../data/searcherModel.js";
+import {
+  StatusBadge, StageBadge, SectionHeading,
+  SANKEY_NODE_COLORS, ENTRY_BADGE_CFG,
+} from "./SearchersBadges.jsx";
+import {
+  searcherKey, splitSearcherNames, splitSchoolNames,
+  toggleActiveFilter, sankeyNodeToEntry, formatPercent, formatEquityStake,
+} from "../data/searcherFormatting.js";
 
 // ── main component ─────────────────────────────────────────
 export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
@@ -171,6 +39,9 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const [histSort, setHistSort]         = useState({ k:"nom", d:"asc" });
   const [activeGeoFilter, setActiveGeoFilter] = usePersistedState("ui_searchersGeo", "Tots");
   const [activeEntryFilter, setActiveEntryFilter] = usePersistedState("ui_searchersEntry", "Tots");
+  const [activeStatusFilter, setActiveStatusFilter] = usePersistedState("ui_searchersStatus", "Tots");
+  const [activeTypeFilter, setActiveTypeFilter] = usePersistedState("ui_searchersType", "Tots");
+  const [activeModalityFilter, setActiveModalityFilter] = usePersistedState("ui_searchersModality", "Tots");
   const [activeSort, setActiveSort] = usePersistedState("ui_searchersSort", { k:"nom", d:"asc" });
   const csvRef    = useRef(null);
   const nifXlsRef = useRef(null);
@@ -205,7 +76,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       const date = String(row?.data ?? "").slice(0, 10);
       if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
       const current = map.get(row.id) ?? { firstCommitmentDate: null, firstCommitmentEur: null };
-      if (row?.cat === "Compromís" && (!current.firstCommitmentDate || date < current.firstCommitmentDate)) {
+      if (row?.eur > 0 && ["Compromís", "Capital Call"].includes(row?.cat) && (!current.firstCommitmentDate || date < current.firstCommitmentDate)) {
         current.firstCommitmentDate = date;
         if (current.firstCommitmentEur == null && row.eur != null) current.firstCommitmentEur = row.eur;
       }
@@ -223,7 +94,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       const date = String(row?.data ?? "").slice(0, 10);
       if (!key || !date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
       const current = map.get(key) ?? { firstCommitmentDate: null, firstCommitmentEur: null };
-      if (row?.cat === "Compromís" && (!current.firstCommitmentDate || date < current.firstCommitmentDate)) {
+      if (row?.eur > 0 && ["Compromís", "Capital Call"].includes(row?.cat) && (!current.firstCommitmentDate || date < current.firstCommitmentDate)) {
         current.firstCommitmentDate = date;
         if (current.firstCommitmentEur == null && row.eur != null) current.firstCommitmentEur = row.eur;
       }
@@ -238,7 +109,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       const stage = describeSearcherStage(row);
       const ccMeta = (row.nif && capitalCallsByNif.get(row.nif)) || capitalCallsBySearcher.get(normalizeSearcherName(row.nom));
       const derivedDataCompr = ccMeta?.firstCommitmentDate ?? row.dataCompr ?? null;
-      const derivedTicket = row.ticket ?? ccMeta?.firstCommitmentEur ?? null;
+      const derivedTicket = ccMeta?.firstCommitmentEur ?? row.ticket ?? null;
       const investmentYear = derivedDataCompr ? Number(derivedDataCompr.slice(0, 4)) : null;
       return {
         ...row,
@@ -284,6 +155,9 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     if (key === "mesosCercant") return row.mesosCercant ?? 0;
     if (key === "equityStake") return row.equityStake ?? 0;
     if (key === "dataCompr") return row.derivedDataCompr ?? "";
+    if (key === "irr") return row.irr ?? -Infinity;
+    if (key === "dpi") return row.dpi ?? -Infinity;
+    if (key === "companiaAdquirida") return row.companiaAdquirida ?? "";
     return row[key] ?? "";
   };
 
@@ -302,6 +176,15 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     if (activeEntryFilter !== "Tots") {
       list = list.filter(r => r.formEntrada === activeEntryFilter);
     }
+    if (activeStatusFilter !== "Tots") {
+      list = list.filter(r => r.statusScreening === activeStatusFilter);
+    }
+    if (activeTypeFilter !== "Tots") {
+      list = list.filter(r => r.tipus === activeTypeFilter);
+    }
+    if (activeModalityFilter !== "Tots") {
+      list = list.filter(r => r.modalitat === activeModalityFilter);
+    }
     return [...list].sort((a, b) => {
       const va = getActiveSortValue(a, activeSort.k);
       const vb = getActiveSortValue(b, activeSort.k);
@@ -311,7 +194,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       if (cmp === 0) cmp = String(a.nom).localeCompare(String(b.nom), "ca", { sensitivity: "base" });
       return activeSort.d === "asc" ? cmp : -cmp;
     });
-  }, [activeEntryFilter, activeGeoFilter, activeRows, activeSort, search]);
+  }, [activeEntryFilter, activeGeoFilter, activeModalityFilter, activeRows, activeSort, activeStatusFilter, activeTypeFilter, search]);
   const displayedSearchersTicket = useMemo(
     () => displayedSearchers.reduce((sum, row) => sum + (row.ticket ?? 0), 0),
     [displayedSearchers]
@@ -367,7 +250,6 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   };
 
   // ── Geography data (searchers only) ──────────────────────
-  const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D","#2563A8","#8A6400","#007A8A"];
   const geoData = useMemo(() => {
     const m = {};
     activeRows.forEach(s => {
@@ -377,10 +259,18 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     });
     return Object.values(m).sort((a, b) => b.value - a.value);
   }, [activeRows]);
+  const geoCountData = useMemo(
+    () => [...geoData].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "ca", { sensitivity: "base" })),
+    [geoData]
+  );
   const geoTotal = geoData.reduce((s, r) => s + r.value, 0);
+  const geoCountTotal = geoCountData.reduce((s, r) => s + r.count, 0);
   const t = ecTheme(TC);
   const sortActive = (k) => setActiveSort(p => ({ k, d: p.k === k && p.d === "asc" ? "desc" : "asc" }));
   const AArr = ({ k }) => <span style={{ marginLeft:3, opacity:activeSort.k===k?1:0.2, fontSize:9 }}>{activeSort.k===k&&activeSort.d==="asc"?"▲":"▼"}</span>;
+  const isSummaryView = subTab === "resum";
+  const isAllView = subTab === "tots";
+  const isActiveView = subTab === "actius";
 
   // ── Historic table ─────────────────────────────────────────
   const getHistoricSortValue = (row, key) => {
@@ -554,7 +444,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const handleAddSearcher = async (values, setError) => {
     const nom = values.nom?.trim();
     if (!nom) { setError("El nom és obligatori"); return; }
-    if (historicData.some(s => s.nom === nom)) {
+    if (historicData.some(s => String(s.nom ?? "").trim().toLowerCase() === nom.toLowerCase())) {
       setError("Ja existeix un searcher amb aquest nom");
       return;
     }
@@ -568,16 +458,38 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       equityStake: parseFloat(values.equityStake) || null, isMock: false,
       nif: values.nif?.trim() || null,
     };
-    const inserted = await insertSearcher(searcher);
-    if (!inserted) { setError("Error en crear el searcher"); return; }
-    setHistoricData([inserted, ...historicData]);
+    let inserted = null;
+    try {
+      const response = await apiFetchJson("/api/searchers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(searcher),
+      });
+      inserted = response?.data ?? null;
+    } catch (error) {
+      setError(error?.message || "Error en crear el searcher");
+      return;
+    }
+    if (!inserted) {
+      setError("Error en crear el searcher");
+      return;
+    }
+    const refreshed = await loadSearchers();
+    setHistoricData(Array.isArray(refreshed) ? refreshed : [inserted, ...historicData]);
     setShowAddModal(false);
+    toast({ message: `Searcher creat: ${nom}` });
   };
 
   const handleDeleteSearcher = async (target) => {
     if (target?.id) {
-      const { error } = await deleteSearcher(target.id);
-      if (error) { toast({ message: "Error eliminant searcher: " + error.message, type: "error" }); return; }
+      try {
+        await apiFetchJson(`/api/searchers?id=${encodeURIComponent(target.id)}`, {
+          method: "DELETE",
+        });
+      } catch (error) {
+        toast({ message: "Error eliminant searcher: " + (error?.message || "error desconegut"), type: "error" });
+        return;
+      }
     }
     const targetKey = searcherKey(target);
     setHistoricData(historicData.filter((searcher) => (
@@ -620,6 +532,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       </div>
 
       {/* ── KPIs ── */}
+      {isSummaryView && <>
       <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
         {[
           { label:"Searchers Actius",  value: activeRows.length,                             sub:`${soloCount} solo / ${duoCount} duo`,   accent:TC.navy },
@@ -725,60 +638,13 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
           <div style={{ ...sec, color:TC.textLight }}>
             <SectionHeading icon="🌍" color={dark ? "#0A2010" : "#E8F8E8"}>Allocation Geogràfica — Searchers (€)</SectionHeading>
           </div>
-          <ReactECharts
-            style={{ width: "100%", height: 300 }}
-            opts={{ renderer: "canvas" }}
-            onEvents={{
-              click: (params) => {
-                const geo = params?.data?.geo ?? "Tots";
-                handleGeoClick(geo);
-              },
-            }}
-            option={{
-              tooltip: {
-                ...t.tooltip,
-                trigger: "item",
-                formatter: p => `<b>${p.name}</b><br/>${fmtM(p.value)}<br/>${formatPercent(geoTotal > 0 ? (p.value / geoTotal) * 100 : 0)}% · ${(geoData.find(r => r.name === p.name)?.count ?? 0)} searcher${(geoData.find(r => r.name === p.name)?.count ?? 0) === 1 ? "" : "s"}`,
-              },
-              legend: { show: false },
-              graphic: [{
-                type: "group",
-                left: "center",
-                top: "middle",
-                children: [
-                  { type: "text", style: { text: fmtM(geoTotal), x: 0, y: -7, textAlign: "center", fill: TC.navy, fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono',monospace" } },
-                  { type: "text", style: { text: "Total", x: 0, y: 9, textAlign: "center", fill: TC.textLight, fontSize: 9 } },
-                ],
-              }],
-              series: [{
-                type: "pie",
-                radius: ["48%", "76%"],
-                center: ["50%", "50%"],
-                selectedMode: false,
-                labelLine: { show: false },
-                label: {
-                  show: true,
-                  formatter: p => {
-                    if (p.percent < 4) return "";
-                    const flagMap = { ES:"🇪🇸", EN:"🇬🇧", IT:"🇮🇹", DE:"🇩🇪", FR:"🇫🇷", PT:"🇵🇹", NL:"🇳🇱", US:"🇺🇸", CH:"🇨🇭" };
-                    return `${flagMap[p.name] || p.name} ${formatPercent(p.percent, 0)}%`;
-                  },
-                  fontSize: 11,
-                  color: TC.textMid,
-                },
-                data: geoData.map((d, i) => ({
-                  name: d.name,
-                  value: d.value,
-                  geo: d.geo,
-                  itemStyle: {
-                    color: GEO_COLORS[i % GEO_COLORS.length],
-                    opacity: activeGeoFilter === "Tots" || activeGeoFilter === d.geo ? 1 : 0.35,
-                    borderWidth: activeGeoFilter === d.geo ? 3 : 0,
-                    borderColor: activeGeoFilter === d.geo ? TC.navy : "transparent",
-                  },
-                })),
-              }],
-            }}
+          <SearcherGeoPieChart
+            geoData={geoData}
+            geoTotal={geoTotal}
+            activeGeoFilter={activeGeoFilter}
+            t={t}
+            TC={TC}
+            onGeoClick={handleGeoClick}
           />
           <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, minHeight:20 }}>
             {activeGeoFilter !== "Tots" ? (
@@ -800,7 +666,8 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
         </div>
       </div>
 
-      <div style={{ ...card, marginBottom:14 }}>
+      <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
+      <div style={card}>
         <div style={{ ...sec, color:TC.textLight }}>
           <SectionHeading icon="📅" color={dark ? "#162840" : "#EAF2FB"}>Any de Compromís — Nombre de Searchers</SectionHeading>
         </div>
@@ -809,56 +676,33 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
             Sense dades de compromís a capital calls.
           </div>
         ) : (
-          <ReactECharts
-            style={{ width:"100%", height:260 }}
-            opts={{ renderer:"canvas" }}
-            option={{
-              grid: { top: 12, right: 12, bottom: 32, left: 12, containLabel: true },
-              tooltip: {
-                ...t.tooltip,
-                trigger: "axis",
-                axisPointer: { type: "shadow" },
-                formatter: (params) => {
-                  const item = params?.[0];
-                  if (!item) return "";
-                  return `<b>${item.axisValue}</b><br/>${item.marker}Searchers: ${item.value}`;
-                },
-              },
-              xAxis: {
-                type: "category",
-                data: commitmentYearData.map((row) => row.year),
-                axisLine: { show: false },
-                axisTick: { show: false },
-                axisLabel: { color: TC.textLight, fontSize: 10 },
-              },
-              yAxis: {
-                type: "value",
-                minInterval: 1,
-                axisLine: { show: false },
-                axisTick: { show: false },
-                axisLabel: { color: TC.textLight, fontSize: 10 },
-                splitLine: { lineStyle: { color: TC.border } },
-              },
-              series: [{
-                type: "bar",
-                name: "Searchers",
-                data: commitmentYearData.map((row) => row.count),
-                itemStyle: { color: TC.navy, borderRadius: [5, 5, 0, 0] },
-                barMaxWidth: 42,
-                label: {
-                  show: true,
-                  position: "top",
-                  color: TC.textMid,
-                  fontSize: 10,
-                  formatter: ({ value }) => value,
-                },
-              }],
-            }}
+          <SearcherYearChart commitmentYearData={commitmentYearData} t={t} TC={TC} />
+        )}
+      </div>
+      <div style={card}>
+        <div style={{ ...sec, color:TC.textLight }}>
+          <SectionHeading icon="🗺️" color={dark ? "#162840" : "#EAF2FB"}>Searchers Actius per Geografia</SectionHeading>
+        </div>
+        {geoCountData.length === 0 ? (
+          <div style={{ padding:"36px 0 12px", textAlign:"center", color:TC.textLight, fontSize:12 }}>
+            Sense dades geogràfiques.
+          </div>
+        ) : (
+          <SearcherGeoBarChart
+            geoCountData={geoCountData}
+            geoCountTotal={geoCountTotal}
+            activeGeoFilter={activeGeoFilter}
+            t={t}
+            TC={TC}
+            onGeoClick={handleGeoClick}
           />
         )}
       </div>
+      </div>
+      </>}
 
       {/* ── Active Searchers table ── */}
+      {isActiveView && (
       <div style={{ ...card, marginBottom:14 }}>
         <div style={{ ...sec, color:TC.textLight }}>
           <SectionHeading icon="🔍" color={dark ? "#162840" : "#EAF2FB"}>Searchers Actius</SectionHeading>
@@ -874,8 +718,11 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                   { label:"Modalitat", k:"modalitat" },
                   { label:"Pais", k:"geo" },
                   { label:"Fase", k:"stage" },
+                  { label:"Companyia Adquirida", k:"companiaAdquirida" },
                   { label:"Ticket", k:"ticket", right:true },
                   { label:"TVPI", k:"tvpi", right:true },
+                  { label:"IRR", k:"irr", right:true },
+                  { label:"DPI", k:"dpi", right:true },
                   { label:"Any Inv.", k:"investmentYear", center:true },
                   { label:"Data Compromis", k:"dataCompr" },
                   { label:"Mesos Cercant", k:"mesosCercant", center:true },
@@ -889,6 +736,56 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                     {h.label}<AArr k={h.k} />
                   </th>
                 ))}
+              </tr>
+              <tr style={{ borderBottom:`1px solid ${TC.border}` }}>
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }}>
+                  <select value={activeEntryFilter} onChange={e => setActiveEntryFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
+                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.formEntrada).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding:"6px 10px" }}>
+                  <select value={activeModalityFilter} onChange={e => setActiveModalityFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
+                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.modalitat).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding:"6px 10px" }}>
+                  <select value={activeGeoFilter} onChange={e => setActiveGeoFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
+                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.geo).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding:"6px 10px" }}>
+                  <select value={activeStatusFilter} onChange={e => setActiveStatusFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
+                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.statusScreening).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px", textAlign:"right" }}>
+                  <select value={activeTypeFilter} onChange={e => setActiveTypeFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
+                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.tipus).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px", textAlign:"center" }}>
+                  {(activeGeoFilter !== "Tots" || activeEntryFilter !== "Tots" || activeStatusFilter !== "Tots" || activeTypeFilter !== "Tots" || activeModalityFilter !== "Tots") ? (
+                    <button onClick={() => {
+                      setActiveGeoFilter("Tots");
+                      setActiveEntryFilter("Tots");
+                      setActiveStatusFilter("Tots");
+                      setActiveTypeFilter("Tots");
+                      setActiveModalityFilter("Tots");
+                    }}
+                      style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}>
+                      netejar
+                    </button>
+                  ) : null}
+                </th>
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
               </tr>
             </thead>
             <tbody>
@@ -951,6 +848,11 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                     <td style={{ padding:"9px 10px" }}>
                       <StageBadge label={r.stageLabel} />
                     </td>
+                    <td style={{ padding:"9px 10px", fontSize:11, color:TC.text }}>
+                      {canEdit
+                        ? <EditableCell value={r.companiaAdquirida ?? ""} type="text" emptyDisplay="—" onSave={v => saveSearcherField(r, "companiaAdquirida", v || null)} />
+                        : (r.companiaAdquirida || "—")}
+                    </td>
                     <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:600, color:TC.navy }}>
                       {canEdit
                         ? <EditableCell value={r.ticket} type="number" align="right" fmt={fmtM} onSave={v => saveSearcherField(r, "ticket", v)} />
@@ -960,6 +862,18 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                       <EditableCell value={r.tvpi} type="number" align="center"
                         fmt={v => v != null ? <span style={{ background:tvpiBg(v), color:tvpiColor(v), borderRadius:20, padding:"2px 8px", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:11, whiteSpace:"nowrap" }}>{formatMultiple(v)}</span> : <span style={{ color:TC.textLight, fontSize:10, fontStyle:"italic" }}>Pendent</span>}
                         onSave={v => saveSearcherField(r, "tvpi", v)}
+                        disabled={!canEdit} />
+                    </td>
+                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:11, color:TC.navyLight }}>
+                      <EditableCell value={r.irr} type="number" align="right"
+                        fmt={v => v != null ? `${Number(v).toFixed(1)}%` : "—"}
+                        onSave={v => saveSearcherField(r, "irr", v)}
+                        disabled={!canEdit} />
+                    </td>
+                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:11, color:TC.navyLight }}>
+                      <EditableCell value={r.dpi} type="number" align="right"
+                        fmt={v => v != null ? formatMultiple(v) : "—"}
+                        onSave={v => saveSearcherField(r, "dpi", v)}
                         disabled={!canEdit} />
                     </td>
                     <td style={{ padding:"9px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", color:TC.textMid }}>
@@ -994,17 +908,18 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
             </tbody>
             <tfoot>
               <tr style={{ borderTop:`2px solid ${TC.border}` }}>
-                <td colSpan={6} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({displayedSearchers.length}{search.trim() || activeGeoFilter !== "Tots" || activeEntryFilter !== "Tots" ? `/${activeRows.length}` : ""} searchers)</td>
+                <td colSpan={7} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({displayedSearchers.length}{search.trim() || activeGeoFilter !== "Tots" || activeEntryFilter !== "Tots" ? `/${activeRows.length}` : ""} searchers)</td>
                 <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.navy }}>{fmtM(displayedSearchersTicket)}</td>
-                <td colSpan={5} />
+                <td colSpan={7} />
               </tr>
             </tfoot>
           </table>
         </div>
       </div>
+      )}
 
       {/* ── Historic table ── */}
-      {subTab === "tots" && <div style={card}>
+      {isAllView && <div style={card}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <div style={{ ...sec, color:TC.textLight, marginBottom:0 }}>
@@ -1019,24 +934,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
               </button>
             )}
           </div>
-          <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-            {/* Filters */}
-            {[
-              { label:"Status",   key:"status",  opts: uniq("statusScreening") },
-              { label:"País",     key:"geo",      opts: ["Tots", ...Array.from(new Set(historicData.map(r=>r.geo).filter(Boolean))).sort()] },
-              { label:"Entrada",  key:"entrada",  opts: ["Tots","Search Capital","Equity Gap"] },
-            ].map(f => (
-              <div key={f.key} style={{ display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:10, color:TC.textLight }}>{f.label}:</span>
-                <select value={histFilter[f.key]} onChange={e => setHistFilter(p => ({ ...p, [f.key]: e.target.value }))} style={inp}>
-                  {f.key === "status"
-                    ? uniq("statusScreening").map(o => <option key={o}>{o}</option>)
-                    : f.opts.map(o => <option key={o}>{o}</option>)
-                  }
-                </select>
-              </div>
-            ))}
-          </div>
+          <div />
         </div>
         <div style={{ fontSize:11, color:TC.textMid, marginBottom:10 }}>
           <b style={{ color:TC.navy }}>{filteredHistoric.length}</b> / {historicData.length} searchers
@@ -1070,6 +968,40 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                   </th>
                 ))}
                 {canEdit && <th style={{ ...th, width: 40 }} />}
+              </tr>
+              <tr style={{ borderBottom:`1px solid ${TC.border}` }}>
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }}>
+                  <select value={histFilter.geo} onChange={e => setHistFilter(p => ({ ...p, geo: e.target.value }))} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
+                    {["Tots", ...Array.from(new Set(historicData.map(r=>r.geo).filter(Boolean))).sort()].map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding:"6px 10px" }}>
+                  <select value={histFilter.status} onChange={e => setHistFilter(p => ({ ...p, status: e.target.value }))} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
+                    {uniq("statusScreening").map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }}>
+                  <select value={histFilter.entrada} onChange={e => setHistFilter(p => ({ ...p, entrada: e.target.value }))} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
+                    {["Tots","Search Capital","Equity Gap"].map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px" }} />
+                <th style={{ padding:"6px 10px", textAlign:"left" }}>
+                  {Object.entries(histFilter).some(([, v]) => v !== "Tots") ? (
+                    <button onClick={() => setHistFilter({ status:"Tots", geo:"Tots", entrada:"Tots" })}
+                      style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}>
+                      netejar
+                    </button>
+                  ) : null}
+                </th>
+                {canEdit && <th style={{ padding:"6px 10px" }} />}
               </tr>
             </thead>
             <tbody>
@@ -1177,9 +1109,10 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
             { key: "nif", label: "NIF", type: "text", placeholder: "B12345678" },
             { key: "tipus", label: "Tipus", type: "select", options: ["", "Tradicional", "Self-funded"] },
             { key: "modalitat", label: "Modalitat", type: "select", options: ["", ...SEARCHER_MODALITAT_OPTIONS] },
-            { key: "geo", label: "Geografia", type: "text", placeholder: "ES, FR, ..." },
+            { key: "geo", label: "Geografia", type: "select", options: ["", ...Object.keys(GEO_NAME).sort()] },
             { key: "statusScreening", label: "Status", type: "select", options: ["", ...SEARCHER_STATUS_OPTIONS] },
             { key: "formEntrada", label: "Entrada", type: "select", options: ["", ...SEARCHER_FORM_ENTRADA_OPTIONS] },
+            { key: "dataInici", label: "Data inici", type: "date" },
             { key: "ticket", label: "Ticket (€)", type: "number" },
             { key: "equityStake", label: "Equity stake (%)", type: "number" },
           ]}

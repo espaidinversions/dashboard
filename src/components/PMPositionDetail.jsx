@@ -3,7 +3,7 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useParams, useNavigate } from "react-router-dom";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
-import { useTheme } from "../theme.js";
+import { TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, fmtMonth, yearsHeld, cagr } from "../utils.js";
 import { PM_TER } from "../generated/publicMarkets/pmTer.js";
 import { loadPMOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
@@ -23,7 +23,7 @@ const PM_POSITION_ID_ALIASES = PM_MODEL.metadata.positionIdAliases;
 const ISIN_RE = /([A-Z]{2}[A-Z0-9]{10})/;
 const cleanIsin = raw => (ISIN_RE.exec(String(raw ?? "").toUpperCase())?.[1]) ?? raw;
 
-function KpiCard({ label, value, accent, tc }) {
+function KpiCard({ label, value, accent, tc = TC_LIGHT }) {
   return (
     <div className="kpi-card card-hover" style={{
       background: tc.card, border: `1px solid ${tc.border}`,
@@ -37,7 +37,7 @@ function KpiCard({ label, value, accent, tc }) {
   );
 }
 
-function InfoRow({ label, value, tc }) {
+function InfoRow({ label, value, tc = TC_LIGHT }) {
   return (
     <tr>
       <td style={{ padding: "6px 0", color: tc.textLight, fontSize: 11, paddingRight: 24, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{label}</td>
@@ -465,7 +465,7 @@ function PMPositionDetail() {
 
 export default PMPositionDetail;
 
-function PositionTxHistory({ isin, tc, card, secLabel }) {
+function PositionTxHistory({ isin, tc = TC_LIGHT, card, secLabel }) {
   const [sortDesc, setSortDesc] = useState(true);
   const txs = useMemo(() => {
     const rows = PM_TRANSACTIONS.filter(t => t.isin === isin);
@@ -530,7 +530,7 @@ function PositionTxHistory({ isin, tc, card, secLabel }) {
 // ── Position metadata editor ──────────────────────────────────
 const CUSTODIAN_OPTIONS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Credit Suisse", "Abel Font", "WAM", "Andbank", "Altre"];
 
-function PositionMetaEditor({ p, isin, tc, dark, card, secLabel, metaOverride, terOverride, onSaveMeta, onSaveTer }) {
+function PositionMetaEditor({ p, isin, tc = TC_LIGHT, dark, card, secLabel, metaOverride, terOverride, onSaveMeta, onSaveTer }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);

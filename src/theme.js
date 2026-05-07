@@ -32,4 +32,11 @@ export const ThemeContext = createContext({
   toggle: () => {},
 });
 
-export const useTheme = () => useContext(ThemeContext);
+export function useTheme() {
+  const value = useContext(ThemeContext);
+  return {
+    tc: value?.tc ?? TC_LIGHT,
+    dark: Boolean(value?.dark),
+    toggle: typeof value?.toggle === "function" ? value.toggle : (() => {}),
+  };
+}

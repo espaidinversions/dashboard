@@ -6,7 +6,7 @@ import { apiFetchJson } from "../../apiClient.js";
 import { formatIsoDate } from "../../utils.js";
 import { useAuth } from "../../auth.jsx";
 
-const ROLES = ["user", "admin"];
+const ROLES = ["user", "superuser", "admin"];
 
 const ROLE_COLORS = {
   admin:     { color: "#1A237E", bg: "#E8EAF6" },

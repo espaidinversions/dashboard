@@ -5,8 +5,8 @@ import {
   CAPITAL_CALL_TIPUS_OPTIONS,
 } from "../config.js";
 import { useTheme } from "../theme.js";
-import { fmtM, usePersistedState, exportMultiXLSX, readStoredJSON, writeStoredJSON } from "../utils.js";
-import { Badge, AddRowModal } from "./SharedComponents.jsx";
+import { usePersistedState, exportMultiXLSX, readStoredJSON, normalizeOptionValue, dedupeOptionValues } from "../utils.js";
+import { CcTransactionModal } from "./CcTransactionModal.jsx";
 import { FonsSelector } from "./FonsSelector.jsx";
 import { PipelineFY26 } from "./PipelineFY26.jsx";
 import { MensualTab } from "./MensualTab.jsx";
@@ -24,35 +24,16 @@ import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
 import { PMTraçabilitatTab } from "./PMTraçabilitatTab.jsx";
 import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
+import { defaultCapitalCallStrategyForVcpe } from "../data/capitalCallStrategyModel.js";
 import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { TxSection } from "./TxSection.jsx";
 
 const LS_CC = "tc_rawCC";
 
-function normalizeOptionValue(value) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, " ");
-}
-
-function dedupeOptionValues(values) {
-  const seen = new Map();
-  (Array.isArray(values) ? values : []).forEach((value) => {
-    const raw = String(value ?? "").trim();
-    if (!raw) return;
-    const key = normalizeOptionValue(raw);
-    if (!seen.has(key)) seen.set(key, raw);
-  });
-  return [...seen.values()].sort((a, b) => String(a).localeCompare(String(b), "ca", { sensitivity: "base" }));
-}
-
 function Dashboard() {
   const { tc, dark } = useTheme();
-  const { isAdmin, canAccessSection, canEditSection } = useAuth();
+  const { isAdmin, canAccessSection, canEditSection, canAccessAny } = useAuth();
   const d = useDashboardData();
 
   const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
@@ -122,11 +103,32 @@ function Dashboard() {
     const key = normalizeOptionValue(vehicleName);
     return vehicleCurrencyMap.get(key) ?? "EUR";
   }, [vehicleCurrencyMap]);
+  const amountInputStyle = useCallback((values) => {
+    const raw = String(values?.eur ?? "").trim();
+    if (!raw) return null;
+    const amount = Number(raw);
+    if (Number.isNaN(amount) || amount === 0) return null;
+    return amount < 0
+      ? { background: "#FDECEC", borderColor: "#E5B7B7", color: "#8F1D1D" }
+      : { background: "#ECF8EE", borderColor: "#B7DEBD", color: tc.text };
+  }, [tc.text]);
+
+  const handleTxQuickUpdate = useCallback(async (row, fields) => {
+    let errorMessage = null;
+    await d.handleCCUpdate(
+      row._rowId,
+      { ...row, ...fields },
+      (message) => { errorMessage = message; },
+      row,
+    );
+    if (errorMessage) throw new Error(errorMessage);
+  }, [d]);
 
   function openCcAddModal(defaults = {}) {
     const fons = defaults.fons ?? "";
     setCcAddModalDefaults({
       ...defaults,
+      est: defaults.est ?? defaultCapitalCallStrategyForVcpe(defaults.vcpe ?? "PE"),
       divisa: defaults.divisa ?? defaultVehicleCurrency(fons),
     });
     setCcAddModalFons(fons);
@@ -188,6 +190,10 @@ function Dashboard() {
           "Fons": r.fons, "Tipus": r.tipus, "Categoria": r.cat,
           "Data": r.data, "Mes": r.mes, "Any": r.any, "FY": r.fy,
           "VCPE": r.vcpe, "Estructura": r.est, "Import (€)": r.eur, "Divisa": r.divisa,
+          "Import Divisa": r.amountNative ?? "",
+          "FX BCE": r.fxRate ?? "",
+          "Font FX": r.fxSource ?? "",
+          "Comentaris": r.comentaris ?? "",
         })),
       },
       {
@@ -258,7 +264,7 @@ function Dashboard() {
   const [fFy,     setFFy]     = usePersistedState("ui_fFy",  "Tots");
   const [fVcpe,   setFVcpe]   = usePersistedState("ui_fVcpe", new Set(), { isSet: true });
   const [fEst,    setFEst]    = usePersistedState("ui_fEst",  "Tots");
-  const [fCat,    setFCat]    = usePersistedState("ui_fCat",  "Tots");
+  const [fTipus,  setFTipus]  = usePersistedState("ui_fTipus",  "Tots");
   const [txSearch,setTxSearch]= usePersistedState("ui_txSearch", "");
   const [sortFons, setSortFons] = usePersistedState("ui_sortFons", "compr");
   const [sortFonsDir, setSortFonsDir] = usePersistedState("ui_sortFonsDir", "desc");
@@ -303,7 +309,7 @@ function Dashboard() {
     if(fFy  !=="Tots") dat=dat.filter(r=>r.fy===fFy);
     if(fVcpe.size>0) dat=dat.filter(r=>fVcpe.has(r.vcpe));
     if(fEst !=="Tots") dat=dat.filter(r=>r.est===fEst);
-    if(fCat !=="Tots") dat=dat.filter(r=>r.cat===fCat);
+    if(fTipus !=="Tots") dat=dat.filter(r=>r.tipus===fTipus);
     if(txSearch.trim()) {
       const q=txSearch.trim().toLowerCase();
       dat=dat.filter(r=>(r.fons||"").toLowerCase().includes(q)||(r.tipus||"").toLowerCase().includes(q)||(r.cat||"").toLowerCase().includes(q));
@@ -313,7 +319,7 @@ function Dashboard() {
       dat=dat.filter(r=>(r.fons||"").toLowerCase().includes(q));
     }
     return dat;
-  },[baseTx,fFy,fVcpe,fEst,fCat,txSearch,globalSearch,section]);
+  },[baseTx,fFy,fVcpe,fEst,fTipus,txSearch,globalSearch,section]);
 
   const fCalls = useMemo(()=>filtered.filter(r=>r.cat==="Capital Call").reduce((s,r)=>s+r.eur,0),[filtered]);
   const fDist  = useMemo(()=>filtered.filter(r=>r.cat==="Distribució"||r.cat==="Retorn Capital").reduce((s,r)=>s+Math.abs(r.eur),0),[filtered]);
@@ -392,8 +398,8 @@ function Dashboard() {
     });
   },[FONS_MAP2,fVcpe,fEst,sortFons,sortFonsDir,ccChartF,baseTx]);
 
-  const clearFilters = ()=>{setFFy("Tots");setFVcpe(new Set());setFEst("Tots");setFCat("Tots");setTxSearch("");};
-  const anyFilter = fFy!=="Tots"||fVcpe.size>0||fEst!=="Tots"||fCat!=="Tots"||txSearch.trim()!="";
+  const clearFilters = ()=>{setFFy("Tots");setFVcpe(new Set());setFEst("Tots");setFTipus("Tots");setTxSearch("");};
+  const anyFilter = fFy!=="Tots"||fVcpe.size>0||fEst!=="Tots"||fTipus!=="Tots"||txSearch.trim()!="";
 
   const vcpeCfg = {
     "PE": { color:tc.navy,               bg: dark ? "#112030" : "#E6EDF3" },
@@ -403,9 +409,14 @@ function Dashboard() {
     "PC": { color:"#7A5A00",             bg: dark ? "#1A1200" : "#FFF5D6" },
   };
   const estCfg = {
-    "Fons Primari": { color:tc.navy,      bg: dark ? "#112030" : "#E6EDF3" },
+    "Fons Primari": { color:tc.navy, bg: dark ? "#112030" : "#E6EDF3" },
+    "Fons Secundari": { color:tc.navyLight, bg: dark ? "#15263A" : "#EAF0F6" },
     "Fons de Fons": { color:tc.greenDark, bg: dark ? "#0A2010" : "#E8F8E8" },
-    "SOCIMI":       { color:tc.purple||"#9B7CC8", bg: dark ? "#20163A" : "#F3EEF8" },
+    "Fons de Coinversió": { color:"#0F766E", bg: dark ? "#0B1F1D" : "#DFF7F3" },
+    "Search Fund - Cerca": { color:"#2563A8", bg: dark ? "#0A1828" : "#DDEAF8" },
+    "Search Fund - Adquisició/Participada (SF)": { color:"#1D4ED8", bg: dark ? "#101B3D" : "#E0E7FF" },
+    "Participada (Altres)": { color:"#7A5A00", bg: dark ? "#1A1200" : "#FFF5D6" },
+    "Fons Real Estate": { color:tc.purple||"#9B7CC8", bg: dark ? "#20163A" : "#F3EEF8" },
   };
   const catCfg = {
     "Capital Call":   { color:tc.navy,      bg: dark ? "#112030" : "#E6EDF3" },
@@ -486,6 +497,9 @@ function Dashboard() {
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
         activeNavItem={activeNavItem}
         onNavigate={handleNavigate}
+        isAdmin={isAdmin}
+        canAccessSection={canAccessSection}
+        canAccessAny={canAccessAny}
         sections={SECTIONS}
         realEstateNav={REAL_ESTATE_NAV}
         publicMarketsNav={PUBLIC_MARKETS_NAV}
@@ -512,7 +526,15 @@ function Dashboard() {
         </header>
 
         <main id="dashboard-content" style={{ flex: 1, padding: "24px 32px" }}>
-          {tab === "resum" && <ResumTab TRANSACTIONS={d.TRANSACTIONS} COMPROMISOS={d.COMPROMISOS} fonsFiltered={FONS_MAP2} rawCC={d.rawCC} onNavigate={setTab} onExcloure={setExcluded} excluded={excluded} />}
+          {tab === "resum" && (
+            <ResumTab
+              tc={tc}
+              byFy={byFy}
+              byVcpe={byVcpe}
+              byEst={byEst}
+              vcpeCfg={vcpeCfg}
+            />
+          )}
 
           {tab === "mensual" && <MensualTab TRANSACTIONS={d.TRANSACTIONS} COMPROMISOS={d.COMPROMISOS} onNavigate={setTab} onExcloure={setExcluded} excluded={excluded} />}
 
@@ -537,7 +559,7 @@ function Dashboard() {
                 ))}
               </div>
               {companiesSubTab === "transaccions" ? (
-                <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "PC" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} title="Transaccions Participades (PC)" />
+                <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "PC" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Participades (PC)" />
               ) : <CompaniesIndexInner search={globalSearch} subTab={companiesSubTab} />}
             </div>
           )}
@@ -546,9 +568,14 @@ function Dashboard() {
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
                 <button onClick={() => setInversionsSubTab("fons")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "fons" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "fons" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Per Vehicle</button>
+                <button onClick={() => setInversionsSubTab("pipeline")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "pipeline" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "pipeline" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Pipeline</button>
                 <button onClick={() => setInversionsSubTab("tx")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "tx" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "tx" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Transaccions</button>
               </div>
-              {inversionsSubTab === "fons" ? <FundsIndexInner search={globalSearch} /> : <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} title="Totes les Transaccions" />}
+              {inversionsSubTab === "fons"
+                ? <FundsIndexInner search={globalSearch} />
+                : inversionsSubTab === "pipeline"
+                  ? <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
+                  : <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
             </div>
           )}
 
@@ -559,7 +586,7 @@ function Dashboard() {
                   <button key={item.id} onClick={() => setRealEstateTab(item.tab)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: realEstateTab === item.tab ? `2px solid ${tc.navy}` : "2px solid transparent", color: realEstateTab === item.tab ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{item.tab === "directe" ? "RE Directe" : item.tab === "altres-vehicles" ? "Altres Vehicles" : "Totes les Posicions"}</button>
                 ))}
               </div>
-              {realEstateTab === "inversions" ? <FundsIndexInner search={globalSearch} vcpeFilter="RE" /> : <TxSection tx={d.reTx.filter(r => realEstateTab === "directe" ? r.est === "Directe" : r.est !== "Directe")} compr={d.reCompr.filter(r => realEstateTab === "directe" ? r.est === "Directe" : r.est !== "Directe")} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: realEstateTab === "directe" ? "Directe" : "SOCIMI" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} title={`Transaccions Real Estate — ${realEstateTab === "directe" ? "Directe" : "Altres"}`} />}
+              {realEstateTab === "inversions" ? <FundsIndexInner search={globalSearch} vcpeFilter="RE" /> : <TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: "Fons Real Estate" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title={`Transaccions Real Estate — ${realEstateTab === "directe" ? "Directe" : "Altres"}`} />}
             </div>
           )}
 
@@ -574,7 +601,7 @@ function Dashboard() {
             </div>
           )}
 
-          {tab === "tx-alt" && <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} title="Registre de Transaccions (Alternatius)" />}
+          {tab === "tx-alt" && <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" />}
         </main>
       </div>
 
@@ -591,209 +618,32 @@ function Dashboard() {
       )}
 
       {ccAddModalFons !== null && (
-        <AddRowModal
-          title="Afegeix moviment"
-          fields={[
-            {
-              key: "fons",
-              label: "Vehicle",
-              type: "combo",
-              options: ccNameOptions,
-              defaultValue: ccAddModalFons,
-              onChange: (value, nextValues, { setValue }) => {
-                setValue("divisa", defaultVehicleCurrency(value));
-                return nextValues;
-              },
-            },
-            { key: "tipus", label: "Tipus Moviment", type: "combo", options: ccTipusOptions, defaultValue: ccAddModalDefaults?.tipus ?? "" },
-            { key: "cat", label: "Categoria", type: "select", options: ["Capital Call", "Distribució", "Retorn Capital", "Compromís", "Altres"], defaultValue: ccAddModalDefaults?.cat ?? "Capital Call" },
-            { key: "data", label: "Data", type: "date", defaultValue: new Date().toISOString().slice(0, 10) },
-            { key: "eur", label: "Import EUR", type: "number" },
-            {
-              key: "divisa",
-              label: "Divisa",
-              type: "select",
-              options: ["EUR", "USD"],
-              defaultValue: ccAddModalDefaults?.divisa ?? defaultVehicleCurrency(ccAddModalFons),
-            },
-            { key: "vcpe", label: "VCPE", type: "select", options: ["PE", "VC", "RE", "SF", "PC"], defaultValue: ccAddModalDefaults?.vcpe ?? "PE" },
-            { key: "est", label: "Estratègia", type: "select", options: ["Fons Primari", "Fons de Fons", "Directe", "SOCIMI"], defaultValue: ccAddModalDefaults?.est ?? "Fons Primari" },
-            {
-              key: "recallable",
-              label: "Recallable (€)",
-              type: "number",
-              visible: v => v.cat === "Distribució",
-              onChange: (value, nextValues, { setValue }) => {
-                if (value !== "" && value != null && nextValues.eur !== "" && nextValues.eur != null) {
-                  const rec = Number(value);
-                  const eur = Number(nextValues.eur);
-                  if (!isNaN(rec) && !isNaN(eur)) {
-                    setValue("non_recallable", String(Math.round((eur - rec) * 100) / 100));
-                  }
-                }
-                return nextValues;
-              },
-            },
-            {
-              key: "non_recallable",
-              label: "No Recallable (€)",
-              type: "number",
-              visible: v => v.cat === "Distribució",
-              hint: (values) => {
-                const rec = values.recallable !== "" && values.recallable != null ? Number(values.recallable) : null;
-                const nonRec = values.non_recallable !== "" && values.non_recallable != null ? Number(values.non_recallable) : null;
-                if (rec == null && nonRec == null) return null;
-                const r = rec ?? 0;
-                const nr = nonRec ?? 0;
-                const total = r + nr;
-                const eur = Number(values.eur) || 0;
-                return { text: `${fmtM(r)} rec + ${fmtM(nr)} no rec = ${fmtM(total)}`, valid: Math.abs(total - eur) <= 0.01 };
-              },
-            },
-            {
-              key: "from_recallable",
-              label: `Des de pool recallable (€) — pool: ${fmtM(recallablePoolByFund[ccAddModalFons] ?? 0)} · pendent: ${fmtM(uncalledByFund[ccAddModalFons] ?? 0)}`,
-              type: "number",
-              visible: v => v.cat === "Capital Call",
-            },
-          ]}
-          onSave={(values, setError) => {
-            if (values.cat === "Capital Call" && values.from_recallable !== "" && values.from_recallable != null) {
-              if (Number(values.from_recallable) < 0) {
-                setError("El valor 'des de pool recallable' no pot ser negatiu.");
-                return;
-              }
-              const pool = recallablePoolByFund[values.fons] ?? 0;
-              if (Number(values.from_recallable) > pool + 0.01) {
-                setError(`Advertiment: pool recallable disponible és ${fmtM(pool)}. El moviment s'ha guardat igualment.`);
-                // soft warning — fall through, do not return
-              }
-            }
-            if (values.cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
-              const rec = Number(values.recallable);
-              if (rec < 0) {
-                setError("El recallable no pot ser negatiu.");
-                return;
-              }
-              const eur = Number(values.eur) || 0;
-              if (rec > eur + 0.01) {
-                setError(`El recallable (${fmtM(rec)}) no pot superar l'import total (${fmtM(eur)}).`);
-                return;
-              }
-              const nonRec = values.non_recallable !== "" && values.non_recallable != null
-                ? Number(values.non_recallable)
-                : eur - rec;
-              const total = rec + nonRec;
-              if (Math.abs(total - eur) > 0.01) {
-                setError(`Recallable (${fmtM(rec)}) + No recallable (${fmtM(nonRec)}) = ${fmtM(total)}, però l'import total és ${fmtM(eur)}`);
-                return;
-              }
-              d.handleCCInsert({ ...values, non_recallable: nonRec }, setError);
-            } else {
-              d.handleCCInsert(values, setError);
-            }
-          }}
+        <CcTransactionModal
+          addFons={ccAddModalFons}
+          addDefaults={ccAddModalDefaults}
+          ccNameOptions={ccNameOptions}
+          ccTipusOptions={ccTipusOptions}
+          amountInputStyle={amountInputStyle}
+          defaultVehicleCurrency={defaultVehicleCurrency}
+          recallablePoolByFund={recallablePoolByFund}
+          uncalledByFund={uncalledByFund}
+          onInsert={d.handleCCInsert}
+          onUpdate={d.handleCCUpdate}
           onClose={() => setCcAddModalFons(null)}
         />
       )}
 
       {ccEditModalRow && (
-        <AddRowModal
-          title="Edita moviment"
-          fields={[
-            { key: "fons", label: "Vehicle", type: "text", defaultValue: ccEditModalRow.fons, disabled: true },
-            { key: "tipus", label: "Tipus Moviment", type: "combo", options: ccTipusOptions, defaultValue: ccEditModalRow.tipus },
-            { key: "cat", label: "Categoria", type: "select", options: ["Capital Call", "Distribució", "Retorn Capital", "Compromís", "Altres"], defaultValue: ccEditModalRow.cat },
-            { key: "data", label: "Data", type: "date", defaultValue: ccEditModalRow.data },
-            { key: "eur", label: "Import EUR", type: "number", defaultValue: ccEditModalRow.eur },
-            { key: "divisa", label: "Divisa", type: "select", options: ["EUR", "USD"], defaultValue: ccEditModalRow.divisa },
-            { key: "vcpe", label: "VCPE", type: "select", options: ["PE", "VC", "RE", "SF", "PC"], defaultValue: ccEditModalRow.vcpe },
-            { key: "est", label: "Estratègia", type: "select", options: ["Fons Primari", "Fons de Fons", "Directe", "SOCIMI"], defaultValue: ccEditModalRow.est },
-            {
-              key: "recallable",
-              label: "Recallable (€)",
-              type: "number",
-              defaultValue: ccEditModalRow.recallable ?? "",
-              visible: v => v.cat === "Distribució",
-              onChange: (value, nextValues, { setValue }) => {
-                if (value !== "" && value != null && nextValues.eur !== "" && nextValues.eur != null) {
-                  const rec = Number(value);
-                  const eur = Number(nextValues.eur);
-                  if (!isNaN(rec) && !isNaN(eur)) {
-                    setValue("non_recallable", String(Math.round((eur - rec) * 100) / 100));
-                  }
-                }
-                return nextValues;
-              },
-            },
-            {
-              key: "non_recallable",
-              label: "No Recallable (€)",
-              type: "number",
-              defaultValue: ccEditModalRow.non_recallable ?? "",
-              visible: v => v.cat === "Distribució",
-              hint: (values) => {
-                const rec = values.recallable !== "" && values.recallable != null ? Number(values.recallable) : null;
-                const nonRec = values.non_recallable !== "" && values.non_recallable != null ? Number(values.non_recallable) : null;
-                if (rec == null && nonRec == null) return null;
-                const r = rec ?? 0;
-                const nr = nonRec ?? 0;
-                const total = r + nr;
-                const eur = Number(values.eur) || 0;
-                return { text: `${fmtM(r)} rec + ${fmtM(nr)} no rec = ${fmtM(total)}`, valid: Math.abs(total - eur) <= 0.01 };
-              },
-            },
-            {
-              key: "from_recallable",
-              // pool balance: add back current row's existing draw so the edit-path sees the "net of this row" available
-              label: (() => {
-                const existingDraw = ccEditModalRow.from_recallable ?? 0;
-                const pool = Math.round(((recallablePoolByFund[ccEditModalRow.fons] ?? 0) + Number(existingDraw)) * 100) / 100;
-                return `Des de pool recallable (€) — pool: ${fmtM(pool)} · pendent: ${fmtM(uncalledByFund[ccEditModalRow.fons] ?? 0)}`;
-              })(),
-              type: "number",
-              defaultValue: ccEditModalRow.from_recallable ?? "",
-              visible: v => v.cat === "Capital Call",
-            },
-          ]}
-          onSave={(values, setError) => {
-            if (values.cat === "Capital Call" && values.from_recallable !== "" && values.from_recallable != null) {
-              if (Number(values.from_recallable) < 0) {
-                setError("El valor 'des de pool recallable' no pot ser negatiu.");
-                return;
-              }
-              // add back existing draw to get pool available for this edit
-              const existingDraw = ccEditModalRow.from_recallable ?? 0;
-              const pool = Math.round(((recallablePoolByFund[values.fons] ?? 0) + Number(existingDraw)) * 100) / 100;
-              if (Number(values.from_recallable) > pool + 0.01) {
-                setError(`Advertiment: pool recallable disponible és ${fmtM(pool)}. El moviment s'ha guardat igualment.`);
-                // soft warning — fall through, do not return
-              }
-            }
-            if (values.cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
-              const rec = Number(values.recallable);
-              if (rec < 0) {
-                setError("El recallable no pot ser negatiu.");
-                return;
-              }
-              const eur = Number(values.eur) || 0;
-              if (rec > eur + 0.01) {
-                setError(`El recallable (${fmtM(rec)}) no pot superar l'import total (${fmtM(eur)}).`);
-                return;
-              }
-              const nonRec = values.non_recallable !== "" && values.non_recallable != null
-                ? Number(values.non_recallable)
-                : eur - rec;
-              const total = rec + nonRec;
-              if (Math.abs(total - eur) > 0.01) {
-                setError(`Recallable (${fmtM(rec)}) + No recallable (${fmtM(nonRec)}) = ${fmtM(total)}, però l'import total és ${fmtM(eur)}`);
-                return;
-              }
-              d.handleCCUpdate(ccEditModalRow._rowId, { ...values, non_recallable: nonRec }, setError);
-            } else {
-              d.handleCCUpdate(ccEditModalRow._rowId, values, setError);
-            }
-          }}
+        <CcTransactionModal
+          editRow={ccEditModalRow}
+          ccNameOptions={ccNameOptions}
+          ccTipusOptions={ccTipusOptions}
+          amountInputStyle={amountInputStyle}
+          defaultVehicleCurrency={defaultVehicleCurrency}
+          recallablePoolByFund={recallablePoolByFund}
+          uncalledByFund={uncalledByFund}
+          onInsert={d.handleCCInsert}
+          onUpdate={d.handleCCUpdate}
           onClose={() => setCcEditModalRow(null)}
         />
       )}

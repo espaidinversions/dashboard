@@ -1,14 +1,16 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { VCPE_CFG, EST_CFG } from "../config.js";
+import { VCPE_CFG, EST_CFG, VEHICLE_TIPUS_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, readStoredJSON, writeStoredJSON, readStoredFlag, formatMultiple, multipleColor } from "../utils.js";
-import { Badge, EditableCell, DeleteRowButton } from "./SharedComponents.jsx";
+import { Badge, EditableCell, DeleteRowButton, indexPageStyles } from "./SharedComponents.jsx";
 import { upsertFundMeta, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
-import { makeFundRouteId } from "../data/fundDetailModel.js";
+import { computeFundIrrFromRows, makeFundRouteId } from "../data/fundDetailModel.js";
+import { convertAmountToEurOnDate } from "../fx.js";
+import { CAPITAL_CALL_STRATEGY_OPTIONS, defaultCapitalCallStrategyForVcpe } from "../data/capitalCallStrategyModel.js";
 
 export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
   const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
@@ -23,6 +25,19 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [sortKey, setSortKey] = useState("compromis");
   const [sortDir, setSortDir] = useState("desc");
+  const [filters, setFilters] = useState({
+    nom: "",
+    id: "",
+    tipus: "Tots",
+    year: "",
+    compromis: "",
+    cridat: "",
+    utilizat: "",
+    tvpi: "",
+    irr: "",
+    dpi: "",
+    rvpi: "",
+  });
 
   const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
 
@@ -46,12 +61,14 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
   }, []);
 
   const saveTvpi = async (fund, tvpi) => {
+    const fundRows = rawCC.filter((row) => makeFundRouteId(row) === fund.routeId);
+    const irr = computeFundIrrFromRows(fundRows, tvpi);
     const updated = fundMeta.some(m => (m.id ?? m.fons) === (fund.id ?? fund.fons))
-      ? fundMeta.map(m => (m.id ?? m.fons) === (fund.id ?? fund.fons) ? { ...m, tvpi } : m)
-      : [...fundMeta, { id: fund.id ?? undefined, fons: fund.fons, tvpi }];
+      ? fundMeta.map(m => (m.id ?? m.fons) === (fund.id ?? fund.fons) ? { ...m, tvpi, irr } : m)
+      : [...fundMeta, { id: fund.id ?? undefined, fons: fund.fons, tvpi, irr }];
     setFundMeta(updated);
     writeStoredJSON("tc_fundMeta", updated);
-    const { error } = await upsertFundMeta(fund, tvpi);
+    const { error } = await upsertFundMeta(fund, tvpi, irr);
     if (error) toast({ message: "Error desant TVPI: " + error.message, type: "error" });
   };
 
@@ -79,30 +96,43 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
 
   const defaultVcpe = canEditAlternatives ? "PE" : "RE";
   const [addingFund, setAddingFund] = useState(false);
-  const [newFund, setNewFund] = useState({ fons: "", vcpe: defaultVcpe, est: "Fons Primari", compromis: "", divisa: "EUR" });
+  const [newFund, setNewFund] = useState({ fons: "", vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVcpe(defaultVcpe), compromis: "", divisa: "EUR" });
 
   useEffect(() => {
     setNewFund((current) => {
       if (current.vcpe === "RE" && canEditRealEstate) return current;
       if ((current.vcpe === "PE" || current.vcpe === "VC") && canEditAlternatives) return current;
-      return { ...current, vcpe: defaultVcpe, est: defaultVcpe === "RE" ? "SOCIMI" : "Fons Primari" };
+      return { ...current, vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVcpe(defaultVcpe) };
     });
   }, [canEditAlternatives, canEditRealEstate, defaultVcpe]);
 
   const handleAddFund = async (e) => {
     e.preventDefault();
     if (!newFund.fons.trim()) return;
+    const today = new Date().toISOString().slice(0, 10);
+    let conversion;
+    try {
+      conversion = await convertAmountToEurOnDate({
+        amount: parseFloat(newFund.compromis) || 0,
+        currency: newFund.divisa,
+        date: today,
+      });
+    } catch (error) {
+      toast({ message: "Error calculant canvi EUR/USD: " + (error?.message || "error desconegut"), type: "error" });
+      return;
+    }
     const row = await insertFund(
       newFund.fons.trim(),
       newFund.vcpe,
       newFund.est,
-      parseFloat(newFund.compromis) || 0,
+      conversion.eur,
       newFund.divisa,
+      conversion,
     );
     if (!row) { toast({ message: "Error en crear el fons", type: "error" }); return; }
     persistRawCC([...rawCC, row]);
     setAddingFund(false);
-    setNewFund({ fons: "", vcpe: defaultVcpe, est: defaultVcpe === "RE" ? "SOCIMI" : "Fons Primari", compromis: "", divisa: "EUR" });
+    setNewFund({ fons: "", vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVcpe(defaultVcpe), compromis: "", divisa: "EUR" });
     toast({ message: `Fons "${newFund.fons.trim()}" afegit.` });
   };
 
@@ -111,9 +141,13 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
     const vcpeSet = vcpeTypes ?? ["PE", "VC", "RE"];
     for (const r of rawCC.filter((row) => vcpeSet.includes(row?.vcpe))) {
       const key = makeFundRouteId(r);
-      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, isMock: !!r.isMock });
+      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, year: null, isMock: !!r.isMock });
       const f = map.get(key);
-      if (r.cat === "Compromís") f.compromis += r.eur;
+      if (r.cat === "Compromís") {
+        f.compromis += r.eur;
+        const yr = r.data ? Number(String(r.data).slice(0, 4)) : null;
+        if (yr && Number.isFinite(yr) && (f.year === null || yr < f.year)) f.year = yr;
+      }
       if (r.cat === "Capital Call") f.calls += r.eur;
       if (r.cat === "Distribució" || r.cat === "Retorn Capital") f.dist += Math.abs(r.eur);
     }
@@ -122,10 +156,14 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
       const tvpi = meta?.tvpi ?? null;
       const dpi = f.calls > 0 ? f.dist / f.calls : 0;
       const rvpi = tvpi != null ? tvpi - dpi : null;
+      const fundRows = rawCC.filter((row) => makeFundRouteId(row) === f.routeId);
+      const irr = meta?.irr ?? computeFundIrrFromRows(fundRows, tvpi);
       return {
         ...f,
+        vehicleTipus: meta?.vehicleTipus ?? null,
         utilizat: f.compromis > 0 ? (f.calls / f.compromis) * 100 : null,
         tvpi,
+        irr,
         dpi,
         rvpi,
       };
@@ -141,9 +179,22 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
       return false;
     };
     return rows.filter((row) => {
-      return shouldIncludeRow(row) && row.fons.toLowerCase().includes(q);
+      if (!shouldIncludeRow(row)) return false;
+      if (q && !row.fons.toLowerCase().includes(q)) return false;
+      if (filters.nom && !row.fons.toLowerCase().includes(filters.nom.toLowerCase())) return false;
+      if (filters.id && !String(row.id ?? "").toLowerCase().includes(filters.id.toLowerCase())) return false;
+      if (filters.tipus !== "Tots" && row.vehicleTipus !== filters.tipus) return false;
+      if (filters.year && !String(row.year ?? "").includes(filters.year)) return false;
+      if (filters.compromis && !String(row.compromis ?? "").includes(filters.compromis)) return false;
+      if (filters.cridat && !String(row.calls ?? "").includes(filters.cridat)) return false;
+      if (filters.utilizat && !String(row.utilizat ?? "").includes(filters.utilizat)) return false;
+      if (filters.tvpi && !String(row.tvpi ?? "").includes(filters.tvpi)) return false;
+      if (filters.irr && !String(row.irr ?? "").includes(filters.irr)) return false;
+      if (filters.dpi && !String(row.dpi ?? "").includes(filters.dpi)) return false;
+      if (filters.rvpi && !String(row.rvpi ?? "").includes(filters.rvpi)) return false;
+      return true;
     });
-  }, [rows, search, canAccessAlternatives, canAccessRealEstate]);
+  }, [rows, search, canAccessAlternatives, canAccessRealEstate, filters]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -154,8 +205,11 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
       else if (sortKey === "utilizat") { av = a.utilizat ?? -1; bv = b.utilizat ?? -1; }
       else if (sortKey === "id") { av = a.id ?? ""; bv = b.id ?? ""; }
       else if (sortKey === "tvpi") { av = a.tvpi ?? -1; bv = b.tvpi ?? -1; }
+      else if (sortKey === "irr") { av = a.irr ?? -Infinity; bv = b.irr ?? -Infinity; }
       else if (sortKey === "dpi") { av = a.dpi ?? -1; bv = b.dpi ?? -1; }
       else if (sortKey === "rvpi") { av = a.rvpi ?? -1; bv = b.rvpi ?? -1; }
+      else if (sortKey === "year") { av = a.year ?? 9999; bv = b.year ?? 9999; }
+      else if (sortKey === "vcpe") { av = a.vehicleTipus ?? ""; bv = b.vehicleTipus ?? ""; }
       else { av = a.fons.toLowerCase(); bv = b.fons.toLowerCase(); }
       if (av < bv) return sortDir === "asc" ? -1 : 1;
       if (av > bv) return sortDir === "asc" ? 1 : -1;
@@ -184,37 +238,25 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
   const COLS = [
     { k: "nom",       label: "Nom",      align: "left" },
     { k: "id",        label: "NIF",      align: "left" },
-    { k: "tipus",     label: "Tipus",    align: "left" },
+    { k: "vcpe",      label: "Fons",     align: "left" },
+    { k: "year",      label: "Any",      align: "right" },
     { k: "compromis", label: "Compromís",align: "right" },
     { k: "cridat",    label: "Cridat",   align: "right" },
     { k: "utilizat",  label: "Utilizat", align: "right" },
     { k: "tvpi",      label: "TVPI",     align: "right", title: "Total Value to Paid-In" },
+    { k: "irr",       label: "IRR",      align: "right", title: "Money-weighted return based on dated flows and current residual value" },
     { k: "dpi",       label: "DPI",      align: "right", title: "Distributions to Paid-In" },
     { k: "rvpi",      label: "RVPI",     align: "right", title: "Residual Value to Paid-In" },
   ];
 
   return (
-    <div style={{ minHeight: inline ? undefined : "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
-      {!inline && (
-        <>
-          <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 16 }}>
-            <Link to="/" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Dashboard</Link>
-            <div style={{ flex: 1 }} />
-            <input value={searchLocal} onChange={e => setSearchLocal(e.target.value)} placeholder="Cerca per nom…"
-              style={{ padding: "6px 12px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 200 }} />
-          </div>
-          <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
-            <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Fons</span>
-            <Link to="/investments/companies" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Participades</Link>
-          </div>
-        </>
-      )}
-
-      <div style={{ padding: "24px 32px" }}>
+    <div style={indexPageStyles.page(tc, inline)}>
+      <div style={indexPageStyles.contentWrap}>
         {sorted.length === 0
           ? <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
           : (
-          <div style={{ overflowX: "auto" }}>
+          <div style={indexPageStyles.panel(tc)}>
+            <div style={indexPageStyles.tableScroll}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: tc.bgAlt }}>
@@ -225,6 +267,38 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
                     </th>
                   ))}
                   {canEditAny && <th style={{ width: 40 }} />}
+                </tr>
+                <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
+                  <th style={{ padding: "6px 12px" }}>
+                    <input value={filters.nom} onChange={(e) => setFilters((current) => ({ ...current, nom: e.target.value }))}
+                      style={indexPageStyles.filterControl(tc)} />
+                  </th>
+                  <th style={{ padding: "6px 12px" }}>
+                    <input value={filters.id} onChange={(e) => setFilters((current) => ({ ...current, id: e.target.value }))}
+                      style={indexPageStyles.filterControl(tc)} />
+                  </th>
+                  <th style={{ padding: "6px 12px" }}>
+                    <select value={filters.tipus} onChange={(e) => setFilters((current) => ({ ...current, tipus: e.target.value }))}
+                      style={indexPageStyles.filterControl(tc)}>
+                      {["Tots", ...Array.from(new Set(rows.map((row) => row.vehicleTipus).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </th>
+                  {["year","compromis","cridat","utilizat","tvpi","irr","dpi","rvpi"].map((key) => (
+                    <th key={key} style={{ padding: "6px 12px" }}>
+                      <input value={filters[key]} onChange={(e) => setFilters((current) => ({ ...current, [key]: e.target.value }))}
+                        style={indexPageStyles.filterControl(tc)} />
+                    </th>
+                  ))}
+                  {canEditAny && (
+                    <th style={{ padding: "6px 12px" }}>
+                      {Object.values(filters).some((value) => value !== "" && value !== "Tots") ? (
+                        <button onClick={() => setFilters({ nom: "", id: "", tipus: "Tots", year: "", compromis: "", cridat: "", utilizat: "", tvpi: "", irr: "", dpi: "", rvpi: "" })}
+                          style={indexPageStyles.clearButton(tc)}>
+                          netejar
+                        </button>
+                      ) : null}
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
@@ -260,10 +334,12 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
                       {r.id ?? "—"}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
-                      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                        <Badge label={r.vcpe} cfg={VCPE_CFG[r.vcpe] || {}} />
-                        {r.est && <Badge label={r.est} cfg={EST_CFG[r.est] || {}} />}
-                      </div>
+                      {r.vehicleTipus
+                        ? <Badge label={r.vehicleTipus} cfg={VEHICLE_TIPUS_CFG[r.vehicleTipus] || {}} />
+                        : <span style={{ color: "#aaa", fontSize: 11 }}>—</span>}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: tc.textMid }}>
+                      {r.year ?? "—"}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: tc.navyLight }}>
                       {r.compromis ? fmtM(r.compromis) : "—"}
@@ -278,6 +354,9 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
                       <EditableCell value={r.tvpi} type="number" align="right"
                         fmt={formatMultiple} onSave={v => saveTvpi(r, v)}
                         disabled={!canEditTvpi} />
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.tvpi, tc) }}>
+                      {r.irr != null ? `${r.irr.toFixed(1)}%` : "—"}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.dpi, tc) }}>
                       {formatMultiple(r.dpi)}
@@ -294,6 +373,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
                 );})}
               </tbody>
             </table>
+            </div>
           </div>
           )
         }
@@ -316,8 +396,8 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
                   placeholder="Nom del fons" style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
               </div>
               {[
-                { label: "Tipus", key: "vcpe", options: [...(canEditAlternatives ? ["PE", "VC"] : []), ...(canEditRealEstate ? ["RE"] : [])] },
-                { label: "Estructura", key: "est", options: ["Fons Primari", "Fons de Fons", "SOCIMI"] },
+                { label: "Fons", key: "vcpe", options: [...(canEditAlternatives ? ["PE", "VC"] : []), ...(canEditRealEstate ? ["RE"] : [])] },
+                { label: "Estructura", key: "est", options: CAPITAL_CALL_STRATEGY_OPTIONS },
                 { label: "Divisa", key: "divisa", options: ["EUR", "USD"] },
               ].map(f => (
                 <div key={f.key}>
@@ -329,7 +409,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
                 </div>
               ))}
               <div>
-                <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>Compromís (€)</div>
+                <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>Compromís</div>
                 <input type="number" value={newFund.compromis} onChange={e => setNewFund(p => ({ ...p, compromis: e.target.value }))}
                   placeholder="0" style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none", width: 100 }} />
               </div>

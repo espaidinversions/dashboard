@@ -120,7 +120,7 @@ export function AuthProvider({ children }) {
   const sectionAccess = buildSectionAccessMap({ role, sectionRoles });
   const deniedSections = sectionAccessMapToDeniedSections(sectionAccess);
   const canEdit = isAdmin || canAccessAnySection(sectionAccess, Object.keys(sectionAccess), ACCESS_SUPERUSER);
-  const isElevated = isAdmin;
+  const isElevated = isAdmin || isSuperuser;
   const canAccessSection = useCallback((sectionId) => hasSectionAccess(sectionAccess, sectionId), [sectionAccess]);
   const canEditSection = useCallback((sectionId) => hasSectionAccess(sectionAccess, sectionId, ACCESS_SUPERUSER), [sectionAccess]);
   const getSectionAccess = useCallback((sectionId) => getSectionAccessLevel(sectionAccess, sectionId), [sectionAccess]);

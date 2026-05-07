@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useTheme } from "../theme.js";
 import { VCPE_CFG, EST_CFG } from "../config.js";
+import { CAPITAL_CALL_STRATEGY_OPTIONS } from "../data/capitalCallStrategyModel.js";
 
 // ══════════════════════════════════════════════════════════
 export function FonsSelector({excluded, setExcluded, rawCC = []}) {
@@ -70,7 +71,7 @@ export function FonsSelector({excluded, setExcluded, rawCC = []}) {
                 {["Tots","PE","VC","RE"].map(o=><option key={o}>{o}</option>)}
               </select>
               <select value={fEst} onChange={e=>setFEst(e.target.value)} style={inp}>
-                {["Tots","Fons Primari","Fons de Fons","SOCIMI"].map(o=><option key={o}>{o}</option>)}
+                {["Tots", ...CAPITAL_CALL_STRATEGY_OPTIONS].map(o=><option key={o}>{o}</option>)}
               </select>
               <div style={{marginLeft:"auto",display:"flex",gap:6}}>
                 <button onClick={toggleAll}
@@ -100,8 +101,7 @@ export function FonsSelector({excluded, setExcluded, rawCC = []}) {
                   </div>
                   <span style={{fontSize:12,color:excl?TC.red:TC.text,flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.fons}</span>
                   <div style={{display:"flex",gap:4,flexShrink:0}}>
-                    <span style={{fontSize:10,background:vcpeBg(f.vcpe),color:VCPE_CFG[f.vcpe]?.color||TC.textMid,borderRadius:4,padding:"1px 5px",fontWeight:600}}>{f.vcpe}</span>
-                    <span style={{fontSize:10,background:estBg(f.est),color:EST_CFG[f.est]?.color||TC.textMid,borderRadius:4,padding:"1px 5px",fontWeight:600}}>{f.est?.replace("Fons ","")}</span>
+                    <span style={{fontSize:10,background:estBg(f.est),color:EST_CFG[f.est]?.color||TC.textMid,borderRadius:4,padding:"1px 5px",fontWeight:600}}>{f.est}</span>
                   </div>
                 </div>
               );

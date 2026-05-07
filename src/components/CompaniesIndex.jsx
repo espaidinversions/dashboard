@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, formatMultiple, multipleColor, readStoredFlag, usePersistedState } from "../utils.js";
-import { Badge } from "./SharedComponents.jsx";
+import { Badge, indexPageStyles } from "./SharedComponents.jsx";
 import { loadCompanies } from "../db.js";
 import { isActualCompany } from "../data/privateCompanyModel.js";
 
@@ -17,6 +17,15 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [sortKey, setSortKey] = useState("ticket");
   const [sortDir, setSortDir] = useState("desc");
+  const [filters, setFilters] = useState({
+    nom: "",
+    id: "",
+    tipus: "Tots",
+    ticket: "",
+    tvpi: "",
+    dpi: "",
+    rvpi: "",
+  });
   const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
 
   useEffect(() => {
@@ -37,8 +46,18 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    return rows.filter(r => r.nom.toLowerCase().includes(q));
-  }, [rows, search]);
+    return rows.filter((r) => {
+      if (q && !r.nom.toLowerCase().includes(q)) return false;
+      if (filters.nom && !r.nom.toLowerCase().includes(filters.nom.toLowerCase())) return false;
+      if (filters.id && !String(r.id ?? "").toLowerCase().includes(filters.id.toLowerCase())) return false;
+      if (filters.tipus !== "Tots" && r.tipus !== filters.tipus && r.segment !== filters.tipus) return false;
+      if (filters.ticket && !String(r.ticket ?? "").includes(filters.ticket)) return false;
+      if (filters.tvpi && !String(r.tvpi ?? "").includes(filters.tvpi)) return false;
+      if (filters.dpi && !String(r.dpiMultiple ?? "").includes(filters.dpi)) return false;
+      if (filters.rvpi && !String(r.rvpiMultiple ?? "").includes(filters.rvpi)) return false;
+      return true;
+    });
+  }, [rows, search, filters]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -78,26 +97,13 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
   ];
 
   return (
-    <div style={{ minHeight: inline ? undefined : "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", fontSize: 14 }}>
-      {!inline && (
-        <>
-          <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "12px 32px", display: "flex", alignItems: "center", gap: 16 }}>
-            <Link to="/" style={{ color: tc.textLight, textDecoration: "none", fontSize: 13 }}>← Dashboard</Link>
-            <div style={{ flex: 1 }} />
-            <input value={searchLocal} onChange={e => setSearchLocal(e.target.value)} placeholder="Cerca per nom…"
-              style={{ padding: "6px 12px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", width: 200 }} />
-          </div>
-          <div style={{ background: tc.card, borderBottom: `1px solid ${tc.border}`, padding: "0 32px", display: "flex" }}>
-            <Link to="/investments/funds" style={{ borderBottom: "2px solid transparent", padding: "11px 20px", fontSize: 12, fontWeight: 400, color: tc.textMid, textDecoration: "none", whiteSpace: "nowrap" }}>Fons</Link>
-            <span style={{ borderBottom: `2px solid ${tc.green}`, padding: "11px 20px", fontSize: 12, fontWeight: 600, color: tc.navy, whiteSpace: "nowrap" }}>Participades</span>
-          </div>
-        </>
-      )}
-
-      <div style={{ padding: "24px 32px" }}>
+    <div style={indexPageStyles.page(tc, inline)}>
+      <div style={indexPageStyles.contentWrap}>
         {sorted.length === 0
           ? <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
           : (
+            <div style={indexPageStyles.panel(tc)}>
+              <div style={indexPageStyles.tableScroll}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: tc.bgAlt }}>
@@ -105,6 +111,28 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
                     <th key={k} onClick={() => toggleSort(k)}
                       style={{ padding: "10px 12px", textAlign: align, fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
                       {label}<SortArrow k={k} />
+                    </th>
+                  ))}
+                </tr>
+                <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
+                  <th style={{ padding: "6px 12px" }}>
+                    <input value={filters.nom} onChange={(e) => setFilters((current) => ({ ...current, nom: e.target.value }))}
+                      style={indexPageStyles.filterControl(tc)} />
+                  </th>
+                  <th style={{ padding: "6px 12px" }}>
+                    <input value={filters.id} onChange={(e) => setFilters((current) => ({ ...current, id: e.target.value }))}
+                      style={indexPageStyles.filterControl(tc)} />
+                  </th>
+                  <th style={{ padding: "6px 12px" }}>
+                    <select value={filters.tipus} onChange={(e) => setFilters((current) => ({ ...current, tipus: e.target.value }))}
+                      style={indexPageStyles.filterControl(tc)}>
+                      {["Tots", ...Array.from(new Set([...rows.map((row) => row.tipus), ...rows.map((row) => row.segment)]).values()).filter(Boolean).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  </th>
+                  {["ticket","tvpi","dpi","rvpi"].map((key) => (
+                    <th key={key} style={{ padding: "6px 12px" }}>
+                      <input value={filters[key]} onChange={(e) => setFilters((current) => ({ ...current, [key]: e.target.value }))}
+                        style={indexPageStyles.filterControl(tc)} />
                     </th>
                   ))}
                 </tr>
@@ -144,6 +172,8 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
                 ))}
               </tbody>
             </table>
+              </div>
+            </div>
           )
         }
       </div>

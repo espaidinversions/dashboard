@@ -2,25 +2,27 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
-import { CAT_CFG, VCPE_CFG, EST_CFG } from "../config.js";
+import { VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
-import { Badge, Logo, KpiCard } from "./SharedComponents.jsx";
-import { loadCapitalCalls, loadFundMeta } from "../db.js";
+import { fmtM, fmtSignedM, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
+import { Badge, Logo, KpiCard, AddRowModal } from "./SharedComponents.jsx";
+import { loadCapitalCalls, loadFundMeta, updateCapitalCall } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
+import { CAPITAL_CALL_TIPUS_OPTIONS, inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
 import { useAuth } from "../auth.jsx";
 
 function FundDetailInner() {
   const { id } = useParams();
   const { tc, dark, toggle } = useTheme();
-  const { canAccessSection } = useAuth();
+  const { canAccessSection, canEdit } = useAuth();
   const navigate = useNavigate();
 
   // 1. All useState calls — hoisted unconditionally before any return
   const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
   const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
-  const [txFilters, setTxFilters] = useState({ data: "", tipus: "", categoria: "Tots", import: "" });
+  const [txFilters, setTxFilters] = useState({ data: "", tipus: "Tots", import: "" });
   const [chartView, setChartView] = useState("quarterly");
+  const [editingRow, setEditingRow] = useState(null);
 
   // 2. All useEffect / useMemo calls — hoisted unconditionally before any return
   useEffect(() => {
@@ -42,15 +44,20 @@ function FundDetailInner() {
   const txs = detail?.txs ?? [];
 
   // Destructure with ?? {} so these are safe before detail loads
-  const { fundName, fundId, vcpe, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, txLog, recallablePool } = detail ?? {};
+  const { fundName, fundId, vcpe, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, irrFund, txLog, recallablePool } = detail ?? {};
 
   const filteredTxLog = useMemo(() => (txLog ?? []).filter((r) => {
     if (txFilters.data && !String(r.data ?? "").includes(txFilters.data)) return false;
-    if (txFilters.tipus && !String(r.tipus ?? "").toLowerCase().includes(txFilters.tipus.toLowerCase())) return false;
-    if (txFilters.categoria !== "Tots" && r.cat !== txFilters.categoria) return false;
+    if (txFilters.tipus !== "Tots" && r.tipus !== txFilters.tipus) return false;
     if (txFilters.import && !String(r.eur ?? "").includes(txFilters.import)) return false;
     return true;
   }), [txFilters, txLog]);
+  const tipusOptions = useMemo(() => {
+    const extras = (txLog ?? [])
+      .map((row) => row.tipus)
+      .filter((value) => value && !CAPITAL_CALL_TIPUS_OPTIONS.includes(value));
+    return ["Tots", ...CAPITAL_CALL_TIPUS_OPTIONS, ...Array.from(new Set(extras)).sort()];
+  }, [txLog]);
 
   // J-curve data: grouped by quarter or year; bars = period flows, line = cumulative net
   const jCurveData = useMemo(() => {
@@ -126,6 +133,7 @@ function FundDetailInner() {
           <KpiCard label="Distribucions"  value={dist ? fmtM(dist) : "—"} tc={tc} />
           <KpiCard label="Net"            value={(net >= 0 ? "+" : "") + fmtM(net)} tc={tc} />
           <KpiCard label="TVPI" value={formatMultiple(tvpiFund)} sub="Inputat manualment" valueColor={multipleColor(tvpiFund, tc)} tc={tc} />
+          <KpiCard label="IRR"  value={irrFund != null ? `${irrFund.toFixed(1)}%` : "—"} valueColor={multipleColor(tvpiFund, tc)} tc={tc} />
           <KpiCard label="DPI"  value={formatMultiple(dpiFund)}  valueColor={multipleColor(dpiFund, tc)}  tc={tc} />
           <KpiCard label="RVPI" value={formatMultiple(rvpiFund)} valueColor={multipleColor(rvpiFund, tc)} tc={tc} />
           {recallablePool > 0 && (
@@ -226,35 +234,91 @@ function FundDetailInner() {
           <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 16 }}>
             Transaccions · {(txLog ?? []).length}
           </div>
+          {editingRow && (
+            <AddRowModal
+              title="Edita transacció"
+              fields={[
+                {
+                  key: "tipus",
+                  label: "Tipus Moviment",
+                  type: "combo",
+                  options: CAPITAL_CALL_TIPUS_OPTIONS,
+                  defaultValue: editingRow.tipus,
+                  hint: (values) => values.tipus
+                    ? `Categoria: ${inferCapitalCallCategoryFromTipus(values.tipus, values.eur)}`
+                    : null,
+                },
+                { key: "data", label: "Data", type: "date", defaultValue: editingRow.data },
+                { key: "eur", label: "Import EUR", type: "number", defaultValue: Math.abs(editingRow.eur ?? 0) },
+                { key: "comentaris", label: "Comentaris", type: "textarea", defaultValue: editingRow.comentaris ?? "", placeholder: "Observacions del moviment" },
+                {
+                  key: "recallable",
+                  label: "Recallable (€)",
+                  type: "number",
+                  defaultValue: editingRow.recallable ?? "",
+                  visible: (v) => inferCapitalCallCategoryFromTipus(v.tipus, v.eur) === "Distribució",
+                },
+                {
+                  key: "from_recallable",
+                  label: (() => {
+                    const existingDraw = editingRow.from_recallable ?? 0;
+                    const pool = Math.round(((recallablePool ?? 0) + Number(existingDraw)) * 100) / 100;
+                    return `Des de pool recallable (€) — pool disponible: ${fmtM(pool)}`;
+                  })(),
+                  type: "number",
+                  defaultValue: editingRow.from_recallable ?? "",
+                  visible: (v) => inferCapitalCallCategoryFromTipus(v.tipus, v.eur) === "Capital Call",
+                },
+              ]}
+              onSave={async (values, setError) => {
+                if (!values.tipus) { setError("El tipus de moviment és obligatori."); return; }
+                if (!values.data)  { setError("La data és obligatòria."); return; }
+                if (!values.eur)   { setError("L'import és obligatori."); return; }
+                const cat = inferCapitalCallCategoryFromTipus(values.tipus, values.eur);
+                const fields = { tipus: values.tipus, data: values.data, eur: values.eur, comentaris: values.comentaris ?? "", cat };
+                if (cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
+                  fields.recallable = Number(values.recallable);
+                  fields.non_recallable = Math.round((Number(values.eur) - Number(values.recallable)) * 100) / 100;
+                }
+                if (cat === "Capital Call" && values.from_recallable !== "" && values.from_recallable != null) {
+                  fields.from_recallable = Number(values.from_recallable);
+                }
+                const { error } = await updateCapitalCall(editingRow._rowId, fields);
+                if (error) { setError(error.message); return; }
+                const fresh = await loadCapitalCalls();
+                if (Array.isArray(fresh)) { setRawCC(fresh); writeStoredJSON("tc_rawCC", fresh); }
+                setEditingRow(null);
+              }}
+              onClose={() => setEditingRow(null)}
+            />
+          )}
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: tc.bgAlt }}>
-                {["Data", "Tipus", "Categoria", "Import", "Recallable"].map(h => (
-                  <th key={h} style={{ padding: "10px 12px", textAlign: h === "Import" || h === "Recallable" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
+                {["Data", "Tipus", "Import", "Recallable", ...(vcpe === "SF" ? ["Fase"] : []), ...(canEdit ? [""] : [])].map(h => (
+                  <th key={h || "_actions"} style={{ padding: "10px 12px", textAlign: h === "Import" || h === "Recallable" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
                 ))}
               </tr>
               <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
                 <th style={{ padding: "6px 12px" }}><input value={txFilters.data} onChange={(e) => setTxFilters((v) => ({ ...v, data: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-                <th style={{ padding: "6px 12px" }}><input value={txFilters.tipus} onChange={(e) => setTxFilters((v) => ({ ...v, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-                <th style={{ padding: "6px 12px" }}><select value={txFilters.categoria} onChange={(e) => setTxFilters((v) => ({ ...v, categoria: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots", ...Array.from(new Set((txLog ?? []).map(r => r.cat).filter(Boolean))).sort()].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+                <th style={{ padding: "6px 12px" }}><select value={txFilters.tipus} onChange={(e) => setTxFilters((v) => ({ ...v, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{tipusOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></th>
                 <th style={{ padding: "6px 12px" }}><input value={txFilters.import} onChange={(e) => setTxFilters((v) => ({ ...v, import: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 12px" }} />
+                {vcpe === "SF" ? <th style={{ padding: "6px 12px" }} /> : null}
+                {canEdit ? <th style={{ padding: "6px 12px" }} /> : null}
               </tr>
             </thead>
             <tbody>
               {filteredTxLog.map((r, i) => {
-                const cfg = CAT_CFG[r.cat] || {};
+                const sfPhaseCfg = vcpe === "SF" && r.est ? EST_CFG[r.est] : null;
+                const sfPhaseLabel = r.est?.includes("Adquis") || r.est?.includes("Participada")
+                  ? "Adquisició" : r.est?.includes("Cerca") ? "Cerca" : null;
                 return (
                   <tr key={`${r.data}-${r.cat}-${r.eur}`} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
                     <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
                     <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.tipus}</td>
-                    <td style={{ padding: "10px 12px" }}>
-                      <span style={{ fontSize: 10, background: cfg.bg || tc.bgAlt, color: cfg.color || tc.textMid, borderRadius: 4, padding: "2px 8px", fontWeight: 600 }}>
-                        {r.cat}
-                      </span>
-                    </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: r.eur > 0 ? tc.navy : tc.green }}>
-                      {r.eur < 0 && "+ "}{fmtM(Math.abs(r.eur))}
+                      {fmtSignedM(r.eur)}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight }}>
                       {r.cat === "Distribució" && r.recallable != null
@@ -263,6 +327,27 @@ function FundDetailInner() {
                         ? `${fmtM(r.from_recallable)} del pool`
                         : "—"}
                     </td>
+                    {vcpe === "SF" ? (
+                      <td style={{ padding: "10px 12px" }}>
+                        {sfPhaseLabel && sfPhaseCfg ? (
+                          <span style={{ fontSize: 10, fontWeight: 600, borderRadius: 4, padding: "2px 6px", background: sfPhaseCfg.bg, color: sfPhaseCfg.color }}>
+                            {sfPhaseLabel}
+                          </span>
+                        ) : null}
+                      </td>
+                    ) : null}
+                    {canEdit ? (
+                      <td style={{ padding: "4px 12px", textAlign: "center" }}>
+                        {r._rowId ? (
+                          <button
+                            onClick={() => setEditingRow(r)}
+                            style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 10, fontFamily: "inherit" }}
+                          >
+                            Edita
+                          </button>
+                        ) : null}
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })}

@@ -124,6 +124,7 @@ function CompanyDetailInner() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [chartView, setChartView] = useState("quarterly");
+  const [quarterFilters, setQuarterFilters] = useState({ trimestre: "", ingressos: "", ebitda: "", dfn: "", ingPress: "", ebitdaPress: "", dfnPress: "" });
 
   const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
 
@@ -252,6 +253,16 @@ function CompanyDetailInner() {
   }, [quarters]);
 
   const chartData = chartView === "annual" ? annualData : quarterlyWithLTM;
+  const filteredQuarters = useMemo(() => quarters.filter((q) => {
+    if (quarterFilters.trimestre && !String(q.q ?? "").toLowerCase().includes(quarterFilters.trimestre.toLowerCase())) return false;
+    if (quarterFilters.ingressos && !String(q.rev ?? "").includes(quarterFilters.ingressos)) return false;
+    if (quarterFilters.ebitda && !String(q.ebitda ?? "").includes(quarterFilters.ebitda)) return false;
+    if (quarterFilters.dfn && !String(q.dfn ?? "").includes(quarterFilters.dfn)) return false;
+    if (quarterFilters.ingPress && !String(q.revBudget ?? "").includes(quarterFilters.ingPress)) return false;
+    if (quarterFilters.ebitdaPress && !String(q.ebitdaBudget ?? "").includes(quarterFilters.ebitdaPress)) return false;
+    if (quarterFilters.dfnPress && !String(q.dfnBudget ?? "").includes(quarterFilters.dfnPress)) return false;
+    return true;
+  }), [quarterFilters, quarters]);
 
   // CAGR from annual data (requires positive first + last values)
   const { revCAGR, ebitdaCAGR } = useMemo(() => {
@@ -374,9 +385,18 @@ function CompanyDetailInner() {
                     <th key={h} style={{ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, padding: "4px 8px", textAlign: "right", whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
+                <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
+                  <th style={{ padding: "6px 8px" }}><input value={quarterFilters.trimestre} onChange={e => setQuarterFilters(v => ({ ...v, trimestre: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                  <th style={{ padding: "6px 8px" }}><input value={quarterFilters.ingressos} onChange={e => setQuarterFilters(v => ({ ...v, ingressos: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                  <th style={{ padding: "6px 8px" }}><input value={quarterFilters.ebitda} onChange={e => setQuarterFilters(v => ({ ...v, ebitda: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                  <th style={{ padding: "6px 8px" }}><input value={quarterFilters.dfn} onChange={e => setQuarterFilters(v => ({ ...v, dfn: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                  <th style={{ padding: "6px 8px" }}><input value={quarterFilters.ingPress} onChange={e => setQuarterFilters(v => ({ ...v, ingPress: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                  <th style={{ padding: "6px 8px" }}><input value={quarterFilters.ebitdaPress} onChange={e => setQuarterFilters(v => ({ ...v, ebitdaPress: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                  <th style={{ padding: "6px 8px" }}><input value={quarterFilters.dfnPress} onChange={e => setQuarterFilters(v => ({ ...v, dfnPress: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                </tr>
               </thead>
               <tbody>
-                {quarters.map(q => (
+                {filteredQuarters.map(q => (
                   <tr key={q.q} style={{ borderTop: `1px solid ${tc.border}` }}>
                     <td style={{ padding: "6px 8px", fontSize: 12, fontWeight: 600, color: tc.text, whiteSpace: "nowrap" }}>{q.q}</td>
                     <td style={{ padding: "2px 4px" }}>

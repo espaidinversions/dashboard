@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { apiFetchJson } from "../../apiClient.js";
+import { loadUserPermissions, saveUserPermissions } from "./adminApi.js";
 import {
   ACCESS_LEVELS,
   ACCESS_NONE,
@@ -101,7 +102,7 @@ export default function AdminPermissions() {
       toast({ message: "Error carregant usuaris: " + e.message, type: "error" });
     }
     try {
-      const permsRes = await apiFetchJson("/api/admin/user-permissions");
+      const permsRes = await loadUserPermissions();
       const map = {};
       for (const row of permsRes.permissions ?? []) {
         const user = loadedUsers.find((candidate) => candidate.id === row.user_id);
@@ -173,14 +174,9 @@ export default function AdminPermissions() {
     setSaving(user.id);
     try {
       const sectionRoles = getPermissions(user);
-      await apiFetchJson("/api/admin/user-permissions", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id,
-          sectionRoles,
-          deniedSections: sectionAccessMapToDeniedSections(sectionRoles),
-        }),
+      await saveUserPermissions(user.id, {
+        sectionRoles,
+        deniedSections: sectionAccessMapToDeniedSections(sectionRoles),
       });
       toast({ message: "Permisos guardats." });
     } catch (e) {

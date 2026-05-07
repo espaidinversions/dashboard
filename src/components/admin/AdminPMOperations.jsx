@@ -378,22 +378,37 @@ function OverridesTab() {
     loadPMPositionOverridesTable().then(d => { setRows(d); setLoading(false); });
   }, []);
 
-  async function save(isin, field, value) {
-    const camelMap = { valor_mercat: "valorMercat", rend_inici: "rendInici", rend2026: "rend2026", rend2025: "rend2025", rend2024: "rend2024", rend2023: "rend2023", cost_anual: "costAnual", notes: "notes" };
-    const { error } = await upsertPMPositionOverride(isin, { [camelMap[field] ?? field]: value });
+  const currentYear = new Date().getFullYear();
+  const REND_YEARS = [currentYear, currentYear - 1, currentYear - 2, currentYear - 3];
+
+  async function save(isin, field, value, isYear = false) {
+    let payload;
+    if (isYear) {
+      const currentRow = rows.find(r => r.isin === isin);
+      const merged = { ...(currentRow?.rendiment ?? {}), [field]: value };
+      payload = { rendiment: merged };
+    } else {
+      const camelMap = { valor_mercat: "valorMercat", rend_inici: "rendInici", cost_anual: "costAnual", notes: "notes" };
+      payload = { [camelMap[field] ?? field]: value };
+    }
+    const { error } = await upsertPMPositionOverride(isin, payload);
     if (error) { toast({ message: "Error desant: " + error.message, type: "error" }); return; }
-    setRows(prev => prev.map(r => r.isin === isin ? { ...r, [field]: value } : r));
+    setRows(prev => prev.map(r => {
+      if (r.isin !== isin) return r;
+      return isYear ? { ...r, rendiment: { ...(r.rendiment ?? {}), [field]: value } } : { ...r, [field]: value };
+    }));
     toast({ message: "Desat", type: "success" });
   }
 
+  const FIXED_FIELDS = [
+    { key: "valor_mercat", label: "Valor Mercat €", isYear: false },
+    { key: "rend_inici",   label: "Rend. Inici %",  isYear: false },
+  ];
+  const YEAR_FIELDS = REND_YEARS.map(y => ({ key: String(y), label: `${y} %`, isYear: true }));
   const NUMERIC_FIELDS = [
-    { key: "valor_mercat", label: "Valor Mercat €" },
-    { key: "rend_inici",   label: "Rend. Inici %" },
-    { key: "rend2026",     label: "2026 %" },
-    { key: "rend2025",     label: "2025 %" },
-    { key: "rend2024",     label: "2024 %" },
-    { key: "rend2023",     label: "2023 %" },
-    { key: "cost_anual",   label: "Cost Anual €" },
+    ...FIXED_FIELDS,
+    ...YEAR_FIELDS,
+    { key: "cost_anual", label: "Cost Anual €", isYear: false },
   ];
 
   const th = { ...sharedStyles.th(tc), padding: "8px 10px", textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
@@ -422,7 +437,11 @@ function OverridesTab() {
                   <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{r.isin}</td>
                   {NUMERIC_FIELDS.map(f => (
                     <td key={f.key} style={td}>
-                      <InlineInput value={r[f.key]} type="number" onSave={v => save(r.isin, f.key, v)} />
+                      <InlineInput
+                        value={f.isYear ? (r.rendiment?.[f.key] ?? null) : r[f.key]}
+                        type="number"
+                        onSave={v => save(r.isin, f.key, v, f.isYear)}
+                      />
                     </td>
                   ))}
                   <td style={td}><InlineInput value={r.notes} onSave={v => save(r.isin, "notes", v)} style={{ width: 200 }} /></td>

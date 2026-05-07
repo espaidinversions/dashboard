@@ -207,12 +207,12 @@ function S2() {
       <H3>Afegir un moviment <AdminOnly /></H3>
       <UL>
         <LI>Fes clic a <strong>＋ Afegeix moviment</strong> des de qualsevol vista de transaccions privades</LI>
-        <LI>Omple el modal: fons/vehicle, categoria, data, import EUR, divisa, tipus i estructura</LI>
+        <LI>Omple el modal: fons/vehicle, data, import EUR, divisa, tipus i estructura</LI>
         <LI>Fes clic a <strong>Desa</strong>. El mes, any i exercici fiscal es deriven automàticament de la data</LI>
       </UL>
       <H3>Veure i filtrar</H3>
       <UL>
-        <LI>Utilitza els filtres d'any fiscal, tipus, estratègia i categoria a la zona Fons</LI>
+        <LI>Utilitza els filtres d'any fiscal, tipus i estratègia a la zona Fons</LI>
         <LI>La cerca global de la barra superior filtra la vista activa</LI>
         <LI>Les taules de transaccions estan paginades</LI>
         <LI>Els KPIs i el gràfic mensual sempre reflecteixen el conjunt filtrat, no només la pàgina visible</LI>

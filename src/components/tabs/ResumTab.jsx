@@ -1,8 +1,15 @@
 import React from "react";
 import ReactECharts from "../../ReactECharts.jsx";
 import { ecTheme } from "../../echartsTheme.js";
+import { TC_LIGHT } from "../../theme.js";
 
-export function ResumTab({ tc, byFy, byVcpe, byEst, vcpeCfg }) {
+export function ResumTab({
+  tc = TC_LIGHT,
+  byFy = [],
+  byVcpe = [],
+  byEst = [],
+  vcpeCfg = {},
+}) {
   return (
     <>
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 22px", marginBottom: 18, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>

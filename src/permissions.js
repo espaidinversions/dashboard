@@ -3,7 +3,7 @@ export const ACCESS_USER = "user";
 export const ACCESS_SUPERUSER = "superuser";
 
 export const ACCESS_LEVELS = [ACCESS_NONE, ACCESS_USER, ACCESS_SUPERUSER];
-export const GLOBAL_ROLES = ["user", "superuser", "admin"];
+const GLOBAL_ROLES = ["user", "superuser", "admin"];
 
 export const TOP_LEVEL_SECTION_IDS = ["alternatives", "real-estate", "mercats-publics"];
 export const ALTERNATIVES_SECTION_IDS = ["fons", "searchers", "companies", "inversions", "txlog"];
@@ -17,7 +17,7 @@ export const PUBLIC_MARKETS_SUBSECTION_IDS = [
   "mp-traçabilitat",
 ];
 export const TRANSACTION_SUBSECTION_IDS = ["tx-alt", "tx-mp"];
-export const ALL_SECTION_IDS = [
+const ALL_SECTION_IDS = [
   ...TOP_LEVEL_SECTION_IDS,
   ...ALTERNATIVES_SECTION_IDS,
   ...REAL_ESTATE_SUBSECTION_IDS,
@@ -46,7 +46,7 @@ const LEVEL_RANK = {
   [ACCESS_SUPERUSER]: 2,
 };
 
-export function normalizeAccessLevel(value, fallback = ACCESS_NONE) {
+function normalizeAccessLevel(value, fallback = ACCESS_NONE) {
   return ACCESS_LEVELS.includes(value) ? value : fallback;
 }
 
@@ -58,7 +58,7 @@ export function isLegacySuperuserRole(role) {
   return role === "superuser";
 }
 
-export function normalizeSectionId(sectionId) {
+function normalizeSectionId(sectionId) {
   if (sectionId === "transaccions") return "txlog";
   if (sectionId === "posicions") return "inversions";
   if (sectionId === "directe") return "re-directe";
@@ -70,7 +70,7 @@ export function normalizeSectionId(sectionId) {
   return sectionId;
 }
 
-export function getParentSectionId(sectionId) {
+function getParentSectionId(sectionId) {
   const normalized = normalizeSectionId(sectionId);
   return PARENT_BY_SECTION[normalized] ?? normalized;
 }

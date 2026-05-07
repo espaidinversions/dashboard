@@ -1,29 +1,29 @@
 import React, { useState, useRef, useEffect } from "react";
-import { useTheme } from "../theme.js";
+import { TC_LIGHT, useTheme } from "../theme.js";
 import { readStoredJSON, writeStoredJSON } from "../utils.js";
 
 // ── Shared style helpers ──────────────────────────────────
 export const sharedStyles = {
-  card: (tc) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10 }),
-  cardPad: (tc, pad = "20px 24px") => ({ ...sharedStyles.card(tc), padding: pad }),
-  th: (tc) => ({ padding: "10px 12px", fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
-  sec: (tc) => ({ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
-  badge: (tc) => ({ fontSize: 11, borderRadius: 4, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
-  kpi: (tc) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 140, flex: 1 }),
-  kpiLabel: (tc) => ({ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }),
-  kpiValue: (tc, valueColor) => ({ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }),
-  kpiSub: (tc) => ({ fontSize: 11, color: tc.textLight, marginTop: 4 }),
+  card: (tc = TC_LIGHT) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10 }),
+  cardPad: (tc = TC_LIGHT, pad = "20px 24px") => ({ ...sharedStyles.card(tc), padding: pad }),
+  th: (tc = TC_LIGHT) => ({ padding: "10px 12px", fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
+  sec: (tc = TC_LIGHT) => ({ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
+  badge: (_tc = TC_LIGHT) => ({ fontSize: 11, borderRadius: 4, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
+  kpi: (tc = TC_LIGHT) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 140, flex: 1 }),
+  kpiLabel: (tc = TC_LIGHT) => ({ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }),
+  kpiValue: (tc = TC_LIGHT, valueColor) => ({ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }),
+  kpiSub: (tc = TC_LIGHT) => ({ fontSize: 11, color: tc.textLight, marginTop: 4 }),
 };
 
 export const indexPageStyles = {
-  page: (tc, inline = false) => ({
+  page: (tc = TC_LIGHT, inline = false) => ({
     minHeight: inline ? undefined : "100vh",
     background: tc.bg,
     color: tc.text,
     fontFamily: "'Outfit',system-ui,sans-serif",
     fontSize: 14,
   }),
-  topBar: (tc) => ({
+  topBar: (tc = TC_LIGHT) => ({
     background: tc.card,
     borderBottom: `1px solid ${tc.border}`,
     padding: "12px 32px",
@@ -31,7 +31,7 @@ export const indexPageStyles = {
     alignItems: "center",
     gap: 16,
   }),
-  searchInput: (tc) => ({
+  searchInput: (tc = TC_LIGHT) => ({
     padding: "6px 12px",
     borderRadius: 6,
     border: `1.5px solid ${tc.border}`,
@@ -41,14 +41,14 @@ export const indexPageStyles = {
     fontFamily: "inherit",
     width: 200,
   }),
-  navRow: (tc, inline = false) => ({
+  navRow: (tc = TC_LIGHT, inline = false) => ({
     background: tc.card,
     borderBottom: `1px solid ${tc.border}`,
     padding: inline ? "0" : "0 32px",
     display: "flex",
     overflowX: "auto",
   }),
-  navItem: (tc, active = false) => ({
+  navItem: (tc = TC_LIGHT, active = false) => ({
     background: "none",
     border: "none",
     borderBottom: `2px solid ${active ? tc.green : "transparent"}`,
@@ -65,7 +65,7 @@ export const indexPageStyles = {
   contentWrap: {
     padding: "24px 32px",
   },
-  panel: (tc) => ({
+  panel: (tc = TC_LIGHT) => ({
     background: tc.card,
     border: `1px solid ${tc.border}`,
     borderRadius: 12,
@@ -75,7 +75,7 @@ export const indexPageStyles = {
   tableScroll: {
     overflowX: "auto",
   },
-  filterControl: (tc) => ({
+  filterControl: (tc = TC_LIGHT) => ({
     width: "100%",
     padding: "4px 6px",
     borderRadius: 4,
@@ -85,7 +85,7 @@ export const indexPageStyles = {
     fontSize: 11,
     fontFamily: "inherit",
   }),
-  clearButton: (tc) => ({
+  clearButton: (tc = TC_LIGHT) => ({
     background: "transparent",
     border: `1px solid ${tc.border}`,
     borderRadius: 4,
@@ -98,7 +98,7 @@ export const indexPageStyles = {
 };
 
 // ── KPI Card ─────────────────────────────────────────────
-export function KpiCard({ label, value, sub, valueColor, tc }) {
+export function KpiCard({ label, value, sub, valueColor, tc = TC_LIGHT }) {
   return (
     <div className="kpi-card card-hover" style={sharedStyles.kpi(tc)}>
       <div style={sharedStyles.kpiLabel(tc)}>{label}</div>
@@ -366,7 +366,7 @@ export function DeleteRowButton({ onDelete }) {
   );
 }
 
-export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" }) {
+export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", submitLabel = "Afegir" }) {
   const { tc } = useTheme();
   const [values, setValues] = useState(() =>
     Object.fromEntries(fields.map(f => [f.key, f.defaultValue ?? ""]))
@@ -375,6 +375,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
     Object.fromEntries(fields.filter(f => f.type === "combo").map(f => [f.key, false]))
   );
   const [error, setError] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [closing, setClosing] = useState(false);
   const handleClose = () => { setClosing(true); setTimeout(onClose, 175); };
 
@@ -398,11 +399,20 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
     background: tc.bg, color: tc.text, fontFamily: "inherit",
     outline: "none", boxSizing: "border-box",
   };
+  const inputStyleFor = (field) => ({
+    ...inp,
+    ...(typeof field.inputStyle === "function" ? field.inputStyle(values) : field.inputStyle),
+  });
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     setError(null);
-    onSave(values, setError);
+    setSaving(true);
+    try {
+      await onSave(values, setError);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -423,7 +433,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                 {f.label}
               </label>
               {f.type === "select" ? (
-                <select value={values[f.key]} onChange={e => applyFieldChange(f, e.target.value)} style={inp} disabled={f.disabled}>
+                <select value={values[f.key]} onChange={e => applyFieldChange(f, e.target.value)} style={inputStyleFor(f)} disabled={f.disabled}>
                   {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               ) : f.type === "combo" ? (
@@ -439,7 +449,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                             applyFieldChange(f, e.target.value);
                           }
                         }}
-                        style={{ ...inp, flex: 1 }}
+                        style={{ ...inputStyleFor(f), flex: 1 }}
                         disabled={f.disabled}
                       >
                         <option value="" disabled>{f.placeholder ?? "Selecciona una opció"}</option>
@@ -463,7 +473,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                         value={values[f.key]}
                         onChange={e => applyFieldChange(f, e.target.value)}
                         placeholder={f.placeholder ?? ""}
-                        style={{ ...inp, flex: 1 }}
+                        style={{ ...inputStyleFor(f), flex: 1 }}
                         disabled={f.disabled}
                       />
                       <button
@@ -484,18 +494,26 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                     onChange={e => applyFieldChange(f, e.target.value)}
                     placeholder={f.placeholder ?? ""}
                     list={`addrow-${f.key}`}
-                    style={inp}
+                    style={inputStyleFor(f)}
                     disabled={f.disabled}
                   />
                   <datalist id={`addrow-${f.key}`}>
                     {(f.options ?? []).map(o => <option key={o} value={o} />)}
                   </datalist>
                 </>
+              ) : f.type === "textarea" ? (
+                <textarea
+                  value={values[f.key]}
+                  onChange={e => applyFieldChange(f, e.target.value)}
+                  placeholder={f.placeholder ?? ""}
+                  style={{ ...inputStyleFor(f), minHeight: 88, resize: "vertical" }}
+                  disabled={f.disabled}
+                />
               ) : (
                 <input type={f.type ?? "text"} value={values[f.key]}
                   onChange={e => applyFieldChange(f, e.target.value)}
                   placeholder={f.placeholder ?? ""}
-                  style={inp}
+                  style={inputStyleFor(f)}
                   disabled={f.disabled} />
               )}
               {f.hint && (() => {
@@ -521,11 +539,12 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre" })
                 fontFamily: "inherit", fontSize: 13 }}>
               Cancel·lar
             </button>
-            <button type="submit"
+            <button type="submit" disabled={saving}
               style={{ padding: "8px 16px", borderRadius: 6, border: "none",
-                background: tc.navy, color: "#fff", cursor: "pointer",
+                background: saving ? tc.navyLight : tc.navy, color: "#fff",
+                cursor: saving ? "wait" : "pointer",
                 fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}>
-              Afegir
+              {saving ? "Desant…" : submitLabel}
             </button>
           </div>
         </form>

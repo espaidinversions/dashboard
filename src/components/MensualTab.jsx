@@ -2,8 +2,8 @@ import React, { useState, useMemo } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
-import { VCPE_CFG } from "../config.js";
-import { fmtM, fmtS } from "../utils.js";
+import { EST_CFG } from "../config.js";
+import { fmtM, fmtS, fmtSignedM } from "../utils.js";
 
 export function MensualTab({filtered, fFy}) {
   const { tc: TC, dark } = useTheme();
@@ -71,7 +71,8 @@ export function MensualTab({filtered, fFy}) {
     "Altres":         { color:TC.textLight, bg: TC.bgAlt },
   };
 
-  const vcpeBg = (vcpe) => dark ? (vcpe==="PE"?"#112030":vcpe==="VC"?"#0A2010":"#20163A") : (VCPE_CFG[vcpe]?.bg||TC.bgAlt);
+  const estBg = (est) => dark ? "#112030" : (EST_CFG[est]?.bg || TC.bgAlt);
+  const fmtMaybeSignedM = (value) => value ? fmtSignedM(value) : "—";
 
   // Dades per al gràfic de barres
   const chartData = useMemo(() => {
@@ -179,12 +180,12 @@ export function MensualTab({filtered, fFy}) {
                       {isOpen ? "▼" : "▶"}
                     </td>
                     <td style={{padding:"10px",fontWeight:700,color:TC.text,fontSize:13}}>{mes.label}</td>
-                    <td style={{padding:"10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.navy}}>{mes.calls?fmtM(mes.calls):"—"}</td>
-                    <td style={{padding:"10px",textAlign:"right",fontFamily:"monospace",fontSize:12,color:TC.green}}>{mes.dist?fmtM(mes.dist):"—"}</td>
-                    <td style={{padding:"10px",textAlign:"right",fontFamily:"monospace",fontSize:12,color:TC.greenDark}}>{mes.retorn?fmtM(mes.retorn):"—"}</td>
-                    <td style={{padding:"10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.green}}>{rebut?fmtM(rebut):"—"}</td>
+                    <td style={{padding:"10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.navy}}>{fmtMaybeSignedM(mes.calls)}</td>
+                    <td style={{padding:"10px",textAlign:"right",fontFamily:"monospace",fontSize:12,color:TC.green}}>{fmtMaybeSignedM(-mes.dist)}</td>
+                    <td style={{padding:"10px",textAlign:"right",fontFamily:"monospace",fontSize:12,color:TC.greenDark}}>{fmtMaybeSignedM(-mes.retorn)}</td>
+                    <td style={{padding:"10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.green}}>{fmtMaybeSignedM(-rebut)}</td>
                     <td style={{padding:"10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:net>=0?TC.greenDark:TC.navy}}>
-                      {net>=0?"+":""}{fmtM(net)}
+                      {fmtSignedM(net)}
                     </td>
                     <td style={{padding:"10px",textAlign:"right",fontSize:11,color:TC.textLight,fontWeight:600}}>
                       {fonsList.length}
@@ -216,16 +217,16 @@ export function MensualTab({filtered, fFy}) {
                             maxWidth:260,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}} title={f.fons}>
                             <span style={{color:TC.greenLight,marginRight:7,fontSize:10}}>└</span>{f.fons}
                           </td>
-                          <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.navy}}>{f.calls?fmtM(f.calls):"—"}</td>
-                          <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,color:TC.green}}>{f.dist?fmtM(f.dist):"—"}</td>
-                          <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,color:TC.greenDark}}>{f.retorn?fmtM(f.retorn):"—"}</td>
-                          <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.green}}>{fRebut?fmtM(fRebut):"—"}</td>
+                          <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.navy}}>{fmtMaybeSignedM(f.calls)}</td>
+                          <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,color:TC.green}}>{fmtMaybeSignedM(-f.dist)}</td>
+                          <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,color:TC.greenDark}}>{fmtMaybeSignedM(-f.retorn)}</td>
+                          <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.green}}>{fmtMaybeSignedM(-fRebut)}</td>
                           <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:fNet>=0?TC.greenDark:TC.navy}}>
-                            {fNet>=0?"+":""}{fmtM(fNet)}
+                            {fmtSignedM(fNet)}
                           </td>
                           <td style={{padding:"8px 10px",textAlign:"right"}}>
                             <div style={{display:"flex",gap:4,justifyContent:"flex-end"}}>
-                              <span style={{fontSize:10,background:vcpeBg(f.vcpe),color:VCPE_CFG[f.vcpe]?.color||TC.textMid,borderRadius:4,padding:"1px 5px",fontWeight:600}}>{f.vcpe}</span>
+                              <span style={{fontSize:10,background:estBg(f.est),color:EST_CFG[f.est]?.color||TC.textMid,borderRadius:4,padding:"1px 5px",fontWeight:600}}>{f.est}</span>
                             </div>
                           </td>
                         </tr>
@@ -239,7 +240,6 @@ export function MensualTab({filtered, fFy}) {
                                   <tr style={{background:greenRow6}}>
                                     <th style={{...th,paddingLeft:60,fontSize:9,width:110}}>Data</th>
                                     <th style={{...th,fontSize:9}}>Tipus detall</th>
-                                    <th style={{...th,fontSize:9}}>Categoria</th>
                                     <th style={{...th,textAlign:"right",fontSize:9}}>Import EUR</th>
                                     <th style={{...th,fontSize:9}}>Divisa orig.</th>
                                   </tr>
@@ -247,21 +247,14 @@ export function MensualTab({filtered, fFy}) {
                                 <tbody>
                                   {f.txs.sort((a,b)=>a.data.localeCompare(b.data)).map((tx,ti) => {
                                     const isIn = tx.eur > 0;
-                                    const cfg  = CAT_CFG_LOCAL[tx.cat] || {};
                                     return (
                                       <tr key={ti} style={{borderBottom:`1px solid ${TC.green}15`,
                                         background:ti%2===0?greenRow5:greenRow2}}>
                                         <td style={{padding:"6px 10px 6px 60px",fontSize:11,color:TC.textMid,whiteSpace:"nowrap"}}>{tx.data}</td>
                                         <td style={{padding:"6px 10px",fontSize:11,color:TC.textMid,whiteSpace:"nowrap"}}>{tx.tipus}</td>
-                                        <td style={{padding:"6px 10px"}}>
-                                          <span style={{fontSize:10,background:cfg.bg||TC.bgAlt,color:cfg.color||TC.textMid,
-                                            borderRadius:4,padding:"1px 7px",fontWeight:600,whiteSpace:"nowrap"}}>
-                                            {tx.cat}
-                                          </span>
-                                        </td>
                                         <td style={{padding:"6px 10px",textAlign:"right",fontFamily:"monospace",
                                           fontSize:12,fontWeight:700,color:isIn?TC.navy:TC.green}}>
-                                          {!isIn&&"+ "}{fmtM(Math.abs(tx.eur))}
+                                          {fmtSignedM(tx.eur)}
                                         </td>
                                         <td style={{padding:"6px 10px",fontSize:11,color:TC.textLight}}>{tx.divisa}</td>
                                       </tr>
@@ -276,7 +269,7 @@ export function MensualTab({filtered, fFy}) {
                                       </td>
                                       <td style={{padding:"5px 10px",textAlign:"right",fontFamily:"monospace",fontSize:11,fontWeight:700,
                                         color:fNet>=0?TC.greenDark:TC.navy}}>
-                                        {fNet>=0?"+":""}{fmtM(fNet)}
+                                        {fmtSignedM(fNet)}
                                       </td>
                                       <td></td>
                                     </tr>
@@ -296,12 +289,12 @@ export function MensualTab({filtered, fFy}) {
                       <td colSpan={2} style={{padding:"8px 10px 8px 14px",fontSize:11,fontWeight:700,color:TC.greenDark,background:greenRow4}}>
                         TOTAL {mes.label}
                       </td>
-                      <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.navy,background:greenRow4}}>{mes.calls?fmtM(mes.calls):"—"}</td>
-                      <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.green,background:greenRow4}}>{mes.dist?fmtM(mes.dist):"—"}</td>
-                      <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.greenDark,background:greenRow4}}>{mes.retorn?fmtM(mes.retorn):"—"}</td>
-                      <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.green,background:greenRow4}}>{rebut?fmtM(rebut):"—"}</td>
+                      <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.navy,background:greenRow4}}>{fmtMaybeSignedM(mes.calls)}</td>
+                      <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.green,background:greenRow4}}>{fmtMaybeSignedM(-mes.dist)}</td>
+                      <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.greenDark,background:greenRow4}}>{fmtMaybeSignedM(-mes.retorn)}</td>
+                      <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:TC.green,background:greenRow4}}>{fmtMaybeSignedM(-rebut)}</td>
                       <td style={{padding:"8px 10px",textAlign:"right",fontFamily:"monospace",fontSize:12,fontWeight:700,color:net>=0?TC.greenDark:TC.navy,background:greenRow4}}>
-                        {net>=0?"+":""}{fmtM(net)}
+                        {fmtSignedM(net)}
                       </td>
                       <td style={{background:greenRow4}}></td>
                     </tr>

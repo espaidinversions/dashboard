@@ -1,9 +1,10 @@
 // src/components/Sidebar.jsx
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
+import { TC_LIGHT } from "../theme.js";
 
-export const SIDEBAR_W = 220;
-export const RAIL_W    = 52;
+const SIDEBAR_W = 220;
+const RAIL_W    = 52;
 
 // ── nav tree ─────────────────────────────────────────────
 const PORTFOLI_SECTIONS = [
@@ -13,7 +14,6 @@ const PORTFOLI_SECTIONS = [
       {id:"fons",      label:"Fons",                icon:"🏦"},
       {id:"searchers", label:"Searchers",           icon:"🔍"},
       {id:"companies", label:"Participades",        icon:"🏢"},
-      {id:"posicions", label:"Totes les Posicions", icon:"📋"},
     ],
   },
   {
@@ -48,7 +48,7 @@ const BOTTOM_ITEMS = [
 ];
 
 // ── component ─────────────────────────────────────────────
-export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc, dark, isAdmin, canAccessSection, canAccessAny }) {
+export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_LIGHT, dark, isAdmin, canAccessSection, canAccessAny }) {
   const [expanded, setExpanded] = useState(new Set(["alt","re","mp"]));
   const [popover,  setPopover]  = useState(null);
 
