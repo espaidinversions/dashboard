@@ -351,8 +351,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
 
       {/* Taula pipeline */}
       <div style={{ ...tableCardStyle(TC), overflowX: "auto" }}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
-          <SectionHeader title="Pipeline de Fons" tc={TC} />
+        <SectionHeader title="Pipeline de Fons" tc={TC} action={
           <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap"}}>
             {[
               {label:"Geo",    val:fGeo,   set:setFGeo,   opts:gOpts},
@@ -372,7 +371,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
             <button onClick={exportExcel} style={{background:"transparent",border:`1.5px solid ${TC.border}`,color:TC.textMid,borderRadius:4,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:600,fontFamily:"inherit"}}>↓ Excel</button>
             {canEdit && <button onClick={()=>setForm(!form)} style={{background:TC.green,border:"none",color:"#fff",borderRadius:4,padding:"6px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>+ Afegir Fons</button>}
           </div>
-        </div>
+        } />
         {form&& canEdit &&(
           <div style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:10,padding:"12px",marginBottom:12}}>
             <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto",gap:7,alignItems:"end"}}>

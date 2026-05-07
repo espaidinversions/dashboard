@@ -5,7 +5,7 @@ import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
 import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState, formatIsoDateDMY, readStoredJSON, tvpiColor, tvpiBg, formatMultiple } from "../utils.js";
 import { GEO_NAME, SEARCHER_STATUS_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_FORM_ENTRADA_OPTIONS } from "../config.js";
-import { FlagImg, AddRowModal, DeleteRowButton, EditableCell, KpiCard, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
+import { FlagImg, AddRowModal, DeleteRowButton, EditableCell, KpiCard, tableCardStyle } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
 import { useToast } from "../toast.jsx";
@@ -124,16 +124,34 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     })
   ), [capitalCallsByNif, capitalCallsBySearcher, historicData]);
 
-  const activeRows = useMemo(
-    () => enrichedSearchers.filter((row) => {
+  const activeRows = useMemo(() => {
+    const seen = new Set();
+    return enrichedSearchers.filter((row) => {
+      if (row.isLegacy) return false;
       if (row.companiaAdquirida) return false;
       // Code 2 = "Invertit en fase de cerca" / "Invested - Search Phase"
-      if (row.statusScreeningCode != null) return row.statusScreeningCode === 2;
-      return row.statusScreening === "Invertit en fase de cerca" ||
-             row.statusScreening === "Invested - Search Phase";
-    }),
-    [enrichedSearchers]
-  );
+      const isActive = row.statusScreeningCode != null
+        ? row.statusScreeningCode === 2
+        : row.statusScreening === "Invertit en fase de cerca" || row.statusScreening === "Invested - Search Phase";
+      if (!isActive) return false;
+      // Deduplicate by id
+      const key = row.id ?? row.nom;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [enrichedSearchers]);
+
+  const legacyRows = useMemo(() => {
+    const seen = new Set();
+    return enrichedSearchers.filter((row) => {
+      if (!row.isLegacy) return false;
+      const key = row.id ?? row.nom;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  }, [enrichedSearchers]);
 
   const commitmentYearData = useMemo(() => {
     const counts = new Map();
@@ -277,6 +295,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const isSummaryView = subTab === "resum";
   const isAllView = subTab === "tots";
   const isActiveView = subTab === "actius";
+  const isLegacyView = subTab === "legacy";
 
   // ── Historic table ─────────────────────────────────────────
   const getHistoricSortValue = (row, key) => {
@@ -734,6 +753,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                     {h.label}<AArr k={h.k} />
                   </th>
                 ))}
+                {canEdit && <th style={{ ...th, textAlign:"center" }}>Legacy</th>}
               </tr>
               <tr style={{ borderBottom:`1px solid ${TC.border}` }}>
                 <th style={{ padding:"6px 10px" }} />
@@ -784,6 +804,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                 <th style={{ padding:"6px 10px" }} />
                 <th style={{ padding:"6px 10px" }} />
                 <th style={{ padding:"6px 10px" }} />
+                {canEdit && <th style={{ padding:"6px 10px" }} />}
               </tr>
             </thead>
             <tbody>
@@ -900,6 +921,15 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                         ? <EditableCell value={r.equityStake} type="number" align="right" fmt={formatEquityStake} onSave={v => saveSearcherField(r, "equityStake", v)} />
                         : formatEquityStake(r.equityStake)}
                     </td>
+                    {canEdit && (
+                      <td style={{ padding:"9px 10px", textAlign:"center" }}>
+                        <button
+                          title="Mou a Legacy"
+                          onClick={() => saveSearcherField(r, "isLegacy", true)}
+                          style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"2px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}
+                        >Legacy</button>
+                      </td>
+                    )}
                   </tr>
                 );
               })}
@@ -911,6 +941,77 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
                 <td colSpan={7} />
               </tr>
             </tfoot>
+          </table>
+        </div>
+      </div>
+      )}
+
+      {/* ── Legacy table ── */}
+      {isLegacyView && (
+      <div style={{ ...tableCardStyle(TC), marginBottom:14 }}>
+        <div style={{ ...sec, color:TC.textLight }}>
+          <SectionHeading icon="📦" color={dark ? "#1a1a2e" : "#F0EDF8"}>Searchers Legacy (Desinvertits)</SectionHeading>
+        </div>
+        <div style={{ overflowX:"auto" }}>
+          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+            <thead>
+              <tr>
+                {[
+                  { label:"Search Fund", k:"nom" },
+                  { label:"Searchers", k:"searchers" },
+                  { label:"Entrada", k:"formEntrada" },
+                  { label:"Modalitat", k:"modalitat" },
+                  { label:"Pais", k:"geo" },
+                  { label:"Ticket", k:"ticket", right:true },
+                  { label:"TVPI", k:"tvpi", right:true },
+                  { label:"IRR", k:"irr", right:true },
+                  { label:"DPI", k:"dpi", right:true },
+                  { label:"Any Inv.", k:"investmentYear", center:true },
+                  { label:"Equity Stake", k:"equityStake", right:true },
+                ].map(h => (
+                  <th key={h.k} style={{ ...th, textAlign:h.right ? "right" : h.center ? "center" : "left" }}>{h.label}</th>
+                ))}
+                {canEdit && <th style={{ ...th, textAlign:"center" }}>Actiu</th>}
+              </tr>
+            </thead>
+            <tbody>
+              {legacyRows.length === 0 && (
+                <tr><td colSpan={12} style={{ padding:"20px 10px", textAlign:"center", color:TC.textLight, fontSize:12 }}>Cap searcher marcat com a Legacy.</td></tr>
+              )}
+              {legacyRows.map((r, i) => (
+                <tr key={searcherKey(r) ?? r.nom} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt }}>
+                  <td style={{ padding:"9px 10px", fontWeight:600, color:TC.navy }}>{r.nom}</td>
+                  <td style={{ padding:"9px 10px", color:TC.textMid }}>{r.searchers || "—"}</td>
+                  <td style={{ padding:"9px 10px" }}>{r.formEntrada || "—"}</td>
+                  <td style={{ padding:"9px 10px" }}>{r.modalitat || "—"}</td>
+                  <td style={{ padding:"9px 10px", textAlign:"center" }}><FlagImg geo={r.geo} /></td>
+                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", color:TC.navyLight }}>{fmtM(r.ticket)}</td>
+                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", color:tvpiColor(r.tvpi,TC) }}>{r.tvpi != null ? formatMultiple(r.tvpi) : "—"}</td>
+                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace" }}>{r.irr != null ? `${(r.irr*100).toFixed(1)}%` : "—"}</td>
+                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace" }}>{r.dpi != null ? formatMultiple(r.dpi) : "—"}</td>
+                  <td style={{ padding:"9px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", color:TC.textMid }}>{r.investmentYear || "—"}</td>
+                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", color:TC.navyLight }}>{formatEquityStake(r.equityStake)}</td>
+                  {canEdit && (
+                    <td style={{ padding:"9px 10px", textAlign:"center" }}>
+                      <button
+                        title="Torna a Actius"
+                        onClick={() => saveSearcherField(r, "isLegacy", false)}
+                        style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"2px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}
+                      >Actiu</button>
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+            {legacyRows.length > 0 && (
+              <tfoot>
+                <tr style={{ borderTop:`2px solid ${TC.border}` }}>
+                  <td colSpan={5} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({legacyRows.length} searchers)</td>
+                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.navy }}>{fmtM(legacyRows.reduce((s,r) => s + (r.ticket ?? 0), 0))}</td>
+                  <td colSpan={canEdit ? 6 : 5} />
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
