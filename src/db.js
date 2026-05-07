@@ -1,4 +1,5 @@
 import { supabase } from "./supabase.js";
+import { apiFetchJson } from "./apiClient.js";
 import {
   buildPrivateEntitiesFromDashboardBundle,
   resolvePrivateEntity,
@@ -589,13 +590,14 @@ export async function deleteCompany(id) {
 
 /** @param {number} id */
 export async function deletePipelineDeal(id) {
-  if (!supabase) return { error: null };
-  const { data: old } = await supabase.from("pipeline").select("*").eq("id", id).single();
-  // Soft-delete: set active=false so the DB record suppresses the seed entry in
-  // mergePipelineDeals (a hard-delete lets the seed name re-appear on next load).
-  const { error } = await supabase.from("pipeline").update({ active: false }).eq("id", id);
-  if (!error) logAudit("delete", "pipeline", id, { old: old ?? null });
-  return { error };
+  // Route through API server (service key) — anon client cannot UPDATE due to RLS.
+  // Soft-deletes (active=false) so the DB record suppresses seed resurrection in mergePipelineDeals.
+  try {
+    await apiFetchJson(`/api/app?route=pipeline&id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    return { error: null };
+  } catch (err) {
+    return { error: err };
+  }
 }
 
 /** @param {string | { id?: string | null, fons?: string | null }} fund */

@@ -302,6 +302,33 @@ async function handleSearchers(req, res) {
   return res.status(200).json({ data: rowToSearcher(data) });
 }
 
+async function handlePipeline(req, res) {
+  if (!["DELETE"].includes(req.method)) {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+  const supabase = makeServiceClient();
+  const user = await verifyUser(req, supabase);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  const role = getUserRole(user);
+  if (role !== "admin" && role !== "superuser") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  if (req.method === "DELETE") {
+    const id = Number(req.query?.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Valid pipeline id is required" });
+    }
+    const { error } = await supabase
+      .from("pipeline")
+      .update({ active: false })
+      .eq("id", id);
+    if (error) throw error;
+    return res.status(200).json({ ok: true });
+  }
+}
+
 export default async function handler(req, res) {
   applySecurityHeaders(res);
   if (!enforceHttps(req, res)) return;
@@ -339,6 +366,10 @@ export default async function handler(req, res) {
     if (route === "searchers") {
       if (!await enforceRateLimit(req, res, "default")) return;
       return await handleSearchers(req, res);
+    }
+    if (route === "pipeline") {
+      if (!await enforceRateLimit(req, res, "default")) return;
+      return await handlePipeline(req, res);
     }
     return res.status(404).json({ error: "Not found" });
   } catch (error) {
