@@ -6,6 +6,7 @@ import { fmtM, fmtMonthKey } from "../utils.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { ALL_PRICE_SERIES, ESTIMATED_PRICE_ISINS } from "../data/allPrices.js";
 import { START_MONTH_2019, buildMonthGrid, getPriceScale, toMonthKey } from "../chartSeries.js";
+import { CHART_PALETTE } from "../chartColors.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 
@@ -192,7 +193,7 @@ export function PriceHistoryChart({ isin, dataCompra, transactions, valueSeries 
               type: "bar",
               yAxisIndex: 0,
               data: chartData.map(r => r.cumInflow ?? null),
-              itemStyle: { color: "#4E79A7", opacity: 0.55, borderRadius: [3, 3, 0, 0] },
+              itemStyle: { color: CHART_PALETTE[0], opacity: 0.55, borderRadius: [3, 3, 0, 0] },
               barMaxWidth: 32,
             }] : []),
             ...(acqMonth ? [{
