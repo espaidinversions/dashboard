@@ -6,6 +6,7 @@ import { fmtM, fmtMonthKey } from "../utils.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
 import { START_MONTH_2019, buildMonthGrid, forwardFillMonthValues, getPriceScale, toMonthKey } from "../chartSeries.js";
+import { MGR_COLORS, CHART_PALETTE } from "../chartColors.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 
@@ -47,11 +48,9 @@ function estimateTxValue(t) {
   return price != null ? (price * t.units) / scale : 0;
 }
 
-const MGR_COLORS = { caixa: "#2B5070", ubs: "#4E79A7", creditSuisse: "#C46B5A", bankinter: "#3DC83E", interactiveBrokers: "#7BC96F", andbank: "#6B2E7E", jpmorgan: "#8A6D3B", altres: "#BAB0AC" };
 const MGR_NAMES  = { caixa: "CaixaBank", ubs: "UBS", creditSuisse: "Credit Suisse", bankinter: "Bankinter", interactiveBrokers: "Interactive Brokers", andbank: "WAM–Andbank", jpmorgan: "JPMorgan", altres: "Altres" };
 const ASSET_COLORS = { RV: "#2B5070", RF: "#F28E2B" };
 const ASSET_NAMES  = { RV: "Renda Variable", RF: "Renda Fixa" };
-const TOP5_COLORS  = ["#4E79A7", "#F28E2B", "#E15759", "#76B7B2", "#59A14F"];
 
 /**
  * CumulativeFlowsChart
@@ -207,7 +206,7 @@ export function CumulativeFlowsChart({
     } else if (groupBy === "position") {
       topIsins.forEach((isin, i) => {
         const pos = PM_POSITIONS.find(p => p.isin === isin);
-        colorMap[isin] = TOP5_COLORS[i] ?? "#BAB0AC";
+        colorMap[isin] = CHART_PALETTE[i] ?? "#BAB0AC";
         nameMap[isin]  = pos
           ? pos.nom.replace(/\bUCITS ETF\b.*/, "ETF").replace(/\bUCITS\b.*/, "").trim()
           : isin;
