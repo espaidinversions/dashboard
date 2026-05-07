@@ -2,14 +2,15 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
-import { useTheme } from "../theme.js";
+import { TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
 import { useAuth } from "../auth.jsx";
 import { loadPMPositionOverrides, upsertPMPositionOverride } from "../db.js";
+import { useToast } from "../toast.jsx";
 
 const PM_STATIC = [...PM_MODEL.holdings.active, ...WAM_POSITIONS];
 
-function SectionHeader({ tipus, count, total, tc }) {
+function SectionHeader({ tipus, count, total, tc = TC_LIGHT }) {
   const isRV  = tipus === "RV";
   const color = isRV ? tc.navy : "#7A6000";
   const label = isRV ? "Renda Variable" : "Renda Fixa";
@@ -27,7 +28,7 @@ function SectionHeader({ tipus, count, total, tc }) {
   );
 }
 
-function PnlCell({ v, tc }) {
+function PnlCell({ v, tc = TC_LIGHT }) {
   if (v == null) {
     return <td style={{ padding: "6px 10px", textAlign: "right", color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</td>;
   }
@@ -94,12 +95,18 @@ export function HoldingsTable() {
   const { tc, dark } = useTheme();
   const { canEditSection }  = useAuth();
   const canEdit = canEditSection("mercats-publics");
+  const { toast } = useToast();
+
+  const currentYear = new Date().getFullYear();
+  const ytdKey  = `rend${currentYear}`;
+  const prevKey = `rend${currentYear - 1}`;
 
   const [custodianFilter, setCustodianFilter] = useState("all");
   const [tipusFilter,     setTipusFilter]     = useState("all");
+  const [columnFilters, setColumnFilters] = useState({ nom:"", custodian:"", tipus:"Tots", isin:"", dataCompra:"", valorMercat:"", rendInici:"", pes:"", [ytdKey]:"", [prevKey]:"", costAnual:"" });
   const [sortCol, setSortCol] = useState("valorMercat");
   const [sortDir, setSortDir] = useState("desc");
-  const [overrides, setOverrides] = useState(new Map()); // isin → {valorMercat, rendInici, ...}
+  const [overrides, setOverrides] = useState(new Map()); // isin → {valorMercat, rendInici, rendiment:{}, costAnual}
 
   // Load overrides from Supabase on mount
   useEffect(() => {
@@ -107,15 +114,26 @@ export function HoldingsTable() {
   }, []);
 
   const handleSave = useCallback(async (isin, field, value) => {
-    // Optimistic update
+    const yearMatch = /^rend(\d{4})$/.exec(field);
     setOverrides(prev => {
       const next = new Map(prev);
       const existing = next.get(isin) ?? {};
-      next.set(isin, { ...existing, [field]: value });
+      if (yearMatch) {
+        next.set(isin, { ...existing, rendiment: { ...(existing.rendiment ?? {}), [yearMatch[1]]: value } });
+      } else {
+        next.set(isin, { ...existing, [field]: value });
+      }
       return next;
     });
-    await upsertPMPositionOverride(isin, { [field]: value });
-  }, []);
+    let result;
+    if (yearMatch) {
+      const existing = overrides.get(isin);
+      result = await upsertPMPositionOverride(isin, { rendiment: { ...(existing?.rendiment ?? {}), [yearMatch[1]]: value } });
+    } else {
+      result = await upsertPMPositionOverride(isin, { [field]: value });
+    }
+    if (result?.error) toast({ message: "Error desant: " + result.error.message, type: "error" });
+  }, [overrides, toast]);
 
   const handleSort = (col) => {
     if (sortCol === col) setSortDir(d => d === "desc" ? "asc" : "desc");
@@ -131,10 +149,7 @@ export function HoldingsTable() {
       const ovf = out._overrideFields;
       if (ov.valorMercat != null) { out.valorMercat = ov.valorMercat; ovf.add("valorMercat"); }
       if (ov.rendInici   != null) { out.rendInici   = ov.rendInici;   ovf.add("rendInici");   }
-      if (ov.rend2026    != null) { out.rend2026    = ov.rend2026;    ovf.add("rend2026");    }
-      if (ov.rend2025    != null) { out.rend2025    = ov.rend2025;    ovf.add("rend2025");    }
-      if (ov.rend2024    != null) { out.rend2024    = ov.rend2024;    ovf.add("rend2024");    }
-      if (ov.rend2023    != null) { out.rend2023    = ov.rend2023;    ovf.add("rend2023");    }
+      if (ov.rendiment)           { for (const [yr, val] of Object.entries(ov.rendiment)) { if (val != null) { out[`rend${yr}`] = val; ovf.add(`rend${yr}`); } } }
       if (ov.costAnual   != null) { out.costAnual   = ov.costAnual;   ovf.add("costAnual");   }
       return out;
     });
@@ -157,6 +172,20 @@ export function HoldingsTable() {
     let all = [...mergedPositions];
     if (custodianFilter !== "all") all = all.filter(p => p.custodian === custodianFilter);
     if (tipusFilter     !== "all") all = all.filter(p => p.tipus     === tipusFilter);
+    all = all.filter((p) => {
+      if (columnFilters.nom && !String(p.nom ?? "").toLowerCase().includes(columnFilters.nom.toLowerCase())) return false;
+      if (columnFilters.custodian && !String(p.custodian ?? "").toLowerCase().includes(columnFilters.custodian.toLowerCase())) return false;
+      if (columnFilters.tipus !== "Tots" && p.tipus !== columnFilters.tipus) return false;
+      if (columnFilters.isin && !String(p.isin ?? "").toLowerCase().includes(columnFilters.isin.toLowerCase())) return false;
+      if (columnFilters.dataCompra && !String(p.dataCompra ?? "").includes(columnFilters.dataCompra)) return false;
+      if (columnFilters.valorMercat && !String(p.valorMercat ?? "").includes(columnFilters.valorMercat)) return false;
+      if (columnFilters.rendInici && !String(p.rendInici ?? "").includes(columnFilters.rendInici)) return false;
+      if (columnFilters.pes && !String(p.pes ?? "").includes(columnFilters.pes)) return false;
+      if (columnFilters[ytdKey]  && !String(p[ytdKey]  ?? "").includes(columnFilters[ytdKey]))  return false;
+      if (columnFilters[prevKey] && !String(p[prevKey] ?? "").includes(columnFilters[prevKey])) return false;
+      if (columnFilters.costAnual && !String(p.costAnual ?? "").includes(columnFilters.costAnual)) return false;
+      return true;
+    });
     all.sort((a, b) => {
       const va = a[sortCol] ?? (sortDir === "desc" ? -Infinity : Infinity);
       const vb = b[sortCol] ?? (sortDir === "desc" ? -Infinity : Infinity);
@@ -164,7 +193,7 @@ export function HoldingsTable() {
       return sortDir === "desc" ? vb - va : va - vb;
     });
     return all;
-  }, [mergedPositions, custodianFilter, tipusFilter, sortCol, sortDir]);
+  }, [mergedPositions, custodianFilter, tipusFilter, sortCol, sortDir, columnFilters]);
 
   const th = {
     padding: "8px 10px", fontSize: 10, letterSpacing: "0.09em",
@@ -246,16 +275,26 @@ export function HoldingsTable() {
               <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("pes")}>
                 Pes %{sortIcon("pes")}
               </th>
-              <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("rend2026")}>
-                YTD{sortIcon("rend2026")}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
+              <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort(ytdKey)}>
+                YTD{sortIcon(ytdKey)}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
               </th>
-              <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("rend2025")}>
-                2025{sortIcon("rend2025")}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
+              <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort(prevKey)}>
+                {currentYear - 1}{sortIcon(prevKey)}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
               </th>
               <th style={{ ...th, textAlign: "right" }} onClick={() => handleSort("costAnual")}>
                 TER{sortIcon("costAnual")}{canEdit && <span style={{ marginLeft: 3, fontSize: 8, opacity: 0.5 }}>✏</span>}
               </th>
               <th style={{ ...th, textAlign: "center" }}>MS</th>
+            </tr>
+            <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
+              <th style={{ padding: "6px 10px" }}><input value={columnFilters.nom} onChange={e => setColumnFilters(v => ({ ...v, nom: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><input value={columnFilters.custodian} onChange={e => setColumnFilters(v => ({ ...v, custodian: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              <th style={{ padding: "6px 10px" }}><select value={columnFilters.tipus} onChange={e => setColumnFilters(v => ({ ...v, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots","RV","RF"].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+              <th style={{ padding: "6px 10px" }}><input value={columnFilters.isin} onChange={e => setColumnFilters(v => ({ ...v, isin: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              {["dataCompra","valorMercat","rendInici","pes",ytdKey,prevKey,"costAnual"].map((key) => (
+                <th key={key} style={{ padding: "6px 10px" }}><input value={columnFilters[key] ?? ""} onChange={e => setColumnFilters(v => ({ ...v, [key]: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              ))}
+              <th style={{ padding: "6px 10px", textAlign:"center" }}>{Object.values(columnFilters).some(v => v !== "" && v !== "Tots") ? <button onClick={() => setColumnFilters({ nom:"", custodian:"", tipus:"Tots", isin:"", dataCompra:"", valorMercat:"", rendInici:"", pes:"", [ytdKey]:"", [prevKey]:"", costAnual:"" })} style={{ background:"transparent", border:`1px solid ${tc.border}`, borderRadius:4, padding:"2px 8px", cursor:"pointer", fontSize:10, color:tc.textMid, fontFamily:"inherit" }}>netejar</button> : null}</th>
             </tr>
           </thead>
           <tbody>
@@ -319,37 +358,37 @@ export function HoldingsTable() {
                     {p.pes != null ? p.pes.toFixed(1) + "%" : "—"}
                   </td>
 
-                  {/* Editable: rend2026 */}
+                  {/* Editable: YTD (current year) */}
                   <EditableCell
-                    value={p.rend2026}
+                    value={p[ytdKey]}
                     canEdit={canEdit}
-                    onSave={v => handleSave(p.isin, "rend2026", v)}
+                    onSave={v => handleSave(p.isin, ytdKey, v)}
                     renderValue={() => {
-                      const v = p.rend2026;
+                      const v = p[ytdKey];
                       if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
                       const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
                       const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
                       return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>
                         {(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}
-                        {p._overrideFields?.has("rend2026") && <OverrideBadge />}
+                        {p._overrideFields?.has(ytdKey) && <OverrideBadge />}
                       </span>;
                     }}
                     td={{ padding: "6px 10px", textAlign: "right" }}
                   />
 
-                  {/* Editable: rend2025 */}
+                  {/* Editable: previous year */}
                   <EditableCell
-                    value={p.rend2025}
+                    value={p[prevKey]}
                     canEdit={canEdit}
-                    onSave={v => handleSave(p.isin, "rend2025", v)}
+                    onSave={v => handleSave(p.isin, prevKey, v)}
                     renderValue={() => {
-                      const v = p.rend2025;
+                      const v = p[prevKey];
                       if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
                       const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
                       const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
                       return <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg2, borderRadius: 4, padding: "1px 5px" }}>
                         {(v >= 0 ? "+" : "") + v.toFixed(2) + "%"}
-                        {p._overrideFields?.has("rend2025") && <OverrideBadge />}
+                        {p._overrideFields?.has(prevKey) && <OverrideBadge />}
                       </span>;
                     }}
                     td={{ padding: "6px 10px", textAlign: "right" }}

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import * as XLSX from "xlsx";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
-import { fmtM, usePersistedState } from "../utils.js";
+import { fmtM, usePersistedState, readStoredJSON } from "../utils.js";
 import { useTheme } from "../theme.js";
 import { STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE, PIPELINE_STATUS_OPTIONS, PIPELINE_CANAL_OPTIONS } from "../config.js";
 import { EmptyState, EditableCell } from "./SharedComponents.jsx";
@@ -85,7 +85,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   const gOpts = ["Tots",...new Set(funds.map(f=>f.geography))];
   const sOpts = ["Tots",...new Set(funds.map(f=>f.strategy))];
 
-  const getLS = key => { try { return JSON.parse(localStorage.getItem(`copts_${key}`) || "[]"); } catch { return []; } };
+  const getLS = key => readStoredJSON(`copts_${key}`, []);
 
   const BASE_SECTORS = ["Software","Generalista","B2B Services","Healthcare","Software / B2B"];
 
@@ -133,7 +133,21 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   const isHl = (type,name) => !chartF||(chartF.type===type&&chartF.value===name);
   const sort=(k)=>{if(sk===k)setSd(d=>d==="asc"?"desc":"asc");else{setSk(k);setSd("asc");}};
   const Arr=({k})=><span style={{marginLeft:3,opacity:sk===k?1:0.2,fontSize:9}}>{sk===k&&sd==="desc"?"▼":"▲"}</span>;
-  const toggle=(id)=>setFundsAndSync(p=>p.map(f=>f.id===id?{...f,active:!f.active}:f));
+  const toggle = async (id) => {
+    let updatedDeal = null;
+    setFundsAndSync(p => {
+      const next = p.map(f => {
+        if (f.id !== id) return f;
+        updatedDeal = { ...f, active: !f.active };
+        return updatedDeal;
+      });
+      return next;
+    });
+    if (updatedDeal) {
+      const { error } = await upsertPipelineDeal(updatedDeal);
+      if (error) toast({ message: "Error desant deal: " + error.message, type: "error" });
+    }
+  };
   const del = async (id) => {
     const { error } = await deletePipelineDeal(id);
     if (error) { toast({ message: "Error eliminant deal: " + error.message, type: "error" }); return; }
@@ -419,7 +433,15 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
                       {f.active&&<span style={{color:"#fff",fontSize:9,fontWeight:900}}>✓</span>}
                     </div>
                   </td>
-                  <td style={{padding:"9px 10px",fontWeight:600,color:TC.text,whiteSpace:"nowrap"}}>{f.name}</td>
+                  <td style={{padding:"9px 10px",fontWeight:600,color:TC.text,whiteSpace:"nowrap"}}>
+                    {canEdit ? (
+                      <EditableCell
+                        value={f.name}
+                        onSave={v => upd(f.id, "name", v)}
+                        style={{ minWidth: 160, whiteSpace: "nowrap" }}
+                      />
+                    ) : f.name}
+                  </td>
                   <td style={{padding:"9px 10px",fontFamily:"monospace",fontWeight:700,color:TC.navy,whiteSpace:"nowrap"}}>
                     {cur==="EUR"?`€${toEUR(f.amount,f.currency).toFixed(2)}M`:`$${toUSD(f.amount,f.currency).toFixed(2)}M`}
                     <span style={{fontSize:10,color:TC.textLight,marginLeft:4,fontFamily:"inherit",fontWeight:400}}>({f.currency==="EUR"?"€":"$"}{f.amount}M)</span>
