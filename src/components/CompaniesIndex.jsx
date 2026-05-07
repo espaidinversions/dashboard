@@ -5,6 +5,7 @@ import { fmtM, formatMultiple, multipleColor, readStoredFlag, usePersistedState 
 import { Badge, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCompanies } from "../db.js";
 import { isActualCompany } from "../data/privateCompanyModel.js";
+import { SF_STRATEGY_ADQUISICIO, STRATEGY_PARTICIPADA_ALTRES } from "../data/searchFundSnapshotModel.js";
 
 const TIPUS_CFG = {
   "SF": { color: "#28A029", bg: "#E8F8E8" },
@@ -37,30 +38,34 @@ export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "
     });
   }, [setCompanies]);
 
-  // Set of vehicle_ids that appear in SF capital calls — used to infer origin
-  // when company.tipus is not set or may be stale.
-  const sfVehicleIds = useMemo(() => {
-    const s = new Set();
+  // Map vehicle_id → strategy, derived from capital calls (est field).
+  // Used to infer company origin when company.tipus is missing or stale.
+  const tipusFromEst = useMemo(() => {
+    const m = new Map();
     (Array.isArray(rawCC) ? rawCC : []).forEach((row) => {
-      if (row?.vcpe === "SF" && row?.vehicle_id) s.add(String(row.vehicle_id));
+      if (!row?.vehicle_id) return;
+      const id = String(row.vehicle_id);
+      const est = row?.est;
+      if (est === SF_STRATEGY_ADQUISICIO) m.set(id, "SF");
+      else if (est === STRATEGY_PARTICIPADA_ALTRES && !m.has(id)) m.set(id, "PE");
     });
-    return s;
+    return m;
   }, [rawCC]);
 
   const rows = useMemo(() =>
     companies.filter(isActualCompany).map(c => {
-      const txSf = sfVehicleIds.has(String(c.id ?? ""));
-      // Effective tipus: stored value takes priority; fall back to transaction inference.
-      const effectiveTipus = c.tipus || (txSf ? "SF" : null);
+      const inferredTipus = tipusFromEst.get(String(c.id ?? "")) ?? null;
+      // Stored tipus takes priority; fall back to estrategia inference.
+      const effectiveTipus = c.tipus || inferredTipus;
       return {
         ...c,
         effectiveTipus,
-        tipusFromTx: !c.tipus && txSf, // inferred from transactions, not stored
+        tipusFromTx: !c.tipus && !!inferredTipus, // inferred from transactions, not stored
         dpiMultiple: c.ticket > 0 && c.dpiEur != null ? c.dpiEur / c.ticket : null,
         rvpiMultiple: c.ticket > 0 && c.rvpiEur != null ? c.rvpiEur / c.ticket : null,
       };
     }),
-  [companies, sfVehicleIds]);
+  [companies, tipusFromEst]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
