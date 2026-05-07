@@ -119,7 +119,8 @@ CREATE TABLE IF NOT EXISTS searchers (
   dpi               NUMERIC,
   equity_stake      NUMERIC,
   nif               TEXT,
-  is_mock           BOOLEAN DEFAULT false
+  is_mock           BOOLEAN DEFAULT false,
+  is_legacy         BOOLEAN DEFAULT false
 );
 
 -- ── Public Markets — manual transactions ──────────────────

@@ -445,6 +445,7 @@ function Dashboard() {
     { id: "resum", label: "Resum" },
     { id: "tots", label: "Tots" },
     { id: "actius", label: "Actius" },
+    { id: "legacy", label: "Legacy" },
     { id: "transaccions", label: "Transaccions" },
   ]), []);
   const COMPANIES_SUBTABS = useMemo(() => ([

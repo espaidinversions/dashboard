@@ -1,0 +1,1 @@
+ALTER TABLE searchers ADD COLUMN IF NOT EXISTS is_legacy BOOLEAN DEFAULT false;
