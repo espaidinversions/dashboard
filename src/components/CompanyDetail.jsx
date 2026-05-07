@@ -7,7 +7,7 @@ import { loadCompanies, upsertCompany } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, slugify, usePersistedState, formatMultiple, multipleColor, readStoredFlag } from "../utils.js";
-import { EditableCell, FlagImg, Logo, KpiCard } from "./SharedComponents.jsx";
+import { EditableCell, FlagImg, Logo, KpiCard, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 
 function MetricChart({ title, data, actualKey, budgetKey, ltmKey, color, view, tc, withMargin }) {
   const isLTM = view === "ltm" && ltmKey != null;
@@ -318,7 +318,7 @@ function CompanyDetailInner() {
 
         {/* Row 1 — Investment KPIs */}
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          <KpiCard label="Ticket"        value={fmtM(ticket)} tc={tc} />
+          <KpiCard label="Ticket" value={fmtM(ticket)} tc={tc} hero />
           <KpiCard label="TVPI"          value={formatMultiple(tvpi)} valueColor={tvpiColor} tc={tc} />
           <KpiCard label="RVPI"          value={fmtM(rvpiEur ?? 0)} tc={tc} />
           <KpiCard label="DPI"           value={fmtM(dpiEur ?? 0)} tc={tc} />
@@ -376,13 +376,13 @@ function CompanyDetailInner() {
 
         {/* Quarter data table (editable) */}
         {quarters.length > 0 && (
-          <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", overflowX: "auto" }}>
-            <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 }}>Dades trimestrals</div>
+          <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
+            <SectionHeader title="Dades trimestrals" tc={tc} />
             <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 600 }}>
               <thead>
                 <tr>
                   {["Trimestre", "Ingressos", "EBITDA", "DFN", "Ing. Pres.", "EBITDA Pres.", "DFN Pres."].map(h => (
-                    <th key={h} style={{ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, padding: "4px 8px", textAlign: "right", whiteSpace: "nowrap" }}>{h}</th>
+                    <th key={h} style={{ padding: "9px 14px", fontSize: 10, fontWeight: 700, color: tc.navyLight ?? tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em", background: "#F7FAFC", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" }}>{h}</th>
                   ))}
                 </tr>
                 <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
@@ -499,8 +499,8 @@ function CompanyDetailInner() {
         )}
 
         {/* Entry info */}
-        <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
-          <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 }}>Entrada</div>
+        <div style={{ ...tableCardStyle(tc) }}>
+          <SectionHeader title="Entrada" tc={tc} />
           <div style={{ display: "flex", gap: 32, flexWrap: "wrap" }}>
             {[
               ["Data d'entrada",   dataCompr || "—"],
