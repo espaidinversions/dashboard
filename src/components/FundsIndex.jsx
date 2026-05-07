@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { VCPE_CFG, EST_CFG, VEHICLE_TIPUS_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, readStoredJSON, writeStoredJSON, readStoredFlag, formatMultiple, multipleColor } from "../utils.js";
-import { Badge, EditableCell, DeleteRowButton, indexPageStyles } from "./SharedComponents.jsx";
+import { Badge, EditableCell, DeleteRowButton, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { upsertFundMeta, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
@@ -255,18 +255,19 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
         {sorted.length === 0
           ? <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
           : (
-          <div style={indexPageStyles.panel(tc)}>
-            <div style={indexPageStyles.tableScroll}>
+          <>
+            <SectionHeader title="Vehicles" count={filtered.length} tc={tc} />
+            <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: tc.bgAlt }}>
                   {COLS.map(({ k, label, align, title }) => (
                     <th key={k} onClick={() => toggleSort(k)} title={title}
-                      style={{ padding: "10px 12px", textAlign: align, fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                      style={{ padding: "9px 14px", fontSize: 10, fontWeight: 700, color: tc.navyLight ?? tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em", background: "#F7FAFC", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap", userSelect: "none", textAlign: align, cursor: "pointer" }}>
                       {label}<SortArrow k={k} />
                     </th>
                   ))}
-                  {canEditAny && <th style={{ width: 40 }} />}
+                  {canEditAny && <th style={{ width: 40, padding: "9px 14px", fontSize: 10, fontWeight: 700, color: tc.navyLight ?? tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em", background: "#F7FAFC", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap", userSelect: "none" }} />}
                 </tr>
                 <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
                   <th style={{ padding: "6px 12px" }}>
@@ -374,7 +375,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
               </tbody>
             </table>
             </div>
-          </div>
+          </>
           )
         }
       {canEditAny && (
