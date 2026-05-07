@@ -5,6 +5,7 @@ import { fmtM, fmtMonthKey } from "../../utils.js";
 import { CumulativeFlowsChart } from "../CumulativeFlowsChart.jsx";
 import { FilterPills } from "./PublicMarketsFilters.jsx";
 import { AREA_COLORS, KpiCard, MGR_COLORS, pctFmt } from "./PublicMarketsShared.jsx";
+import { SectionHeader } from "../SharedComponents.jsx";
 
 export function PublicMarketsSummarySection({
   tc,
@@ -31,8 +32,9 @@ export function PublicMarketsSummarySection({
 }) {
   return (
     <>
+      <SectionHeader title="Resum" tc={tc} />
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <KpiCard label="Total Patrimoni" value={fmtM(total)} sub="Mercats Públics" tc={tc} />
+        <KpiCard label="Total Patrimoni" value={fmtM(total)} sub="Mercats Públics" tc={tc} hero />
         <KpiCard label="Renda Variable" value={fmtM(totalRV)} sub={total > 0 ? `${(totalRV / total * 100).toFixed(1)}% del total` : "—"} tc={tc} />
         <KpiCard label="Renda Fixa" value={fmtM(totalRF)} sub={total > 0 ? `${(totalRF / total * 100).toFixed(1)}% del total` : "—"} tc={tc} />
         <KpiCard label="YTD Global" value={pctFmt(ytdWeighted)} sub="Ponderat per AUM" tc={tc} valueColor={ytdWeighted >= 0 ? tc.green : tc.red} />

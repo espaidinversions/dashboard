@@ -1,6 +1,7 @@
 import React from "react";
 import { MGR_COLORS as _MGR_COLORS } from "../../chartColors.js";
 import { TC_LIGHT } from "../../theme.js";
+import { KpiCard as _KpiCard } from "../SharedComponents.jsx";
 import { PM_MODEL } from "../../data/publicMarketsModel.js";
 import { WAM_POSITIONS } from "../../data/wamPositions.js";
 
@@ -82,28 +83,8 @@ export function getMgrPositions(mgrId) {
   return [...active, ...discontinued];
 }
 
-export function KpiCard({ label, value, sub, tc = TC_LIGHT, valueColor }) {
-  return (
-    <div
-      className="kpi-card card-hover"
-      style={{
-        background: tc.card,
-        border: `1px solid ${tc.border}`,
-        borderRadius: 10,
-        padding: "16px 20px",
-        minWidth: 160,
-        flex: 1,
-      }}
-    >
-      <div style={{ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }}>
-        {label}
-      </div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }}>
-        {value}
-      </div>
-      {sub ? <div style={{ fontSize: 11, color: tc.textLight, marginTop: 4 }}>{sub}</div> : null}
-    </div>
-  );
+export function KpiCard({ label, value, sub, tc = TC_LIGHT, valueColor, hero = false }) {
+  return <_KpiCard label={label} value={value} sub={sub} tc={tc} valueColor={valueColor} hero={hero} />;
 }
 
 export function PctChip({ v, tc = TC_LIGHT }) {
