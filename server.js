@@ -487,9 +487,6 @@ app.post("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin" 
   if (!email) return sendJson(res, 400, { error: "Email required" });
   if (!isValidEmail(email)) return sendJson(res, 400, { error: "Invalid email" });
   if (!isAllowedRole(role)) return sendJson(res, 400, { error: "Invalid role" });
-  if (role !== "user" && getUserRole(req.user) !== "admin") {
-    return sendJson(res, 403, { error: "Assigning elevated roles requires admin" });
-  }
 
   const { data: setting } = await supabase
     .from("app_settings")
@@ -528,9 +525,6 @@ app.patch("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin"
   const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
   const updates = {};
   if (role !== undefined) {
-    if (getUserRole(req.user) !== "admin") {
-      return sendJson(res, 403, { error: "Role changes require admin" });
-    }
     if (!isAllowedRole(role)) return sendJson(res, 400, { error: "Invalid role" });
     updates.app_metadata = { role };
   }
@@ -547,9 +541,6 @@ app.patch("/api/admin/users/:id", withGuard({ auth: "admin-only", rateLimit: "ad
   const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
   const updates = {};
   if (role !== undefined) {
-    if (getUserRole(req.user) !== "admin") {
-      return sendJson(res, 403, { error: "Role changes require admin" });
-    }
     if (!isAllowedRole(role)) return sendJson(res, 400, { error: "Invalid role" });
     updates.app_metadata = { role };
   }
