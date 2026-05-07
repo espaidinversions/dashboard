@@ -1,4 +1,4 @@
-import { getUserRole, isAllowedRole, makeServiceClient, verifyAdmin, verifyAdminOnly } from "../../_adminAuth.js";
+import { getUserRole, isAllowedRole, makeServiceClient, verifyAdminOnly } from "../../_adminAuth.js";
 import {
   applySecurityHeaders,
   enforceCors,
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
 
   try {
     const supabase = makeServiceClient();
-    const admin = await verifyAdmin(req, supabase);
+    const admin = await verifyAdminOnly(req, supabase);
     if (!admin) return res.status(403).json({ error: "Forbidden" });
 
     const id = sanitizeText(req.query.id, { maxLength: 128 });

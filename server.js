@@ -4,7 +4,7 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { createClient } from "@supabase/supabase-js";
 import { getLatestDataVersion } from "./api/_dataVersion.js";
-import { getUserRole, isAllowedRole, isValidEmail, makeServiceClient, verifyAdmin, verifyUser } from "./api/_adminAuth.js";
+import { getUserRole, isAllowedRole, isValidEmail, makeServiceClient, verifyAdmin, verifyAdminOnly, verifyUser } from "./api/_adminAuth.js";
 import {
   ValidationError,
   applySecurityHeaders,
@@ -21,6 +21,13 @@ import {
   toFiniteNumber,
   toInteger,
 } from "./api/_security.js";
+import {
+  ACCESS_SUPERUSER,
+  buildSectionAccessMap,
+  hasSectionAccess,
+} from "./src/permissions.js";
+import { searcherToRow, rowToSearcher } from "./src/data/mappers.js";
+import { normalizeSearcherName } from "./src/data/searcherModel.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DATA  = join(__dirname, "src/data");
@@ -163,6 +170,10 @@ function normalizeCapitalCallsCsv(csv) {
       est: sanitizeText(record.est, { maxLength: 80 }),
       eur: toFiniteNumber(record.eur, { allowNull: false, min: -1e12, max: 1e12 }),
       divisa: sanitizeText(record.divisa, { maxLength: 12 }).toUpperCase(),
+      comentaris: sanitizeText(record.comentaris, { maxLength: 1000 }) || null,
+      amount_native: toFiniteNumber(record.amount_native, { allowNull: true, min: -1e12, max: 1e12 }),
+      fx_rate: toFiniteNumber(record.fx_rate, { allowNull: true, min: 0, max: 100 }),
+      fx_source: sanitizeText(record.fx_source, { maxLength: 80 }) || null,
     };
   });
 
@@ -170,6 +181,36 @@ function normalizeCapitalCallsCsv(csv) {
     csv: [headers.join(","), ...lines.slice(1)].join("\n"),
     rows,
   };
+}
+
+async function fetchEcbFxRate(date, base, quote) {
+  const endPeriod = ensureIsoDate(date, "FX date");
+  const baseCurrency = sanitizeText(base, { maxLength: 3 }).toUpperCase();
+  const quoteCurrency = sanitizeText(quote, { maxLength: 3 }).toUpperCase();
+  if (!/^[A-Z]{3}$/.test(baseCurrency) || !/^[A-Z]{3}$/.test(quoteCurrency)) {
+    throw new ValidationError("Currencies must be ISO-3 codes");
+  }
+  if (baseCurrency === quoteCurrency) {
+    return { rate: 1, observedAt: endPeriod, source: "identity" };
+  }
+
+  const seriesKey = `D.${baseCurrency}.${quoteCurrency}.SP00.A`;
+  const url = `https://data-api.ecb.europa.eu/service/data/EXR/${seriesKey}?endPeriod=${encodeURIComponent(endPeriod)}&lastNObservations=1&format=csvdata`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new ValidationError(`ECB FX request failed (${response.status})`);
+  }
+  const csv = await response.text();
+  const lines = csv.trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) {
+    throw new ValidationError("ECB returned no FX data for the requested date");
+  }
+  const headers = parseCsvLine(lines[0]);
+  const values = parseCsvLine(lines[lines.length - 1]);
+  const row = Object.fromEntries(headers.map((header, index) => [header, values[index] ?? ""]));
+  const rate = toFiniteNumber(row.OBS_VALUE, { allowNull: false, min: 0.000001, max: 100 });
+  const observedAt = sanitizeText(row.TIME_PERIOD, { maxLength: 10 }) || endPeriod;
+  return { rate, observedAt, source: "ecb" };
 }
 
 function errorResponse(res, error, context) {
@@ -194,11 +235,34 @@ function withGuard({ auth = "none", rateLimit = "public" }, handler) {
         user = await verifyAdmin(req, supabase);
         if (!user) return sendJson(res, 403, { error: "Forbidden" });
       }
+      if (auth === "admin-only") {
+        user = await verifyAdminOnly(req, supabase);
+        if (!user) return sendJson(res, 403, { error: "Forbidden" });
+      }
       return await handler(req, res, { supabase, user });
     } catch (error) {
       return errorResponse(res, error, `[${req.method}] ${req.path}`);
     }
   };
+}
+
+async function canWriteSearchers(supabase, user) {
+  const role = getUserRole(user);
+  if (role === "admin" || role === "superuser") return true;
+
+  const { data, error } = await supabase
+    .from("user_permissions")
+    .select("denied_sections, section_roles")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (error) throw error;
+
+  const accessMap = buildSectionAccessMap({
+    role,
+    sectionRoles: data?.section_roles,
+    deniedSections: data?.denied_sections,
+  });
+  return hasSectionAccess(accessMap, "searchers", ACCESS_SUPERUSER);
 }
 
 // ── POST /api/pipeline ────────────────────────────────────
@@ -254,6 +318,14 @@ app.get("/api/eur-usd", withGuard({ auth: "user", rateLimit: "public" }, async (
   }
 }));
 
+app.get("/api/fx-rate", withGuard({ auth: "user", rateLimit: "public" }, async (req, res) => {
+  const date = String(req.query?.date ?? "");
+  const base = String(req.query?.base ?? "");
+  const quote = String(req.query?.quote ?? "EUR");
+  const payload = await fetchEcbFxRate(date, base, quote);
+  return res.json(payload);
+}));
+
 // ── GET /api/auth-settings ────────────────────────────────
 // Returns app-wide auth settings such as the registration domain allowlist.
 
@@ -282,8 +354,116 @@ app.get("/api/data-version", withGuard({ auth: "user", rateLimit: "public" }, as
   return res.json({ version: getLatestDataVersion(SRC_DATA) });
 }));
 
+// ── POST /api/searchers ───────────────────────────────────
+
+app.all("/api/searchers", withGuard({ auth: "user", rateLimit: "sensitive" }, async (req, res, { supabase, user }) => {
+  if (!["POST", "DELETE"].includes(req.method)) {
+    return sendJson(res, 405, { error: "Method not allowed" });
+  }
+  const canWrite = await canWriteSearchers(supabase, user);
+  if (!canWrite) return sendJson(res, 403, { error: "Forbidden" });
+
+  if (req.method === "DELETE") {
+    const id = Number(req.query?.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return sendJson(res, 400, { error: "Valid searcher id is required" });
+    }
+    const { error } = await supabase
+      .from("searchers")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
+    return res.json({ ok: true });
+  }
+
+  if (String(req.query?.action ?? "") === "sync-capital-calls") {
+    const sourceRows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+    const { data: existing, error: existingError } = await supabase
+      .from("searchers")
+      .select("nom,nif")
+      .order("nom");
+    if (existingError) throw existingError;
+
+    const existingNames = new Set(
+      (existing ?? [])
+        .map((row) => normalizeSearcherName(row?.nom))
+        .filter(Boolean)
+    );
+    const existingVehicleIds = new Set(
+      (existing ?? [])
+        .map((row) => String(row?.nif ?? "").trim())
+        .filter(Boolean)
+    );
+    const pending = new Map();
+
+    sourceRows.forEach((row) => {
+      if (row?.vcpe !== "SF") return;
+      const nom = String(row?.fons ?? "").trim();
+      if (!nom) return;
+      const vehicleId = String(row?.vehicle_id ?? row?.id ?? "").trim() || null;
+      const nameKey = normalizeSearcherName(nom);
+      if (!nameKey) return;
+      if (existingNames.has(nameKey)) return;
+      if (vehicleId && existingVehicleIds.has(vehicleId)) return;
+      const candidateKey = vehicleId || nameKey;
+      const current = pending.get(candidateKey) ?? {
+        nom,
+        tipus: null,
+        modalitat: null,
+        geo: null,
+        statusScreening: "Invertit en fase de cerca",
+        formEntrada: "Search Capital",
+        introPer: null,
+        searcher1: null,
+        searcher2: null,
+        escola1: null,
+        escola2: null,
+        ticket: null,
+        dataInici: null,
+        dataCompr: null,
+        mesosCercant: null,
+        equityStake: null,
+        isMock: false,
+        nif: vehicleId,
+      };
+      const date = String(row?.data ?? "").slice(0, 10);
+      if (date && (!current.dataInici || date < current.dataInici)) current.dataInici = date;
+      if ((row?.eur ?? 0) > 0 && ["Compromís", "Capital Call"].includes(row?.cat)) {
+        if (!current.dataCompr || (date && date < current.dataCompr)) {
+          current.dataCompr = date || current.dataCompr;
+          current.ticket = Number(row?.eur ?? 0) || current.ticket;
+        }
+      }
+      pending.set(candidateKey, current);
+    });
+
+    const rowsToInsert = [...pending.values()];
+    if (rowsToInsert.length) {
+      const { error } = await supabase
+        .from("searchers")
+        .insert(rowsToInsert.map(searcherToRow));
+      if (error) throw error;
+    }
+    return res.json({ inserted: rowsToInsert.length });
+  }
+
+  const row = searcherToRow(req.body ?? {});
+  if (!String(row.nom ?? "").trim()) {
+    return sendJson(res, 400, { error: "Nom is required" });
+  }
+
+  const { data, error } = await supabase
+    .from("searchers")
+    .insert(row)
+    .select()
+    .single();
+  if (error) throw error;
+
+  return res.json({ data: rowToSearcher(data) });
+}));
+
 // ── GET /api/admin/users ──────────────────────────────────
-app.get("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+app.get("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   const { page, pageSize, offset } = parsePagination(req.query, { defaultPageSize: 25, maxPageSize: 100 });
   const { data, error } = await supabase.auth.admin.listUsers();
   if (error) throw error;
@@ -301,7 +481,7 @@ app.get("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, asy
 }));
 
 // ── POST /api/admin/users ─────────────────────────────────
-app.post("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+app.post("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   const email = sanitizeEmail(req.body?.email);
   const role = req.body?.role ? sanitizeText(req.body.role, { maxLength: 20 }) : "user";
   if (!email) return sendJson(res, 400, { error: "Email required" });
@@ -340,7 +520,7 @@ app.post("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, as
 }));
 
 // ── PATCH /api/admin/users?id=:id ─────────────────────────
-app.patch("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+app.patch("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   const id = sanitizeText(req.query?.id, { maxLength: 128 });
   if (!id) return sendJson(res, 400, { error: "User id required" });
 
@@ -361,7 +541,7 @@ app.patch("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, a
 }));
 
 // ── PATCH /api/admin/users/:id ────────────────────────────
-app.patch("/api/admin/users/:id", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+app.patch("/api/admin/users/:id", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   const id = sanitizeText(req.params.id, { maxLength: 128 });
   const role = req.body?.role !== undefined ? sanitizeText(req.body.role, { maxLength: 20 }) : undefined;
   const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
@@ -380,7 +560,7 @@ app.patch("/api/admin/users/:id", withGuard({ auth: "admin", rateLimit: "admin" 
 }));
 
 // ── DELETE /api/admin/users?id=:id ────────────────────────
-app.delete("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+app.delete("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   const id = sanitizeText(req.query?.id, { maxLength: 128 });
   if (!id) return sendJson(res, 400, { error: "User id required" });
 
@@ -396,7 +576,7 @@ app.delete("/api/admin/users", withGuard({ auth: "admin", rateLimit: "admin" }, 
 }));
 
 // ── DELETE /api/admin/users/:id ───────────────────────────
-app.delete("/api/admin/users/:id", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+app.delete("/api/admin/users/:id", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   const id = sanitizeText(req.params.id, { maxLength: 128 });
   const { data: allUsers } = await supabase.auth.admin.listUsers();
   const admins = (allUsers?.users ?? []).filter(user => getUserRole(user) === "admin");
@@ -410,7 +590,7 @@ app.delete("/api/admin/users/:id", withGuard({ auth: "admin", rateLimit: "admin"
 }));
 
 // ── GET/PATCH /api/admin/settings/allowed-domains ────────
-app.get("/api/admin/settings/allowed-domains", withGuard({ auth: "admin", rateLimit: "admin" }, async (_req, res, { supabase }) => {
+app.get("/api/admin/settings/allowed-domains", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (_req, res, { supabase }) => {
   const { data, error } = await supabase
     .from("app_settings")
     .select("value")
@@ -423,7 +603,7 @@ app.get("/api/admin/settings/allowed-domains", withGuard({ auth: "admin", rateLi
   return res.json({ domains });
 }));
 
-app.patch("/api/admin/settings/allowed-domains", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+app.patch("/api/admin/settings/allowed-domains", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   if (!Array.isArray(req.body?.domains)) {
     return sendJson(res, 400, { error: "domains must be an array" });
   }
@@ -442,7 +622,7 @@ app.patch("/api/admin/settings/allowed-domains", withGuard({ auth: "admin", rate
 }));
 
 // ── GET /api/admin/audit-log ──────────────────────────────
-app.get("/api/admin/audit-log", withGuard({ auth: "admin", rateLimit: "admin" }, async (req, res, { supabase }) => {
+app.get("/api/admin/audit-log", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   const { page, pageSize } = parsePagination(req.query, { defaultPageSize: 50, maxPageSize: 200 });
   const user = req.query?.user ? sanitizeText(req.query.user, { maxLength: 320 }) : "";
   const table = req.query?.table ? sanitizeText(req.query.table, { maxLength: 80 }) : "";
@@ -493,7 +673,7 @@ if (process.env.NODE_ENV === "production") {
   const DIST = join(__dirname, "dist");
   app.use(express.static(DIST));
   app.use(express.static(join(__dirname, "public")));
-  app.get("*", (req, res) => res.sendFile(join(DIST, "index.html")));
+  app.get("/{*path}", (req, res) => res.sendFile(join(DIST, "index.html")));
 }
 
 // ── Raw-data file watcher ─────────────────────────────────
@@ -517,7 +697,11 @@ if (existsSync(RAW_DATA)) {
           headers.forEach((h, j) => r[h] = (vals[j] ?? "").trim());
           return { fons: r.fons, tipus: r.tipus, cat: r.cat, data: r.data,
             mes: parseInt(r.mes), any: parseInt(r.any), fy: r.fy, vcpe: r.vcpe,
-            est: r.est, eur: parseFloat(r.eur), divisa: r.divisa };
+            est: r.est, eur: parseFloat(r.eur), divisa: r.divisa,
+            comentaris: r.comentaris || null,
+            amountNative: r.amount_native ? parseFloat(r.amount_native) : null,
+            fxRate: r.fx_rate ? parseFloat(r.fx_rate) : null,
+            fxSource: r.fx_source || null };
         });
         writeJs("capital-calls.js", "RAW_CC", rows);
         console.log(`[watcher] capital-calls.csv → src/data/capital-calls.js (${rows.length} rows)`);

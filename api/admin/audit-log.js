@@ -1,4 +1,4 @@
-import { makeServiceClient, verifyAdmin } from "../_adminAuth.js";
+import { makeServiceClient, verifyAdminOnly } from "../_adminAuth.js";
 import {
   applySecurityHeaders,
   enforceCors,
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
 
   try {
     const supabase = makeServiceClient();
-    const admin = await verifyAdmin(req, supabase);
+    const admin = await verifyAdminOnly(req, supabase);
     if (!admin) return res.status(403).json({ error: "Forbidden" });
 
     const { page, pageSize } = parsePagination(req.query, { defaultPageSize: 50, maxPageSize: 200 });
