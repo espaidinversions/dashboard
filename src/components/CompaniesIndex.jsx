@@ -11,7 +11,7 @@ const TIPUS_CFG = {
   "PE": { color: "#2B5070", bg: "#E6EDF3" },
 };
 
-export function CompaniesIndexInner({ inline = false, searchOverride }) {
+export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "totes" }) {
   const { tc } = useTheme();
   const [searchLocal, setSearchLocal] = useState("");
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
@@ -27,6 +27,7 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
     rvpi: "",
   });
   const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
+  const [rawCC] = usePersistedState("tc_rawCC", []);
 
   useEffect(() => {
     loadCompanies().then((data) => {
@@ -36,28 +37,47 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
     });
   }, [setCompanies]);
 
+  // Set of vehicle_ids that appear in SF capital calls — used to infer origin
+  // when company.tipus is not set or may be stale.
+  const sfVehicleIds = useMemo(() => {
+    const s = new Set();
+    (Array.isArray(rawCC) ? rawCC : []).forEach((row) => {
+      if (row?.vcpe === "SF" && row?.vehicle_id) s.add(String(row.vehicle_id));
+    });
+    return s;
+  }, [rawCC]);
+
   const rows = useMemo(() =>
-    companies.filter(isActualCompany).map(c => ({
-      ...c,
-      dpiMultiple: c.ticket > 0 && c.dpiEur != null ? c.dpiEur / c.ticket : null,
-      rvpiMultiple: c.ticket > 0 && c.rvpiEur != null ? c.rvpiEur / c.ticket : null,
-    })),
-  [companies]);
+    companies.filter(isActualCompany).map(c => {
+      const txSf = sfVehicleIds.has(String(c.id ?? ""));
+      // Effective tipus: stored value takes priority; fall back to transaction inference.
+      const effectiveTipus = c.tipus || (txSf ? "SF" : null);
+      return {
+        ...c,
+        effectiveTipus,
+        tipusFromTx: !c.tipus && txSf, // inferred from transactions, not stored
+        dpiMultiple: c.ticket > 0 && c.dpiEur != null ? c.dpiEur / c.ticket : null,
+        rvpiMultiple: c.ticket > 0 && c.rvpiEur != null ? c.rvpiEur / c.ticket : null,
+      };
+    }),
+  [companies, sfVehicleIds]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return rows.filter((r) => {
+      if (subTab === "via-sf" && r.effectiveTipus !== "SF") return false;
+      if (subTab === "pe-directe" && r.effectiveTipus !== "PE") return false;
       if (q && !r.nom.toLowerCase().includes(q)) return false;
       if (filters.nom && !r.nom.toLowerCase().includes(filters.nom.toLowerCase())) return false;
       if (filters.id && !String(r.id ?? "").toLowerCase().includes(filters.id.toLowerCase())) return false;
-      if (filters.tipus !== "Tots" && r.tipus !== filters.tipus && r.segment !== filters.tipus) return false;
+      if (filters.tipus !== "Tots" && r.effectiveTipus !== filters.tipus && r.segment !== filters.tipus) return false;
       if (filters.ticket && !String(r.ticket ?? "").includes(filters.ticket)) return false;
       if (filters.tvpi && !String(r.tvpi ?? "").includes(filters.tvpi)) return false;
       if (filters.dpi && !String(r.dpiMultiple ?? "").includes(filters.dpi)) return false;
       if (filters.rvpi && !String(r.rvpiMultiple ?? "").includes(filters.rvpi)) return false;
       return true;
     });
-  }, [rows, search, filters]);
+  }, [rows, search, filters, subTab]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -151,7 +171,12 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
                     </td>
                     <td style={{ padding: "10px 12px" }}>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap", alignItems: "center" }}>
-                        <Badge label={r.tipus} cfg={TIPUS_CFG[r.tipus] || {}} />
+                        {r.effectiveTipus ? (
+                          <span title={r.tipusFromTx ? "Origen inferit de transaccions" : undefined}>
+                            <Badge label={r.effectiveTipus} cfg={TIPUS_CFG[r.effectiveTipus] || {}} />
+                            {r.tipusFromTx && <span style={{ fontSize: 9, color: tc.textLight, marginLeft: 2 }}>TX</span>}
+                          </span>
+                        ) : null}
                         <span style={{ fontSize: 11, color: tc.textMid }}>{r.segment}</span>
                       </div>
                     </td>
