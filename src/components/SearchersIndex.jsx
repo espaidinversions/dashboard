@@ -138,6 +138,25 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
     toast({ message: "Searcher eliminat." });
   };
 
+  const handleToggleLegacy = async (row, isLegacy) => {
+    if (!row?.id) {
+      toast({ message: "No es pot modificar aquest searcher.", type: "error" });
+      return;
+    }
+    try {
+      await apiFetchJson(`/api/searchers?id=${encodeURIComponent(row.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isLegacy }),
+      });
+    } catch (error) {
+      toast({ message: "Error actualitzant searcher: " + (error?.message || "error desconegut"), type: "error" });
+      return;
+    }
+    await reloadSearchers();
+    toast({ message: isLegacy ? `${row.nom} mogut a Legacy.` : `${row.nom} restaurat a Actius.` });
+  };
+
   const toggleSort = (key) => {
     if (sortKey === key) setSortDir((value) => value === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir(key === "nom" || key === "geo" ? "asc" : "desc"); }
@@ -188,12 +207,21 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
 
   const rows = useMemo(() => (
     searchers
-      .filter((row) => isInvestedUnacquiredSearcher(row, actualCompanyIds))
+      .filter((row) => !row.isLegacy && isInvestedUnacquiredSearcher(row, actualCompanyIds))
       .map((row) => ({
         ...row,
         mesosCercant: calcMesos(row.dataCompr),
       }))
   ), [actualCompanyIds, searchers]);
+
+  const legacyRows = useMemo(() => (
+    searchers
+      .filter((row) => row.isLegacy)
+      .map((row) => ({
+        ...row,
+        mesosCercant: calcMesos(row.dataCompr),
+      }))
+  ), [searchers]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
@@ -273,9 +301,9 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
           ) : null}
         </div>
 
-        {(subTab === "tots" || !showSubTabs) && sorted.length === 0 ? (
+        {(subTab === "tots" || subTab === "actius" || !showSubTabs) && sorted.length === 0 ? (
           <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
-        ) : (subTab === "tots" || !showSubTabs) ? (
+        ) : (subTab === "tots" || subTab === "actius" || !showSubTabs) ? (
           <div style={indexPageStyles.panel(tc)}>
             <div style={indexPageStyles.tableScroll}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -341,7 +369,14 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
                   <td style={{ padding: "10px 12px", color: tc.textMid }}>{formatIsoDateDMY(row.dataCompr)}</td>
                   <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.textMid }}>{row.mesosCercant ?? "-"}</td>
                   {canEdit ? (
-                    <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                    <td style={{ padding: "4px 8px", textAlign: "center", whiteSpace: "nowrap" }}>
+                      <button
+                        onClick={() => handleToggleLegacy(row, true)}
+                        title="Moure a Legacy"
+                        style={{ marginRight: 4, padding: "3px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textLight, cursor: "pointer", fontSize: 11 }}
+                      >
+                        Legacy
+                      </button>
                       <DeleteRowButton onDelete={() => handleDeleteSearcher(row)} />
                     </td>
                   ) : null}
@@ -351,6 +386,54 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
           </table>
             </div>
           </div>
+        ) : subTab === "legacy" ? (
+          legacyRows.length === 0 ? (
+            <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap searcher a Legacy</div>
+          ) : (
+            <div style={indexPageStyles.panel(tc)}>
+              <div style={indexPageStyles.tableScroll}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr style={{ background: tc.bgAlt }}>
+                      {cols.map(({ k, label, align }) => (
+                        <th key={k} style={{ padding: "10px 12px", textAlign: align, fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, whiteSpace: "nowrap" }}>
+                          {label}
+                        </th>
+                      ))}
+                      {canEdit ? <th style={{ padding: "10px 12px" }} /> : null}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {legacyRows.map((row, index) => (
+                      <tr key={row.id ?? row.nom} className="hoverable" style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
+                        <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>{row.nom}</td>
+                        <td style={{ padding: "10px 12px" }}>{row.tipus || "-"}</td>
+                        <td style={{ padding: "10px 12px" }}>{row.modalitat || "-"}</td>
+                        <td style={{ padding: "10px 12px", textAlign: "center" }}><FlagImg geo={row.geo} /></td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <Badge label={row.formEntrada || "-"} cfg={ENTRY_BADGE_CFG[row.formEntrada] || { bg: tc.bgAlt, color: tc.textMid }} />
+                        </td>
+                        <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.navyLight }}>{fmtM(row.ticket)}</td>
+                        <td style={{ padding: "10px 12px", color: tc.textMid }}>{formatIsoDateDMY(row.dataCompr)}</td>
+                        <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.textMid }}>{row.mesosCercant ?? "-"}</td>
+                        {canEdit ? (
+                          <td style={{ padding: "4px 8px", textAlign: "center" }}>
+                            <button
+                              onClick={() => handleToggleLegacy(row, false)}
+                              title="Restaurar a Actius"
+                              style={{ padding: "3px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.navyLight, cursor: "pointer", fontSize: 11 }}
+                            >
+                              Actiu
+                            </button>
+                          </td>
+                        ) : null}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )
         ) : (
           <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>

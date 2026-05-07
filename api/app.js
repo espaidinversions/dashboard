@@ -176,7 +176,7 @@ async function handleFxRate(req, res) {
 }
 
 async function handleSearchers(req, res) {
-  if (!["POST", "DELETE"].includes(req.method)) {
+  if (!["POST", "PATCH", "DELETE"].includes(req.method)) {
     return res.status(405).json({ error: "Method not allowed" });
   }
   const supabase = makeServiceClient();
@@ -185,6 +185,23 @@ async function handleSearchers(req, res) {
 
   const canWrite = await canWriteSearchers(supabase, user);
   if (!canWrite) return res.status(403).json({ error: "Forbidden" });
+
+  if (req.method === "PATCH") {
+    const id = Number(req.query?.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Valid searcher id is required" });
+    }
+    const { isLegacy } = req.body ?? {};
+    if (typeof isLegacy !== "boolean") {
+      return res.status(400).json({ error: "isLegacy must be a boolean" });
+    }
+    const { error } = await supabase
+      .from("searchers")
+      .update({ is_legacy: isLegacy })
+      .eq("id", id);
+    if (error) throw error;
+    return res.status(200).json({ ok: true });
+  }
 
   if (req.method === "DELETE") {
     const id = Number(req.query?.id);
