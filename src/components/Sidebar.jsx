@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { TC_LIGHT } from "../theme.js";
+import { Briefcase, Building2, Search, Building, Home, TrendingUp, BookOpen, Settings, Menu, ChevronLeft } from "lucide-react";
 
 const SIDEBAR_W = 220;
 const RAIL_W    = 52;
@@ -9,15 +10,15 @@ const RAIL_W    = 52;
 // ── nav tree ─────────────────────────────────────────────
 const PORTFOLI_SECTIONS = [
   {
-    id:"alt", label:"Alternatius", icon:"💼",
+    id:"alt", label:"Alternatius", icon:Briefcase,
     children:[
-      {id:"fons",      label:"Fons",                icon:"🏦"},
-      {id:"searchers", label:"Searchers",           icon:"🔍"},
-      {id:"companies", label:"Participades",        icon:"🏢"},
+      {id:"fons",      label:"Fons",                icon:Building2},
+      {id:"searchers", label:"Searchers",           icon:Search},
+      {id:"companies", label:"Participades",        icon:Building},
     ],
   },
   {
-    id:"re", label:"Real Estate", icon:"🏠",
+    id:"re", label:"Real Estate", icon:Home,
     children:[
       {id:"re-directe",    label:"Directe"},
       {id:"re-altres",     label:"Altres Vehicles"},
@@ -25,7 +26,7 @@ const PORTFOLI_SECTIONS = [
     ],
   },
   {
-    id:"mp", label:"Mercats Públics", icon:"📈",
+    id:"mp", label:"Mercats Públics", icon:TrendingUp,
     children:[
       {id:"mp-resum",        label:"Resum"},
       {id:"mp-rv",           label:"Renda Variable"},
@@ -38,13 +39,13 @@ const PORTFOLI_SECTIONS = [
 ];
 
 const TX_LEAVES = [
-  {id:"tx-alt", label:"Alternatius",    icon:"💼"},
-  {id:"tx-mp",  label:"Mercats Públics", icon:"📈"},
+  {id:"tx-alt", label:"Alternatius",    icon:Briefcase},
+  {id:"tx-mp",  label:"Mercats Públics", icon:TrendingUp},
 ];
 
 const BOTTOM_ITEMS = [
-  {id:"guia",  label:"Guia",  icon:"📖", to:"/guia"},
-  {id:"admin", label:"Admin", icon:"⚙️",  to:"/admin", adminOnly:true},
+  {id:"guia",  label:"Guia",  icon:BookOpen, to:"/guia"},
+  {id:"admin", label:"Admin", icon:Settings,  to:"/admin", adminOnly:true},
 ];
 
 // ── component ─────────────────────────────────────────────
@@ -87,7 +88,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
         onMouseEnter={e => { if(!active) e.currentTarget.style.background=C.bgHover; }}
         onMouseLeave={e => { if(!active) e.currentTarget.style.background="transparent"; }}
       >
-        {item.icon && <span style={{fontSize:13,flexShrink:0,lineHeight:1}}>{item.icon}</span>}
+        {item.icon && (() => { const Icon = item.icon; return <Icon size={13} strokeWidth={1.75} style={{flexShrink:0}} />; })()}
         {!collapsed && <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</span>}
       </button>
     );
@@ -133,7 +134,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
           onMouseEnter={e => { e.currentTarget.style.background=C.bgHover; }}
           onMouseLeave={e => { e.currentTarget.style.background="transparent"; }}
         >
-          <span style={{fontSize:15,flexShrink:0,lineHeight:1}}>{sec.icon}</span>
+          {(() => { const Icon = sec.icon; return <Icon size={15} strokeWidth={1.75} style={{flexShrink:0}} />; })()}
           {!collapsed && (
             <>
               <span style={{flex:1,letterSpacing:"0.01em"}}>{sec.label}</span>
@@ -207,8 +208,8 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
         borderBottom:`1px solid ${C.border}`, flexShrink:0,
       }}>
         {!collapsed && <span style={{color:"#fff",fontWeight:700,fontSize:13,letterSpacing:"0.05em",whiteSpace:"nowrap"}}>Turtle Capital</span>}
-        <button onClick={onToggle} style={{background:"none",border:"none",cursor:"pointer",color:C.text,fontSize:16,padding:6,lineHeight:1,flexShrink:0}}>
-          {collapsed ? "☰" : "←"}
+        <button onClick={onToggle} style={{background:"none",border:"none",cursor:"pointer",color:C.text,padding:6,lineHeight:1,flexShrink:0,display:"flex",alignItems:"center"}}>
+          {collapsed ? <Menu size={15} strokeWidth={1.75} /> : <ChevronLeft size={15} strokeWidth={1.75} />}
         </button>
       </div>
 
@@ -242,7 +243,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
             onMouseEnter={e => { e.currentTarget.style.background=C.bgHover; }}
             onMouseLeave={e => { e.currentTarget.style.background="transparent"; }}
           >
-            <span style={{fontSize:14,lineHeight:1}}>{item.icon}</span>
+            {(() => { const Icon = item.icon; return <Icon size={14} strokeWidth={1.75} style={{flexShrink:0}} />; })()}
             {!collapsed && <span>{item.label}</span>}
           </Link>
         ))}
