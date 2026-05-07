@@ -4,6 +4,7 @@ import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { fmtM, tvpiColor, tvpiBg, usePersistedState, formatMultiple, formatIsoDateDMY } from "../utils.js";
 import { GEO_NAME, COMPANY_TIPUS_OPTIONS, COMPANY_ORIGEN_OPTIONS } from "../config.js";
+import { CHART_PALETTE } from "../chartColors.js";
 import { FlagImg, FlagSvgLabel, EditableCell, AddRowModal, DeleteRowButton } from "./SharedComponents.jsx";
 import { Link } from "react-router-dom";
 import { upsertCompany, insertCompany, deleteCompany, saveCompanies, loadCompanies } from "../db.js";
@@ -12,11 +13,11 @@ import { useToast } from "../toast.jsx";
 import { getCompanyCategoryLabel, isActualCompany, isDirectPeCompany, isSfBackedCompany, isSearchFundShell, matchesCompanyCategory } from "../data/privateCompanyModel.js";
 
 const ORIG_COLORS = {
-  "Equity Gap":    "#3DC83E",
-  "Search Capital":"#2B5070",
-  "Direct PE":     "#6A4C8A",
+  "Equity Gap":    CHART_PALETTE[1],  // green
+  "Search Capital": CHART_PALETTE[0], // navy
+  "Direct PE":     CHART_PALETTE[6],  // purple
 };
-const GEO_COLORS = ["#2B5070","#3DC83E","#6A4C8A","#B8860B","#C62828","#1C6B1D","#2563A8","#8A6400","#007A8A"];
+const GEO_COLORS = CHART_PALETTE;
 
 export function PortfolioCompaniesTab({ search = "", categoryFilter = null, forShells = false }) {
   const { tc: TC, dark } = useTheme();
@@ -24,6 +25,21 @@ export function PortfolioCompaniesTab({ search = "", categoryFilter = null, forS
   const canEdit = canEditSection("companies");
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
+  const [filters, setFilters] = useState({
+    empresa: "",
+    id: "",
+    categoria: "Tots",
+    segment: "",
+    empresaris: "",
+    origen: "Tots",
+    pais: "Tots",
+    ticket: "",
+    tvpi: "",
+    rev: "",
+    ebitda: "",
+    data: "",
+    mesos: "",
+  });
 
   const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:10, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
   const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap" };
@@ -134,10 +150,29 @@ export function PortfolioCompaniesTab({ search = "", categoryFilter = null, forS
   const filtered = companies
     .filter(forShells ? isSearchFundShell : isActualCompany)
     .filter(r => !forShells && categoryFilter ? matchesCompanyCategory(r, categoryFilter) : true)
-    .filter(r => !search.trim() ? true :
-      r.nom.toLowerCase().includes(search.toLowerCase()) ||
-      (r.segment||"").toLowerCase().includes(search.toLowerCase())
-    );
+    .filter(r => {
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        if (!(
+          r.nom.toLowerCase().includes(q) ||
+          (r.segment||"").toLowerCase().includes(q)
+        )) return false;
+      }
+      if (filters.empresa && !String(r.nom ?? "").toLowerCase().includes(filters.empresa.toLowerCase())) return false;
+      if (filters.id && !String(r.id ?? "").toLowerCase().includes(filters.id.toLowerCase())) return false;
+      if (filters.categoria !== "Tots" && getCompanyCategoryLabel(r) !== filters.categoria) return false;
+      if (filters.segment && !String(r.segment ?? "").toLowerCase().includes(filters.segment.toLowerCase())) return false;
+      if (filters.empresaris && !String(r.entrepreneurs ?? "").toLowerCase().includes(filters.empresaris.toLowerCase())) return false;
+      if (filters.origen !== "Tots" && r.origen !== filters.origen) return false;
+      if (filters.pais !== "Tots" && r.geo !== filters.pais) return false;
+      if (filters.ticket && !String(r.ticket ?? "").includes(filters.ticket)) return false;
+      if (filters.tvpi && !String(r.tvpi ?? "").includes(filters.tvpi)) return false;
+      if (filters.rev && !String(r.rev ?? "").includes(filters.rev)) return false;
+      if (filters.ebitda && !String(r.ebitda ?? "").includes(filters.ebitda)) return false;
+      if (filters.data && !String(r.dataCompr ?? "").includes(filters.data)) return false;
+      if (filters.mesos && !String(r.mesosOperant ?? "").includes(filters.mesos)) return false;
+      return true;
+    });
 
   const total    = filtered.reduce((s,r) => s + r.ticket, 0);
   const sfCompanies = filtered.filter(isSfBackedCompany);
@@ -157,20 +192,20 @@ export function PortfolioCompaniesTab({ search = "", categoryFilter = null, forS
       m[r.geo].count += 1;
     });
     return Object.values(m).sort((a,b) => b.value - a.value);
-  }, [search]);
+  }, [filtered]);
 
   const byOrigen = useMemo(() => {
     const m = {};
     filtered.forEach(r => { m[r.origen] = (m[r.origen]||0) + r.ticket; });
     return Object.entries(m).map(([name,value]) => ({ name, value }));
-  }, [search]);
+  }, [filtered]);
 
   const tvpiChartData = useMemo(() =>
     filtered
       .filter(r => r.tvpi != null)
       .sort((a,b) => b.tvpi - a.tvpi)
       .map(r => ({ name:r.nom, tvpi:r.tvpi, tipus:r.tipus }))
-  , [search]);
+  , [filtered]);
 
   const t = ecTheme(TC);
   const geoTotal = byGeo.reduce((s, r) => s + r.value, 0);
@@ -381,6 +416,19 @@ export function PortfolioCompaniesTab({ search = "", categoryFilter = null, forS
                   <th key={h} style={th}>{h}</th>
                 ))}
                 {canEdit && <th style={{ ...th, width: 40 }} />}
+              </tr>
+              <tr style={{ borderBottom:`1px solid ${TC.border}` }}>
+                <th style={{ padding:"6px 10px" }}><input value={filters.empresa} onChange={e => setFilters(v => ({ ...v, empresa: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${TC.border}`, background:TC.bg, color:TC.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding:"6px 10px" }}><input value={filters.id} onChange={e => setFilters(v => ({ ...v, id: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${TC.border}`, background:TC.bg, color:TC.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding:"6px 10px" }}><select value={filters.categoria} onChange={e => setFilters(v => ({ ...v, categoria: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${TC.border}`, background:TC.bg, color:TC.text, fontSize:11, fontFamily:"inherit" }}>{["Tots", ...Array.from(new Set(companies.filter(isActualCompany).map(getCompanyCategoryLabel))).sort()].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+                <th style={{ padding:"6px 10px" }}><input value={filters.segment} onChange={e => setFilters(v => ({ ...v, segment: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${TC.border}`, background:TC.bg, color:TC.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding:"6px 10px" }}><input value={filters.empresaris} onChange={e => setFilters(v => ({ ...v, empresaris: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${TC.border}`, background:TC.bg, color:TC.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding:"6px 10px" }}><select value={filters.origen} onChange={e => setFilters(v => ({ ...v, origen: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${TC.border}`, background:TC.bg, color:TC.text, fontSize:11, fontFamily:"inherit" }}>{["Tots", ...COMPANY_ORIGEN_OPTIONS].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+                <th style={{ padding:"6px 10px" }}><select value={filters.pais} onChange={e => setFilters(v => ({ ...v, pais: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${TC.border}`, background:TC.bg, color:TC.text, fontSize:11, fontFamily:"inherit" }}>{["Tots", ...Array.from(new Set(companies.map(c => c.geo).filter(Boolean))).sort()].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+                {["ticket","tvpi","rev","ebitda","data","mesos"].map(key => (
+                  <th key={key} style={{ padding:"6px 10px" }}><input value={filters[key]} onChange={e => setFilters(v => ({ ...v, [key]: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${TC.border}`, background:TC.bg, color:TC.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                ))}
+                {canEdit && <th style={{ padding:"6px 10px", textAlign:"center" }}>{Object.values(filters).some(v => v !== "" && v !== "Tots") ? <button onClick={() => setFilters({ empresa:"", id:"", categoria:"Tots", segment:"", empresaris:"", origen:"Tots", pais:"Tots", ticket:"", tvpi:"", rev:"", ebitda:"", data:"", mesos:"" })} style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"2px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}>netejar</button> : null}</th>}
               </tr>
             </thead>
             <tbody>
