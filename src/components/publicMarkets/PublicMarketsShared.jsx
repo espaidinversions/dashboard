@@ -1,4 +1,6 @@
 import React from "react";
+import { MGR_COLORS as _MGR_COLORS } from "../../chartColors.js";
+import { TC_LIGHT } from "../../theme.js";
 import { PM_MODEL } from "../../data/publicMarketsModel.js";
 import { WAM_POSITIONS } from "../../data/wamPositions.js";
 
@@ -15,29 +17,13 @@ export const TIPUS_CFG = {
   "RV+RF": { color: "#28A029", bg: "#E8F8E8" },
 };
 
+export const MGR_COLORS = _MGR_COLORS;
+
 export const AREA_COLORS = {
   total: "#2B5070",
-  rv: "#2B5070",
-  rf: "#E8A020",
-  caixa: "#2B5070",
-  ubs: "#4E79A7",
-  creditSuisse: "#C46B5A",
-  abel: "#3DC83E",
-  bankinter: "#3DC83E",
-  interactiveBrokers: "#7BC96F",
-  andbank: "#6B2E7E",
-  jpmorgan: "#8A6D3B",
-  altres: "#9AA4B2",
-};
-
-export const MGR_COLORS = {
-  caixa: "#2B5070",
-  ubs: "#4E79A7",
-  creditSuisse: "#C46B5A",
-  andbank: "#6B2E7E",
-  abel: "#3DC83E",
-  jpmorgan: "#8A6D3B",
-  altres: "#9AA4B2",
+  rv:    "#2B5070",
+  rf:    "#E8A020",
+  ...MGR_COLORS,
 };
 
 export const PERIODS = [
@@ -96,7 +82,7 @@ export function getMgrPositions(mgrId) {
   return [...active, ...discontinued];
 }
 
-export function KpiCard({ label, value, sub, tc, valueColor }) {
+export function KpiCard({ label, value, sub, tc = TC_LIGHT, valueColor }) {
   return (
     <div
       className="kpi-card card-hover"
@@ -120,7 +106,7 @@ export function KpiCard({ label, value, sub, tc, valueColor }) {
   );
 }
 
-export function PctChip({ v, tc }) {
+export function PctChip({ v, tc = TC_LIGHT }) {
   if (v == null) return <span style={{ fontSize: 11, color: tc.textLight }}>—</span>;
   const pos = v > 0.005;
   const neg = v < -0.005;
@@ -141,7 +127,7 @@ export function pctFmt(v) {
 
 const TX_MONTH_NAMES = ["Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"];
 
-export function fmtTxMonth(yyyymm) {
+function fmtTxMonth(yyyymm) {
   if (!yyyymm || yyyymm === "????-??") return "Sense data";
   const [year, month] = yyyymm.split("-");
   return `${TX_MONTH_NAMES[parseInt(month, 10) - 1]} ${year}`;
