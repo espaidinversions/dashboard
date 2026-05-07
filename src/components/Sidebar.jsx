@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { TC_LIGHT } from "../theme.js";
-import { Briefcase, Building2, Search, Building, Home, TrendingUp, BookOpen, Settings, Menu, ChevronLeft } from "lucide-react";
+import { Briefcase, Building2, Search, Building, Home, TrendingUp, BookOpen, Users, DollarSign, Menu, ChevronLeft } from "lucide-react";
 
 const SIDEBAR_W = 220;
 const RAIL_W    = 52;
@@ -39,13 +39,13 @@ const PORTFOLI_SECTIONS = [
 ];
 
 const TX_LEAVES = [
-  {id:"tx-alt", label:"Alternatius",    icon:Briefcase},
-  {id:"tx-mp",  label:"Mercats Públics", icon:TrendingUp},
+  {id:"tx-alt", label:"Alternatius",    icon:DollarSign},
+  {id:"tx-mp",  label:"Mercats Públics", icon:DollarSign},
 ];
 
 const BOTTOM_ITEMS = [
   {id:"guia",  label:"Guia",  icon:BookOpen, to:"/guia"},
-  {id:"admin", label:"Admin", icon:Settings,  to:"/admin", adminOnly:true},
+  {id:"admin", label:"Admin", icon:Users,  to:"/admin", adminOnly:true},
 ];
 
 // ── component ─────────────────────────────────────────────
@@ -88,7 +88,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
         onMouseEnter={e => { if(!active) e.currentTarget.style.background=C.bgHover; }}
         onMouseLeave={e => { if(!active) e.currentTarget.style.background="transparent"; }}
       >
-        {item.icon && (() => { const Icon = item.icon; return <Icon size={13} strokeWidth={1.75} style={{flexShrink:0}} />; })()}
+        {item.icon && (() => { const Icon = item.icon; return <Icon size={16} strokeWidth={1.75} color={active ? tc.green : tc.textLight} style={{flexShrink:0}} />; })()}
         {!collapsed && <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</span>}
       </button>
     );
@@ -134,7 +134,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
           onMouseEnter={e => { e.currentTarget.style.background=C.bgHover; }}
           onMouseLeave={e => { e.currentTarget.style.background="transparent"; }}
         >
-          {(() => { const Icon = sec.icon; return <Icon size={15} strokeWidth={1.75} style={{flexShrink:0}} />; })()}
+          {(() => { const Icon = sec.icon; return <Icon size={16} strokeWidth={1.75} color={childActive ? tc.green : tc.textLight} style={{flexShrink:0}} />; })()}
           {!collapsed && (
             <>
               <span style={{flex:1,letterSpacing:"0.01em"}}>{sec.label}</span>
@@ -209,7 +209,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
       }}>
         {!collapsed && <span style={{color:"#fff",fontWeight:700,fontSize:13,letterSpacing:"0.05em",whiteSpace:"nowrap"}}>Turtle Capital</span>}
         <button onClick={onToggle} style={{background:"none",border:"none",cursor:"pointer",color:C.text,padding:6,lineHeight:1,flexShrink:0,display:"flex",alignItems:"center"}}>
-          {collapsed ? <Menu size={15} strokeWidth={1.75} /> : <ChevronLeft size={15} strokeWidth={1.75} />}
+          {collapsed ? <Menu size={16} strokeWidth={1.75} /> : <ChevronLeft size={16} strokeWidth={1.75} />}
         </button>
       </div>
 
@@ -243,7 +243,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
             onMouseEnter={e => { e.currentTarget.style.background=C.bgHover; }}
             onMouseLeave={e => { e.currentTarget.style.background="transparent"; }}
           >
-            {(() => { const Icon = item.icon; return <Icon size={14} strokeWidth={1.75} style={{flexShrink:0}} />; })()}
+            {(() => { const Icon = item.icon; return <Icon size={16} strokeWidth={1.75} color={tc.textLight} style={{flexShrink:0}} />; })()}
             {!collapsed && <span>{item.label}</span>}
           </Link>
         ))}
