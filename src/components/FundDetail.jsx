@@ -5,7 +5,7 @@ import { ecTheme } from "../echartsTheme.js";
 import { VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, fmtSignedM, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
-import { Badge, Logo, KpiCard, AddRowModal } from "./SharedComponents.jsx";
+import { Badge, Logo, KpiCard, AddRowModal, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCapitalCalls, loadFundMeta, updateCapitalCall } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
 import { CAPITAL_CALL_TIPUS_OPTIONS, inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
@@ -128,7 +128,7 @@ function FundDetailInner() {
       <div style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: 24 }}>
         {/* KPI cards */}
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-          <KpiCard label="Compromís"      value={compromis ? fmtM(compromis) : "—"} tc={tc} />
+          <KpiCard label="Compromís"      value={compromis ? fmtM(compromis) : "—"} tc={tc} hero />
           <KpiCard label="Capital Cridat" value={fmtM(calls)} sub={utilPct ? `${utilPct} del compromís` : null} tc={tc} />
           <KpiCard label="Distribucions"  value={dist ? fmtM(dist) : "—"} tc={tc} />
           <KpiCard label="Net"            value={(net >= 0 ? "+" : "") + fmtM(net)} tc={tc} />
@@ -143,9 +143,9 @@ function FundDetailInner() {
 
         {/* J-curve */}
         <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
-          <div style={{ display: "flex", alignItems: "center", marginBottom: 16 }}>
-            <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, flex: 1 }}>J-curve</div>
-            <div style={{ display: "flex", gap: 4 }}>
+          <div>
+            <SectionHeader title="J-curve" tc={tc} />
+            <div style={{ display: "flex", gap: 4, marginBottom: 16 }}>
               {["quarterly", "annual"].map(v => (
                 <button key={v} onClick={() => setChartView(v)}
                   style={{ padding: "4px 10px", borderRadius: 4, border: `1.5px solid ${chartView === v ? tc.green : tc.border}`, background: chartView === v ? (dark ? "#0A2010" : "#E8F8E8") : "transparent", color: chartView === v ? tc.green : tc.textLight, fontSize: 11, cursor: "pointer", fontFamily: "inherit", fontWeight: chartView === v ? 700 : 400 }}>
@@ -230,10 +230,8 @@ function FundDetailInner() {
         </div>
 
         {/* Transaction log */}
-        <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
-          <div style={{ fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 16 }}>
-            Transaccions · {(txLog ?? []).length}
-          </div>
+        <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
+          <SectionHeader title={`Transaccions · ${(txLog ?? []).length}`} tc={tc} />
           {editingRow && (
             <AddRowModal
               title="Edita transacció"
