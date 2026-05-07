@@ -5,7 +5,7 @@ import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
 import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState, formatIsoDateDMY, readStoredJSON, tvpiColor, tvpiBg, formatMultiple } from "../utils.js";
 import { GEO_NAME, SEARCHER_STATUS_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_FORM_ENTRADA_OPTIONS } from "../config.js";
-import { FlagImg, AddRowModal, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
+import { FlagImg, AddRowModal, DeleteRowButton, EditableCell, KpiCard, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
 import { useToast } from "../toast.jsx";
@@ -52,7 +52,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
 
   // shared styles
   const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:10, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
-  const th   = { padding:"9px 10px", fontSize:10, letterSpacing:"0.09em", color:TC.textLight, textTransform:"uppercase", fontWeight:600, textAlign:"left", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap", userSelect:"none" };
+  const th   = { padding:"9px 10px", fontSize:10, fontWeight:700, color:TC.navyLight ?? TC.textLight, textTransform:"uppercase", letterSpacing:"0.06em", background:"#F7FAFC", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap", userSelect:"none" };
   const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
 
   useEffect(() => {
@@ -125,7 +125,13 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   ), [capitalCallsByNif, capitalCallsBySearcher, historicData]);
 
   const activeRows = useMemo(
-    () => enrichedSearchers.filter((row) => row.statusScreening === "Invertit en fase de cerca"),
+    () => enrichedSearchers.filter((row) => {
+      if (row.companiaAdquirida) return false;
+      // Code 2 = "Invertit en fase de cerca" / "Invested - Search Phase"
+      if (row.statusScreeningCode != null) return row.statusScreeningCode === 2;
+      return row.statusScreening === "Invertit en fase de cerca" ||
+             row.statusScreening === "Invested - Search Phase";
+    }),
     [enrichedSearchers]
   );
 
@@ -534,18 +540,10 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       {/* ── KPIs ── */}
       {isSummaryView && <>
       <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
-        {[
-          { label:"Searchers Actius",  value: activeRows.length,                             sub:`${soloCount} solo / ${duoCount} duo`,   accent:TC.navy },
-          { label:"Capital Compromès", value: fmtM(totalSearchers),                          sub:"total search capital",                  accent:TC.green },
-          { label:"Ticket Promig",     value: activeRows.length ? fmtM(totalSearchers / activeRows.length) : "—", sub:"per searcher", accent:TC.navyLight },
-          { label:"Total DB",          value: historicData.length,                           sub:"searchers en base de dades",            accent:TC.navyLight },
-        ].map(k => (
-          <div key={k.label} style={{ ...card, padding:"16px 18px", borderTop:`3px solid ${k.accent}` }}>
-            <div style={{ fontSize:10, color:TC.textLight, letterSpacing:"0.11em", textTransform:"uppercase", marginBottom:6, fontWeight:500 }}>{k.label}</div>
-            <div style={{ fontSize:21, fontWeight:700, color:k.accent, marginBottom:2, letterSpacing:"-0.02em" }}>{k.value}</div>
-            <div style={{ fontSize:11, color:TC.textLight }}>{k.sub}</div>
-          </div>
-        ))}
+        <KpiCard hero label="Searchers Actius" value={activeRows.length} sub={`${soloCount} solo / ${duoCount} duo`} tc={TC} />
+        <KpiCard label="Capital Compromès" value={fmtM(totalSearchers)} sub="total search capital" tc={TC} />
+        <KpiCard label="Ticket Promig" value={activeRows.length ? fmtM(totalSearchers / activeRows.length) : "—"} sub="per searcher" tc={TC} />
+        <KpiCard label="Total DB" value={historicData.length} sub="searchers en base de dades" tc={TC} />
       </div>
 
       {/* ── Sankey + Geography ── */}
@@ -703,7 +701,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
 
       {/* ── Active Searchers table ── */}
       {isActiveView && (
-      <div style={{ ...card, marginBottom:14 }}>
+      <div style={{ ...tableCardStyle(TC), marginBottom:14 }}>
         <div style={{ ...sec, color:TC.textLight }}>
           <SectionHeading icon="🔍" color={dark ? "#162840" : "#EAF2FB"}>Searchers Actius</SectionHeading>
         </div>
@@ -919,7 +917,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       )}
 
       {/* ── Historic table ── */}
-      {isAllView && <div style={card}>
+      {isAllView && <div style={{ ...tableCardStyle(TC), overflowX: "auto" }}>
         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
           <div style={{ display:"flex", alignItems:"center", gap:12 }}>
             <div style={{ ...sec, color:TC.textLight, marginBottom:0 }}>
