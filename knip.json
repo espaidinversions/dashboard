@@ -16,5 +16,9 @@
   ],
   "ignoreBinaries": [
     "python"
+  ],
+  "ignoreExportsUsedInFile": true,
+  "ignore": [
+    "src/components/SharedComponents.jsx"
   ]
 }
