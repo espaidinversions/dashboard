@@ -1,14 +1,22 @@
 // ── Paleta ────────────────────────────────────────────────
 import { TC_LIGHT } from "./theme.js";
+import { CAPITAL_CALL_TIPUS_OPTIONS as CAPITAL_CALL_TIPUS_MODEL_OPTIONS } from "./data/capitalCallTipusModel.js";
+import { CAPITAL_CALL_STRATEGY_OPTIONS } from "./data/capitalCallStrategyModel.js";
 const TC = TC_LIGHT;
 
 // ── Configs ───────────────────────────────────────────────
-export const CAT_CFG = {
+const CAT_CFG = {
   "Capital Call":    { color:TC.navy,      bg:"#E8EFF5" },
   "Distribució":     { color:TC.green,     bg:"#E8F5E9" },
   "Retorn Capital":  { color:TC.greenDark, bg:"#D6EAE0" },
   "Compromís":       { color:TC.navyLight, bg:"#EAF0F6" },
   "Altres":          { color:TC.textLight, bg:TC.bgAlt  },
+};
+export const VEHICLE_TIPUS_CFG = {
+  "Primari":     { color: TC.navy,      bg: "#E6EDF3" },
+  "FoF":         { color: TC.greenDark, bg: "#E8F8E8" },
+  "Secundari":   { color: TC.navyLight, bg: "#EAF0F6" },
+  "Co-inversió": { color: "#0F766E",    bg: "#DFF7F3" },
 };
 export const VCPE_CFG = {
   "PE": { color:TC.navy,      bg:"#E6EDF3" },
@@ -18,9 +26,14 @@ export const VCPE_CFG = {
   "PC": { color:"#7A5A00",    bg:"#FFF5D6" },
 };
 export const EST_CFG = {
-  "Fons Primari": { color:TC.navy,      bg:"#E6EDF3" },
-  "Fons de Fons": { color:TC.greenDark, bg:"#E8F8E8" },
-  "SOCIMI":       { color:"#6A4C8A",    bg:"#F3EEF8" },
+  "Fons Primari":                          { color:TC.navy,      bg:"#E6EDF3" },
+  "Fons Secundari":                        { color:TC.navyLight, bg:"#EAF0F6" },
+  "Fons de Fons":                          { color:TC.greenDark, bg:"#E8F8E8" },
+  "Fons de Coinversió":                    { color:"#0F766E",    bg:"#DFF7F3" },
+  "Search Fund - Cerca":                   { color:"#2563A8",    bg:"#DDEAF8" },
+  "Search Fund - Adquisició/Participada (SF)": { color:"#1D4ED8", bg:"#E0E7FF" },
+  "Participada (Altres)":                  { color:"#7A5A00",    bg:"#FFF5D6" },
+  "Fons Real Estate":                      { color:"#6A4C8A",    bg:"#F3EEF8" },
 };
 export const STATUS_CFG = {
   "En estudi": { bg:"#FFF8E1", color:"#B8860B", border:"#F0C040" },
@@ -58,10 +71,10 @@ export const SEARCHER_MODALITAT_OPTIONS = ["Solo", "Duo", "Trio", "Partnership"]
 export const SEARCHER_FORM_ENTRADA_OPTIONS = ["Search Capital", "Equity Gap"];
 export const COMPANY_TIPUS_OPTIONS      = ["SF", "PE"];
 export const COMPANY_ORIGEN_OPTIONS     = ["Search Capital", "Equity Gap", "Direct PE"];
-export const CAPITAL_CALL_CAT_OPTIONS   = Object.keys(CAT_CFG).filter(k => k !== "Compromís");
-export const CAPITAL_CALL_VCPE_OPTIONS  = Object.keys(VCPE_CFG);
-export const CAPITAL_CALL_EST_OPTIONS   = Object.keys(EST_CFG);
-export const CAPITAL_CALL_TIPUS_OPTIONS = ["Aportació", "Distribució", "Devol. Capital", "Close Interest"];
+const CAPITAL_CALL_CAT_OPTIONS   = Object.keys(CAT_CFG).filter(k => k !== "Compromís");
+const CAPITAL_CALL_VCPE_OPTIONS  = Object.keys(VCPE_CFG);
+const CAPITAL_CALL_EST_OPTIONS   = CAPITAL_CALL_STRATEGY_OPTIONS;
+export const CAPITAL_CALL_TIPUS_OPTIONS = CAPITAL_CALL_TIPUS_MODEL_OPTIONS;
 
 // ── Data imports ─────────────────────────────────────────
 import { RAW_CC as RAW_CC_DATA } from "./data/capital-calls.js";
@@ -72,9 +85,9 @@ const toEUR = (a,c) => c==="USD" ? a/EUR_USD : a;
 const toUSD = (a,c) => c==="EUR" ? a*EUR_USD : a;
 export const SCOL  = {"Fons primari":TC.navy,"Coinversions":TC.green,"Fons secundaris":TC.navyLight,"Fons de fons":TC.greenDark};
 export const GCOL  = {EU:TC.green,US:TC.navy,"EU/US":TC.navyLight};
-export const SECCOL= {Software:TC.navy,Generalista:TC.green,"B2B Services":TC.greenDark,Healthcare:"#7A5A8A","Software / B2B":TC.greenLight};
-export const STCOL = {"En estudi":"#B8860B","Aprovat":"#2E7D32","Descartat":"#C62828"};
-export const CCOL  = {"Arcano":TC.navy,"Placement Agent":TC.green,"Propietari":TC.navyLight,"Altres":"#6A4C8A"};
+export const SECCOL= {Software:TC.navy,Generalista:TC.green,"B2B Services":TC.greenDark,Healthcare:TC.purple,"Software / B2B":TC.greenLight};
+export const STCOL = {"En estudi":TC.yellow,"Aprovat":TC.greenDark,"Descartat":TC.red};
+export const CCOL  = {"Arcano":TC.navy,"Placement Agent":TC.green,"Propietari":TC.navyLight,"Altres":TC.purple};
 export const SBADGE= {"Fons primari":{bg:"#E8EFF5",color:TC.navy},"Coinversions":{bg:"#E8F4EE",color:TC.greenDark},"Fons secundaris":{bg:"#EAF0F6",color:TC.navyLight},"Fons de fons":{bg:"#E3EDE8",color:TC.greenDark}};
 export const GBADGE= {EU:{bg:"#E8F4EE",color:TC.greenDark},US:{bg:"#E8EFF5",color:TC.navyDark},"EU/US":{bg:"#EAF0F6",color:TC.navyLight}};
 
