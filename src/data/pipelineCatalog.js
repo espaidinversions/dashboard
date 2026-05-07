@@ -23,10 +23,10 @@ export function mergePipelineDeals(liveDeals = [], fallbackDeals = PIPELINE_SEED
   }
 
   return [...merged.values()].sort((a, b) => {
-    const idA = Number.isFinite(Number(a?.id)) ? Number(a.id) : Number.MAX_SAFE_INTEGER;
-    const idB = Number.isFinite(Number(b?.id)) ? Number(b.id) : Number.MAX_SAFE_INTEGER;
-    if (idA !== idB) return idA - idB;
-    return String(a?.name ?? "").localeCompare(String(b?.name ?? ""));
-  });
+      const idA = Number.isFinite(Number(a?.id)) ? Number(a.id) : Number.MAX_SAFE_INTEGER;
+      const idB = Number.isFinite(Number(b?.id)) ? Number(b.id) : Number.MAX_SAFE_INTEGER;
+      if (idA !== idB) return idA - idB;
+      return String(a?.name ?? "").localeCompare(String(b?.name ?? ""));
+    });
 }
 

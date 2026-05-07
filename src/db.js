@@ -475,7 +475,7 @@ export async function loadPipelineDeals() {
   if (!supabase) return null;
   const { data, error } = await supabase.from("pipeline").select("*").order("id");
   if (error) { console.error(error); return null; }
-  return mergePipelineDeals(data.map(rowToDeal));
+  return mergePipelineDeals(data.map(rowToDeal)).filter((d) => d?.active !== false);
 }
 
 /**
@@ -591,7 +591,9 @@ export async function deleteCompany(id) {
 export async function deletePipelineDeal(id) {
   if (!supabase) return { error: null };
   const { data: old } = await supabase.from("pipeline").select("*").eq("id", id).single();
-  const { error } = await supabase.from("pipeline").delete().eq("id", id);
+  // Soft-delete: set active=false so the DB record suppresses the seed entry in
+  // mergePipelineDeals (a hard-delete lets the seed name re-appear on next load).
+  const { error } = await supabase.from("pipeline").update({ active: false }).eq("id", id);
   if (!error) logAudit("delete", "pipeline", id, { old: old ?? null });
   return { error };
 }
