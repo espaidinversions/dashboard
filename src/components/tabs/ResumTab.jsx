@@ -2,6 +2,7 @@ import React from "react";
 import ReactECharts from "../../ReactECharts.jsx";
 import { ecTheme } from "../../echartsTheme.js";
 import { TC_LIGHT } from "../../theme.js";
+import { SectionHeader } from "../SharedComponents.jsx";
 
 export function ResumTab({
   tc = TC_LIGHT,
@@ -13,9 +14,7 @@ export function ResumTab({
   return (
     <>
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 22px", marginBottom: 18, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
-        <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight, textTransform: "uppercase", marginBottom: 16, fontWeight: 600 }}>
-          Capital Cridat vs. Retornat per Any Fiscal
-        </div>
+        <SectionHeader title="Capital Cridat vs. Retornat per Any Fiscal" tc={tc} />
         {(() => {
           const t = ecTheme(tc);
           const option = {
@@ -51,7 +50,7 @@ export function ResumTab({
           { title: "Capital Cridat per Estratègia", data: byEst, colorFn: n => vcpeCfg[n]?.color || tc.navy },
         ].map((ch, i) => (
           <div key={i} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px 22px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight, textTransform: "uppercase", marginBottom: 14, fontWeight: 600 }}>{ch.title}</div>
+            <SectionHeader title={ch.title} tc={tc} />
             {(() => {
               const t = ecTheme(tc);
               const option = {

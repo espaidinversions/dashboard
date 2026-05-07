@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, formatMultiple, multipleColor, readStoredFlag, usePersistedState } from "../utils.js";
-import { Badge, indexPageStyles } from "./SharedComponents.jsx";
+import { Badge, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCompanies } from "../db.js";
 import { isActualCompany } from "../data/privateCompanyModel.js";
 
@@ -102,14 +102,13 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
         {sorted.length === 0
           ? <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
           : (
-            <div style={indexPageStyles.panel(tc)}>
-              <div style={indexPageStyles.tableScroll}>
+            <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
-                <tr style={{ background: tc.bgAlt }}>
+                <tr>
                   {COLS.map(({ k, label, align }) => (
                     <th key={k} onClick={() => toggleSort(k)}
-                      style={{ padding: "10px 12px", textAlign: align, fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
+                      style={{ padding: "9px 14px", textAlign: align, fontSize: 10, fontWeight: 700, color: tc.navyLight ?? tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em", background: "#F7FAFC", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap", cursor: "pointer", userSelect: "none" }}>
                       {label}<SortArrow k={k} />
                     </th>
                   ))}
@@ -172,7 +171,6 @@ export function CompaniesIndexInner({ inline = false, searchOverride }) {
                 ))}
               </tbody>
             </table>
-              </div>
             </div>
           )
         }
