@@ -23,6 +23,11 @@ function calcMesos(dateIso) {
   return Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()));
 }
 
+function isActiveSearcher(row) {
+  if (row?.statusScreeningCode != null) return row.statusScreeningCode === 2;
+  return row?.statusScreening === "Invertit en fase de cerca" || row?.statusScreening === "Invested - Search Phase";
+}
+
 function isInvestedUnacquiredSearcher(row, actualCompanyIds) {
   if (!(Number(row?.ticket ?? 0) > 0)) return false;
   // Already acquired a company → is now a participada, not an active searcher
@@ -226,6 +231,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return rows.filter((row) => {
+      if (subTab === "actius" && !isActiveSearcher(row)) return false;
       if (q && !(
         row.nom?.toLowerCase().includes(q) ||
         `${row.searcher1 ?? ""} ${row.searcher2 ?? ""}`.toLowerCase().includes(q)
@@ -236,7 +242,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
       if (filters.entrada !== "Tots" && row.formEntrada !== filters.entrada) return false;
       return true;
     });
-  }, [filters, rows, search]);
+  }, [filters, rows, search, subTab]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
