@@ -5,7 +5,7 @@ import { ecTheme } from "../echartsTheme.js";
 import { fmtM, usePersistedState, readStoredJSON } from "../utils.js";
 import { useTheme } from "../theme.js";
 import { STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE, PIPELINE_STATUS_OPTIONS, PIPELINE_CANAL_OPTIONS } from "../config.js";
-import { EmptyState, EditableCell } from "./SharedComponents.jsx";
+import { EmptyState, EditableCell, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { insertPipelineDeal, deletePipelineDeal, upsertPipelineDeal, loadPipelineDeals } from "../db.js";
 import { useToast } from "../toast.jsx";
@@ -185,7 +185,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   };
 
   const inp2={border:`1px solid ${TC.border}`,borderRadius:4,padding:"7px 10px",fontSize:13,color:TC.text,background:TC.card,width:"100%",boxSizing:"border-box",outline:"none",fontFamily:"inherit"};
-  const th2={padding:"9px 10px",fontSize:10,letterSpacing:"0.1em",color:TC.textLight,textTransform:"uppercase",fontWeight:600,textAlign:"left",borderBottom:`2px solid ${TC.border}`,cursor:"pointer",userSelect:"none",whiteSpace:"nowrap"};
+  const th2={padding:"9px 14px",fontSize:10,fontWeight:700,color:TC.navyLight??TC.textLight,textTransform:"uppercase",letterSpacing:"0.06em",background:"#F7FAFC",borderBottom:`2px solid ${TC.border}`,whiteSpace:"nowrap",userSelect:"none",cursor:"pointer",textAlign:"left"};
 
   const kpis=[
     {label:"Compromís Total",   value:`${sym}${total.toFixed(1)}M`, sub:`${active.length} fons actius`, accent:TC.navy},
@@ -350,9 +350,9 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
       </div>
 
       {/* Taula pipeline */}
-      <div style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:10,padding:"18px",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
+      <div style={{ ...tableCardStyle(TC), overflowX: "auto" }}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12,flexWrap:"wrap",gap:8}}>
-          <div style={{fontSize:10,letterSpacing:"0.15em",color:TC.textLight,textTransform:"uppercase",fontWeight:600}}>Pipeline de Fons</div>
+          <SectionHeader title="Pipeline de Fons" tc={TC} />
           <div style={{display:"flex",gap:7,alignItems:"center",flexWrap:"wrap"}}>
             {[
               {label:"Geo",    val:fGeo,   set:setFGeo,   opts:gOpts},
