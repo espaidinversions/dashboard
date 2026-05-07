@@ -23,9 +23,27 @@ function calcMesos(dateIso) {
   return Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()));
 }
 
+// Status codes 2 = "Invertit en fase de cerca", 3 = "Invertit en fase d'adquisició"
+const ACTIVE_SEARCHER_CODES = new Set([2, 3]);
+// Fallback string labels for rows without a code (manually entered)
+const ACTIVE_SEARCHER_LABELS = new Set([
+  "Invertit en fase de cerca",
+  "Invertit en fase d'adquisició",
+  "Invested - Search Phase",
+  "Invested - Acquisition Phase",
+]);
+
 function isInvestedUnacquiredSearcher(row, actualCompanyIds) {
-  const entityId = row?.id ?? row?.nif ?? null;
-  return Number(row?.ticket ?? 0) > 0 && !actualCompanyIds.has(entityId);
+  if (!(Number(row?.ticket ?? 0) > 0)) return false;
+  // Already acquired a company → is now a participada, not an active searcher
+  if (row?.companiaAdquirida) return false;
+  // Must be actively invested (searching or in acquisition phase)
+  const code = row?.statusScreeningCode;
+  if (code != null ? !ACTIVE_SEARCHER_CODES.has(code) : !ACTIVE_SEARCHER_LABELS.has(row?.statusScreening)) return false;
+  // nif matches the private_entities.id used as the portfolio company's id
+  const nif = String(row?.nif ?? "").trim();
+  if (nif && actualCompanyIds.has(nif)) return false;
+  return true;
 }
 
 export function SearchersIndexInner({ inline = false, searchOverride, subTab: subTabOverride, rawCC: rawCCOverride }) {

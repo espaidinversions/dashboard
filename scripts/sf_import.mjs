@@ -544,4 +544,18 @@ for (let i = 0; i < toInsert.length; i += BATCH) {
 }
 if (toInsert.length) process.stdout.write("\n");
 
-console.log(`✓ Searchers synced: ${updated} updated, ${insertedSearchers} inserted`);
+// Delete stale entries: rows in DB that are no longer in the Master sheet
+const masterNormSet = new Set(masterRows.map(r => normalizeName(r.nom)).filter(Boolean));
+const toDelete = existingSearchers.filter(row => !masterNormSet.has(normalizeName(row.nom)));
+let deleted = 0;
+for (const row of toDelete) {
+  const { error } = await sb.from("searchers").delete().eq("id", row.id);
+  if (error) {
+    console.error(`Delete failed for ${row.nom}:`, error.message);
+    process.exit(1);
+  }
+  deleted += 1;
+}
+if (deleted) console.log(`  Deleted ${deleted} stale searchers: ${toDelete.map(r => r.nom).join(", ")}`);
+
+console.log(`✓ Searchers synced: ${updated} updated, ${insertedSearchers} inserted, ${deleted} deleted`);
