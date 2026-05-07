@@ -51,3 +51,16 @@ test("buildFundDetailSnapshot ignores shared-id PC rows on fund routes", () => {
   assert.equal(detail.compromis, 0);
   assert.equal(detail.txLog.length, 1);
 });
+
+test("buildFundDetailSnapshot normalizes transaction concepts for fund pages", () => {
+  const rawCC = [
+    { id: "F1", vcpe: "PE", fons: "Test Fund", tipus: "Ampliació Capital", cat: "Capital Call", eur: 1000, data: "2026-01-10", est: "Fons Primari" },
+    { id: "F1", vcpe: "PE", fons: "Test Fund", tipus: "Devol. Capital", cat: "Retorn Capital", eur: 250, data: "2026-02-10", est: "Fons Primari" },
+  ];
+
+  const detail = buildFundDetailSnapshot(rawCC, [], "PE:F1");
+
+  assert.deepEqual(detail.txLog.map((row) => row.tipus), ["Retorn Capital", "Aportació"]);
+  assert.equal(detail.txLog[0].eur, -250);
+  assert.equal(detail.txLog[1].eur, 1000);
+});

@@ -1,84 +1,30 @@
-# Claude Working Instructions — Turtle Capital Dashboard
+# Claude Working Instructions
 
-> Behavioral rules for Claude in this project. See PROJECT.md for project context.
+Read only the minimum needed:
 
----
+- `PROJECT.md` for project structure, key commands, and architecture entry points.
+- `docs/claude-code.md` for task workflow, repo guardrails, and context-preservation rules.
+- `tasks/lessons.md` before non-trivial work if it exists.
 
-## Workflow Orchestration
+Core rules:
 
-### 1. Plan Before Acting
-- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions).
-- If something goes sideways mid-task, STOP and re-plan — do not keep pushing.
-- Use plan mode for verification steps, not just building.
-- Write detailed specs upfront to reduce ambiguity.
+- Plan before any multi-step or architectural change.
+- Fix root causes, not symptoms.
+- Keep edits narrow and avoid unrelated churn.
+- Verify before declaring work complete.
+- Update `tasks/lessons.md` after user corrections.
 
-### 2. Subagent Strategy
-- Offload research, exploration, and parallel analysis to subagents.
-- One task per subagent for focused execution.
+Context boundaries:
 
-### 3. Self-Improvement Loop
-- After any correction from the user, update `tasks/lessons.md` immediately.
-- Review `tasks/lessons.md` at the start of every session.
+- Respect `.claudeignore`; do not pull large datasets or generated output into context unless the task requires it.
+- Prefer source files over generated artifacts.
+- Existing Supabase migrations are immutable; add a new migration instead of editing an old one.
 
-### 4. Verification Before Done
-- Never mark a task complete without proving it works.
-- Ask yourself: "Would a staff engineer approve this?"
+Useful references:
 
-### 5. Demand Elegance (Balanced)
-- For non-trivial changes: pause and ask "is there a more elegant way?"
-- Skip this for simple, obvious fixes — don't over-engineer.
-
-### 6. Autonomous Bug Fixing
-- When given a bug report: just fix it. Point at logs, errors, failing tests — resolve them.
-
----
-
-## Task Management Protocol
-
-1. **Plan First** — Write plan to `tasks/todo.md` with checkable items.
-2. **Verify Plan** — Check in before starting implementation.
-3. **Track Progress** — Mark items `[x]` as you go.
-4. **Explain Actions** — High-level summary at each step.
-5. **Document Results** — Add review section to `tasks/todo.md` when done.
-6. **Capture Lessons** — Update `tasks/lessons.md` after corrections.
-
----
-
-## Core Principles
-
-- **Simplicity First** — Make every change as simple as possible. Impact minimal code.
-- **No Laziness** — Find root causes. No temporary fixes.
-- **Minimal Impact** — Only touch what's necessary.
-
----
-
-→ See PROJECT.md for project context, file map, and Kanvas commands.
-
----
-
-## gstack
-
-Use `/browse` from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
-
-Available skills: `/office-hours`, `/plan-ceo-review`, `/plan-eng-review`, `/plan-design-review`,
-`/design-consultation`, `/design-shotgun`, `/design-html`, `/review`, `/ship`, `/land-and-deploy`,
-`/canary`, `/benchmark`, `/browse`, `/connect-chrome`, `/qa`, `/qa-only`, `/design-review`,
-`/setup-browser-cookies`, `/setup-deploy`, `/retro`, `/investigate`, `/document-release`, `/codex`,
-`/cso`, `/autoplan`, `/careful`, `/freeze`, `/guard`, `/unfreeze`, `/gstack-upgrade`, `/learn`.
-
-If skills aren't working, run: `cd ~/.claude/skills/gstack && bash setup --no-prefix`
-
----
-
-## Context Preservation
-
-> When context is compressed, Claude must preserve these patterns exactly.
-
-- **ThemeContext pattern** — Outer wrapper: `const [dark, setDark] = useState(() => localStorage.getItem("tc_dark") === "1")`. Provider receives `{ tc, dark, toggle: () => setDark(d => !d) }` — never the raw color object (`TC_LIGHT`/`TC_DARK`). `useTheme()` returns `{ tc, dark, toggle }`.
-- **Data loading pattern** — `localStorage.getItem("tc_rawCC")` with `RAW_CC_DEFAULT` fallback (imported from `src/config.js`). `loadFromLS` is private to `Dashboard.jsx` — never import or call it elsewhere.
-- **Routing** — `BrowserRouter` + `AppRoutes` in `src/router.jsx`. Fund IDs: `slugify(r.fons)`. Company IDs: `slugify(c.nom)`. Routes: `/` (Dashboard), `/investments` (InvestmentsIndex), `/fund/:id` (FundDetail), `/company/:id` (CompanyDetail).
-- **Active task status** — current `[ ]` items in `tasks/todo.md`.
-- **Files modified this session** — list of files changed so Claude doesn't re-read everything next turn.
+- `docs/claude-code.md#task-workflow`
+- `docs/claude-code.md#context-preservation`
+- `docs/claude-code.md#skill-routing`
 
 ## Skill routing
 

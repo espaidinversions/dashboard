@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.npm/
+.yarn/
+
+# Version control and deployment state
+.git/
+.gstack/
+.vercel/
+
+# Build and generated output
+dist/
+build/
+coverage/
+.test-artifacts/
+__pycache__/
+*.pyc
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Temporary and cache files
+.cache/
+tmp/
+tmp*/
+*.log
+
+# Large local datasets and exports that are rarely needed for coding tasks
+*.pdf
+*.xlsx
+*.csv
+Mercats Públics/
+raw-data/
+
+# Local tooling and editors
+.obsidian/
+files search/

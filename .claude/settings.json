@@ -1,5 +1,16 @@
 {
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|MultiEdit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/hooks/protect-paths.cjs"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "type": "command",
@@ -8,7 +19,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit",
+        "matcher": "Edit|MultiEdit",
         "hooks": [
           {
             "type": "command",

@@ -29,6 +29,10 @@ CREATE TABLE IF NOT EXISTS capital_calls (
   est     TEXT,
   eur     NUMERIC,
   divisa  TEXT,
+  comentaris TEXT,
+  amount_native NUMERIC,
+  fx_rate NUMERIC,
+  fx_source TEXT,
   recallable      NUMERIC,
   non_recallable  NUMERIC,
   from_recallable NUMERIC
@@ -36,9 +40,11 @@ CREATE TABLE IF NOT EXISTS capital_calls (
 
 -- ── Fund metadata (TVPI etc.) ─────────────────────────────
 CREATE TABLE IF NOT EXISTS fund_meta (
-  vehicle_id TEXT PRIMARY KEY REFERENCES private_entities(id) ON UPDATE CASCADE ON DELETE SET NULL,
-  fons       TEXT,
-  tvpi       NUMERIC
+  vehicle_id    TEXT PRIMARY KEY REFERENCES private_entities(id) ON UPDATE CASCADE ON DELETE SET NULL,
+  fons          TEXT,
+  tvpi          NUMERIC,
+  irr           NUMERIC,
+  vehicle_tipus TEXT
 );
 
 -- ── Pipeline ──────────────────────────────────────────────
@@ -153,10 +159,7 @@ CREATE TABLE IF NOT EXISTS pm_position_overrides (
   isin          TEXT PRIMARY KEY,
   valor_mercat  NUMERIC,
   rend_inici    NUMERIC,
-  rend2026      NUMERIC,
-  rend2025      NUMERIC,
-  rend2024      NUMERIC,
-  rend2023      NUMERIC,
+  rendiment     JSONB NOT NULL DEFAULT '{}',  -- keyed by year string: {"2023": 0.04, "2026": 0.07}
   cost_anual    NUMERIC,
   updated_at    TIMESTAMPTZ DEFAULT now()
 );
@@ -255,10 +258,10 @@ BEGIN
     DELETE FROM capital_calls;
   END IF;
   IF p_cc_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_cc_rows), 0) > 0 THEN
-    INSERT INTO capital_calls (vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa, recallable, non_recallable, from_recallable)
-    SELECT vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa, recallable, non_recallable, from_recallable
+    INSERT INTO capital_calls (vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa, comentaris, amount_native, fx_rate, fx_source, recallable, non_recallable, from_recallable)
+    SELECT vehicle_id, fons, tipus, cat, data, mes, year, fy, vcpe, est, eur, divisa, comentaris, amount_native, fx_rate, fx_source, recallable, non_recallable, from_recallable
     FROM jsonb_to_recordset(COALESCE(p_cc_rows, '[]'::jsonb))
-    AS x(vehicle_id TEXT, fons TEXT, tipus TEXT, cat TEXT, data TEXT, mes INTEGER, year INTEGER, fy TEXT, vcpe TEXT, est TEXT, eur NUMERIC, divisa TEXT, recallable NUMERIC, non_recallable NUMERIC, from_recallable NUMERIC);
+    AS x(vehicle_id TEXT, fons TEXT, tipus TEXT, cat TEXT, data TEXT, mes INTEGER, year INTEGER, fy TEXT, vcpe TEXT, est TEXT, eur NUMERIC, divisa TEXT, comentaris TEXT, amount_native NUMERIC, fx_rate NUMERIC, fx_source TEXT, recallable NUMERIC, non_recallable NUMERIC, from_recallable NUMERIC);
   END IF;
 
   IF p_pl_rows IS NOT NULL THEN
@@ -344,10 +347,10 @@ BEGIN
     AS x(id TEXT, kind TEXT, canonical_name TEXT, source_name TEXT, workbook_name TEXT, match_type TEXT);
   END IF;
   IF p_fund_meta_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_fund_meta_rows), 0) > 0 THEN
-    INSERT INTO fund_meta (vehicle_id, fons, tvpi)
-    SELECT vehicle_id, fons, tvpi
+    INSERT INTO fund_meta (vehicle_id, fons, tvpi, irr, vehicle_tipus)
+    SELECT vehicle_id, fons, tvpi, irr, vehicle_tipus
     FROM jsonb_to_recordset(COALESCE(p_fund_meta_rows, '[]'::jsonb))
-    AS x(vehicle_id TEXT, fons TEXT, tvpi NUMERIC);
+    AS x(vehicle_id TEXT, fons TEXT, tvpi NUMERIC, irr NUMERIC, vehicle_tipus TEXT);
   END IF;
 END;
 $$;

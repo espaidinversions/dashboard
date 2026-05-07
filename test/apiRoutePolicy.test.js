@@ -12,10 +12,10 @@ test("server api routes declare explicit guard policies", () => {
     ["/api/eur-usd", 'withGuard({ auth: "user"'],
     ["/api/auth-settings", 'withGuard({ auth: "none"'],
     ["/api/data-version", 'withGuard({ auth: "user"'],
-    ["/api/admin/users", 'withGuard({ auth: "admin"'],
-    ["/api/admin/users/:id", 'withGuard({ auth: "admin"'],
-    ["/api/admin/settings/allowed-domains", 'withGuard({ auth: "admin"'],
-    ["/api/admin/audit-log", 'withGuard({ auth: "admin"'],
+    ["/api/admin/users", 'withGuard({ auth: "admin-only"'],
+    ["/api/admin/users/:id", 'withGuard({ auth: "admin-only"'],
+    ["/api/admin/settings/allowed-domains", 'withGuard({ auth: "admin-only"'],
+    ["/api/admin/audit-log", 'withGuard({ auth: "admin-only"'],
     ["/api/board", 'withGuard({ auth: "user"'],
   ]);
 

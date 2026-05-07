@@ -8,6 +8,7 @@
   ],
   "project": [
     "src/**/*.{js,jsx}",
+    "test/**/*.js",
     "!src/generated/**",
     "api/**/*.js",
     "scripts/**/*.{js,mjs,cjs}",

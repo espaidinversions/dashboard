@@ -1,13 +1,18 @@
 /**
- * Search Funds import — reads "Logs" sheet from the SF Excel and syncs vcpe=SF rows.
+ * Search Funds import — reads:
+ *   - "Logs"   -> capital_calls rows where vcpe = 'SF'
+ *   - "Master" -> searchers master data (columns C:W)
  *
  * Usage:
  *   node scripts/sf_import.mjs "260416_Seguiment_SearchFunds.xlsx"
  *   node scripts/sf_import.mjs "260416_Seguiment_SearchFunds.xlsx" --dry-run
  *
- * Strategy: DELETE all capital_calls WHERE vcpe = 'SF', then INSERT parsed rows
- * where the resolved entity is kind='vehicle'. Company rows are skipped (covered
- * by startups_import.mjs / cc_import.mjs).
+ * Strategy:
+ *   1. DELETE all capital_calls WHERE vcpe = 'SF', then INSERT parsed log rows
+ *      where the resolved entity is kind='vehicle'. Company rows are skipped
+ *      (covered by startups_import.mjs / cc_import.mjs).
+ *   2. UPSERT searchers master rows by normalized `nom`, preserving non-master
+ *      fields such as NIF or valuation fields already stored in the DB.
  *
  * Sheet: "Logs"
  * Columns: 0=Startup, 1=Tipus, 2=#, 3=Data, 4=Import, 5=Divisa, 6=FXrate,
@@ -49,6 +54,68 @@ const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 const EXCLUDED_SEARCH_FUNDS = new Set(["castelnau capital"]);
+const ENTITY_ALIASES = new Map([
+  ["finanzarel cabrera", "finanzarel turtle"],
+  ["finanzarel espai", "finanzarel turtle"],
+]);
+
+// ── SF phase allocation — source: 260416_Seguiment_SearchFunds.xlsx, Snapshot v2 ──
+// Normalized fons name → phase config
+// "adquisicio": all transactions are post-acquisition (SF Equity Gap deals)
+// "search-acq": split by acqDate (search ticket before, equity on/after)
+// Fons NOT listed here: classified by masterSearcherMatches() vs "Participada (Altres)"
+const SF_FONS_ALLOCATION = new Map([
+  ["road capital",                           { phase: "adquisicio" }],
+  ["cw group",                               { phase: "adquisicio" }],
+  ["lexana",                                 { phase: "adquisicio" }],
+  ["project north",                          { phase: "adquisicio" }],
+  ["salomonte investor pooling b v hotek",   { phase: "adquisicio" }],
+  ["asf pharma alfavet seqos aurica spv",    { phase: "adquisicio" }],
+  ["anval capital",                          { phase: "adquisicio" }],
+  ["greenfarm omega project",                { phase: "adquisicio" }],
+  ["itaca fire coinvest",                    { phase: "adquisicio" }],
+  ["pleamar partners",                       { phase: "search-acq", acqDate: "2024-06-25" }],
+  ["terra firma capital",                    { phase: "search-acq", acqDate: "2025-07-17" }],
+]);
+
+const SF_EST_CERCA      = "Search Fund - Cerca";
+const SF_EST_ADQUISICIO = "Search Fund - Adquisició/Participada (SF)";
+
+// Overrides for Logs fons names that differ significantly from Master nom
+// (prefix matching handles most cases; only truly different names need explicit entries)
+const LOGS_TO_MASTER_NORM_OVERRIDES = new Map([
+  ["fs sav",         "fortius fs"],
+  ["janus capital",  "janus mittelstandnachfolge"],
+  ["quo investments","quo inversion"],
+  ["wildlynx capital","wild lynx capital"],
+]);
+
+// Returns true if a Logs normalized fons name matches any Master searcher norm.
+// Uses prefix matching to handle short Master names ("ab1") vs full Logs names ("ab1 capital")
+// and Master names with legal suffixes ("aeqor partners") vs stripped Logs names ("aeqor").
+function masterSearcherMatches(normalizedFons, masterSearcherNorms) {
+  const needle = LOGS_TO_MASTER_NORM_OVERRIDES.get(normalizedFons) ?? normalizedFons;
+  if (masterSearcherNorms.has(needle)) return true;
+  for (const masterNorm of masterSearcherNorms) {
+    if (needle.startsWith(masterNorm) || masterNorm.startsWith(needle)) return true;
+  }
+  return false;
+}
+
+function inferSFEst(normalizedFons, transactionDate, masterSearcherNorms) {
+  // Explicit SF acquisitions (Equity Gap + Search→Acq)
+  const alloc = SF_FONS_ALLOCATION.get(normalizedFons);
+  if (alloc) {
+    if (alloc.phase === "adquisicio") return SF_EST_ADQUISICIO;
+    if (alloc.phase === "search-acq") {
+      return transactionDate >= alloc.acqDate ? SF_EST_ADQUISICIO : SF_EST_CERCA;
+    }
+  }
+  // Known SF searchers (matched against Master sheet, with prefix flexibility)
+  if (masterSearcherMatches(normalizedFons, masterSearcherNorms)) return SF_EST_CERCA;
+  // Everything else in the Logs = direct investment (not SF)
+  return "Participada (Altres)";
+}
 
 // ── Category mapping ──────────────────────────────────────────────────────────
 const CAT_MAP = {
@@ -104,6 +171,73 @@ function excelDateToISO(serial) {
   return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
 }
 
+function cleanText(value) {
+  const text = String(value ?? "").replace(/\r\n/g, "\n").trim();
+  return text || null;
+}
+
+function toIntOrNull(value) {
+  return Number.isFinite(Number(value)) ? Number(value) : null;
+}
+
+function toNumberOrNull(value) {
+  if (value == null || String(value).trim() === "") return null;
+  const num = Number(value);
+  return Number.isFinite(num) ? num : null;
+}
+
+function normalizeGeo(value) {
+  const raw = String(value ?? "").trim().toUpperCase();
+  const map = {
+    ESP: "ES",
+    ES: "ES",
+    UK: "EN",
+    EN: "EN",
+    ITA: "IT",
+    IT: "IT",
+    DEU: "DE",
+    DE: "DE",
+    FRA: "FR",
+    FR: "FR",
+    POR: "PT",
+    PT: "PT",
+    NED: "NL",
+    NL: "NL",
+    USA: "US",
+    US: "US",
+    CHE: "CH",
+    CH: "CH",
+    SWE: "SE",
+    SE: "SE",
+    MEX: "MX",
+    MX: "MX",
+    POL: "PL",
+    PL: "PL",
+    TUR: "TR",
+    TR: "TR",
+  };
+  return map[raw] ?? (raw || null);
+}
+
+function normalizeEntryForm(value) {
+  const raw = String(value ?? "").trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === "search capital") return "Search Capital";
+  if (raw === "equity gap") return "Equity Gap";
+  return String(value).trim();
+}
+
+function normalizeName(value) {
+  return String(value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[().,/-]/g, " ")
+    .replace(/\b(s\.?l\.?|srl|ltd|limited)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // ── Parse Excel ───────────────────────────────────────────────────────────────
 function parseExcel(filePath) {
   const wb = XLSX.readFile(filePath);
@@ -151,6 +285,50 @@ function parseExcel(filePath) {
   return rows;
 }
 
+function parseMasterSheet(filePath) {
+  const wb = XLSX.readFile(filePath);
+  const ws = wb.Sheets["Master"];
+  if (!ws) throw new Error('Sheet "Master" not found');
+
+  const raw = XLSX.utils.sheet_to_json(ws, { defval: null, header: 1 });
+  const rowsByName = new Map();
+
+  for (let i = 3; i < raw.length; i++) {
+    const r = raw[i] ?? [];
+    const nom = cleanText(r[2]);
+    if (!nom || EXCLUDED_SEARCH_FUNDS.has(nom.toLowerCase())) continue;
+
+    const databaseIntroDate = typeof r[22] === "number" ? excelDateToISO(r[22]) : cleanText(r[22]);
+    rowsByName.set(normalizeName(nom), {
+      nom,
+      tipus: cleanText(r[3]),
+      modalitat: cleanText(r[4]),
+      geo: normalizeGeo(r[5]),
+      status_screening_code: toIntOrNull(r[6]),
+      status_screening: cleanText(r[7]),
+      status_cerca_code: toIntOrNull(r[8]),
+      status_cerca: cleanText(r[9]),
+      status_adquisicio_code: toIntOrNull(r[10]),
+      status_adquisicio: cleanText(r[11]),
+      form_entrada: normalizeEntryForm(r[12]),
+      intro_per: cleanText(r[13]),
+      companyia_adquirida: cleanText(r[14]),
+      searcher1: cleanText(r[15]),
+      searcher2: cleanText(r[16]),
+      escola1: cleanText(r[17]),
+      escola2: cleanText(r[18]),
+      ticket: toNumberOrNull(r[19]),
+      web: cleanText(r[20]),
+      comentaris: cleanText(r[21]),
+      data_inici: databaseIntroDate,
+      database_intro_date: databaseIntroDate,
+      is_mock: false,
+    });
+  }
+
+  return [...rowsByName.values()];
+}
+
 // ── Build entity maps ─────────────────────────────────────────────────────────
 async function buildEntityMaps() {
   const { data, error } = await sb
@@ -168,8 +346,17 @@ async function buildEntityMaps() {
   return { vehicles, companies };
 }
 
+async function loadExistingSearchers() {
+  const { data, error } = await sb
+    .from("searchers")
+    .select("id, nom");
+  if (error) throw new Error("Failed to load searchers: " + error.message);
+  return data ?? [];
+}
+
 function resolveEntity(fons, vehicles, companies) {
-  const needle = fons.trim().toLowerCase();
+  const rawNeedle = fons.trim().toLowerCase();
+  const needle = ENTITY_ALIASES.get(rawNeedle) ?? rawNeedle;
 
   // Exact vehicle match
   if (vehicles.has(needle)) return { id: vehicles.get(needle), kind: "vehicle" };
@@ -209,6 +396,10 @@ if (dryRun) console.log("🔍 DRY RUN — no changes will be written\n");
 
 const rows = parseExcel(absPath);
 console.log(`✓ Parsed ${rows.length} rows from "Logs"`);
+const masterRows = parseMasterSheet(absPath);
+console.log(`✓ Parsed ${masterRows.length} rows from "Master"`);
+
+const masterSearcherNorms = new Set(masterRows.map(r => normalizeName(r.nom)).filter(Boolean));
 
 console.log("Loading entities from DB...");
 const { vehicles, companies } = await buildEntityMaps();
@@ -221,20 +412,27 @@ for (const r of rows) {
   const { id, kind } = resolveEntity(r.fons, vehicles, companies);
 
   if (kind === "vehicle") {
-    sfRows.push({
-      vehicle_id: id,
-      fons: r.fons,
-      tipus: r.tipus,
-      vcpe: "SF",
-      est: "SF",
-      cat: r.cat,
-      eur: r.eur,
-      divisa: r.divisa,
-      mes: r.mes,
-      year: r.any,
-      fy: r.fy,
-      data: r.data,
-    });
+    const est = inferSFEst(normalizeName(r.fons), r.data, masterSearcherNorms);
+    if (est === "Participada (Altres)") {
+      // Non-SF direct investments in the Logs are managed by other import sources (cc_import / UI).
+      // Importing them here would create duplicates alongside existing vcpe='PC' rows.
+      skippedCompanies.add(r.fons);
+    } else {
+      sfRows.push({
+        vehicle_id: id,
+        fons: r.fons,
+        tipus: r.tipus,
+        vcpe: "SF",
+        est,
+        cat: r.cat,
+        eur: r.eur,
+        divisa: r.divisa,
+        mes: r.mes,
+        year: r.any,
+        fy: r.fy,
+        data: r.data,
+      });
+    }
   } else if (kind === "company") {
     skippedCompanies.add(r.fons);
   } else {
@@ -243,19 +441,51 @@ for (const r of rows) {
 }
 
 console.log(`  SF vehicle rows: ${sfRows.length}`);
-console.log(`  Skipped (companies): ${skippedCompanies.size} entities`);
+console.log(`  Skipped (non-SF / companies): ${skippedCompanies.size} entities`);
 if (unresolved.size) console.log(`  ⚠ Unresolved: ${[...unresolved].join(", ")}`);
 
 if (dryRun) {
-  console.log("\nSample SF rows:");
-  sfRows.slice(0, 5).forEach(r => console.log(" ", JSON.stringify(r)));
+  // Check for duplicate rows in parsed data
+  const seen = new Map();
+  const dupes = [];
+  for (const r of sfRows) {
+    const key = `${r.vehicle_id}|${r.data}|${r.eur}|${r.cat}`;
+    if (seen.has(key)) dupes.push(r);
+    else seen.set(key, r);
+  }
+  if (dupes.length) {
+    console.log(`\n⚠ ${dupes.length} duplicate rows detected (same vehicle+date+eur+cat):`);
+    dupes.forEach(r => console.log(`  ${r.fons}  ${r.data}  ${r.eur}  ${r.cat}`));
+  } else {
+    console.log("\n✓ No duplicate rows in parsed data");
+  }
+
+  // Show all unique fons → est assignments grouped by est value
+  const byEst = new Map();
+  for (const r of sfRows) {
+    if (!byEst.has(r.est)) byEst.set(r.est, new Set());
+    byEst.get(r.est).add(r.fons);
+  }
+  console.log("\n── Fons → Estratègia assignments ──");
+  for (const [est, fonsSet] of [...byEst.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
+    console.log(`\n  ${est} (${fonsSet.size} fons):`);
+    [...fonsSet].sort().forEach(f => console.log(`    • ${f}`));
+  }
+  console.log(`\nTotal: ${sfRows.length} rows across ${new Set(sfRows.map(r => r.fons)).size} unique fons`);
+
   process.exit(0);
 }
 
-// DELETE existing SF rows
+// DELETE existing SF rows and stale PC rows for the same vehicles
+// (PC rows may have been entered via UI before the SF import existed)
+const sfVehicleIds = [...new Set(sfRows.map(r => r.vehicle_id))];
 console.log("\nDeleting existing SF capital calls...");
 const { error: delErr } = await sb.from("capital_calls").delete().eq("vcpe", "SF");
-if (delErr) { console.error("Delete failed:", delErr.message); process.exit(1); }
+if (delErr) { console.error("Delete SF failed:", delErr.message); process.exit(1); }
+const { error: delPcErr } = await sb.from("capital_calls").delete()
+  .eq("vcpe", "PC")
+  .in("vehicle_id", sfVehicleIds);
+if (delPcErr) { console.error("Delete PC failed:", delPcErr.message); process.exit(1); }
 console.log("✓ Deleted");
 
 // INSERT in batches
@@ -269,3 +499,49 @@ for (let i = 0; i < sfRows.length; i += BATCH) {
   process.stdout.write(`\r  Inserted ${inserted}/${sfRows.length}...`);
 }
 console.log(`\n✓ Import complet: ${inserted} moviments SF`);
+
+console.log("\nSyncing searchers master rows...");
+const existingSearchers = await loadExistingSearchers();
+const existingByName = new Map(
+  existingSearchers
+    .map((row) => [normalizeName(row.nom), row])
+    .filter(([key]) => key)
+);
+
+const toUpdate = [];
+const toInsert = [];
+for (const row of masterRows) {
+  const existing = existingByName.get(normalizeName(row.nom));
+  if (existing?.id) toUpdate.push({ id: existing.id, row });
+  else toInsert.push(row);
+}
+
+let updated = 0;
+for (const item of toUpdate) {
+  const { error } = await sb
+    .from("searchers")
+    .update(item.row)
+    .eq("id", item.id);
+  if (error) {
+    console.error(`Update failed for ${item.row.nom}:`, error.message);
+    process.exit(1);
+  }
+  updated += 1;
+  process.stdout.write(`\r  Updated ${updated}/${toUpdate.length}...`);
+}
+if (toUpdate.length) process.stdout.write("\n");
+
+let insertedSearchers = 0;
+for (let i = 0; i < toInsert.length; i += BATCH) {
+  const batch = toInsert.slice(i, i + BATCH);
+  const { error } = await sb.from("searchers").insert(batch);
+  if (error) {
+    console.error(`Insert searchers batch ${i}-${i + batch.length} failed:`, error.message);
+    process.exit(1);
+  }
+  insertedSearchers += batch.length;
+  process.stdout.write(`\r  Inserted ${insertedSearchers}/${toInsert.length} new searchers...`);
+}
+if (toInsert.length) process.stdout.write("\n");
+
+console.log(`✓ Searchers synced: ${updated} updated, ${insertedSearchers} inserted`);
