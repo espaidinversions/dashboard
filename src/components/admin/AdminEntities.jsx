@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import * as XLSX from "xlsx";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
@@ -196,6 +197,27 @@ export default function AdminEntities() {
     setConfirmDelete(null);
   }
 
+  function exportXlsx() {
+    const rows = entities.map(e => ({
+      id:             e.id,
+      canonical_name: e.canonical_name,
+      fiscal_name:    e.fiscal_name ?? "",
+      kind:           e.kind,
+      match_type:     e.match_type ?? "",
+      nif:            e.nif ?? "",
+      isin:           e.isin ?? "",
+      country:        e.country ?? "",
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    ws["!cols"] = [
+      { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 10 },
+      { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 8 },
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Entitats");
+    XLSX.writeFile(wb, "entitats.xlsx");
+  }
+
   const th = { ...sharedStyles.th(tc), padding: "9px 12px", textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
   const td = { padding: "9px 12px", borderBottom: `1px solid ${tc.border}`, fontSize: 12 };
 
@@ -214,11 +236,15 @@ export default function AdminEntities() {
     <div>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tc.navy }}>Registre d'Entitats</h2>
-        <div style={{ display: "flex", gap: 6 }}>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <button style={tabStyle(tab === "list")} onClick={() => setTab("list")}>Llista</button>
           <button style={{ ...tabStyle(tab === "duplicates"), ...(duplicateGroups.length > 0 ? { color: tab === "duplicates" ? "#fff" : (tc.red ?? "#d32f2f"), borderColor: tc.red ?? "#d32f2f" } : {}) }}
             onClick={() => setTab("duplicates")}>
             Duplicats {duplicateGroups.length > 0 && `(${duplicateGroups.length})`}
+          </button>
+          <button onClick={exportXlsx} disabled={entities.length === 0}
+            style={{ padding: "6px 14px", borderRadius: 6, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 12, fontFamily: "inherit" }}>
+            Exporta XLSX
           </button>
         </div>
       </div>
