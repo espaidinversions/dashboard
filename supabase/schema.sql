@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS private_entities (
   workbook_name   TEXT,
   match_type      TEXT,
   nif             TEXT,
+  fiscal_name     TEXT,
   created_at      TIMESTAMPTZ DEFAULT now(),
   updated_at      TIMESTAMPTZ DEFAULT now()
 );

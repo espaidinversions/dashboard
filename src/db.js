@@ -606,6 +606,19 @@ export async function updateEntityNif(entityId, nif) {
   return { error };
 }
 
+export async function updateEntityFiscalName(entityId, fiscalName) {
+  if (!supabase) return { error: null };
+  const trimmed = String(fiscalName ?? "").trim();
+  const { error } = await supabase
+    .from("private_entities")
+    .update({ fiscal_name: trimmed || null })
+    .eq("id", entityId);
+  if (!error) {
+    logAudit("update", "private_entities", entityId, { fiscal_name: trimmed || null });
+  }
+  return { error };
+}
+
 /**
  * Routes through the API server (service key) to bypass RLS.
  * Deletes fund_meta first, then the private_entities row.

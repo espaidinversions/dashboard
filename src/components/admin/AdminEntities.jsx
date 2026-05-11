@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
-import { loadPrivateEntities, renamePrivateEntity, updateEntityNif, deleteVehicle, deleteCompanyEntity, mergePrivateEntities } from "../../db.js";
+import { loadPrivateEntities, renamePrivateEntity, updateEntityNif, updateEntityFiscalName, deleteVehicle, deleteCompanyEntity, mergePrivateEntities } from "../../db.js";
 
 // ── Duplicate detection ─────────────────────────────────────
 const DEDUPE_STOPWORDS = new Set([
@@ -51,7 +51,7 @@ export default function AdminEntities() {
   const [filterMatch, setFilterMatch] = useState("");
   const [editId, setEditId] = useState(null);
   const [editValue, setEditValue] = useState("");
-  const [editField, setEditField] = useState("name"); // "name" | "nif"
+  const [editField, setEditField] = useState("name"); // "name" | "nif" | "fiscal_name"
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null); // entity or null
   const [deleting, setDeleting] = useState(false);
@@ -132,7 +132,9 @@ export default function AdminEntities() {
   function startEdit(entity, field) {
     setEditId(entity.id);
     setEditField(field);
-    setEditValue(field === "nif" ? (entity.nif ?? "") : entity.canonical_name);
+    if (field === "nif") setEditValue(entity.nif ?? "");
+    else if (field === "fiscal_name") setEditValue(entity.fiscal_name ?? "");
+    else setEditValue(entity.canonical_name);
   }
 
   function cancelEdit() {
@@ -149,6 +151,12 @@ export default function AdminEntities() {
       if (!error) {
         setEntities(prev => prev.map(e => e.id === entityId ? { ...e, nif: trimmed || null } : e));
         toast({ message: "NIF actualitzat", type: "success" });
+      }
+    } else if (editField === "fiscal_name") {
+      ({ error } = await updateEntityFiscalName(entityId, trimmed));
+      if (!error) {
+        setEntities(prev => prev.map(e => e.id === entityId ? { ...e, fiscal_name: trimmed || null } : e));
+        toast({ message: "Nom fiscal actualitzat", type: "success" });
       }
     } else {
       if (!trimmed) { setSaving(false); return; }
@@ -305,20 +313,22 @@ export default function AdminEntities() {
                 <th style={th}>ID</th>
                 <th style={th}>Nom canònic</th>
                 <th style={th}>NIF</th>
+                <th style={th}>Nom fiscal</th>
                 <th style={th}>Tipus</th>
                 <th style={th}>Match</th>
                 <th style={th}>ISIN</th>
                 <th style={th}>País</th>
-                <th style={{ ...th, width: 120 }}></th>
+                <th style={{ ...th, width: 160 }}></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={8} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap resultat</td></tr>
+                <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap resultat</td></tr>
               )}
               {filtered.map(e => {
-                const isEditingName = editId === e.id && editField === "name";
-                const isEditingNif  = editId === e.id && editField === "nif";
+                const isEditingName       = editId === e.id && editField === "name";
+                const isEditingNif        = editId === e.id && editField === "nif";
+                const isEditingFiscalName = editId === e.id && editField === "fiscal_name";
                 const isEditing = editId === e.id;
                 const matchCfg = MATCH_COLORS[e.match_type] ?? {};
                 return (
@@ -348,12 +358,26 @@ export default function AdminEntities() {
                           style={{ padding: "4px 8px", borderRadius: 4, border: `1.5px solid ${tc.green}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit", width: 120 }}
                         />
                       ) : (
+                        <span style={{ color: e.nif ? tc.text : tc.textLight }}>{e.nif ?? "—"}</span>
+                      )}
+                    </td>
+                    <td style={td}>
+                      {isEditingFiscalName ? (
+                        <input
+                          autoFocus
+                          value={editValue}
+                          onChange={ev => setEditValue(ev.target.value)}
+                          onKeyDown={ev => { if (ev.key === "Enter") saveEdit(e.id); if (ev.key === "Escape") cancelEdit(); }}
+                          placeholder="Nom fiscal…"
+                          style={{ padding: "4px 8px", borderRadius: 4, border: `1.5px solid ${tc.green}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit", width: 180 }}
+                        />
+                      ) : (
                         <span
-                          onClick={() => startEdit(e, "nif")}
-                          title="Clica per editar el NIF"
-                          style={{ cursor: "pointer", color: e.nif ? tc.text : tc.textLight, borderBottom: `1px dashed ${tc.border}` }}
+                          onClick={() => startEdit(e, "fiscal_name")}
+                          title="Clica per editar el nom fiscal"
+                          style={{ cursor: "pointer", color: e.fiscal_name ? tc.text : tc.textLight, borderBottom: `1px dashed ${tc.border}` }}
                         >
-                          {e.nif ?? "—"}
+                          {e.fiscal_name ?? "—"}
                         </span>
                       )}
                     </td>
@@ -376,10 +400,14 @@ export default function AdminEntities() {
                           </button>
                         </span>
                       ) : (
-                        <span style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                        <span style={{ display: "flex", gap: 6, justifyContent: "flex-end", flexWrap: "wrap" }}>
                           <button onClick={() => startEdit(e, "name")}
                             style={{ padding: "3px 10px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
                             Reanomena
+                          </button>
+                          <button onClick={() => startEdit(e, "nif")}
+                            style={{ padding: "3px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
+                            NIF
                           </button>
                           <button onClick={() => setConfirmDelete(e)}
                             style={{ padding: "3px 8px", borderRadius: 4, border: `1px solid ${tc.red ?? "#d32f2f"}`, background: "transparent", color: tc.red ?? "#d32f2f", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
