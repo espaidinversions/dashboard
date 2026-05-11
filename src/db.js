@@ -590,6 +590,19 @@ export async function renamePrivateEntity(entityId, canonicalName) {
   return { error };
 }
 
+export async function updateEntityId(oldId, newId) {
+  if (!supabase) return { error: null };
+  const trimmed = String(newId ?? "").trim();
+  const { error } = await supabase.rpc("update_private_entity_id", {
+    p_old_id: oldId,
+    p_new_id: trimmed,
+  });
+  if (!error) {
+    logAudit("update", "private_entities", oldId, { id: trimmed });
+  }
+  return { error };
+}
+
 /**
  * @param {string} entityId
  * @param {string} nif
