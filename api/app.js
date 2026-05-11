@@ -302,8 +302,27 @@ async function handleSearchers(req, res) {
   return res.status(200).json({ data: rowToSearcher(data) });
 }
 
-async function handlePipeline(req, res) {
-  if (!["DELETE"].includes(req.method)) {
+async function canWritePipeline(serviceClient, user) {
+  const role = getUserRole(user);
+  if (role === "admin" || role === "superuser") return true;
+
+  const { data, error } = await serviceClient
+    .from("user_permissions")
+    .select("denied_sections, section_roles")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (error) throw error;
+
+  const accessMap = buildSectionAccessMap({
+    role,
+    sectionRoles: data?.section_roles,
+    deniedSections: data?.denied_sections,
+  });
+  return hasSectionAccess(accessMap, "fons", ACCESS_SUPERUSER);
+}
+
+async function handleVehicles(req, res) {
+  if (req.method !== "DELETE") {
     return res.status(405).json({ error: "Method not allowed" });
   }
   const supabase = makeServiceClient();
@@ -315,15 +334,146 @@ async function handlePipeline(req, res) {
     return res.status(403).json({ error: "Forbidden" });
   }
 
+  const id = String(req.query?.id ?? "").trim();
+  if (!id) return res.status(400).json({ error: "Vehicle id is required" });
+
+  // Delete fund_meta first — its vehicle_id is a PK so SET NULL would fail.
+  const { error: fmErr } = await supabase.from("fund_meta").delete().eq("vehicle_id", id);
+  if (fmErr) throw fmErr;
+
+  const { error } = await supabase
+    .from("private_entities")
+    .delete()
+    .eq("id", id)
+    .eq("kind", "vehicle");
+  if (error) throw error;
+
+  return res.status(200).json({ ok: true });
+}
+
+async function handleCompanies(req, res) {
+  if (req.method !== "DELETE") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+  const supabase = makeServiceClient();
+  const user = await verifyUser(req, supabase);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  const role = getUserRole(user);
+  if (role !== "admin" && role !== "superuser") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const id = String(req.query?.id ?? "").trim();
+  if (!id) return res.status(400).json({ error: "Company id is required" });
+
+  // Delete portfolio_companies first — entity_id FK is SET NULL, not CASCADE.
+  const { error: pcErr } = await supabase.from("portfolio_companies").delete().eq("entity_id", id);
+  if (pcErr) throw pcErr;
+
+  const { error } = await supabase
+    .from("private_entities")
+    .delete()
+    .eq("id", id)
+    .eq("kind", "company");
+  if (error) throw error;
+
+  return res.status(200).json({ ok: true });
+}
+
+async function handleMergeEntities(req, res) {
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+  const supabase = makeServiceClient();
+  const user = await verifyUser(req, supabase);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  const role = getUserRole(user);
+  if (role !== "admin" && role !== "superuser") {
+    return res.status(403).json({ error: "Forbidden" });
+  }
+
+  const { from_id, to_id } = req.body ?? {};
+  if (!from_id || !to_id) return res.status(400).json({ error: "from_id and to_id are required" });
+  if (from_id === to_id) return res.status(400).json({ error: "from_id and to_id must differ" });
+
+  // Fetch keeper entity to get canonical name for denormalized fons column
+  const { data: toEntity, error: toErr } = await supabase
+    .from("private_entities").select("canonical_name").eq("id", to_id).maybeSingle();
+  if (toErr) throw toErr;
+  if (!toEntity) return res.status(404).json({ error: "Target entity not found" });
+
+  const toName = toEntity.canonical_name;
+
+  // 1. Reassign capital_calls
+  const { error: ccErr } = await supabase.from("capital_calls")
+    .update({ vehicle_id: to_id, fons: toName })
+    .eq("vehicle_id", from_id);
+  if (ccErr) throw ccErr;
+
+  // 2. Reassign portfolio_companies
+  const { error: pcErr } = await supabase.from("portfolio_companies")
+    .update({ entity_id: to_id })
+    .eq("entity_id", from_id);
+  if (pcErr) throw pcErr;
+
+  // 3. Merge fund_meta: patch keeper's nulls with source values, then delete source row
+  const [{ data: fromMeta }, { data: toMeta }] = await Promise.all([
+    supabase.from("fund_meta").select("*").eq("vehicle_id", from_id).maybeSingle(),
+    supabase.from("fund_meta").select("*").eq("vehicle_id", to_id).maybeSingle(),
+  ]);
+  if (fromMeta) {
+    if (!toMeta) {
+      // No keeper meta yet — reassign the source row
+      const { error: fmMvErr } = await supabase.from("fund_meta")
+        .update({ vehicle_id: to_id, fons: toName })
+        .eq("vehicle_id", from_id);
+      if (fmMvErr) throw fmMvErr;
+    } else {
+      // Keeper already has meta — fill its nulls with source values, then drop source row
+      const patch = {};
+      for (const key of ["tvpi", "irr", "fi_end"]) {
+        if (toMeta[key] == null && fromMeta[key] != null) patch[key] = fromMeta[key];
+      }
+      if (Object.keys(patch).length > 0) {
+        const { error: fmPatchErr } = await supabase.from("fund_meta").update(patch).eq("vehicle_id", to_id);
+        if (fmPatchErr) throw fmPatchErr;
+      }
+      const { error: fmDelErr } = await supabase.from("fund_meta").delete().eq("vehicle_id", from_id);
+      if (fmDelErr) throw fmDelErr;
+    }
+  }
+
+  // 4. Delete the source entity
+  const { error: delErr } = await supabase.from("private_entities").delete().eq("id", from_id);
+  if (delErr) throw delErr;
+
+  return res.status(200).json({ ok: true, merged_into: to_id });
+}
+
+async function handlePipeline(req, res) {
+  if (!["DELETE"].includes(req.method)) {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+  const supabase = makeServiceClient();
+  const user = await verifyUser(req, supabase);
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  const canWrite = await canWritePipeline(supabase, user);
+  if (!canWrite) return res.status(403).json({ error: "Forbidden" });
+
   if (req.method === "DELETE") {
     const id = Number(req.query?.id);
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ error: "Valid pipeline id is required" });
     }
+    // Upsert instead of update so seed-only deals (no DB row yet) get a real row with active=false.
+    // mergePipelineDeals merges DB records over seed records, so active=false suppresses resurrection.
+    const name = String(req.query?.name ?? "").trim() || null;
     const { error } = await supabase
       .from("pipeline")
-      .update({ active: false })
-      .eq("id", id);
+      .upsert({ id, ...(name ? { name } : {}), active: false }, { onConflict: "id" });
     if (error) throw error;
     return res.status(200).json({ ok: true });
   }
@@ -370,6 +520,18 @@ export default async function handler(req, res) {
     if (route === "pipeline") {
       if (!await enforceRateLimit(req, res, "default")) return;
       return await handlePipeline(req, res);
+    }
+    if (route === "vehicles") {
+      if (!await enforceRateLimit(req, res, "default")) return;
+      return await handleVehicles(req, res);
+    }
+    if (route === "companies") {
+      if (!await enforceRateLimit(req, res, "default")) return;
+      return await handleCompanies(req, res);
+    }
+    if (route === "merge-entity") {
+      if (!await enforceRateLimit(req, res, "default")) return;
+      return await handleMergeEntities(req, res);
     }
     return res.status(404).json({ error: "Not found" });
   } catch (error) {

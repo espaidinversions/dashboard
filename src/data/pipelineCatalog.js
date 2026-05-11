@@ -19,7 +19,10 @@ export function mergePipelineDeals(liveDeals = [], fallbackDeals = PIPELINE_SEED
   for (const deal of liveDeals) {
     const key = normalizeDealName(deal?.name);
     if (!key) continue;
-    merged.set(key, { ...(merged.get(key) ?? {}), ...deal });
+    // Strip null/undefined from DB record so seed values aren't clobbered by missing columns.
+    // `false` (e.g. active: false) is intentional and must be preserved.
+    const clean = Object.fromEntries(Object.entries(deal).filter(([, v]) => v !== null && v !== undefined));
+    merged.set(key, { ...(merged.get(key) ?? {}), ...clean });
   }
 
   return [...merged.values()].sort((a, b) => {

@@ -4,7 +4,7 @@ import { VCPE_CFG, EST_CFG, VEHICLE_TIPUS_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, readStoredJSON, writeStoredJSON, readStoredFlag, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, EditableCell, DeleteRowButton, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
-import { upsertFundMeta, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
+import { upsertFundMeta, upsertFundMetaFiEnd, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
@@ -70,6 +70,17 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
     writeStoredJSON("tc_fundMeta", updated);
     const { error } = await upsertFundMeta(fund, tvpi, irr);
     if (error) toast({ message: "Error desant TVPI: " + error.message, type: "error" });
+  };
+
+  const saveFiEnd = async (fund, fiEnd) => {
+    const val = fiEnd || null;
+    const updated = fundMeta.some(m => (m.id ?? m.fons) === (fund.id ?? fund.fons))
+      ? fundMeta.map(m => (m.id ?? m.fons) === (fund.id ?? fund.fons) ? { ...m, fiEnd: val } : m)
+      : [...fundMeta, { id: fund.id ?? undefined, fons: fund.fons, fiEnd: val }];
+    setFundMeta(updated);
+    writeStoredJSON("tc_fundMeta", updated);
+    const { error } = await upsertFundMetaFiEnd(fund, val);
+    if (error) toast({ message: "Error desant fi inversió: " + error.message, type: "error" });
   };
 
   const handleDeleteFund = async (fund) => {
@@ -166,6 +177,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
         irr,
         dpi,
         rvpi,
+        fiEnd: meta?.fiEnd ?? null,
       };
     });
   }, [rawCC, fundMeta, vcpeTypes]);
@@ -210,6 +222,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
       else if (sortKey === "rvpi") { av = a.rvpi ?? -1; bv = b.rvpi ?? -1; }
       else if (sortKey === "year") { av = a.year ?? 9999; bv = b.year ?? 9999; }
       else if (sortKey === "vcpe") { av = a.vehicleTipus ?? ""; bv = b.vehicleTipus ?? ""; }
+      else if (sortKey === "fiEnd") { av = a.fiEnd ?? "9999"; bv = b.fiEnd ?? "9999"; }
       else { av = a.fons.toLowerCase(); bv = b.fons.toLowerCase(); }
       if (av < bv) return sortDir === "asc" ? -1 : 1;
       if (av > bv) return sortDir === "asc" ? 1 : -1;
@@ -247,6 +260,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
     { k: "irr",       label: "IRR",      align: "right", title: "Money-weighted return based on dated flows and current residual value" },
     { k: "dpi",       label: "DPI",      align: "right", title: "Distributions to Paid-In" },
     { k: "rvpi",      label: "RVPI",     align: "right", title: "Residual Value to Paid-In" },
+    { k: "fiEnd",     label: "Fi Inv.",  align: "right", title: "Fi del període d'inversió — quan el capital compromès no cridat queda lliure" },
   ];
 
   return (
@@ -364,6 +378,11 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: multipleColor(r.rvpi, tc) }}>
                       {formatMultiple(r.rvpi)}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: tc.textMid }}>
+                      <EditableCell value={r.fiEnd} type="text" align="right"
+                        emptyDisplay="—" onSave={v => saveFiEnd(r, v)}
+                        disabled={!canEditTvpi} />
                     </td>
                     {canEditAny && (
                       <td style={{ padding: "4px 8px", textAlign: "center" }}>

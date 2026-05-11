@@ -2,7 +2,35 @@ import React, { useState, useEffect, useMemo } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
-import { loadPrivateEntities, renamePrivateEntity } from "../../db.js";
+import { loadPrivateEntities, renamePrivateEntity, updateEntityNif, deleteVehicle, deleteCompanyEntity, mergePrivateEntities } from "../../db.js";
+
+// ── Duplicate detection ─────────────────────────────────────
+const DEDUPE_STOPWORDS = new Set([
+  "a","an","and","capital","partner","partners","fund","funds","invest","investment","investments",
+  "holding","holdings","group","global","private","equity","program","class","corporation","corp",
+  "company","companies","limited","ltd","llp","llc","lp","sl","slp","srl","sa","spa","scra","scr",
+  "scsp","sicav","raif","fcr","fcre","ficc","u","ua",
+]);
+
+function stripDiacritics(s) {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function dedupeKey(name) {
+  return stripDiacritics(name)
+    .toLowerCase()
+    .replace(/co[\s-]?inv(?:est(?:ment)?)?/g, "coinvest")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(t => t && !DEDUPE_STOPWORDS.has(t))
+    .sort()
+    .join(" ");
+}
+
+function isMockId(id) {
+  return String(id).startsWith("MOCKNIF:");
+}
 
 const KIND_LABELS = { company: "Empresa", vehicle: "Vehicle" };
 const MATCH_COLORS = {
@@ -17,12 +45,17 @@ export default function AdminEntities() {
   const { toast } = useToast();
   const [entities, setEntities] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState("list"); // "list" | "duplicates"
   const [search, setSearch] = useState("");
   const [filterKind, setFilterKind] = useState("");
   const [filterMatch, setFilterMatch] = useState("");
   const [editId, setEditId] = useState(null);
   const [editValue, setEditValue] = useState("");
+  const [editField, setEditField] = useState("name"); // "name" | "nif"
   const [saving, setSaving] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null); // entity or null
+  const [deleting, setDeleting] = useState(false);
+  const [merging, setMerging] = useState(false);
 
   useEffect(() => {
     setLoading(true);
@@ -44,9 +77,62 @@ export default function AdminEntities() {
 
   const matchTypes = useMemo(() => [...new Set(entities.map(e => e.match_type).filter(Boolean))].sort(), [entities]);
 
-  function startEdit(entity) {
+  // Groups with 2+ entities sharing a normalized name, where at least one is a mock ID.
+  const duplicateGroups = useMemo(() => {
+    const groups = new Map();
+    for (const e of entities) {
+      const key = dedupeKey(e.canonical_name);
+      if (!key) continue;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(e);
+    }
+    return [...groups.values()]
+      .filter(g => g.length > 1 && g.some(e => isMockId(e.id)))
+      .map(g => {
+        const keeper = g.find(e => !isMockId(e.id)) ?? g.find(e => e.match_type !== "fallback") ?? g[0];
+        const dups = g.filter(e => e !== keeper);
+        return { keeper, dups };
+      });
+  }, [entities]);
+
+  async function mergeGroup(keeper, dups) {
+    setMerging(true);
+    let anyError = false;
+    for (const dup of dups) {
+      const { error } = await mergePrivateEntities(dup.id, keeper.id);
+      if (error) {
+        toast({ message: `Error fusionant "${dup.canonical_name}": ${error.message}`, type: "error" });
+        anyError = true;
+      } else {
+        setEntities(prev => prev.filter(e => e.id !== dup.id));
+      }
+    }
+    setMerging(false);
+    if (!anyError) toast({ message: `Fusionat correctament a "${keeper.canonical_name}"`, type: "success" });
+  }
+
+  async function mergeAllDuplicates() {
+    // Snapshot before starting — entities state changes mid-loop as merges complete
+    const snapshot = duplicateGroups.slice();
+    setMerging(true);
+    let merged = 0, errors = 0;
+    const toRemove = new Set();
+    for (const { keeper, dups } of snapshot) {
+      for (const dup of dups) {
+        const { error } = await mergePrivateEntities(dup.id, keeper.id);
+        if (error) { errors++; }
+        else { merged++; toRemove.add(dup.id); }
+      }
+    }
+    if (toRemove.size > 0) setEntities(prev => prev.filter(e => !toRemove.has(e.id)));
+    setMerging(false);
+    toast({ message: `${merged} duplicats fusionats${errors ? `, ${errors} errors` : ""}`, type: errors ? "error" : "success" });
+  }
+
+  function startEdit(entity, field) {
     setEditId(entity.id);
-    setEditValue(entity.canonical_name);
+    setEditField(field);
+    setEditValue(field === "nif" ? (entity.nif ?? "") : entity.canonical_name);
   }
 
   function cancelEdit() {
@@ -56,17 +142,45 @@ export default function AdminEntities() {
 
   async function saveEdit(entityId) {
     const trimmed = editValue.trim();
-    if (!trimmed) return;
     setSaving(true);
-    const { error } = await renamePrivateEntity(entityId, trimmed);
+    let error;
+    if (editField === "nif") {
+      ({ error } = await updateEntityNif(entityId, trimmed));
+      if (!error) {
+        setEntities(prev => prev.map(e => e.id === entityId ? { ...e, nif: trimmed || null } : e));
+        toast({ message: "NIF actualitzat", type: "success" });
+      }
+    } else {
+      if (!trimmed) { setSaving(false); return; }
+      ({ error } = await renamePrivateEntity(entityId, trimmed));
+      if (!error) {
+        setEntities(prev => prev.map(e => e.id === entityId ? { ...e, canonical_name: trimmed } : e));
+        toast({ message: "Nom actualitzat", type: "success" });
+      }
+    }
     setSaving(false);
     if (error) {
-      toast({ message: "Error canviant el nom: " + error.message, type: "error" });
+      toast({ message: "Error desant: " + error.message, type: "error" });
       return;
     }
-    setEntities(prev => prev.map(e => e.id === entityId ? { ...e, canonical_name: trimmed } : e));
     setEditId(null);
-    toast({ message: "Nom actualitzat", type: "success" });
+  }
+
+  async function confirmAndDelete() {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    const { error } = confirmDelete.kind === "company"
+      ? await deleteCompanyEntity(confirmDelete.id)
+      : await deleteVehicle(confirmDelete.id);
+    setDeleting(false);
+    if (error) {
+      toast({ message: "Error eliminant: " + error.message, type: "error" });
+    } else {
+      setEntities(prev => prev.filter(e => e.id !== confirmDelete.id));
+      const label = confirmDelete.kind === "company" ? "Empresa" : "Vehicle";
+      toast({ message: `${label} "${confirmDelete.canonical_name}" eliminat`, type: "success" });
+    }
+    setConfirmDelete(null);
   }
 
   const th = { ...sharedStyles.th(tc), padding: "9px 12px", textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
@@ -76,9 +190,25 @@ export default function AdminEntities() {
   const vehicleCount   = entities.filter(e => e.kind === "vehicle").length;
   const companyCount   = entities.filter(e => e.kind === "company").length;
 
+  const tabStyle = (active) => ({
+    padding: "6px 16px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 12, fontFamily: "inherit",
+    fontWeight: active ? 700 : 400,
+    background: active ? tc.navy : "transparent",
+    color: active ? "#fff" : tc.textMid,
+  });
+
   return (
     <div>
-      <h2 style={{ margin: "0 0 20px", fontSize: 18, fontWeight: 700, color: tc.navy }}>Registre d'Entitats</h2>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 10 }}>
+        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: tc.navy }}>Registre d'Entitats</h2>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button style={tabStyle(tab === "list")} onClick={() => setTab("list")}>Llista</button>
+          <button style={{ ...tabStyle(tab === "duplicates"), ...(duplicateGroups.length > 0 ? { color: tab === "duplicates" ? "#fff" : (tc.red ?? "#d32f2f"), borderColor: tc.red ?? "#d32f2f" } : {}) }}
+            onClick={() => setTab("duplicates")}>
+            Duplicats {duplicateGroups.length > 0 && `(${duplicateGroups.length})`}
+          </button>
+        </div>
+      </div>
 
       {/* Summary */}
       <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
@@ -95,6 +225,54 @@ export default function AdminEntities() {
         ))}
       </div>
 
+      {tab === "duplicates" && (
+        <div>
+          {duplicateGroups.length === 0 ? (
+            <div style={{ color: tc.textLight, padding: 32, textAlign: "center" }}>Cap duplicat detectat.</div>
+          ) : (
+            <>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <span style={{ fontSize: 13, color: tc.text }}>{duplicateGroups.length} grup{duplicateGroups.length !== 1 ? "s" : ""} de duplicats detectats</span>
+                <button onClick={mergeAllDuplicates} disabled={merging}
+                  style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 600 }}>
+                  {merging ? "Fusionant…" : "Fusiona tots"}
+                </button>
+              </div>
+              {duplicateGroups.map(({ keeper, dups }, gi) => (
+                <div key={gi} style={{ ...sharedStyles.cardPad(tc, "16px 20px"), marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Grup</div>
+                      {/* Keeper */}
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                        <span style={{ fontSize: 10, borderRadius: 4, padding: "1px 6px", fontWeight: 600, background: "#E8F5E9", color: "#1B5E20" }}>✓ manté</span>
+                        <span style={{ fontWeight: 600, fontSize: 13, color: tc.navy }}>{keeper.canonical_name}</span>
+                        <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: tc.textLight }}>{keeper.id}</span>
+                        {keeper.match_type && <span style={{ fontSize: 10, borderRadius: 4, padding: "1px 6px", fontWeight: 600, ...(MATCH_COLORS[keeper.match_type] ?? {}) }}>{keeper.match_type}</span>}
+                      </div>
+                      {/* Duplicates */}
+                      {dups.map(dup => (
+                        <div key={dup.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, opacity: 0.7 }}>
+                          <span style={{ fontSize: 10, borderRadius: 4, padding: "1px 6px", fontWeight: 600, background: "#FFEBEE", color: "#B71C1C" }}>✕ elimina</span>
+                          <span style={{ fontSize: 13, color: tc.text }}>{dup.canonical_name}</span>
+                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: tc.textLight }}>{dup.id}</span>
+                          {dup.match_type && <span style={{ fontSize: 10, borderRadius: 4, padding: "1px 6px", fontWeight: 600, ...(MATCH_COLORS[dup.match_type] ?? {}) }}>{dup.match_type}</span>}
+                        </div>
+                      ))}
+                    </div>
+                    <button onClick={() => mergeGroup(keeper, dups)} disabled={merging}
+                      style={{ padding: "5px 14px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {merging ? "…" : "Fusiona"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {tab === "list" && <>
       {/* Filters */}
       <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
         <input
@@ -124,27 +302,30 @@ export default function AdminEntities() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: tc.bgAlt }}>
-                <th style={th}>ID / NIF</th>
+                <th style={th}>ID</th>
                 <th style={th}>Nom canònic</th>
+                <th style={th}>NIF</th>
                 <th style={th}>Tipus</th>
                 <th style={th}>Match</th>
                 <th style={th}>ISIN</th>
                 <th style={th}>País</th>
-                <th style={{ ...th, width: 80 }}></th>
+                <th style={{ ...th, width: 120 }}></th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={7} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap resultat</td></tr>
+                <tr><td colSpan={8} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap resultat</td></tr>
               )}
               {filtered.map(e => {
+                const isEditingName = editId === e.id && editField === "name";
+                const isEditingNif  = editId === e.id && editField === "nif";
                 const isEditing = editId === e.id;
                 const matchCfg = MATCH_COLORS[e.match_type] ?? {};
                 return (
                   <tr key={e.id} style={{ background: isEditing ? tc.bgAlt : "transparent" }}>
                     <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight }}>{e.id}</td>
                     <td style={td}>
-                      {isEditing ? (
+                      {isEditingName ? (
                         <input
                           autoFocus
                           value={editValue}
@@ -154,6 +335,26 @@ export default function AdminEntities() {
                         />
                       ) : (
                         <span style={{ fontWeight: 500 }}>{e.canonical_name}</span>
+                      )}
+                    </td>
+                    <td style={{ ...td, fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
+                      {isEditingNif ? (
+                        <input
+                          autoFocus
+                          value={editValue}
+                          onChange={ev => setEditValue(ev.target.value)}
+                          onKeyDown={ev => { if (ev.key === "Enter") saveEdit(e.id); if (ev.key === "Escape") cancelEdit(); }}
+                          placeholder="Ex: B12345678"
+                          style={{ padding: "4px 8px", borderRadius: 4, border: `1.5px solid ${tc.green}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit", width: 120 }}
+                        />
+                      ) : (
+                        <span
+                          onClick={() => startEdit(e, "nif")}
+                          title="Clica per editar el NIF"
+                          style={{ cursor: "pointer", color: e.nif ? tc.text : tc.textLight, borderBottom: `1px dashed ${tc.border}` }}
+                        >
+                          {e.nif ?? "—"}
+                        </span>
                       )}
                     </td>
                     <td style={td}>{KIND_LABELS[e.kind] ?? e.kind}</td>
@@ -175,10 +376,16 @@ export default function AdminEntities() {
                           </button>
                         </span>
                       ) : (
-                        <button onClick={() => startEdit(e)}
-                          style={{ padding: "3px 10px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
-                          Reanomena
-                        </button>
+                        <span style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>
+                          <button onClick={() => startEdit(e, "name")}
+                            style={{ padding: "3px 10px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
+                            Reanomena
+                          </button>
+                          <button onClick={() => setConfirmDelete(e)}
+                            style={{ padding: "3px 8px", borderRadius: 4, border: `1px solid ${tc.red ?? "#d32f2f"}`, background: "transparent", color: tc.red ?? "#d32f2f", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
+                            Elimina
+                          </button>
+                        </span>
                       )}
                     </td>
                   </tr>
@@ -186,6 +393,37 @@ export default function AdminEntities() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+      </>}
+
+      {/* Delete confirmation dialog */}
+      {confirmDelete && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
+          <div style={{ ...sharedStyles.cardPad(tc, "28px 32px"), maxWidth: 420, width: "90%" }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: tc.navy, marginBottom: 10 }}>
+              Eliminar {confirmDelete.kind === "company" ? "empresa" : "vehicle"}?
+            </div>
+            <div style={{ fontSize: 13, color: tc.text, marginBottom: 8 }}>
+              <strong>{confirmDelete.canonical_name}</strong>
+            </div>
+            <div style={{ fontSize: 12, color: tc.red ?? "#d32f2f", marginBottom: 20, lineHeight: 1.5 }}>
+              {confirmDelete.kind === "company"
+                ? "Atenció: s'eliminarà el registre de l'empresa i les seves dades. Aquesta acció no es pot desfer."
+                : "Atenció: totes les crides de capital associades a aquest vehicle perdran la referència (vehicle_id → NULL). Aquesta acció no es pot desfer."
+              }
+            </div>
+            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+              <button onClick={() => setConfirmDelete(null)} disabled={deleting}
+                style={{ padding: "6px 16px", borderRadius: 6, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
+                Cancel·la
+              </button>
+              <button onClick={confirmAndDelete} disabled={deleting}
+                style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: tc.red ?? "#d32f2f", color: "#fff", cursor: "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>
+                {deleting ? "Eliminant…" : "Elimina"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

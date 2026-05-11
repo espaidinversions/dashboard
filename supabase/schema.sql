@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS private_entities (
   source_name     TEXT,
   workbook_name   TEXT,
   match_type      TEXT,
+  nif             TEXT,
   created_at      TIMESTAMPTZ DEFAULT now(),
   updated_at      TIMESTAMPTZ DEFAULT now()
 );
@@ -44,7 +45,8 @@ CREATE TABLE IF NOT EXISTS fund_meta (
   fons          TEXT,
   tvpi          NUMERIC,
   irr           NUMERIC,
-  vehicle_tipus TEXT
+  vehicle_tipus TEXT,
+  fi_end        TEXT
 );
 
 -- ── Pipeline ──────────────────────────────────────────────
@@ -59,6 +61,7 @@ CREATE TABLE IF NOT EXISTS pipeline (
   status      TEXT,
   canal       TEXT,
   active      BOOLEAN DEFAULT true,
+  manager     TEXT,
   estimated_closing TEXT
 );
 
@@ -394,6 +397,31 @@ BEGIN
   UPDATE public.portfolio_companies
   SET nom = trim(p_name)
   WHERE entity_id = p_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION public.update_private_entity_nif(
+  p_id  TEXT,
+  p_nif TEXT
+)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  IF NOT public.is_superuser() THEN
+    RAISE EXCEPTION 'Forbidden';
+  END IF;
+
+  IF COALESCE(length(trim(p_id)), 0) = 0 THEN
+    RAISE EXCEPTION 'Entity id required';
+  END IF;
+
+  UPDATE public.private_entities
+  SET nif        = NULLIF(trim(p_nif), ''),
+      updated_at = now()
+  WHERE id = p_id;
 END;
 $$;
 

@@ -163,6 +163,7 @@ export function fundMetaToRow(row) {
     tvpi: row.tvpi ?? null,
     irr: row.irr ?? null,
     vehicle_tipus: row.vehicleTipus ?? null,
+    fi_end: row.fiEnd ?? null,
   };
 }
 
@@ -179,6 +180,7 @@ export function rowToFundMeta(row, entityMap) {
     tvpi: row.tvpi,
     irr: row.irr ?? null,
     vehicleTipus: row.vehicle_tipus ?? null,
+    fiEnd: row.fi_end ?? null,
   };
 }
 
@@ -250,6 +252,7 @@ export function dealToRow(d) {
     name: d.name, amount: d.amount, currency: d.currency,
     geography: d.geography, strategy: d.strategy, sector: d.sector,
     status: d.status, canal: d.canal, active: d.active ?? true,
+    manager: d.manager ?? null,
     estimated_closing: d.estimatedClosing ?? null,
   };
 }
@@ -263,6 +266,7 @@ export function rowToDeal(r) {
     id: r.id, name: r.name, amount: r.amount, currency: r.currency,
     geography: r.geography, strategy: r.strategy, sector: r.sector,
     status: r.status, canal: r.canal, active: r.active,
+    manager: r.manager ?? null,
     estimatedClosing: r.estimated_closing ?? null,
   };
 }

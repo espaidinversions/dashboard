@@ -412,6 +412,19 @@ export async function upsertFundMeta(fund, tvpi, irr = null) {
   return { error };
 }
 
+export async function upsertFundMetaFiEnd(fund, fiEnd) {
+  if (!supabase) return { error: null };
+  const name = typeof fund === "string" ? fund : fund?.fons ?? fund?.nom ?? "";
+  const resolved = resolvePrivateEntity("vehicle", name, typeof fund === "string" ? null : fund?.id ?? null);
+  const { error: entityError } = await upsertPrivateEntities([resolved]);
+  if (entityError) return { error: entityError };
+  const { error } = await supabase
+    .from("fund_meta")
+    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, fi_end: fiEnd ?? null }, { onConflict: "vehicle_id" });
+  if (!error) logAudit("update", "fund_meta", resolved.id, { fons: resolved.canonicalName, fiEnd });
+  return { error };
+}
+
 /**
  * @param {PortfolioCompany} company
  */
@@ -577,6 +590,70 @@ export async function renamePrivateEntity(entityId, canonicalName) {
   return { error };
 }
 
+/**
+ * @param {string} entityId
+ * @param {string} nif
+ */
+export async function updateEntityNif(entityId, nif) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase.rpc("update_private_entity_nif", {
+    p_id: entityId,
+    p_nif: String(nif ?? "").trim(),
+  });
+  if (!error) {
+    logAudit("update", "private_entities", entityId, { nif: String(nif ?? "").trim() });
+  }
+  return { error };
+}
+
+/**
+ * Routes through the API server (service key) to bypass RLS.
+ * Deletes fund_meta first, then the private_entities row.
+ * capital_calls.vehicle_id will be SET NULL by the FK cascade.
+ * @param {string} id - vehicle entity id
+ */
+export async function deleteVehicle(id) {
+  try {
+    const params = new URLSearchParams({ route: "vehicles", id });
+    await apiFetchJson(`/api/app?${params}`, { method: "DELETE" });
+    logAudit("delete", "private_entities", id, { kind: "vehicle" });
+    return { error: null };
+  } catch (err) {
+    return { error: err };
+  }
+}
+
+export async function deleteCompanyEntity(id) {
+  try {
+    const params = new URLSearchParams({ route: "companies", id });
+    await apiFetchJson(`/api/app?${params}`, { method: "DELETE" });
+    logAudit("delete", "private_entities", id, { kind: "company" });
+    return { error: null };
+  } catch (err) {
+    return { error: err };
+  }
+}
+
+/**
+ * Merge a duplicate entity into the canonical one.
+ * Reassigns capital_calls, portfolio_companies, and fund_meta, then deletes from_id.
+ * @param {string} fromId - entity to delete (duplicate)
+ * @param {string} toId   - entity to keep (canonical)
+ */
+export async function mergePrivateEntities(fromId, toId) {
+  try {
+    await apiFetchJson(`/api/app?route=merge-entity`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ from_id: fromId, to_id: toId }),
+    });
+    logAudit("merge", "private_entities", fromId, { into: toId });
+    return { error: null };
+  } catch (err) {
+    return { error: err };
+  }
+}
+
 // ── Delete ────────────────────────────────────────────────
 
 /** @param {string} id */
@@ -588,12 +665,18 @@ export async function deleteCompany(id) {
   return { error };
 }
 
-/** @param {number} id */
-export async function deletePipelineDeal(id) {
+/**
+ * @param {number} id
+ * @param {string} [name] - Deal name; required for seed-only deals so the server can upsert a DB record.
+ */
+export async function deletePipelineDeal(id, name) {
   // Route through API server (service key) — anon client cannot UPDATE due to RLS.
   // Soft-deletes (active=false) so the DB record suppresses seed resurrection in mergePipelineDeals.
+  // Name is passed so seed-only deals (no DB row yet) get upserted with active=false instead of a no-op UPDATE.
   try {
-    await apiFetchJson(`/api/app?route=pipeline&id=${encodeURIComponent(id)}`, { method: "DELETE" });
+    const params = new URLSearchParams({ route: "pipeline", id: String(id) });
+    if (name) params.set("name", name);
+    await apiFetchJson(`/api/app?${params}`, { method: "DELETE" });
     return { error: null };
   } catch (err) {
     return { error: err };

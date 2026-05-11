@@ -53,14 +53,13 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   };
 
   const [cur,setCur]       = usePersistedState("pl_cur", "EUR");
-  const [nf,setNf]         = useState({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",estimatedClosing:""});
+  const [nf,setNf]         = useState({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",manager:"",estimatedClosing:""});
   const [form,setForm]     = useState(false);
   const [fGeo,setFGeo]     = usePersistedState("pl_fGeo",  "Tots");
   const [fStr,setFStr]     = usePersistedState("pl_fStr",  "Tots");
   const [fStat,setFStat]   = usePersistedState("pl_fStat", "Tots");
   const [fCanal,setFCanal] = usePersistedState("pl_fCanal","Tots");
   const [fSec,setFSec]     = usePersistedState("pl_fSec",  "Tots");
-  const [fAct,setFAct]     = usePersistedState("pl_fAct",  "Tots");
   const [chartF,setChartF] = useState(null);
   const [sk,setSk]         = usePersistedState("pl_sk", "name");
   const [sd,setSd]         = usePersistedState("pl_sd", "asc");
@@ -118,8 +117,6 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
     if(fStat!=="Tots") l=l.filter(f=>f.status===fStat);
     if(fCanal!=="Tots")l=l.filter(f=>f.canal===fCanal);
     if(fSec!=="Tots")  l=l.filter(f=>f.sector===fSec);
-    if(fAct==="Actiu")   l=l.filter(f=>f.active);
-    if(fAct==="Inactiu") l=l.filter(f=>!f.active);
     l.sort((a,b)=>{
       let va=sk==="commitment"?toEUR(a.amount,a.currency):a[sk]??""
       let vb=sk==="commitment"?toEUR(b.amount,b.currency):b[sk]??""
@@ -127,29 +124,14 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
       return sd==="asc"?va-vb:vb-va;
     });
     return l;
-  },[funds,chartF,fGeo,fStr,fStat,fCanal,fSec,fAct,sk,sd]);
+  },[funds,chartF,fGeo,fStr,fStat,fCanal,fSec,sk,sd]);
 
   const clickChart = (type,name) => setChartF(prev=>prev&&prev.type===type&&prev.value===name?null:{type,value:name});
   const isHl = (type,name) => !chartF||(chartF.type===type&&chartF.value===name);
   const sort=(k)=>{if(sk===k)setSd(d=>d==="asc"?"desc":"asc");else{setSk(k);setSd("asc");}};
   const Arr=({k})=><span style={{marginLeft:3,opacity:sk===k?1:0.2,fontSize:9}}>{sk===k&&sd==="desc"?"▼":"▲"}</span>;
-  const toggle = async (id) => {
-    let updatedDeal = null;
-    setFundsAndSync(p => {
-      const next = p.map(f => {
-        if (f.id !== id) return f;
-        updatedDeal = { ...f, active: !f.active };
-        return updatedDeal;
-      });
-      return next;
-    });
-    if (updatedDeal) {
-      const { error } = await upsertPipelineDeal(updatedDeal);
-      if (error) toast({ message: "Error desant deal: " + error.message, type: "error" });
-    }
-  };
-  const del = async (id) => {
-    const { error } = await deletePipelineDeal(id);
+  const del = async (id, name) => {
+    const { error } = await deletePipelineDeal(id, name);
     if (error) { toast({ message: "Error eliminant deal: " + error.message, type: "error" }); return; }
     setFundsAndSync(p => p.filter(f => f.id !== id));
     toast({ message: "Deal eliminat." });
@@ -177,6 +159,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
       currency: nf.currency, geography: nf.geography,
       strategy: nf.strategy, sector: nf.sector,
       status: nf.status, canal: nf.canal,
+      manager: nf.manager || null,
       active: true, estimatedClosing: nf.estimatedClosing ?? null,
     };
     const inserted = await insertPipelineDeal(deal);
@@ -252,6 +235,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   const exportExcel = () => {
     const rows = funds.map(f => ({
       "Nom":              f.name,
+      "Gestor":           f.manager || "",
       "Compromís (orig)": f.amount,
       "Moneda":           f.currency,
       "Compromís (€M)":   +toEUR(amt(f), f.currency).toFixed(3),
@@ -262,13 +246,11 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
       "Status":           f.status,
       "Canal":            f.canal,
       "Tancament Est.":   f.estimatedClosing || "",
-      "Actiu":            f.active ? "Sí" : "No",
     }));
     const ws = XLSX.utils.json_to_sheet(rows);
-    // Column widths
     ws["!cols"] = [
-      {wch:28},{wch:14},{wch:9},{wch:15},{wch:15},
-      {wch:10},{wch:18},{wch:18},{wch:14},{wch:18},{wch:16},{wch:8},
+      {wch:28},{wch:20},{wch:14},{wch:9},{wch:15},{wch:15},
+      {wch:10},{wch:18},{wch:18},{wch:14},{wch:18},{wch:16},
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Pipeline FY26");
@@ -359,7 +341,6 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
               {label:"Sector", val:fSec,   set:setFSec,   opts:["Tots",...sectorOptions]},
               {label:"Status", val:fStat,  set:setFStat,  opts:["Tots",...statusOptions]},
               {label:"Canal",  val:fCanal, set:setFCanal, opts:["Tots",...canalOptions]},
-              {label:"Actiu",  val:fAct,   set:setFAct,   opts:["Tots","Actiu","Inactiu"]},
             ].map(f=>(
               <div key={f.label} style={{display:"flex",alignItems:"center",gap:3}}>
                 <span style={{fontSize:11,color:TC.textLight}}>{f.label}:</span>
@@ -374,9 +355,10 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
         } />
         {form&& canEdit &&(
           <div style={{background:TC.bgAlt,border:`1px solid ${TC.border}`,borderRadius:10,padding:"12px",marginBottom:12}}>
-            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto",gap:7,alignItems:"end"}}>
+            <div style={{display:"grid",gridTemplateColumns:"2fr 1.5fr 1fr 1fr 1fr 1fr 1.5fr 1fr 1fr 1fr auto",gap:7,alignItems:"end"}}>
               {[
                 {label:"Nom",key:"name",type:"input"},
+                {label:"Gestor",key:"manager",type:"input"},
                 {label:"M€/$",key:"amount",type:"input",it:"number"},
                 {label:"Moneda",key:"currency",type:"sel",opts:["EUR","USD"]},
                 {label:"Geo",key:"geography",type:"sel",opts:["EU","US","EU/US"]},
@@ -399,7 +381,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
                 <button onClick={async ()=>{
                   if(!nf.name||!nf.amount)return;
                   await add(nf);
-                  setNf({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",estimatedClosing:""});
+                  setNf({name:"",amount:"",currency:"EUR",geography:"EU",strategy:"Fons primari",sector:"Software",status:"En estudi",canal:"Arcano",manager:"",estimatedClosing:""});
                   setForm(false);
                 }} style={{background:TC.navy,border:"none",color:"#fff",borderRadius:4,padding:"8px 12px",cursor:"pointer",fontSize:14,fontWeight:700,width:"100%",fontFamily:"inherit"}}>✓</button>
               </div>
@@ -411,8 +393,8 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
           <table style={{width:"100%",borderCollapse:"collapse"}}>
             <thead>
               <tr style={{background:TC.bgAlt}}>
-                <th style={{...th2,width:34,cursor:"default"}}>✓</th>
                 <th style={th2} onClick={()=>sort("name")}>Fons <Arr k="name"/></th>
+                <th style={th2} onClick={()=>sort("manager")}>Gestor <Arr k="manager"/></th>
                 <th style={th2} onClick={()=>sort("commitment")}>Compromís <Arr k="commitment"/></th>
                 <th style={th2} onClick={()=>sort("geography")}>Geo <Arr k="geography"/></th>
                 <th style={th2} onClick={()=>sort("strategy")}>Estratègia <Arr k="strategy"/></th>
@@ -426,12 +408,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
             <tbody>
               {filtered.length===0 && <tr><td colSpan={10}><EmptyState/></td></tr>}
               {filtered.map((f,i)=>(
-                <tr key={f.id} style={{borderBottom:`1px solid ${TC.bgAlt}`,background:i%2===0?TC.card:TC.bgAlt,opacity:f.active?1:0.4}}>
-                  <td style={{padding:"9px 10px"}}>
-                    <div onClick={()=>toggle(f.id)} style={{width:16,height:16,border:`2px solid ${f.active?TC.green:TC.border}`,background:f.active?TC.green:"transparent",borderRadius:4,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                      {f.active&&<span style={{color:"#fff",fontSize:9,fontWeight:900}}>✓</span>}
-                    </div>
-                  </td>
+                <tr key={f.id} style={{borderBottom:`1px solid ${TC.bgAlt}`,background:i%2===0?TC.card:TC.bgAlt}}>
                   <td style={{padding:"9px 10px",fontWeight:600,color:TC.text,whiteSpace:"nowrap"}}>
                     {canEdit ? (
                       <EditableCell
@@ -441,18 +418,26 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
                       />
                     ) : f.name}
                   </td>
+                  <td style={{padding:"9px 10px",fontSize:12,color:TC.textMid,whiteSpace:"nowrap"}}>
+                    {canEdit ? <EditableCell value={f.manager||""} emptyDisplay="—" onSave={v=>upd(f.id,"manager",v||null)}/> : <span style={{color:f.manager?TC.text:TC.textLight}}>{f.manager||"—"}</span>}
+                  </td>
                   <td style={{padding:"9px 10px",fontFamily:"monospace",fontWeight:700,color:TC.navy,whiteSpace:"nowrap"}}>
-                    {cur==="EUR"?`€${toEUR(f.amount,f.currency).toFixed(2)}M`:`$${toUSD(f.amount,f.currency).toFixed(2)}M`}
+                    {cur==="EUR"?`€${(toEUR(f.amount,f.currency)??0).toFixed(2)}M`:`$${(toUSD(f.amount,f.currency)??0).toFixed(2)}M`}
                     <span style={{fontSize:10,color:TC.textLight,marginLeft:4,fontFamily:"inherit",fontWeight:400}}>({f.currency==="EUR"?"€":"$"}{f.amount}M)</span>
                   </td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:4,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:4,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>
-                  <td style={{padding:"9px 10px",fontSize:12,color:TC.textMid,whiteSpace:"nowrap"}}>{canEdit ? <EditableCell value={f.sector} options={sectorOptions} allowCustom optionsKey="p_sector" onSave={v=>upd(f.id,"sector",v)}/> : f.sector}</td>
+                  <td style={{padding:"9px 10px"}}>
+                    {canEdit
+                      ? <EditableCell value={f.sector} options={sectorOptions} allowCustom optionsKey="p_sector" onSave={v=>upd(f.id,"sector",v)}/>
+                      : <span style={{fontSize:11,background:SECCOL[f.sector]?`${SECCOL[f.sector]}22`:TC.bgAlt,color:SECCOL[f.sector]||TC.navy,borderRadius:4,padding:"2px 7px",fontWeight:600,display:"inline-block"}}>{f.sector}</span>
+                    }
+                  </td>
                   <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.status} options={PIPELINE_STATUS_OPTIONS} allowCustom optionsKey="p_status" badgeCfg={STATUS_CFG} onSave={v=>upd(f.id,"status",v)}/> : <span style={{display:"block"}}>{f.status}</span>}</td>
                   <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.canal} options={PIPELINE_CANAL_OPTIONS} allowCustom optionsKey="p_canal" badgeCfg={CANAL_CFG} onSave={v=>upd(f.id,"canal",v)}/> : <span style={{display:"block"}}>{f.canal}</span>}</td>
                   <td style={{padding:"9px 10px"}}>{canEdit ? <EditableCell value={f.estimatedClosing} options={MONTHS_OPTS} emptyDisplay="— sense data" onSave={v=>upd(f.id,"estimatedClosing",v)}/> : <span>{f.estimatedClosing||""}</span>}</td>
                   <td style={{padding:"9px 10px"}}>
-                    {canEdit && <button onClick={()=>del(f.id)} style={{background:"transparent",border:"none",color:TC.border,cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}
+                    {canEdit && <button onClick={()=>del(f.id, f.name)} style={{background:"transparent",border:"none",color:TC.border,cursor:"pointer",fontSize:16,padding:0,lineHeight:1}}
                       onMouseEnter={e=>e.target.style.color="#C0392B"} onMouseLeave={e=>e.target.style.color=TC.border}>×</button>}
                   </td>
                 </tr>
@@ -460,9 +445,9 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
             </tbody>
             <tfoot>
               <tr style={{borderTop:`2px solid ${TC.border}`,background:TC.bgAlt}}>
-                <td colSpan={2} style={{padding:"8px 10px",fontSize:12,color:TC.textLight}}>{filtered.filter(f=>f.active).length} actius · {filtered.length} mostrats</td>
+                <td colSpan={2} style={{padding:"8px 10px",fontSize:12,color:TC.textLight}}>{filtered.length} mostrats</td>
                 <td style={{padding:"8px 10px",fontSize:14,fontWeight:700,color:TC.navy}}>
-                  {sym}{filtered.filter(f=>f.active).reduce((s,f)=>s+cv(f.amount,f.currency),0).toFixed(2)}M
+                  {sym}{filtered.reduce((s,f)=>s+cv(f.amount??0,f.currency),0).toFixed(2)}M
                 </td>
                 <td colSpan={7}></td>
               </tr>
