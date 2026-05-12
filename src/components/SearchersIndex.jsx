@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, fmtSignedM, formatIsoDateDMY, readStoredFlag, usePersistedState } from "../utils.js";
 import { loadCapitalCalls, loadCompanies, loadSearchers } from "../db.js";
@@ -40,6 +41,7 @@ function isInvestedUnacquiredSearcher(row, actualCompanyIds) {
 
 export function SearchersIndexInner({ inline = false, searchOverride, subTab: subTabOverride, rawCC: rawCCOverride }) {
   const { tc } = useTheme();
+  const navigate = useNavigate();
   const { canEditSection } = useAuth();
   const { toast } = useToast();
   const canEdit = canEditSection("searchers");
@@ -363,7 +365,9 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
             </thead>
             <tbody>
               {sorted.map((row, index) => (
-                <tr key={row.id ?? row.nom} className="hoverable" style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
+                <tr key={row.id ?? row.nom} className="hoverable"
+                  onClick={() => row.id && navigate(`/searcher/${encodeURIComponent(row.id)}`)}
+                  style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, cursor: row.id ? "pointer" : "default" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>{row.nom}</td>
                   <td style={{ padding: "10px 12px" }}>{row.tipus || "-"}</td>
                   <td style={{ padding: "10px 12px" }}>{row.modalitat || "-"}</td>
@@ -375,7 +379,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
                   <td style={{ padding: "10px 12px", color: tc.textMid }}>{formatIsoDateDMY(row.dataCompr)}</td>
                   <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.textMid }}>{row.mesosCercant ?? "-"}</td>
                   {canEdit ? (
-                    <td style={{ padding: "4px 8px", textAlign: "center", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "4px 8px", textAlign: "center", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
                       <button
                         onClick={() => handleToggleLegacy(row, true)}
                         title="Moure a Legacy"
