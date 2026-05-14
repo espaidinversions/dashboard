@@ -137,13 +137,15 @@ export function useDashboardData() {
       setError(error?.message || "No s'ha pogut calcular el tipus de canvi.");
       return;
     }
-    const { error } = await insertCapitalCall(payload);
+    const { error, data: insertedRow } = await insertCapitalCall(payload);
     if (error) { setError(error.message); return; }
     const fresh = await loadCapitalCalls();
     if (fresh) {
       setRawCC(fresh);
       writeStoredJSON(LS_CC, fresh);
       await syncSearchersFromCapitalCalls(fresh);
+    } else {
+      console.error("[handleCCInsert] loadCapitalCalls returned null after successful insert", { insertedRow });
     }
   }, []);
 

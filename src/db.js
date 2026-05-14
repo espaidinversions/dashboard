@@ -79,7 +79,7 @@ async function fetchAllCapitalCallRows() {
       .select("*")
       .order("data")
       .range(from, to);
-    if (error) return { data: null, error };
+    if (error) { console.error("[fetchAllCapitalCallRows] SELECT error:", error); return { data: null, error }; }
     rows.push(...(data ?? []));
     if (!data || data.length < CAPITAL_CALLS_PAGE_SIZE) break;
   }
