@@ -6,7 +6,7 @@ export const ACCESS_LEVELS = [ACCESS_NONE, ACCESS_USER, ACCESS_SUPERUSER];
 const GLOBAL_ROLES = ["user", "superuser", "admin"];
 
 export const TOP_LEVEL_SECTION_IDS = ["alternatives", "real-estate", "mercats-publics"];
-export const ALTERNATIVES_SECTION_IDS = ["fons", "searchers", "companies", "inversions", "txlog"];
+export const ALTERNATIVES_SECTION_IDS = ["fons", "searchers", "companies", "inversions", "cash-model", "txlog"];
 export const REAL_ESTATE_SUBSECTION_IDS = ["re-directe", "re-altres"];
 export const PUBLIC_MARKETS_SUBSECTION_IDS = [
   "mp-resum",
@@ -30,6 +30,7 @@ const PARENT_BY_SECTION = {
   searchers: "alternatives",
   companies: "alternatives",
   inversions: "alternatives",
+  "cash-model": "alternatives",
   txlog: "alternatives",
   "re-directe": "real-estate",
   "re-altres": "real-estate",

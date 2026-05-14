@@ -191,13 +191,23 @@ async function handleSearchers(req, res) {
     if (!Number.isInteger(id) || id <= 0) {
       return res.status(400).json({ error: "Valid searcher id is required" });
     }
-    const { isLegacy } = req.body ?? {};
-    if (typeof isLegacy !== "boolean") {
-      return res.status(400).json({ error: "isLegacy must be a boolean" });
+    const body = req.body ?? {};
+    const updates = {};
+    if (Object.prototype.hasOwnProperty.call(body, "isLegacy")) {
+      if (typeof body.isLegacy !== "boolean") {
+        return res.status(400).json({ error: "isLegacy must be a boolean" });
+      }
+      updates.is_legacy = body.isLegacy;
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "label")) {
+      updates.label = typeof body.label === "string" ? body.label.trim() || null : null;
+    }
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "No valid fields to update" });
     }
     const { error } = await supabase
       .from("searchers")
-      .update({ is_legacy: isLegacy })
+      .update(updates)
       .eq("id", id);
     if (error) throw error;
     return res.status(200).json({ ok: true });

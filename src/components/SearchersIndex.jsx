@@ -5,7 +5,7 @@ import { fmtM, fmtSignedM, formatIsoDateDMY, readStoredFlag, usePersistedState }
 import { loadCapitalCalls, loadCompanies, loadSearchers } from "../db.js";
 import { FlagImg, Badge, AddRowModal, DeleteRowButton, indexPageStyles } from "./SharedComponents.jsx";
 import { isActualCompany } from "../data/privateCompanyModel.js";
-import { SEARCHER_FORM_ENTRADA_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_STATUS_OPTIONS, GEO_NAME } from "../config.js";
+import { SEARCHER_FORM_ENTRADA_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_STATUS_OPTIONS, SEARCHER_STATUS_CFG, GEO_NAME } from "../config.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 import { apiFetchJson } from "../apiClient.js";
@@ -206,10 +206,26 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
     ),
     [searchers]
   );
+  const trackedSearcherCoreTokens = useMemo(
+    () => new Set(
+      (Array.isArray(searchers) ? searchers : [])
+        .map((row) => {
+          const token = normalizeSearcherName(row?.nom).split(" ")[0];
+          return token && token.length >= 4 ? token : null;
+        })
+        .filter(Boolean)
+    ),
+    [searchers]
+  );
+
   const belongsToTrackedSearcher = (row) => {
     const entityId = String(row?.id ?? "").trim();
     if (entityId && trackedSearcherIds.has(entityId)) return true;
-    return trackedSearcherNames.has(normalizeSearcherName(row?.fons));
+    const rNorm = normalizeSearcherName(row?.fons);
+    if (trackedSearcherNames.has(rNorm)) return true;
+    const coreToken = rNorm.split(" ")[0];
+    if (coreToken && coreToken.length >= 4 && trackedSearcherCoreTokens.has(coreToken)) return true;
+    return false;
   };
 
   const rows = useMemo(() => (
@@ -217,7 +233,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
       .filter((row) => !row.isLegacy && isInvestedUnacquiredSearcher(row, actualCompanyIds))
       .map((row) => ({
         ...row,
-        mesosCercant: calcMesos(row.dataCompr),
+        mesosCercant: row.mesosCercant ?? calcMesos(row.dataCompr),
       }))
   ), [actualCompanyIds, searchers]);
 
@@ -226,7 +242,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
       .filter((row) => row.isLegacy)
       .map((row) => ({
         ...row,
-        mesosCercant: calcMesos(row.dataCompr),
+        mesosCercant: row.mesosCercant ?? calcMesos(row.dataCompr),
       }))
   ), [searchers]);
 
@@ -368,7 +384,14 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
                 <tr key={row.id ?? row.nom} className="hoverable"
                   onClick={() => row.id && navigate(`/searcher/${encodeURIComponent(row.id)}`)}
                   style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, cursor: row.id ? "pointer" : "default" }}>
-                  <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>{row.nom}</td>
+                  <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>
+                    {row.nom}
+                    {row.label && (
+                      <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, borderRadius: 5, padding: "2px 7px", verticalAlign: "middle", ...(SEARCHER_STATUS_CFG[row.label] ?? { bg: "#FEF3E2", color: "#8B5E00" }) }}>
+                        {row.label}
+                      </span>
+                    )}
+                  </td>
                   <td style={{ padding: "10px 12px" }}>{row.tipus || "-"}</td>
                   <td style={{ padding: "10px 12px" }}>{row.modalitat || "-"}</td>
                   <td style={{ padding: "10px 12px", textAlign: "center" }}><FlagImg geo={row.geo} /></td>
@@ -416,7 +439,14 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
                   <tbody>
                     {legacyRows.map((row, index) => (
                       <tr key={row.id ?? row.nom} className="hoverable" style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
-                        <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>{row.nom}</td>
+                        <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>
+                          {row.nom}
+                          {row.label && (
+                            <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, borderRadius: 5, padding: "2px 7px", verticalAlign: "middle", ...(SEARCHER_STATUS_CFG[row.label] ?? { bg: "#FEF3E2", color: "#8B5E00" }) }}>
+                              {row.label}
+                            </span>
+                          )}
+                        </td>
                         <td style={{ padding: "10px 12px" }}>{row.tipus || "-"}</td>
                         <td style={{ padding: "10px 12px" }}>{row.modalitat || "-"}</td>
                         <td style={{ padding: "10px 12px", textAlign: "center" }}><FlagImg geo={row.geo} /></td>

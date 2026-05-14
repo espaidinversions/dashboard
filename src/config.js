@@ -59,6 +59,7 @@ export const SEARCHER_STATUS_CFG = {
   "Sobresuscrit":                   { bg:"#F0EEFA", color:"#5A3E9A" },
   "Pendent de formalitzar":         { bg:"#E6EDF3", color:"#2B5070" },
   "No tancat":                      { bg:"#F5F5F5", color:"#777"    },
+  "Capital retornat":               { bg:"#FEF3E2", color:"#8B5E00" },
 };
 export const FY_LIST = ["FY 2019","FY 2020","FY 2021","FY 2022","FY 2023","FY 2024","FY 2025","FY 2026","FY 2027"];
 export const MESOS   = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];

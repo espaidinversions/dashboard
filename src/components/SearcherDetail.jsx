@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTheme } from "../theme.js";
 import { fmtM, fmtSignedM, formatIsoDateDMY } from "../utils.js";
 import { loadSearchers, loadCapitalCalls } from "../db.js";
+import { apiFetchJson } from "../apiClient.js";
 import { FlagImg } from "./SharedComponents.jsx";
 import { SEARCHER_STATUS_CFG, GEO_NAME } from "../config.js";
 import { normalizeSearcherName } from "../data/searcherModel.js";
+import { useAuth } from "../auth.jsx";
 
 function calcMesos(dateIso) {
   if (!dateIso) return null;
@@ -19,9 +21,14 @@ export default function SearcherDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { tc } = useTheme();
+  const { canEditSection } = useAuth();
+  const canEdit = canEditSection("searchers");
   const [searcher, setSearcher] = useState(null);
   const [txRows, setTxRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [editingLabel, setEditingLabel] = useState(false);
+  const [labelValue, setLabelValue] = useState("");
+  const labelInputRef = useRef(null);
 
   useEffect(() => {
     Promise.all([loadSearchers(), loadCapitalCalls()]).then(([searchers, cc]) => {
@@ -31,15 +38,44 @@ export default function SearcherDetail() {
       if (found) {
         const normName = normalizeSearcherName(found.nom);
         const nif = String(found.nif ?? "").trim();
-        const rows = (Array.isArray(cc) ? cc : [])
+        // Also match by stripping just the core token (handles "Aeqor Partners" vs "Aeqor SRL")
+        const coreToken = normName.split(" ")[0];
+        const ccAll = Array.isArray(cc) ? cc : [];
+        const rows = ccAll
           .filter(r => r.vcpe === "SF" && r.cat !== "Compromís")
-          .filter(r => (nif && String(r.id ?? "").trim() === nif) || normalizeSearcherName(r.fons) === normName)
+          .filter(r => {
+            const rNorm = normalizeSearcherName(r.fons);
+            if (nif && String(r.id ?? "").trim() === nif) return true;
+            if (rNorm === normName) return true;
+            // Fallback: single-token core match (e.g. "aeqor" in both "Aeqor Partners" and "Aeqor SRL")
+            if (coreToken && coreToken.length >= 4 && rNorm.split(" ")[0] === coreToken) return true;
+            return false;
+          })
           .sort((a, b) => String(b.data ?? "").localeCompare(String(a.data ?? "")));
         setTxRows(rows);
       }
       setLoading(false);
     });
   }, [id]);
+
+  const startEditLabel = () => {
+    setLabelValue(searcher.label ?? "");
+    setEditingLabel(true);
+    setTimeout(() => labelInputRef.current?.focus(), 0);
+  };
+
+  const saveLabel = async () => {
+    const newLabel = labelValue.trim() || null;
+    try {
+      await apiFetchJson(`/api/searchers?id=${encodeURIComponent(searcher.id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ label: newLabel }),
+      });
+      setSearcher((s) => ({ ...s, label: newLabel }));
+    } catch {}
+    setEditingLabel(false);
+  };
 
   if (loading) return <div style={{ padding: 48, textAlign: "center", color: tc.textLight }}>Carregant…</div>;
   if (!searcher) return <div style={{ padding: 48, textAlign: "center", color: tc.textLight }}>Searcher no trobat.</div>;
@@ -97,6 +133,37 @@ export default function SearcherDetail() {
                   {searcher.formEntrada}
                 </span>
               )}
+              {/* Label badge / inline edit */}
+              {editingLabel ? (
+                <form onSubmit={(e) => { e.preventDefault(); saveLabel(); }} style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                  <input
+                    ref={labelInputRef}
+                    value={labelValue}
+                    onChange={(e) => setLabelValue(e.target.value)}
+                    onBlur={saveLabel}
+                    onKeyDown={(e) => e.key === "Escape" && setEditingLabel(false)}
+                    placeholder="Etiqueta…"
+                    style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, border: `1px solid ${tc.border}`, fontFamily: "inherit", outline: "none", width: 160 }}
+                  />
+                </form>
+              ) : (
+                <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                  {searcher.label && (
+                    <span style={{ fontSize: 11, fontWeight: 600, borderRadius: 6, padding: "3px 10px", ...(SEARCHER_STATUS_CFG[searcher.label] ?? { bg: "#FEF3E2", color: "#8B5E00" }) }}>
+                      {searcher.label}
+                    </span>
+                  )}
+                  {canEdit && (
+                    <button
+                      onClick={startEditLabel}
+                      title="Editar etiqueta"
+                      style={{ background: "none", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 12, padding: "2px 4px", lineHeight: 1, borderRadius: 4 }}
+                    >
+                      ✎
+                    </button>
+                  )}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -139,7 +206,7 @@ export default function SearcherDetail() {
             {[
               { label: "Data inici",     value: formatIsoDateDMY(searcher.dataInici)  || "—" },
               { label: "Data compromís", value: formatIsoDateDMY(searcher.dataCompr)  || "—" },
-              { label: "NIF",            value: searcher.nif || searcher.id || "—" },
+              { label: "NIF",            value: searcher.nif ?? "—" },
             ].map(r => (
               <div key={r.label} style={{ display: "flex", justifyContent: "space-between", gap: 12, padding: "6px 0", borderBottom: `1px solid ${tc.border}` }}>
                 <span style={{ fontSize: 12, color: tc.textLight, whiteSpace: "nowrap" }}>{r.label}</span>

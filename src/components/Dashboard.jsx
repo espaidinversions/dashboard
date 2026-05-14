@@ -18,6 +18,7 @@ import { CompaniesIndexInner } from "./CompaniesIndex.jsx";
 import { useAuth } from "../auth.jsx";
 import { DataLoader } from "./DataLoader.jsx";
 import { PublicMarketsTab } from "./PublicMarketsTab.jsx";
+import { ProspectiveCashTab } from "./ProspectiveCashTab.jsx";
 import { HoldingsTable } from "./HoldingsTable.jsx";
 import { PMTipusTab } from "./PMTipusTab.jsx";
 import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
@@ -140,6 +141,7 @@ function Dashboard() {
       case "fons":           setTab("inversions"); setInversionsSubTab("fons"); break;
       case "searchers":      setTab("searchers"); break;
       case "companies":      setTab("companies"); break;
+      case "cash-model":     setTab("cash-model"); break;
       case "posicions":      setTab("inversions"); break;
       case "re-directe":     setTab("real-estate");     setRealEstateTab("directe"); break;
       case "re-altres":      setTab("real-estate");     setRealEstateTab("altres-vehicles"); break;
@@ -298,7 +300,9 @@ function Dashboard() {
           ? "tx-alt"
           : tab === "searchers"
             ? "alternatives"
-            : tab === "companies"
+            : tab === "cash-model"
+              ? "cash-model"
+              : tab === "companies"
               ? "companies"
               : tab === "inversions"
                 ? "inversions"
@@ -436,6 +440,7 @@ function Dashboard() {
     {id:"searchers",  label:"Searchers"},
     {id:"companies",  label:"Participades"},
     {id:"inversions", label:"Totes les Posicions"},
+    {id:"cash-model", label:"Model Caixa"},
   ];
   const SECTIONS = useMemo(() => SECTIONS_ALL.filter(s => canAccessSection(s.id)), [canAccessSection]);
   const SUPRA = useMemo(() => SUPRA_ALL.filter(s =>
@@ -485,6 +490,7 @@ function Dashboard() {
   useEffect(() => {
     if (tab === "searchers" && activeNavItem !== "searchers") setActiveNavItem("searchers");
     if (tab === "companies" && activeNavItem !== "companies") setActiveNavItem("companies");
+    if (tab === "cash-model" && activeNavItem !== "cash-model") setActiveNavItem("cash-model");
     if (tab === "inversions" && activeNavItem !== "posicions") setActiveNavItem("posicions");
     if (tab === "pipeline" && activeNavItem !== "fons") setActiveNavItem("fons");
   }, [tab, activeNavItem, setActiveNavItem]);
@@ -578,6 +584,8 @@ function Dashboard() {
                   : <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
             </div>
           )}
+
+          {tab === "cash-model" && <ProspectiveCashTab rawCapitalCalls={d.rawCC} />}
 
           {tab === "real-estate" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
