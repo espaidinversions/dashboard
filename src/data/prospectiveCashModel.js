@@ -113,7 +113,7 @@ function setProspectiveRow(map, row) {
 }
 
 function rowKey(row) {
-  return `${row.fund} ${row.year} ${row.type}`;
+  return `${row.fund}\0${row.year}\0${row.type}`;
 }
 
 function deriveActualsFromCapitalCalls(rows) {
