@@ -94,6 +94,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   const [editorType, setEditorType] = useState("calls");
   const [editorSearch, setEditorSearch] = useState("");
   const [dirty, setDirty] = useState(false);
+  const [editorInputMode, setEditorInputMode] = useState("eur"); // "eur" | "pct"
 
   useEffect(() => {
     let cancelled = false;
@@ -385,6 +386,8 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
           resetDraft={resetDraft}
           dirty={dirty}
           saving={saving}
+          editorInputMode={editorInputMode}
+          setEditorInputMode={setEditorInputMode}
         />
       )}
     </div>
@@ -830,7 +833,7 @@ function YearCell({ tc, year, model, real, pctValue, total = false }) {
   );
 }
 
-function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames, editorType, setEditorType, editorSearch, setEditorSearch, updateFundValue, saveAndApply, exportEditorCsv, resetDraft, dirty, saving }) {
+function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames, editorType, setEditorType, editorSearch, setEditorSearch, updateFundValue, saveAndApply, exportEditorCsv, resetDraft, dirty, saving, editorInputMode, setEditorInputMode }) {
   const key = `model_${editorType}`;
   const yearCols = editorData.years;
   return (
