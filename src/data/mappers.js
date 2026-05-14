@@ -37,6 +37,8 @@ export function privateEntityToRow(entity) {
     first_investment_date: entity.firstInvestmentDate ?? null,
     active: entity.active ?? true,
     notes: entity.notes ?? null,
+    nif: entity.nif ?? null,
+    fiscal_name: entity.fiscalName ?? null,
     updated_at: new Date().toISOString(),
   };
 }
@@ -208,6 +210,7 @@ export function searcherToRow(s) {
     equity_stake: s.equityStake ?? null, is_mock: s.isMock ?? false,
     is_legacy: s.isLegacy ?? false,
     nif: s.nif ?? null,
+    label: s.label ?? null,
     irr: s.irr ?? null,
     dpi: s.dpi ?? null,
   };
@@ -238,6 +241,7 @@ export function rowToSearcher(r) {
     equityStake: r.equity_stake, isMock: r.is_mock ?? false,
     isLegacy: r.is_legacy ?? false,
     nif: r.nif ?? null,
+    label: r.label ?? null,
     irr: r.irr ?? null,
     dpi: r.dpi ?? null,
   };
