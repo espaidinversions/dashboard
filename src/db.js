@@ -22,7 +22,8 @@ import {
 import { mergeSearchersWithCapitalCalls } from "./data/searcherModel.js";
 import { buildFallbackCompaniesFromCapitalCalls } from "./data/privateCompanyModel.js";
 import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "./data/capitalCallTipusModel.js";
-import { defaultCapitalCallStrategyForVcpe, normalizeCapitalCallStrategy } from "./data/capitalCallStrategyModel.js";
+import { defaultCapitalCallStrategyForVcpe, normalizeCapitalCallStrategy, setSnapshotInferrer } from "./data/capitalCallStrategyModel.js";
+import { buildSearchFundInferrer } from "./data/searchFundSnapshotModel.js";
 import { computeFundIrrFromRows } from "./data/fundDetailModel.js";
 
 /** @typedef {import("./data/dashboardTypes.js").CapitalCallRow} CapitalCallRow */
@@ -96,6 +97,22 @@ async function upsertPrivateEntities(rows) {
   return { error };
 }
 
+async function upsertPrivateEntitiesIfNew(rows) {
+  if (!supabase || !rows.length) return { error: null };
+  const ids = rows.map((r) => r.id).filter(Boolean);
+  const { data: existing } = await supabase
+    .from("private_entities")
+    .select("id")
+    .in("id", ids);
+  const existingIds = new Set((existing ?? []).map((r) => r.id));
+  const toInsert = rows.filter((r) => !existingIds.has(r.id));
+  if (!toInsert.length) return { error: null };
+  const { error } = await supabase
+    .from("private_entities")
+    .upsert(toInsert.map(privateEntityToRow), { onConflict: "id" });
+  return { error };
+}
+
 // ── Audit log ─────────────────────────────────────────────
 
 /**
@@ -150,6 +167,15 @@ export async function loadAll() {
     ? buildFallbackCompaniesFromCapitalCalls(cc.data, entityMap, companies)
     : [];
   const livePipelineDeals = (pl.error || !Array.isArray(pl.data) ? [] : pl.data).map(rowToDeal);
+
+  // Wire live data into the strategy inferrer before mapping capital calls
+  if (!sr.error && Array.isArray(sr.data) && !co.error && Array.isArray(co.data)) {
+    setSnapshotInferrer(buildSearchFundInferrer(
+      sr.data.map((r) => ({ nom: r.nom, statusScreening: r.status_screening })),
+      co.data.map((r) => ({ nom: r.nom, tipus: r.tipus })),
+    ));
+  }
+
   /** @type {DashboardBundle | Partial<DashboardBundle>} */
   const result = {
     privateEntities: privateEntities.map((row) => ({
@@ -195,11 +221,19 @@ export async function loadCompanies() {
 /** @returns {Promise<CapitalCallRow[] | null>} */
 export async function loadCapitalCalls() {
   if (!supabase) return null;
-  const [cc, entityMap] = await Promise.all([
+  const [cc, entityMap, srResult, coResult] = await Promise.all([
     fetchAllCapitalCallRows(),
     loadPrivateEntityMap(),
+    supabase.from("searchers").select("nom,status_screening"),
+    supabase.from("portfolio_companies").select("nom,tipus"),
   ]);
   if (cc.error) return null;
+  if (!srResult.error && Array.isArray(srResult.data) && !coResult.error && Array.isArray(coResult.data)) {
+    setSnapshotInferrer(buildSearchFundInferrer(
+      srResult.data.map((r) => ({ nom: r.nom, statusScreening: r.status_screening })),
+      coResult.data.map((r) => ({ nom: r.nom, tipus: r.tipus })),
+    ));
+  }
   return cc.data.map((row) => rowToCapitalCall(row, entityMap));
 }
 
@@ -889,7 +923,11 @@ export async function upsertPMPositionOverride(isin, fields) {
 export async function insertCapitalCall(cc) {
   if (!supabase) return { data: null, error: null };
   const resolved = resolvePrivateEntity("vehicle", cc.fons, cc.vehicle_id ?? null);
-  const { error: entityError } = await upsertPrivateEntities([resolved]);
+  if (resolved) {
+    resolved.nif = String(cc.nif ?? "").trim() || null;
+    resolved.fiscalName = String(cc.fiscal_name ?? "").trim() || null;
+  }
+  const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
   if (entityError) return { data: null, error: entityError };
   const { mes, year, fy } = parseDateParts(cc.data);
   const tipus = normalizeCapitalCallTipus(cc.tipus) ?? null;
@@ -971,7 +1009,7 @@ export async function updateCapitalCall(rowId, fields) {
   }
   if (fields.fons) {
     const resolved = resolvePrivateEntity("vehicle", fields.fons, old?.vehicle_id ?? null);
-    const { error: entityError } = await upsertPrivateEntities([resolved]);
+    const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
     if (entityError) return { error: entityError };
     updates.vehicle_id = resolved.id;
     updates.fons = resolved.canonicalName;
