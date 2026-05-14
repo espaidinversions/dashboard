@@ -496,6 +496,12 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
   const [closing, setClosing] = useState(false);
   const handleClose = () => { setClosing(true); setTimeout(onClose, 175); };
 
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") handleClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const set = (key, val) => setValues(v => ({ ...v, [key]: val }));
   const setCustom = (key, val) => setCustomOpen(v => ({ ...v, [key]: val }));
   const applyFieldChange = (field, nextValue) => {
@@ -536,12 +542,20 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
     <div className={`modal-overlay${closing ? " closing" : ""}`}
       style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex",
         alignItems: "center", justifyContent: "center", zIndex: 1000 }}
-      onClick={e => { if (e.target === e.currentTarget) handleClose(); }}>
+      >
       <div className={`modal-card${closing ? " closing" : ""}`}
         style={{ background: tc.card, borderRadius: 14, padding: "28px 28px 24px",
           width: 420, maxWidth: "90vw", boxShadow: "0 8px 40px rgba(0,0,0,.25)",
           fontFamily: "'Outfit',system-ui,sans-serif" }}>
-        <div style={{ fontSize: 16, fontWeight: 700, color: tc.navy, marginBottom: 20 }}>{title}</div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+          <div style={{ fontSize: 16, fontWeight: 700, color: tc.navy }}>{title}</div>
+          <button
+            type="button"
+            onClick={handleClose}
+            style={{ background: "transparent", border: "none", cursor: "pointer", color: tc.textLight, fontSize: 18, lineHeight: 1, padding: "0 2px", fontFamily: "inherit" }}
+            aria-label="Tanca"
+          >×</button>
+        </div>
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {fields.filter(f => !f.visible || f.visible(values)).map(f => (
             <div key={f.key}>
