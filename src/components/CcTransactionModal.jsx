@@ -107,6 +107,28 @@ export function CcTransactionModal({
       defaultValue: isEdit ? (editRow.from_recallable ?? "") : undefined,
       visible: v => inferCapitalCallCategoryFromTipus(v.tipus, v.eur) === "Capital Call",
     },
+    {
+      key: "nif",
+      label: "NIF (nou vehicle)",
+      type: "text",
+      defaultValue: "",
+      placeholder: "p. ex. A12345678",
+      visible: (v) => {
+        const name = String(v.fons ?? "").trim();
+        return name !== "" && !(ccNameOptions ?? []).includes(name);
+      },
+    },
+    {
+      key: "fiscal_name",
+      label: "Nom fiscal (nou vehicle)",
+      type: "text",
+      defaultValue: "",
+      placeholder: "Raó social completa",
+      visible: (v) => {
+        const name = String(v.fons ?? "").trim();
+        return name !== "" && !(ccNameOptions ?? []).includes(name);
+      },
+    },
   ];
 
   const handleSave = async (values, setError) => {
