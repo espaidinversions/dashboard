@@ -63,12 +63,24 @@ export function editorDataToForecastRows(editorData, vehicleIds) {
 
 export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
   const normalized = editorData && typeof editorData === "object" ? editorData : { years: [], funds: {} };
+
+  const reFunds = new Set();
+  if (Array.isArray(actualCapitalCalls)) {
+    for (const row of actualCapitalCalls) {
+      if (String(row?.vcpe ?? "").trim() === "RE") {
+        const fund = String(row?.fons ?? "").trim();
+        if (fund) reFunds.add(fund);
+      }
+    }
+  }
+
   const byFundYearType = new Map();
   const committed = deriveCommittedFromCapitalCalls(actualCapitalCalls);
   const firstCall = {};
   const actuals = deriveActualsFromCapitalCalls(actualCapitalCalls);
 
   for (const [fund, fundData] of Object.entries(normalized.funds ?? {})) {
+    if (reFunds.has(fund)) continue;
     if (!committed[fund]) committed[fund] = Number(fundData.committed) || 0;
     const years = new Set();
     ["model_calls", "model_dist"].forEach((key) => {
@@ -83,6 +95,7 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
   }
 
   actuals.forEach((actual) => {
+    if (reFunds.has(actual.fund)) return;
     const key = rowKey(actual);
     const existing = byFundYearType.get(key);
     if (!existing && !(actual.fund in (normalized.funds ?? {}))) return;
