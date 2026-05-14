@@ -97,15 +97,19 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
 
   useEffect(() => {
     let cancelled = false;
-    fetchProspectiveCashForecasts().then(({ data, error }) => {
-      if (cancelled) return;
-      if (error) { setFetchError(error.message); setLoading(false); return; }
-      const { editorData: derived, vehicleIds: ids } = forecastRowsToEditorData(data);
-      fetchedRef.current = derived;
-      setEditorData(derived);
-      setVehicleIds(ids);
-      setLoading(false);
-    });
+    fetchProspectiveCashForecasts()
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) { setFetchError(error.message); setLoading(false); return; }
+        const { editorData: derived, vehicleIds: ids } = forecastRowsToEditorData(data);
+        fetchedRef.current = derived;
+        setEditorData(derived);
+        setVehicleIds(ids);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (!cancelled) { setFetchError(err.message ?? "Error inesperat"); setLoading(false); }
+      });
     return () => { cancelled = true; };
   }, []);
 
