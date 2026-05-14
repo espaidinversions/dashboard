@@ -44,6 +44,8 @@
  * @property {string|null} [sourceName]
  * @property {string|null} [workbookName]
  * @property {string|null} [matchType]
+ * @property {string|null} [nif]
+ * @property {string|null} [fiscalName]
  */
 
 /**
