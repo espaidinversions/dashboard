@@ -841,6 +841,7 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
       <div style={{ display: "flex", gap: 10, alignItems: "center", padding: 12, borderBottom: `1px solid ${tc.border}`, flexWrap: "wrap" }}>
         <span style={{ fontSize: 11, color: tc.textLight, fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.07em" }}>Prediccio</span>
         <Segmented tc={tc} value={editorType} onChange={setEditorType} options={[{ id: "calls", label: "Capital Calls" }, { id: "dist", label: "Distribucions" }]} />
+        <Segmented tc={tc} value={editorInputMode} onChange={setEditorInputMode} options={[{ id: "eur", label: "€" }, { id: "pct", label: "%" }]} />
         <input value={editorSearch} onChange={(event) => setEditorSearch(event.target.value)} placeholder="Cercar fons..." style={{ ...inputStyle(tc), width: 220 }} />
         <span style={{ fontSize: 11, color: tc.textLight }}>{fundNames.length} fons</span>
         <div style={{ flex: 1 }} />
