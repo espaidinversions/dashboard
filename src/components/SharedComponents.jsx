@@ -497,10 +497,10 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
   const handleClose = () => { setClosing(true); setTimeout(onClose, 175); };
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") handleClose(); };
+    const onKey = (e) => { if (e.key === "Escape") { setClosing(true); setTimeout(onClose, 175); } };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [onClose]);
 
   const set = (key, val) => setValues(v => ({ ...v, [key]: val }));
   const setCustom = (key, val) => setCustomOpen(v => ({ ...v, [key]: val }));
