@@ -72,12 +72,13 @@ async function prepareCapitalCallPayload(values, existingRow = null) {
 }
 
 async function syncSearchersFromCapitalCalls(rows) {
-  if (!Array.isArray(rows) || !rows.some((row) => row?.vcpe === "SF")) return;
+  const sfRows = Array.isArray(rows) ? rows.filter((row) => row?.vcpe === "SF") : [];
+  if (!sfRows.length) return;
   try {
     await apiFetchJson("/api/searchers?action=sync-capital-calls", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rows }),
+      body: JSON.stringify({ rows: sfRows }),
     });
   } catch (error) {
     console.error("Searchers sync failed:", error);
@@ -141,6 +142,8 @@ export function useDashboardData() {
     if (error) { setError(error.message); return; }
     const fresh = await loadCapitalCalls();
     if (fresh) {
+      const newRow = fresh.find(r => r._rowId === insertedRow?.id);
+      console.log("[handleCCInsert] OK — rows:", fresh.length, "| new row found:", !!newRow, newRow ? `(${newRow.fons}, cat=${newRow.cat}, vcpe=${newRow.vcpe})` : "(not found, insertedRow.id=" + insertedRow?.id + ")");
       setRawCC(fresh);
       writeStoredJSON(LS_CC, fresh);
       await syncSearchersFromCapitalCalls(fresh);
