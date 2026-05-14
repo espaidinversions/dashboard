@@ -901,7 +901,10 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
                       </td>
                     );
                   })}
-                  <td style={tdStyle(tc)}><strong>{fmtC(total)}</strong></td>
+                  <td style={tdStyle(tc)}>
+                    <strong>{inPct ? `${((total / base) * 100).toFixed(1)}%` : fmtC(total)}</strong>
+                    {inPct && <div style={{ fontSize: 9, color: tc.textLight }}>{fmtC(total)}</div>}
+                  </td>
                 </tr>
               );
             })}
