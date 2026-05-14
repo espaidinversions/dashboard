@@ -1,4 +1,52 @@
 import { FUND_NAME_MAP } from "./fundNameMap.js";
+import { RAW_CC as STATIC_CC } from "./capital-calls.js";
+
+function stripLegalSuffix(name) {
+  return name.replace(/\s+(A\s+)?S\.?L\.?$|\s+S\.?A\.?$|\s+SCR(,\s*S\.?A\.?)?$|\s+FCRE$/i, "").trim();
+}
+
+// Fund name PREFIXES whose entire family is RE (all static rows with these prefixes
+// have vcpe=RE and none are PE). Used for fuzzy matching when canonical names
+// in the DB/forecast table strip trailing identifiers like " D" or " FICC".
+const RE_FAMILY_PREFIXES = [
+  "inveractiva",
+  "meridia",
+  "espaiactiu",
+  "healthcare activos",
+  "tectum",
+];
+
+// RE funds derived from static capital-calls.js (authoritative for vcpe classification).
+// Used as fallback when rawCapitalCalls (DB data) lacks vcpe metadata.
+const STATIC_RE_NAMES = (() => {
+  const s = new Set();
+  for (const row of STATIC_CC) {
+    if (String(row?.vcpe ?? "").trim() !== "RE") continue;
+    const fund = String(row?.fons ?? "").trim();
+    if (fund) {
+      s.add(fund.toLowerCase());
+      s.add(stripLegalSuffix(fund).toLowerCase());
+    }
+  }
+  return s;
+})();
+
+// Committed amounts from static capital-calls.js.
+// Keyed by BOTH the raw workbook name AND the mapped canonical name so the
+// lookup succeeds regardless of which name the forecast table uses.
+const STATIC_COMMITTED = (() => {
+  const m = {};
+  for (const row of STATIC_CC) {
+    if (row?.cat !== "Compromís") continue;
+    const rawFund = String(row?.fons ?? "").trim();
+    if (!rawFund) continue;
+    const mappedFund = FUND_NAME_MAP[rawFund];
+    const amount = Math.abs(Number(row?.eur) || 0);
+    m[rawFund] = (m[rawFund] ?? 0) + amount;
+    if (mappedFund) m[mappedFund] = (m[mappedFund] ?? 0) + amount;
+  }
+  return m;
+})();
 
 export const PROSPECTIVE_CASH_USD_FUNDS = new Set([
   "Adams Street GSF7", "Alder III", "Alpine IX", "Altamar MidMarket", "Ara III",
@@ -63,13 +111,10 @@ export function editorDataToForecastRows(editorData, vehicleIds) {
   return rows;
 }
 
-// Strip common Catalan/Spanish legal entity suffixes before name comparison
-function stripLegalSuffix(name) {
-  return name.replace(/\s+(A\s+)?S\.?L\.?$|\s+S\.?A\.?$|\s+SCR(,\s*S\.?A\.?)?$|\s+FCRE$/i, "").trim();
-}
-
 export function buildReFundMatcher(actualCapitalCalls = []) {
-  const reFundsNorm = new Set();
+  // Start from the authoritative static set so RE detection works even when
+  // rawCapitalCalls (DB data) is empty or lacks vcpe metadata.
+  const reFundsNorm = new Set(STATIC_RE_NAMES);
   if (Array.isArray(actualCapitalCalls)) {
     for (const row of actualCapitalCalls) {
       if (String(row?.vcpe ?? "").trim() === "RE") {
@@ -81,8 +126,12 @@ export function buildReFundMatcher(actualCapitalCalls = []) {
       }
     }
   }
-  return (name) => reFundsNorm.has(name.trim().toLowerCase()) ||
-    reFundsNorm.has(stripLegalSuffix(name.trim()).toLowerCase());
+  return (name) => {
+    const norm = name.trim().toLowerCase();
+    return reFundsNorm.has(norm) ||
+      reFundsNorm.has(stripLegalSuffix(name.trim()).toLowerCase()) ||
+      RE_FAMILY_PREFIXES.some((prefix) => norm.startsWith(prefix));
+  };
 }
 
 export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
@@ -92,12 +141,15 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
 
   const byFundYearType = new Map();
   const committed = deriveCommittedFromCapitalCalls(actualCapitalCalls);
+  // Build a lowercase index so case differences between DB names and forecast names don't break lookup.
+  const committedLower = {};
+  for (const [k, v] of Object.entries(committed)) committedLower[k.trim().toLowerCase()] = v;
   const firstCall = {};
   const actuals = deriveActualsFromCapitalCalls(actualCapitalCalls);
 
   for (const [fund, fundData] of Object.entries(normalized.funds ?? {})) {
     if (isReFund(fund)) continue;
-    if (!committed[fund]) committed[fund] = Number(fundData.committed) || 0;
+    if (!committed[fund]) committed[fund] = committedLower[fund.trim().toLowerCase()] ?? (Number(fundData.committed) || 0);
     const years = new Set();
     ["model_calls", "model_dist"].forEach((key) => {
       Object.keys(fundData[key] ?? {}).forEach((year) => years.add(Number(year)));
@@ -167,13 +219,16 @@ function deriveActualsFromCapitalCalls(rows) {
 }
 
 function deriveCommittedFromCapitalCalls(rows) {
-  const committed = {};
-  if (!Array.isArray(rows)) return committed;
-  rows.forEach((row) => {
-    const rawFund = String(row?.fons ?? "").trim();
-    const fund = FUND_NAME_MAP[rawFund] ?? rawFund;
-    if (!fund || row?.cat !== "Compromís") return;
-    committed[fund] = (committed[fund] ?? 0) + Math.abs(Number(row?.eur) || 0);
-  });
-  return committed;
+  // Collect committed totals from the DB data.
+  const fromDb = {};
+  if (Array.isArray(rows)) {
+    rows.forEach((row) => {
+      const rawFund = String(row?.fons ?? "").trim();
+      const fund = FUND_NAME_MAP[rawFund] ?? rawFund;
+      if (!fund || row?.cat !== "Compromís") return;
+      fromDb[fund] = (fromDb[fund] ?? 0) + Math.abs(Number(row?.eur) || 0);
+    });
+  }
+  // DB data wins per fund; static provides fallback for funds not yet in DB.
+  return { ...STATIC_COMMITTED, ...fromDb };
 }

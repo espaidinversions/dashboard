@@ -1,9 +1,16 @@
 import {
-  inferStrategyFromSearchFundSnapshot,
   SF_STRATEGY_ADQUISICIO,
   SF_STRATEGY_CERCA,
   STRATEGY_PARTICIPADA_ALTRES,
 } from "./searchFundSnapshotModel.js";
+
+/** Set by db.js once live searcher + company data is loaded. */
+let _snapshotInferrer = null;
+
+/** @param {((ctx: object) => string|null) | null} fn */
+export function setSnapshotInferrer(fn) {
+  _snapshotInferrer = fn ?? null;
+}
 
 function slugifyStrategy(value) {
   return String(value ?? "")
@@ -49,11 +56,11 @@ export function normalizeCapitalCallStrategy(value, vcpe = null, context = null)
   // This preserves per-transaction est values set by the import script (e.g. SF Cerca vs Adquisició).
   if (key && STRATEGY_MAP.has(key)) return STRATEGY_MAP.get(key);
 
-  // For legacy/unset values, fall back to snapshot inference
-  const snapshotStrategy = inferStrategyFromSearchFundSnapshot({
+  // For legacy/unset values, fall back to live snapshot inference (set by db.js after loadAll)
+  const snapshotStrategy = _snapshotInferrer?.({
     fons: typeof context === "string" ? context : context?.fons,
     vcpe,
-  });
+  }) ?? null;
   if (snapshotStrategy) return snapshotStrategy;
 
   if (vcpe === "RE") return "Fons Real Estate";

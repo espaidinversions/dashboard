@@ -1,41 +1,41 @@
-import { ACTIVE_SEARCHERS, ALL_SEARCHERS, PORTFOLIO_COMPANIES } from "./searchers.js";
 import { normalizeSearcherName } from "./searcherModel.js";
 
 export const SF_STRATEGY_CERCA = "Search Fund - Cerca";
 export const SF_STRATEGY_ADQUISICIO = "Search Fund - Adquisició/Participada (SF)";
 export const STRATEGY_PARTICIPADA_ALTRES = "Participada (Altres)";
 
-const activeSearcherNames = new Set(
-  ACTIVE_SEARCHERS.map((row) => normalizeSearcherName(row.nom)).filter(Boolean),
-);
+/**
+ * Build a strategy inferrer from live searcher and portfolio company data.
+ * @param {{ nom: string, statusScreening?: string|null }[]} searchers
+ * @param {{ nom: string, tipus?: string|null }[]} companies
+ * @returns {(ctx: { fons?: string|null, vcpe?: string|null }) => string|null}
+ */
+export function buildSearchFundInferrer(searchers = [], companies = []) {
+  const stageByName = new Map(
+    searchers
+      .map((r) => [normalizeSearcherName(r.nom), String(r.statusScreening ?? "").trim()])
+      .filter(([name]) => Boolean(name)),
+  );
 
-const searcherStageByName = new Map(
-  ALL_SEARCHERS.map((row) => [
-    normalizeSearcherName(row.nom),
-    String(row.statusScreening ?? "").trim(),
-  ]).filter(([name]) => Boolean(name)),
-);
+  const typeByName = new Map(
+    companies
+      .map((r) => [normalizeSearcherName(r.nom), String(r.tipus ?? "").trim()])
+      .filter(([name]) => Boolean(name)),
+  );
 
-const companyTypeByName = new Map(
-  PORTFOLIO_COMPANIES.map((row) => [
-    normalizeSearcherName(row.nom),
-    String(row.tipus ?? "").trim(),
-  ]).filter(([name]) => Boolean(name)),
-);
+  return function inferStrategy({ fons, vcpe } = {}) {
+    const nameKey = normalizeSearcherName(fons);
+    if (!nameKey) return null;
 
-export function inferStrategyFromSearchFundSnapshot({ fons, vcpe } = {}) {
-  const nameKey = normalizeSearcherName(fons);
-  if (!nameKey) return null;
+    const companyType = typeByName.get(nameKey);
+    if (companyType === "SF") return SF_STRATEGY_ADQUISICIO;
+    if (companyType === "PE") return STRATEGY_PARTICIPADA_ALTRES;
 
-  const companyType = companyTypeByName.get(nameKey);
-  if (companyType === "SF") return SF_STRATEGY_ADQUISICIO;
-  if (companyType === "PE") return STRATEGY_PARTICIPADA_ALTRES;
+    const stage = stageByName.get(nameKey);
+    if (stage === "Invertit en fase d'adquisició") return SF_STRATEGY_ADQUISICIO;
+    if (stage === "Invertit en fase de cerca") return SF_STRATEGY_CERCA;
 
-  const stage = searcherStageByName.get(nameKey);
-  if (stage === "Invertit en fase d'adquisició") return SF_STRATEGY_ADQUISICIO;
-  if (stage === "Invertit en fase de cerca") return SF_STRATEGY_CERCA;
-
-  if (activeSearcherNames.has(nameKey)) return SF_STRATEGY_CERCA;
-  if (vcpe === "PC") return STRATEGY_PARTICIPADA_ALTRES;
-  return null;
+    if (vcpe === "PC") return STRATEGY_PARTICIPADA_ALTRES;
+    return null;
+  };
 }
