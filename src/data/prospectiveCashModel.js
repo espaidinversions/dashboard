@@ -1,3 +1,5 @@
+import { FUND_NAME_MAP } from "./fundNameMap.js";
+
 export const PROSPECTIVE_CASH_USD_FUNDS = new Set([
   "Adams Street GSF7", "Alder III", "Alpine IX", "Altamar MidMarket", "Ara III",
   "CS Climate Innovation Fund", "CS Seasons Global IV",
@@ -149,7 +151,8 @@ function deriveActualsFromCapitalCalls(rows) {
   if (!Array.isArray(rows)) return [];
   const result = [];
   rows.forEach((row) => {
-    const fund = String(row?.fons ?? "").trim();
+    const rawFund = String(row?.fons ?? "").trim();
+    const fund = FUND_NAME_MAP[rawFund] ?? rawFund;
     const year = Number(row?.any ?? row?.year ?? String(row?.data ?? "").slice(0, 4));
     if (!fund || !year) return;
     const category = String(row?.cat ?? "").trim();
@@ -167,7 +170,8 @@ function deriveCommittedFromCapitalCalls(rows) {
   const committed = {};
   if (!Array.isArray(rows)) return committed;
   rows.forEach((row) => {
-    const fund = String(row?.fons ?? "").trim();
+    const rawFund = String(row?.fons ?? "").trim();
+    const fund = FUND_NAME_MAP[rawFund] ?? rawFund;
     if (!fund || row?.cat !== "Compromís") return;
     committed[fund] = (committed[fund] ?? 0) + Math.abs(Number(row?.eur) || 0);
   });
