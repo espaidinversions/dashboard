@@ -114,6 +114,34 @@ async function upsertPrivateEntitiesIfNew(rows) {
   return { error };
 }
 
+export async function fetchProspectiveCashForecasts() {
+  if (!supabase) return { data: [], error: null };
+  const { data, error } = await supabase
+    .from("prospective_cash_forecasts")
+    .select("vehicle_id, fons, flow_type, year, amount")
+    .order("fons")
+    .order("flow_type")
+    .order("year");
+  return { data: data ?? [], error };
+}
+
+export async function saveProspectiveCashForecasts(rows, vehicleIdValues) {
+  if (!supabase) return { error: null };
+  const ids = [...new Set(vehicleIdValues)].filter(Boolean);
+  if (ids.length) {
+    const { error: deleteError } = await supabase
+      .from("prospective_cash_forecasts")
+      .delete()
+      .in("vehicle_id", ids);
+    if (deleteError) return { error: deleteError };
+  }
+  if (!rows.length) return { error: null };
+  const { error } = await supabase
+    .from("prospective_cash_forecasts")
+    .insert(rows.map((r) => ({ ...r, updated_at: new Date().toISOString() })));
+  return { error };
+}
+
 // ── Audit log ─────────────────────────────────────────────
 
 /**
