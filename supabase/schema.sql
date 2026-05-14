@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS searchers (
   dpi               NUMERIC,
   equity_stake      NUMERIC,
   nif               TEXT,
+  label             TEXT,
   is_mock           BOOLEAN DEFAULT false,
   is_legacy         BOOLEAN DEFAULT false
 );
@@ -312,7 +313,7 @@ BEGIN
       searcher1, searcher2, escola1, escola2,
       web, comentaris, ticket, tvpi,
       data_inici, database_intro_date, data_compr,
-      mesos_cercant, irr, dpi, equity_stake, nif, is_mock
+      mesos_cercant, irr, dpi, equity_stake, nif, label, is_mock, is_legacy
     )
     SELECT
       nom, tipus, modalitat, geo,
@@ -323,7 +324,8 @@ BEGIN
       searcher1, searcher2, escola1, escola2,
       web, comentaris, ticket, tvpi,
       data_inici, database_intro_date, data_compr,
-      mesos_cercant, irr, dpi, equity_stake, nif, is_mock
+      mesos_cercant, irr, dpi, equity_stake, nif,
+      label, COALESCE(is_mock, false), COALESCE(is_legacy, false)
     FROM jsonb_to_recordset(COALESCE(p_searchers_rows, '[]'::jsonb))
     AS x(
       nom TEXT, tipus TEXT, modalitat TEXT, geo TEXT,
@@ -334,7 +336,8 @@ BEGIN
       searcher1 TEXT, searcher2 TEXT, escola1 TEXT, escola2 TEXT,
       web TEXT, comentaris TEXT, ticket NUMERIC, tvpi NUMERIC,
       data_inici TEXT, database_intro_date TEXT, data_compr TEXT,
-      mesos_cercant INTEGER, irr NUMERIC, dpi NUMERIC, equity_stake NUMERIC, nif TEXT, is_mock BOOLEAN
+      mesos_cercant INTEGER, irr NUMERIC, dpi NUMERIC, equity_stake NUMERIC,
+      nif TEXT, label TEXT, is_mock BOOLEAN, is_legacy BOOLEAN
     );
   END IF;
 
@@ -494,3 +497,27 @@ $$;
 
 REVOKE ALL ON FUNCTION public.take_rate_limit(TEXT, TEXT, INTEGER, INTEGER) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.take_rate_limit(TEXT, TEXT, INTEGER, INTEGER) TO service_role;
+
+-- prospective_cash_forecasts: fund manager forecast inputs per vehicle, flow type, and year.
+CREATE TABLE IF NOT EXISTS prospective_cash_forecasts (
+  vehicle_id TEXT NOT NULL REFERENCES private_entities(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  fons       TEXT NOT NULL,
+  flow_type  TEXT NOT NULL CHECK (flow_type IN ('calls', 'dist')),
+  year       INTEGER NOT NULL CHECK (year BETWEEN 2000 AND 2100),
+  amount     NUMERIC NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (vehicle_id, flow_type, year)
+);
+
+ALTER TABLE prospective_cash_forecasts ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY prospective_cash_forecasts_read_authenticated
+  ON prospective_cash_forecasts FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY prospective_cash_forecasts_write_superuser
+  ON prospective_cash_forecasts FOR ALL TO authenticated
+  USING (public.is_superuser()) WITH CHECK (public.is_superuser());
+
+CREATE INDEX IF NOT EXISTS idx_prospective_cash_forecasts_fons ON prospective_cash_forecasts(fons);
+CREATE INDEX IF NOT EXISTS idx_prospective_cash_forecasts_year ON prospective_cash_forecasts(year);
