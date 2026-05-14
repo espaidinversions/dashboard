@@ -61,18 +61,28 @@ export function editorDataToForecastRows(editorData, vehicleIds) {
   return rows;
 }
 
-export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
-  const normalized = editorData && typeof editorData === "object" ? editorData : { years: [], funds: {} };
-
-  const reFunds = new Set();
+export function buildReFundMatcher(actualCapitalCalls = []) {
+  const reFundsNorm = new Set();
   if (Array.isArray(actualCapitalCalls)) {
     for (const row of actualCapitalCalls) {
       if (String(row?.vcpe ?? "").trim() === "RE") {
         const fund = String(row?.fons ?? "").trim();
-        if (fund) reFunds.add(fund);
+        if (fund) reFundsNorm.add(fund.toLowerCase());
       }
     }
   }
+  // Bidirectional prefix match handles cases where forecast names lack legal suffixes
+  // e.g. "Inveractiva Plus II" matches "Inveractiva Plus II A S.L"
+  return (name) => {
+    const norm = name.trim().toLowerCase();
+    return [...reFundsNorm].some((re) => re.startsWith(norm) || norm.startsWith(re));
+  };
+}
+
+export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
+  const normalized = editorData && typeof editorData === "object" ? editorData : { years: [], funds: {} };
+
+  const isReFund = buildReFundMatcher(actualCapitalCalls);
 
   const byFundYearType = new Map();
   const committed = deriveCommittedFromCapitalCalls(actualCapitalCalls);
@@ -80,7 +90,7 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
   const actuals = deriveActualsFromCapitalCalls(actualCapitalCalls);
 
   for (const [fund, fundData] of Object.entries(normalized.funds ?? {})) {
-    if (reFunds.has(fund)) continue;
+    if (isReFund(fund)) continue;
     if (!committed[fund]) committed[fund] = Number(fundData.committed) || 0;
     const years = new Set();
     ["model_calls", "model_dist"].forEach((key) => {
@@ -95,7 +105,7 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
   }
 
   actuals.forEach((actual) => {
-    if (reFunds.has(actual.fund)) return;
+    if (isReFund(actual.fund)) return;
     const key = rowKey(actual);
     const existing = byFundYearType.get(key);
     if (!existing && !(actual.fund in (normalized.funds ?? {}))) return;

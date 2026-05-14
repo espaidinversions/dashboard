@@ -5,6 +5,7 @@ import { useTheme } from "../theme.js";
 import { fetchProspectiveCashForecasts, saveProspectiveCashForecasts } from "../db.js";
 import {
   PROSPECTIVE_CASH_USD_FUNDS,
+  buildReFundMatcher,
   deriveProspectiveCashRows,
   editorDataToForecastRows,
   forecastRowsToEditorData,
@@ -203,11 +204,14 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     sort,
   }), [cashData, fund, sort, tableType, visibleYears, vintageFilter, yearFilters]);
 
+  const isReFund = useMemo(() => buildReFundMatcher(rawCapitalCalls), [rawCapitalCalls]);
+
   const editorFundNames = useMemo(() => (
     Object.keys(editorData.funds)
+      .filter((name) => !isReFund(name))
       .filter((name) => !editorSearch || name.toLowerCase().includes(editorSearch.toLowerCase()))
       .sort((a, b) => a.localeCompare(b))
-  ), [editorData.funds, editorSearch]);
+  ), [editorData.funds, editorSearch, isReFund]);
 
   const saveAndApply = useCallback(async () => {
     setSaving(true);
