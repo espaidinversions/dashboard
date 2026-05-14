@@ -29,10 +29,11 @@ export function TxSection({
   const [page, setPage] = useState(0);
   const TX_PP = 25;
 
+  const allRows = useMemo(() => [...tx, ...compr], [tx, compr]);
   const yearOptions = useMemo(() => {
-    const years = new Set(tx.map((r) => String(r.data ?? "").slice(0, 4)).filter((y) => /^\d{4}$/.test(y)));
+    const years = new Set(allRows.map((r) => String(r.data ?? "").slice(0, 4)).filter((y) => /^\d{4}$/.test(y)));
     return ["Tots", ...[...years].sort()];
-  }, [tx]);
+  }, [allRows]);
   const monthOptions = [
     { value: "Tots", label: "Tots" },
     { value: "01", label: "Gen" }, { value: "02", label: "Feb" }, { value: "03", label: "Mar" },
@@ -43,7 +44,7 @@ export function TxSection({
 
   const query = search.trim().toLowerCase();
   const visibleTx = useMemo(() => {
-    return tx.filter((row) => {
+    return allRows.filter((row) => {
       if (query && !(
         (row.fons || "").toLowerCase().includes(query) ||
         (row.tipus || "").toLowerCase().includes(query) ||
@@ -58,20 +59,12 @@ export function TxSection({
       if (filters.comentaris && !String(row.comentaris ?? "").toLowerCase().includes(filters.comentaris.toLowerCase())) return false;
       return true;
     });
-  }, [filters, query, tx]);
-  const visibleCompr = useMemo(() => {
-    return compr.filter((row) => {
-      if (query && !(row.fons || "").toLowerCase().includes(query)) return false;
-      if (filters.year !== "Tots" && !String(row.data ?? "").startsWith(filters.year)) return false;
-      if (filters.fons && !String(row.fons ?? "").toLowerCase().includes(filters.fons.toLowerCase())) return false;
-      if (filters.est !== "Tots" && row.est !== filters.est) return false;
-      return true;
-    });
-  }, [compr, filters, query]);
+  }, [filters, query, allRows]);
+  const visibleCompr = useMemo(() => visibleTx.filter((row) => row.cat === "Compromís"), [visibleTx]);
 
   const tipusOptions = useMemo(
-    () => ["Tots", ...Array.from(new Set(tx.map((row) => row.tipus).filter(Boolean))).sort()],
-    [tx],
+    () => ["Tots", ...Array.from(new Set(allRows.map((row) => row.tipus).filter(Boolean))).sort()],
+    [allRows],
   );
 
   const sorted = useMemo(() => [...visibleTx].sort((a, b) => {
@@ -280,7 +273,7 @@ export function TxSection({
                 <th style={{ padding: "6px 10px" }}><input value={filters.eur} onChange={(e) => setFilters((current) => ({ ...current, eur: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 10px" }}>
                   <select value={filters.est} onChange={(e) => setFilters((current) => ({ ...current, est: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>
-                    {["Tots", ...Array.from(new Set(tx.map((row) => row.est).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
+                    {["Tots", ...Array.from(new Set(allRows.map((row) => row.est).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                 </th>
                 <th style={{ padding: "6px 10px" }}><input value={filters.comentaris} onChange={(e) => setFilters((current) => ({ ...current, comentaris: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
