@@ -160,7 +160,9 @@ export function CcTransactionModal({
         await onUpdate(editRow._rowId, { ...values, cat, non_recallable: nonRec }, (m) => { errMsg = m; setError(m); }, editRow);
         if (!errMsg) onClose();
       } else {
-        onInsert({ ...values, cat, non_recallable: nonRec }, setError);
+        let errMsg = null;
+        await onInsert({ ...values, cat, non_recallable: nonRec }, (m) => { errMsg = m; setError(m); });
+        if (!errMsg) onClose();
       }
       return;
     }
@@ -170,7 +172,9 @@ export function CcTransactionModal({
       await onUpdate(editRow._rowId, { ...values, cat }, (m) => { errMsg = m; setError(m); }, editRow);
       if (!errMsg) onClose();
     } else {
-      onInsert({ ...values, cat }, setError);
+      let errMsg = null;
+      await onInsert({ ...values, cat }, (m) => { errMsg = m; setError(m); });
+      if (!errMsg) onClose();
     }
   };
 
