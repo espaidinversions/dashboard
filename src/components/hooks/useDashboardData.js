@@ -142,8 +142,6 @@ export function useDashboardData() {
     if (error) { setError(error.message); return; }
     const fresh = await loadCapitalCalls();
     if (fresh) {
-      const newRow = fresh.find(r => r._rowId === insertedRow?.id);
-      console.log("[handleCCInsert] OK — rows:", fresh.length, "| new row found:", !!newRow, newRow ? `(${newRow.fons}, cat=${newRow.cat}, vcpe=${newRow.vcpe})` : "(not found, insertedRow.id=" + insertedRow?.id + ")");
       setRawCC(fresh);
       writeStoredJSON(LS_CC, fresh);
       await syncSearchersFromCapitalCalls(fresh);

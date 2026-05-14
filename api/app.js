@@ -228,19 +228,31 @@ async function handleSearchers(req, res) {
 
   if (String(req.query?.action ?? "") === "sync-capital-calls") {
     const sourceRows = Array.isArray(req.body?.rows) ? req.body.rows : [];
-    const { data: existing, error: existingError } = await supabase
-      .from("searchers")
-      .select("nom,nif")
-      .order("nom");
-    if (existingError) throw existingError;
+
+    // SELECT existing searchers; fall back to nom-only if nif column doesn't exist yet
+    let existing = [];
+    {
+      const { data, error } = await supabase.from("searchers").select("nom,nif").order("nom");
+      if (error && String(error.code) === "42703") {
+        console.warn("[sync-capital-calls] nif column missing, falling back to nom-only select");
+        const { data: data2, error: error2 } = await supabase.from("searchers").select("nom").order("nom");
+        if (error2) { console.error("[sync-capital-calls] SELECT searchers failed:", error2); throw error2; }
+        existing = data2 ?? [];
+      } else if (error) {
+        console.error("[sync-capital-calls] SELECT searchers failed:", error);
+        throw error;
+      } else {
+        existing = data ?? [];
+      }
+    }
 
     const existingNames = new Set(
-      (existing ?? [])
+      existing
         .map((row) => normalizeSearcherName(row?.nom))
         .filter(Boolean)
     );
     const existingVehicleIds = new Set(
-      (existing ?? [])
+      existing
         .map((row) => String(row?.nif ?? "").trim())
         .filter(Boolean)
     );
@@ -292,7 +304,7 @@ async function handleSearchers(req, res) {
       const { error } = await supabase
         .from("searchers")
         .insert(rowsToInsert.map(searcherToRow));
-      if (error) throw error;
+      if (error) { console.error("[sync-capital-calls] INSERT searchers failed:", error, { noms: rowsToInsert.map(r => r.nom) }); throw error; }
     }
     return res.status(200).json({ inserted: rowsToInsert.length });
   }
