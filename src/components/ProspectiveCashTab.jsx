@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
-import { fetchProspectiveCashForecasts, saveProspectiveCashForecasts } from "../db.js";
+import { fetchProspectiveCashForecasts, saveProspectiveCashForecasts, fetchCommittedOverrides, saveCommittedOverrides } from "../db.js";
+import { makeFundRouteId } from "../data/fundDetailModel.js";
 import {
   PROSPECTIVE_CASH_USD_FUNDS,
   buildReFundMatcher,
@@ -97,17 +99,19 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   const [editorSearch, setEditorSearch] = useState("");
   const [dirty, setDirty] = useState(false);
   const [editorInputMode, setEditorInputMode] = useState("eur"); // "eur" | "pct"
+  const [committedOverrides, setCommittedOverrides] = useState({});
 
   useEffect(() => {
     let cancelled = false;
-    fetchProspectiveCashForecasts()
-      .then(({ data, error }) => {
+    Promise.all([fetchProspectiveCashForecasts(), fetchCommittedOverrides()])
+      .then(([{ data, error }, { data: overrides, error: overridesError }]) => {
         if (cancelled) return;
         if (error) { setFetchError(error.message); setLoading(false); return; }
         const { editorData: derived, vehicleIds: ids } = forecastRowsToEditorData(data);
         fetchedRef.current = derived;
         setEditorData(derived);
         setVehicleIds(ids);
+        if (!overridesError) setCommittedOverrides(overrides ?? {});
         setLoading(false);
       })
       .catch((err) => {
@@ -169,6 +173,11 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     return map;
   }, [cashData.rows]);
 
+  const mergedCommitted = useMemo(
+    () => ({ ...cashData.committed, ...committedOverrides }),
+    [cashData.committed, committedOverrides],
+  );
+
   const periodBanner = useMemo(() => {
     const totals = {
       closed: { mc: 0, rc: 0, md: 0, rd: 0 },
@@ -206,6 +215,20 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
 
   const isReFund = useMemo(() => buildReFundMatcher(rawCapitalCalls), [rawCapitalCalls]);
 
+  // Map fund canonical name → proper route ID (vcpe:id or slugified fons) for FundDetail links.
+  // Built from rawCapitalCalls so the format matches what FundDetail expects.
+  const fundRouteIds = useMemo(() => {
+    const map = {};
+    if (Array.isArray(rawCapitalCalls)) {
+      rawCapitalCalls.forEach((row) => {
+        if (!row?.fons) return;
+        const key = String(row.fons);
+        if (!map[key]) map[key] = makeFundRouteId(row);
+      });
+    }
+    return map;
+  }, [rawCapitalCalls]);
+
   const editorFundNames = useMemo(() => (
     Object.keys(editorData.funds)
       .filter((name) => !isReFund(name))
@@ -216,14 +239,17 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   const saveAndApply = useCallback(async () => {
     setSaving(true);
     const rows = editorDataToForecastRows(editorData, vehicleIds);
-    const { error } = await saveProspectiveCashForecasts(rows, Object.values(vehicleIds));
+    const [{ error }, { error: overridesError }] = await Promise.all([
+      saveProspectiveCashForecasts(rows, Object.values(vehicleIds)),
+      saveCommittedOverrides(committedOverrides, vehicleIds),
+    ]);
     setSaving(false);
-    if (error) { setSaveError(error.message); return; }
+    if (error || overridesError) { setSaveError((error ?? overridesError).message); return; }
     fetchedRef.current = editorData;
     setSaveError(null);
     setDirty(false);
     setView("dashboard");
-  }, [editorData, vehicleIds]);
+  }, [committedOverrides, editorData, vehicleIds]);
 
   const resetDraft = useCallback(() => {
     setEditorData(fetchedRef.current);
@@ -235,6 +261,12 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
       ...current,
       funds: { ...current.funds, [fundName]: updater({ ...current.funds[fundName] }) },
     }));
+    setDirty(true);
+  }, []);
+
+  const updateCommittedOverride = useCallback((fundName, value) => {
+    const num = Number(value) || 0;
+    setCommittedOverrides((prev) => ({ ...prev, [fundName]: num || undefined }));
     setDirty(true);
   }, []);
 
@@ -375,13 +407,14 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
             setVintageFilter={setVintageFilter}
             sort={sort}
             setSort={setSort}
+            fundRouteIds={fundRouteIds}
           />
         </>
       ) : (
         <EditorPanel
           tc={tc}
           editorData={editorData}
-          committedByFund={cashData.committed}
+          committedByFund={mergedCommitted}
           paidInByFund={paidInByFund}
           fundNames={editorFundNames}
           editorType={editorType}
@@ -389,6 +422,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
           editorSearch={editorSearch}
           setEditorSearch={setEditorSearch}
           updateFundValue={updateFundValue}
+          updateCommittedOverride={updateCommittedOverride}
           saveAndApply={saveAndApply}
           exportEditorCsv={exportEditorCsv}
           resetDraft={resetDraft}
@@ -396,6 +430,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
           saving={saving}
           editorInputMode={editorInputMode}
           setEditorInputMode={setEditorInputMode}
+          fundRouteIds={fundRouteIds}
         />
       )}
     </div>
@@ -705,7 +740,7 @@ function PeriodPill({ tc, active, color, label, onClick }) {
   );
 }
 
-function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears, yearFilters, setYearFilters, vintageFilter, setVintageFilter, sort, setSort }) {
+function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears, yearFilters, setYearFilters, vintageFilter, setVintageFilter, sort, setSort, fundRouteIds = {} }) {
   const hasYearFilter = yearFilters.size > 0;
   const setSortKey = (key) => {
     setSort((current) => ({ key, dir: current.key === key && current.dir === "desc" ? "asc" : "desc" }));
@@ -772,7 +807,9 @@ function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears,
               <tr key={row.fund} className="hoverable">
                 <td style={tdStyle(tc, "left")}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontWeight: 700 }}>
-                    <span title={row.fund}>{row.fund.length > 32 ? `${row.fund.slice(0, 32)}...` : row.fund}</span>
+                    {fundRouteIds[row.fund]
+                      ? <Link to={`/fund/${encodeURIComponent(fundRouteIds[row.fund])}`} title={row.fund} style={{ color: tc.navy, textDecoration: "none" }}>{row.fund.length > 32 ? `${row.fund.slice(0, 32)}...` : row.fund}</Link>
+                      : <span title={row.fund}>{row.fund.length > 32 ? `${row.fund.slice(0, 32)}...` : row.fund}</span>}
                     {PROSPECTIVE_CASH_USD_FUNDS.has(row.fund) ? <MiniTag tc={tc}>USD</MiniTag> : null}
                     {row.vintage ? <button onClick={() => setVintageFilter(row.vintage)} style={vintageStyle(tc, row.vintage)}>{row.vintage}</button> : null}
                   </div>
@@ -846,7 +883,7 @@ function YearCell({ tc, year, model, real, pctValue, total = false }) {
   );
 }
 
-function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames, editorType, setEditorType, editorSearch, setEditorSearch, updateFundValue, saveAndApply, exportEditorCsv, resetDraft, dirty, saving, editorInputMode, setEditorInputMode }) {
+function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames, editorType, setEditorType, editorSearch, setEditorSearch, updateFundValue, updateCommittedOverride, saveAndApply, exportEditorCsv, resetDraft, dirty, saving, editorInputMode, setEditorInputMode, fundRouteIds = {} }) {
   const key = `model_${editorType}`;
   const yearCols = editorData.years;
   const committedNorm = useMemo(() => {
@@ -899,9 +936,23 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
               const total = Object.values(values).reduce((sum, value) => sum + (Number(value) || 0), 0);
               return (
                 <tr key={fundName} className="hoverable">
-                  <td style={{ ...tdStyle(tc, "left"), position: "sticky", left: 0, background: tc.card, zIndex: 1, fontWeight: 700 }}>{fundName.length > 48 ? `${fundName.slice(0, 48)}...` : fundName}</td>
+                  <td style={{ ...tdStyle(tc, "left"), position: "sticky", left: 0, background: tc.card, zIndex: 1, fontWeight: 700 }}>
+                    {fundRouteIds[fundName]
+                      ? <Link to={`/fund/${encodeURIComponent(fundRouteIds[fundName])}`} title={fundName} style={{ color: tc.navy, textDecoration: "none" }}>{fundName.length > 48 ? `${fundName.slice(0, 48)}...` : fundName}</Link>
+                      : (fundName.length > 48 ? `${fundName.slice(0, 48)}...` : fundName)}
+                  </td>
                   <td style={tdStyle(tc)}>
-                    <span className="num" style={{ color: tc.textLight }}>{fmtC(base)}</span>
+                    {editorType === "calls" ? (
+                      <input
+                        type="number"
+                        value={Number(committedByFund[fundName] ?? committedNorm[normKey] ?? 0) || ""}
+                        onChange={(e) => updateCommittedOverride(fundName, e.target.value)}
+                        style={{ ...editorNumberStyle(tc), width: 90 }}
+                        placeholder="—"
+                      />
+                    ) : (
+                      <span className="num" style={{ color: tc.textLight }}>{fmtC(base)}</span>
+                    )}
                   </td>
                   {yearCols.map((year) => {
                     const value = numberAtYear(values, year);
