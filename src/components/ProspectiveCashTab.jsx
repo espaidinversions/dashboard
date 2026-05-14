@@ -871,6 +871,7 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
               const base = editorType === "calls"
                 ? Number(committedByFund[fundName] ?? data.committed ?? 0) || 0
                 : Number(paidInByFund[fundName] ?? 0) || 0;
+              const inPct = editorInputMode === "pct" && base > 0;
               const total = Object.values(values).reduce((sum, value) => sum + (Number(value) || 0), 0);
               return (
                 <tr key={fundName} className="hoverable">
@@ -880,15 +881,23 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
                   </td>
                   {yearCols.map((year) => {
                     const value = numberAtYear(values, year);
+                    const displayValue = inPct ? (value ? ((value / base) * 100).toFixed(2) : "") : (value || "");
+                    const hint = inPct
+                      ? (value ? fmtC(value) : null)
+                      : (value && base ? `${((value / base) * 100).toFixed(1)}%` : null);
                     return (
                       <td key={year} style={{ ...tdStyle(tc), background: periodBg(tc, year) }}>
                         <input
                           type="number"
-                          value={value || ""}
-                          onChange={(event) => updateFundValue(fundName, (draft) => ({ ...draft, [key]: yearMapValue(draft[key], year, event.target.value) }))}
+                          value={displayValue}
+                          onChange={(event) => {
+                            const raw = Number(event.target.value);
+                            const stored = inPct ? (raw / 100) * base : raw;
+                            updateFundValue(fundName, (draft) => ({ ...draft, [key]: yearMapValue(draft[key], year, stored || "") }));
+                          }}
                           style={editorNumberStyle(tc)}
                         />
-                        {value && base ? <div style={{ fontSize: 9, color: tc.textLight }}>{((value / base) * 100).toFixed(1)}%</div> : null}
+                        {hint ? <div style={{ fontSize: 9, color: tc.textLight }}>{hint}</div> : null}
                       </td>
                     );
                   })}
