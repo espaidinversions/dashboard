@@ -976,13 +976,32 @@ export async function upsertPMPositionOverride(isin, fields) {
 
 export async function insertCapitalCall(cc) {
   if (!supabase) return { data: null, error: null };
-  const resolved = resolvePrivateEntity("vehicle", cc.fons, cc.vehicle_id ?? null);
-  if (resolved) {
-    resolved.nif = String(cc.nif ?? "").trim() || null;
-    resolved.fiscalName = String(cc.fiscal_name ?? "").trim() || null;
+  let resolved = resolvePrivateEntity("vehicle", cc.fons, cc.vehicle_id ?? null);
+  if (!resolved) return { data: null, error: new Error("No s'ha pogut identificar el vehicle") };
+  resolved.nif = String(cc.nif ?? "").trim() || null;
+  resolved.fiscalName = String(cc.fiscal_name ?? "").trim() || null;
+
+  // MOCKNIF IDs are fallbacks generated locally when no workbook entry matches.
+  // The real entity may already exist in the DB under a different (NIF-based) ID.
+  // Resolve by canonical name first to avoid FK violations and RLS errors.
+  if (resolved.id.startsWith("MOCKNIF:")) {
+    const { data: dbEntity, error: lookupError } = await supabase
+      .from("private_entities")
+      .select("id")
+      .eq("canonical_name", resolved.canonicalName)
+      .maybeSingle();
+    if (lookupError) return { data: null, error: lookupError };
+    if (dbEntity?.id) {
+      resolved = { ...resolved, id: dbEntity.id };
+    } else {
+      // Genuinely new vehicle — only admins can create private entities.
+      const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
+      if (entityError) return { data: null, error: entityError };
+    }
+  } else {
+    const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
+    if (entityError) return { data: null, error: entityError };
   }
-  const { error: entityError } = await upsertPrivateEntitiesIfNew(resolved ? [resolved] : []);
-  if (entityError) return { data: null, error: entityError };
   const { mes, year, fy } = parseDateParts(cc.data);
   const tipus = normalizeCapitalCallTipus(cc.tipus) ?? null;
   const eur = normalizeCapitalCallSignedAmount(tipus, cc.eur);
