@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { TC_LIGHT } from "../theme.js";
-import { Briefcase, Building2, Search, Building, Home, TrendingUp, BookOpen, Users, DollarSign, Menu, ChevronLeft } from "lucide-react";
+import { Briefcase, Building2, Search, Building, Home, TrendingUp, BookOpen, Users, DollarSign, Menu, ChevronLeft, LineChart } from "lucide-react";
 
 const SIDEBAR_W = 220;
 const RAIL_W    = 52;
@@ -15,6 +15,7 @@ const PORTFOLI_SECTIONS = [
       {id:"fons",      label:"Fons",                icon:Building2},
       {id:"searchers", label:"Searchers",           icon:Search},
       {id:"companies", label:"Participades",        icon:Building},
+      {id:"cash-model", label:"Model Caixa",        icon:LineChart},
     ],
   },
   {
@@ -49,9 +50,10 @@ const BOTTOM_ITEMS = [
 ];
 
 // ── component ─────────────────────────────────────────────
-export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_LIGHT, dark, isAdmin, canAccessSection, canAccessAny }) {
+export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavigate, tc = TC_LIGHT, dark, isAdmin, canAccessSection, canAccessAny }) {
   const [expanded, setExpanded] = useState(new Set(["alt","re","mp"]));
   const [popover,  setPopover]  = useState(null);
+  const activeId = activeItem ?? activeNavItem;
 
   const toggleSec = id =>
     setExpanded(p => { const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n; });
@@ -69,7 +71,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
 
   // ── shared leaf button ──
   function Leaf({ item, indent = false }) {
-    const active = activeItem === item.id;
+    const active = activeId === item.id;
     return (
       <button
         onClick={() => onNavigate(item.id)}
@@ -108,7 +110,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
     if (visibleChildren.length === 0) return null;
 
     const open = expanded.has(sec.id);
-    const childActive = visibleChildren.some(c => c.id === activeItem);
+    const childActive = visibleChildren.some(c => c.id === activeId);
 
     return (
       <div
@@ -164,15 +166,15 @@ export function Sidebar({ collapsed, onToggle, activeItem, onNavigate, tc = TC_L
                 onClick={() => { onNavigate(c.id); setPopover(null); }}
                 style={{
                   display:"block", width:"100%", textAlign:"left",
-                  background: activeItem===c.id ? C.bgActive : "transparent",
+                  background: activeId===c.id ? C.bgActive : "transparent",
                   border:"none",
-                  borderLeft:`3px solid ${activeItem===c.id ? C.activeBorder : "transparent"}`,
+                  borderLeft:`3px solid ${activeId===c.id ? C.activeBorder : "transparent"}`,
                   padding:"8px 16px", cursor:"pointer",
-                  color: activeItem===c.id ? "#fff" : C.text,
+                  color: activeId===c.id ? "#fff" : C.text,
                   fontSize:12, fontFamily:"inherit",
                 }}
-                onMouseEnter={e => { if(activeItem!==c.id) e.currentTarget.style.background=C.bgHover; }}
-                onMouseLeave={e => { if(activeItem!==c.id) e.currentTarget.style.background="transparent"; }}
+                onMouseEnter={e => { if(activeId!==c.id) e.currentTarget.style.background=C.bgHover; }}
+                onMouseLeave={e => { if(activeId!==c.id) e.currentTarget.style.background="transparent"; }}
               >{c.label}</button>
             ))}
           </div>
