@@ -61,22 +61,26 @@ export function editorDataToForecastRows(editorData, vehicleIds) {
   return rows;
 }
 
+// Strip common Catalan/Spanish legal entity suffixes before name comparison
+function stripLegalSuffix(name) {
+  return name.replace(/\s+(A\s+)?S\.?L\.?$|\s+S\.?A\.?$|\s+SCR(,\s*S\.?A\.?)?$|\s+FCRE$/i, "").trim();
+}
+
 export function buildReFundMatcher(actualCapitalCalls = []) {
   const reFundsNorm = new Set();
   if (Array.isArray(actualCapitalCalls)) {
     for (const row of actualCapitalCalls) {
       if (String(row?.vcpe ?? "").trim() === "RE") {
         const fund = String(row?.fons ?? "").trim();
-        if (fund) reFundsNorm.add(fund.toLowerCase());
+        if (fund) {
+          reFundsNorm.add(fund.toLowerCase());
+          reFundsNorm.add(stripLegalSuffix(fund).toLowerCase());
+        }
       }
     }
   }
-  // Bidirectional prefix match handles cases where forecast names lack legal suffixes
-  // e.g. "Inveractiva Plus II" matches "Inveractiva Plus II A S.L"
-  return (name) => {
-    const norm = name.trim().toLowerCase();
-    return [...reFundsNorm].some((re) => re.startsWith(norm) || norm.startsWith(re));
-  };
+  return (name) => reFundsNorm.has(name.trim().toLowerCase()) ||
+    reFundsNorm.has(stripLegalSuffix(name.trim()).toLowerCase());
 }
 
 export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
