@@ -91,6 +91,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   const [yearFilters, setYearFilters] = useState(new Set());
   const [vintageFilter, setVintageFilter] = useState(null);
   const [sort, setSort] = useState({ key: "devAbs", dir: "desc" });
+  const [devMetric, setDevMetric] = useState("eur"); // "eur" | "pct"
   const [editorType, setEditorType] = useState("calls");
   const [editorSearch, setEditorSearch] = useState("");
   const [dirty, setDirty] = useState(false);
@@ -251,7 +252,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
 
   const text = {
     model: mode === "calls" ? "Capital Calls" : mode === "dist" ? "Distribucions" : "Net Cash Flow",
-    table: tableType === "calls" ? "Calls" : "Distribucions",
+    table: tableType === "calls" ? "Calls" : tableType === "dist" ? "Distribucions" : "Net CF",
   };
 
   if (loading) return (
@@ -350,7 +351,10 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
               <ReactECharts option={deviationChartOption({ rows: yearAgg, mode, tc, dark })} style={{ height: 260 }} opts={{ renderer: "canvas" }} />
             </ChartCard>
             <ChartCard tc={tc} title="Top 25 fons - desviacio total" wide>
-              <ReactECharts option={fundDeviationChartOption({ rows: fundAgg, mode, tc, dark })} style={{ height: 340 }} opts={{ renderer: "canvas" }} />
+              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+                <Segmented tc={tc} value={devMetric} onChange={setDevMetric} options={[{ id: "eur", label: "€" }, { id: "pct", label: "%" }]} />
+              </div>
+              <ReactECharts option={fundDeviationChartOption({ rows: fundAgg, mode, tc, dark, metric: devMetric })} style={{ height: 340 }} opts={{ renderer: "canvas" }} />
             </ChartCard>
           </div>
 
@@ -436,13 +440,14 @@ function buildTable({ rows, committed, firstCall, fund, tableType, visibleYears,
 
   const byFund = new Map();
   rows.forEach((row) => {
-    if (row.type !== tableType) return;
+    if (tableType !== "net" && row.type !== tableType) return;
     if (fund !== "all" && row.fund !== fund) return;
     if (!byFund.has(row.fund)) byFund.set(row.fund, {});
     const yearData = byFund.get(row.fund);
     if (!yearData[row.year]) yearData[row.year] = { model: 0, real: 0 };
-    yearData[row.year].model += row.model;
-    yearData[row.year].real += row.real;
+    const sign = tableType === "net" ? (row.type === "dist" ? 1 : -1) : 1;
+    yearData[row.year].model += row.model * sign;
+    yearData[row.year].real += row.real * sign;
   });
 
   const selectedYears = [...yearFilters].sort((a, b) => a - b);
@@ -574,21 +579,25 @@ function deviationChartOption({ rows, mode, tc }) {
   };
 }
 
-function fundDeviationChartOption({ rows, mode, tc }) {
+function fundDeviationChartOption({ rows, mode, tc, metric = "eur" }) {
   const t = ecTheme(tc);
   const top = rows
     .map((row) => {
-      const value = mode === "calls" ? row.rc - row.mc : mode === "dist" ? row.rd - row.md : (row.rd - row.rc) - (row.md - row.mc);
-      return { fund: row.fund, value };
+      const devEur = mode === "calls" ? row.rc - row.mc : mode === "dist" ? row.rd - row.md : (row.rd - row.rc) - (row.md - row.mc);
+      const modelBase = mode === "calls" ? row.mc : mode === "dist" ? row.md : row.mc + row.md;
+      const value = metric === "pct" && modelBase !== 0 ? (devEur / Math.abs(modelBase)) * 100 : devEur;
+      return { fund: row.fund, value, devEur };
     })
-    .filter((row) => Math.abs(row.value) > 100)
-    .sort((a, b) => Math.abs(b.value) - Math.abs(a.value))
+    .filter((row) => Math.abs(row.devEur) > 100)
+    .sort((a, b) => Math.abs(b.devEur) - Math.abs(a.devEur))
     .slice(0, 25)
     .reverse();
+  const fmtAxis = metric === "pct" ? (v) => `${v.toFixed(0)}%` : (v) => fmtK(v, 0);
+  const fmtTip = metric === "pct" ? (v) => `${v.toFixed(1)}%` : fmtK;
   return {
     grid: { top: 8, right: 14, bottom: 34, left: 210, containLabel: false },
-    tooltip: { ...t.tooltip, trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: fmtK },
-    xAxis: { type: "value", axisLabel: { ...t.axisLabel, formatter: (value) => fmtK(value, 0) }, splitLine: t.splitLine },
+    tooltip: { ...t.tooltip, trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: fmtTip },
+    xAxis: { type: "value", axisLabel: { ...t.axisLabel, formatter: fmtAxis }, splitLine: t.splitLine },
     yAxis: { type: "category", data: top.map((row) => row.fund.length > 38 ? `${row.fund.slice(0, 38)}...` : row.fund), axisLabel: { ...t.axisLabel, fontSize: 10 }, axisTick: t.axisTick, axisLine: t.axisLine },
     series: [
       { type: "bar", data: top.map((row) => row.value), itemStyle: { color: (params) => params.value >= 0 ? tc.green : tc.red, borderRadius: [0, 4, 4, 0] }, barMaxWidth: 14 },
@@ -709,7 +718,7 @@ function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears,
     <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8, overflow: "hidden", boxShadow: tc.shadows?.card }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderBottom: `1px solid ${tc.border}`, flexWrap: "wrap" }}>
         <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.07em", color: tc.textLight, fontWeight: 750 }}>Detall per fons</div>
-        <Segmented tc={tc} value={tableType} onChange={setTableType} options={[{ id: "calls", label: "Calls" }, { id: "dist", label: "Distribucions" }]} />
+        <Segmented tc={tc} value={tableType} onChange={setTableType} options={[{ id: "calls", label: "Calls" }, { id: "dist", label: "Distribucions" }, { id: "net", label: "Net CF" }]} />
         {vintageFilter != null && (
           <button onClick={() => setVintageFilter(null)} style={buttonStyle(tc)}>
             Treure vintage {vintageFilter}
@@ -836,6 +845,16 @@ function YearCell({ tc, year, model, real, pctValue, total = false }) {
 function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames, editorType, setEditorType, editorSearch, setEditorSearch, updateFundValue, saveAndApply, exportEditorCsv, resetDraft, dirty, saving, editorInputMode, setEditorInputMode }) {
   const key = `model_${editorType}`;
   const yearCols = editorData.years;
+  const committedNorm = useMemo(() => {
+    const m = {};
+    Object.entries(committedByFund).forEach(([k, v]) => { m[k.trim().toLowerCase()] = v; });
+    return m;
+  }, [committedByFund]);
+  const paidInNorm = useMemo(() => {
+    const m = {};
+    Object.entries(paidInByFund).forEach(([k, v]) => { m[k.trim().toLowerCase()] = v; });
+    return m;
+  }, [paidInByFund]);
   return (
     <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8, overflow: "hidden", boxShadow: tc.shadows?.card }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", padding: 12, borderBottom: `1px solid ${tc.border}`, flexWrap: "wrap" }}>
@@ -868,9 +887,10 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
             {fundNames.map((fundName) => {
               const data = editorData.funds[fundName] ?? {};
               const values = data[key] ?? {};
-              const base = editorType === "calls"
-                ? Number(committedByFund[fundName] ?? data.committed ?? 0) || 0
-                : Number(paidInByFund[fundName] ?? 0) || 0;
+              const normKey = fundName.trim().toLowerCase();
+              const committed = committedByFund[fundName] ?? committedNorm[normKey] ?? data.committed ?? 0;
+              const paidIn = paidInByFund[fundName] ?? paidInNorm[normKey] ?? 0;
+              const base = editorType === "calls" ? Number(committed) || 0 : Number(paidIn) || 0;
               const inPct = editorInputMode === "pct" && base > 0;
               const total = Object.values(values).reduce((sum, value) => sum + (Number(value) || 0), 0);
               return (
