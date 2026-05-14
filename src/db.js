@@ -100,10 +100,11 @@ async function upsertPrivateEntities(rows) {
 async function upsertPrivateEntitiesIfNew(rows) {
   if (!supabase || !rows.length) return { error: null };
   const ids = rows.map((r) => r.id).filter(Boolean);
-  const { data: existing } = await supabase
+  const { data: existing, error: selectError } = await supabase
     .from("private_entities")
     .select("id")
     .in("id", ids);
+  if (selectError) return { error: selectError };
   const existingIds = new Set((existing ?? []).map((r) => r.id));
   const toInsert = rows.filter((r) => !existingIds.has(r.id));
   if (!toInsert.length) return { error: null };
@@ -927,7 +928,7 @@ export async function insertCapitalCall(cc) {
     resolved.nif = String(cc.nif ?? "").trim() || null;
     resolved.fiscalName = String(cc.fiscal_name ?? "").trim() || null;
   }
-  const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
+  const { error: entityError } = await upsertPrivateEntitiesIfNew(resolved ? [resolved] : []);
   if (entityError) return { data: null, error: entityError };
   const { mes, year, fy } = parseDateParts(cc.data);
   const tipus = normalizeCapitalCallTipus(cc.tipus) ?? null;
