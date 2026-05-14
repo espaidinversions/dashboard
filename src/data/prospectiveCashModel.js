@@ -84,7 +84,9 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
 
   actuals.forEach((actual) => {
     const key = rowKey(actual);
-    const current = byFundYearType.get(key) ?? { ...actual, model: 0, real: 0 };
+    const existing = byFundYearType.get(key);
+    if (!existing && !(actual.fund in (normalized.funds ?? {}))) return;
+    const current = existing ?? { ...actual, model: 0, real: 0 };
     current.real += actual.real;
     byFundYearType.set(key, current);
     if (actual.type === "calls" && actual.real > 0 && (!firstCall[actual.fund] || actual.year < firstCall[actual.fund])) {
