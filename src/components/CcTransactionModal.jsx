@@ -49,6 +49,12 @@ export function CcTransactionModal({
     return { text: `${fmtM(r)} rec + ${fmtM(nr)} no rec = ${fmtM(total)}`, valid: Math.abs(total - eur) <= 0.01 };
   };
 
+  const isNewVehicle = (v) => {
+    if (isEdit) return false;
+    const name = String(v.fons ?? "").trim();
+    return name !== "" && !(ccNameOptions ?? []).includes(name);
+  };
+
   const fields = [
     isEdit
       ? { key: "fons", label: "Vehicle", type: "text", defaultValue: fons, disabled: true }
@@ -113,10 +119,7 @@ export function CcTransactionModal({
       type: "text",
       defaultValue: "",
       placeholder: "p. ex. A12345678",
-      visible: (v) => {
-        const name = String(v.fons ?? "").trim();
-        return name !== "" && !(ccNameOptions ?? []).includes(name);
-      },
+      visible: isNewVehicle,
     },
     {
       key: "fiscal_name",
@@ -124,10 +127,7 @@ export function CcTransactionModal({
       type: "text",
       defaultValue: "",
       placeholder: "Raó social completa",
-      visible: (v) => {
-        const name = String(v.fons ?? "").trim();
-        return name !== "" && !(ccNameOptions ?? []).includes(name);
-      },
+      visible: isNewVehicle,
     },
   ];
 
