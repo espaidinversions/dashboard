@@ -1030,7 +1030,7 @@ export async function insertCapitalCall(cc) {
   if (!error) logAudit("insert", "capital_calls", String(data?.id), row);
   if (!error) {
     const metaResult = await upsertFundMetaComputed(resolved.id, resolved.canonicalName);
-    if (metaResult.error) return { data, error: metaResult.error };
+    if (metaResult.error) console.warn("upsertFundMetaComputed (insert) failed (non-fatal):", metaResult.error);
   }
   return { data, error };
 }
@@ -1097,7 +1097,7 @@ export async function updateCapitalCall(rowId, fields) {
     const vehicleId = updates.vehicle_id ?? old?.vehicle_id ?? null;
     const fundName = updates.fons ?? old?.fons ?? "";
     const metaResult = await upsertFundMetaComputed(vehicleId, fundName);
-    if (metaResult.error) return { error: metaResult.error };
+    if (metaResult.error) console.warn("upsertFundMetaComputed (update) failed (non-fatal):", metaResult.error);
   }
   return { error };
 }
@@ -1108,7 +1108,7 @@ export async function deleteCapitalCall(rowId) {
   const { error } = await supabase.from("capital_calls").delete().eq("id", rowId);
   if (!error && old?.vehicle_id) {
     const metaResult = await upsertFundMetaComputed(old.vehicle_id, old.fons ?? "");
-    if (metaResult.error) return { error: metaResult.error };
+    if (metaResult.error) console.warn("upsertFundMetaComputed (delete) failed (non-fatal):", metaResult.error);
   }
   if (!error) logAudit("delete", "capital_calls", String(rowId), { old: old ?? null });
   return { error };
