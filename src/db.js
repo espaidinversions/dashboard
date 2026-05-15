@@ -981,22 +981,33 @@ export async function insertCapitalCall(cc) {
   resolved.nif = String(cc.nif ?? "").trim() || null;
   resolved.fiscalName = String(cc.fiscal_name ?? "").trim() || null;
 
-  // Always resolve via canonical_name so local workbook IDs that differ from DB IDs
-  // don't cause a spurious INSERT (which would fail with RLS for non-admin users).
-  const { data: dbEntity, error: lookupError } = await supabase
-    .from("private_entities")
-    .select("id")
-    .eq("canonical_name", resolved.canonicalName)
+  // For existing vehicles: pull vehicle_id from an existing capital_call row.
+  // This avoids touching private_entities (which non-admins cannot write to)
+  // and sidesteps any mismatch between the locally-resolved ID and the DB ID.
+  const { data: existingCC } = await supabase
+    .from("capital_calls")
+    .select("vehicle_id")
+    .eq("fons", resolved.canonicalName)
+    .not("vehicle_id", "is", null)
+    .limit(1)
     .maybeSingle();
-  console.log("[insertCC] canonical_name lookup:", { canonicalName: resolved.canonicalName, localId: resolved.id, dbId: dbEntity?.id ?? null, lookupError: lookupError?.message ?? null });
-  if (lookupError) return { data: null, error: lookupError };
-  if (dbEntity?.id) {
-    resolved = { ...resolved, id: dbEntity.id };
+  if (existingCC?.vehicle_id) {
+    resolved = { ...resolved, id: existingCC.vehicle_id };
   } else {
-    // Genuinely new vehicle — only admins can create private entities.
-    console.log("[insertCC] entity not found by canonical_name — attempting insert for:", resolved.canonicalName);
-    const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
-    if (entityError) return { data: null, error: entityError };
+    // No existing transaction for this vehicle — try private_entities by canonical_name.
+    const { data: dbEntity, error: lookupError } = await supabase
+      .from("private_entities")
+      .select("id")
+      .eq("canonical_name", resolved.canonicalName)
+      .maybeSingle();
+    if (lookupError) return { data: null, error: lookupError };
+    if (dbEntity?.id) {
+      resolved = { ...resolved, id: dbEntity.id };
+    } else {
+      // Genuinely new vehicle — only admins can create private entities.
+      const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
+      if (entityError) return { data: null, error: entityError };
+    }
   }
   const { mes, year, fy } = parseDateParts(cc.data);
   const tipus = normalizeCapitalCallTipus(cc.tipus) ?? null;
