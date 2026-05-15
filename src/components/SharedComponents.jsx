@@ -584,8 +584,8 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                         disabled={f.disabled}
                       >
                         <option value="" disabled>{f.placeholder ?? "Selecciona una opció"}</option>
-                        {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
                         <option value="__custom__">+ Nou valor…</option>
+                        {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
                       </select>
                       {values[f.key] && !(f.options ?? []).includes(values[f.key]) ? (
                         <button

@@ -1,5 +1,10 @@
 const _CAT_MONTHS = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
 
+export function fmtFull(n) {
+  if (n == null || !Number.isFinite(Number(n))) return "—";
+  return Number(n).toLocaleString("ca-ES", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "€";
+}
+
 export function fmtM(n) {
   if (n == null || !Number.isFinite(Number(n))) return "—";
   n = Number(n);

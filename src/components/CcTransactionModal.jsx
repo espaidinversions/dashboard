@@ -1,6 +1,6 @@
 import React from "react";
 import { AddRowModal } from "./SharedComponents.jsx";
-import { fmtM } from "../utils.js";
+import { fmtFull } from "../utils.js";
 import { inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS } from "../data/capitalCallStrategyModel.js";
 import { CAPITAL_CALL_TIPUS_OPTIONS } from "../config.js";
@@ -46,7 +46,7 @@ export function CcTransactionModal({
     if (rec == null && nonRec == null) return null;
     const r = rec ?? 0, nr = nonRec ?? 0, total = r + nr;
     const eur = Number(values.eur) || 0;
-    return { text: `${fmtM(r)} rec + ${fmtM(nr)} no rec = ${fmtM(total)}`, valid: Math.abs(total - eur) <= 0.01 };
+    return { text: `${fmtFull(r)} rec + ${fmtFull(nr)} no rec = ${fmtFull(total)}`, valid: Math.abs(total - eur) <= 0.01 };
   };
 
   const isNewVehicle = (v) => {
@@ -82,7 +82,7 @@ export function CcTransactionModal({
         }
         if (values.divisa !== "USD") return "Introdueix EUR.";
         if (editRow.fxRate) {
-          return `Import en USD. Tipus BCE guardat: ${Number(editRow.fxRate).toFixed(6)} · EUR guardats: ${fmtM(editRow.eur)}`;
+          return `Import en USD. Tipus BCE guardat: ${Number(editRow.fxRate).toFixed(6)} · EUR guardats: ${fmtFull(editRow.eur)}`;
         }
         return "Import en USD. Si aquest moviment és legacy, el canvi a EUR es recalcularà quan modifiquis l'import o la data.";
       },
@@ -108,7 +108,7 @@ export function CcTransactionModal({
     },
     {
       key: "from_recallable",
-      label: `Des de pool recallable (€) — pool: ${fmtM(poolForLabel)} · pendent: ${fmtM(uncalledByFund[fons] ?? 0)}`,
+      label: `Des de pool recallable (€) — pool: ${fmtFull(poolForLabel)} · pendent: ${fmtFull(uncalledByFund[fons] ?? 0)}`,
       type: "number",
       defaultValue: isEdit ? (editRow.from_recallable ?? "") : undefined,
       visible: v => inferCapitalCallCategoryFromTipus(v.tipus, v.eur) === "Capital Call",
@@ -139,7 +139,7 @@ export function CcTransactionModal({
     if (cat === "Capital Call" && values.from_recallable !== "" && values.from_recallable != null) {
       if (Number(values.from_recallable) < 0) { setError("El valor 'des de pool recallable' no pot ser negatiu."); return; }
       if (Number(values.from_recallable) > poolForLabel + 0.01) {
-        setError(`Advertiment: pool recallable disponible és ${fmtM(poolForLabel)}. El moviment s'ha guardat igualment.`);
+        setError(`Advertiment: pool recallable disponible és ${fmtFull(poolForLabel)}. El moviment s'ha guardat igualment.`);
         // soft warning — fall through
       }
     }
@@ -149,10 +149,10 @@ export function CcTransactionModal({
       const rec = Number(values.recallable);
       if (rec < 0) { setError("El recallable no pot ser negatiu."); return; }
       const eur = Number(values.eur) || 0;
-      if (rec > eur + 0.01) { setError(`El recallable (${fmtM(rec)}) no pot superar l'import total (${fmtM(eur)}).`); return; }
+      if (rec > eur + 0.01) { setError(`El recallable (${fmtFull(rec)}) no pot superar l'import total (${fmtFull(eur)}).`); return; }
       const nonRec = values.non_recallable !== "" && values.non_recallable != null ? Number(values.non_recallable) : eur - rec;
       if (Math.abs(rec + nonRec - eur) > 0.01) {
-        setError(`Recallable (${fmtM(rec)}) + No recallable (${fmtM(nonRec)}) = ${fmtM(rec + nonRec)}, però l'import total és ${fmtM(eur)}`);
+        setError(`Recallable (${fmtFull(rec)}) + No recallable (${fmtFull(nonRec)}) = ${fmtFull(rec + nonRec)}, però l'import total és ${fmtFull(eur)}`);
         return;
       }
       if (isEdit) {
