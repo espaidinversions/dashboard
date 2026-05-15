@@ -981,24 +981,18 @@ export async function insertCapitalCall(cc) {
   resolved.nif = String(cc.nif ?? "").trim() || null;
   resolved.fiscalName = String(cc.fiscal_name ?? "").trim() || null;
 
-  // MOCKNIF IDs are fallbacks generated locally when no workbook entry matches.
-  // The real entity may already exist in the DB under a different (NIF-based) ID.
-  // Resolve by canonical name first to avoid FK violations and RLS errors.
-  if (resolved.id.startsWith("MOCKNIF:")) {
-    const { data: dbEntity, error: lookupError } = await supabase
-      .from("private_entities")
-      .select("id")
-      .eq("canonical_name", resolved.canonicalName)
-      .maybeSingle();
-    if (lookupError) return { data: null, error: lookupError };
-    if (dbEntity?.id) {
-      resolved = { ...resolved, id: dbEntity.id };
-    } else {
-      // Genuinely new vehicle — only admins can create private entities.
-      const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
-      if (entityError) return { data: null, error: entityError };
-    }
+  // Always resolve via canonical_name so local workbook IDs that differ from DB IDs
+  // don't cause a spurious INSERT (which would fail with RLS for non-admin users).
+  const { data: dbEntity, error: lookupError } = await supabase
+    .from("private_entities")
+    .select("id")
+    .eq("canonical_name", resolved.canonicalName)
+    .maybeSingle();
+  if (lookupError) return { data: null, error: lookupError };
+  if (dbEntity?.id) {
+    resolved = { ...resolved, id: dbEntity.id };
   } else {
+    // Genuinely new vehicle — only admins can create private entities.
     const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
     if (entityError) return { data: null, error: entityError };
   }
