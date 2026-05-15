@@ -988,11 +988,13 @@ export async function insertCapitalCall(cc) {
     .select("id")
     .eq("canonical_name", resolved.canonicalName)
     .maybeSingle();
+  console.log("[insertCC] canonical_name lookup:", { canonicalName: resolved.canonicalName, localId: resolved.id, dbId: dbEntity?.id ?? null, lookupError: lookupError?.message ?? null });
   if (lookupError) return { data: null, error: lookupError };
   if (dbEntity?.id) {
     resolved = { ...resolved, id: dbEntity.id };
   } else {
     // Genuinely new vehicle — only admins can create private entities.
+    console.log("[insertCC] entity not found by canonical_name — attempting insert for:", resolved.canonicalName);
     const { error: entityError } = await upsertPrivateEntitiesIfNew([resolved]);
     if (entityError) return { data: null, error: entityError };
   }
