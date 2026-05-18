@@ -296,7 +296,16 @@ export function TxSection({
                     </td>
                     <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.tipus}</td>
                     <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: isIn ? tc.navy : tc.green }}>
-                      {fmtSignedM(row.eur)}
+                      {row.fxSource?.startsWith("ecb:estimated:") ? (
+                        <span
+                          title="Tipus de canvi estimat — s'actualitzarà quan arribi la data de la transacció"
+                          style={{ cursor: "help", borderBottom: "1px dashed currentColor" }}
+                        >
+                          ~{fmtSignedM(row.eur)}
+                        </span>
+                      ) : (
+                        fmtSignedM(row.eur)
+                      )}
                     </td>
                     <td style={{ padding: "8px 10px" }}>
                       {canEdit && row._rowId && onQuickUpdate ? (
