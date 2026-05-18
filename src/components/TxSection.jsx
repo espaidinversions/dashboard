@@ -245,7 +245,7 @@ export function TxSection({
                   { k: "tipus", label: "Tipus" },
                   { k: "amountNative", label: "Import (Original)", right: true },
                   { k: "eur", label: "Import (Euros)", right: true },
-                  { k: "est", label: "Estratègia" },
+                  { k: "est", label: "Tipus de Vehicle" },
                   { k: "comentaris", label: "Comentaris" },
                 ].map((head) => (
                   <th key={head.k} onClick={() => toggleSort(head.k)} style={{ ...thStyle, textAlign: head.right ? "right" : "left" }}>
