@@ -4,7 +4,7 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { VCPE_CFG, EST_CFG } from "../config.js";
 import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtSignedM, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
+import { fmtM, fmtSignedM, fmtSignedNative, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
 import { Badge, Logo, KpiCard, AddRowModal, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCapitalCalls, loadFundMeta, updateCapitalCall } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
@@ -293,13 +293,14 @@ function FundDetailInner() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: tc.bgAlt }}>
-                {["Data", "Tipus", "Import", "Recallable", ...(vcpe === "SF" ? ["Fase"] : []), ...(canEdit ? [""] : [])].map(h => (
-                  <th key={h || "_actions"} style={{ padding: "10px 12px", textAlign: h === "Import" || h === "Recallable" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
+                {["Data", "Tipus", "Import (Original)", "Import (Euros)", "Recallable", ...(vcpe === "SF" ? ["Fase"] : []), ...(canEdit ? [""] : [])].map(h => (
+                  <th key={h || "_actions"} style={{ padding: "10px 12px", textAlign: h === "Import (Original)" || h === "Import (Euros)" || h === "Recallable" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
                 ))}
               </tr>
               <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
                 <th style={{ padding: "6px 12px" }}><input value={txFilters.data} onChange={(e) => setTxFilters((v) => ({ ...v, data: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 12px" }}><select value={txFilters.tipus} onChange={(e) => setTxFilters((v) => ({ ...v, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{tipusOptions.map(o => <option key={o} value={o}>{o}</option>)}</select></th>
+                <th style={{ padding: "6px 12px" }} />
                 <th style={{ padding: "6px 12px" }}><input value={txFilters.import} onChange={(e) => setTxFilters((v) => ({ ...v, import: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 12px" }} />
                 {vcpe === "SF" ? <th style={{ padding: "6px 12px" }} /> : null}
@@ -315,6 +316,9 @@ function FundDetailInner() {
                   <tr key={`${r.data}-${r.cat}-${r.eur}`} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
                     <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
                     <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.tipus}</td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: r.eur > 0 ? tc.navy : tc.green }}>
+                      {fmtSignedNative(r.amountNative ?? r.eur, r.divisa ?? "EUR")}
+                    </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: r.eur > 0 ? tc.navy : tc.green }}>
                       {fmtSignedM(r.eur)}
                     </td>

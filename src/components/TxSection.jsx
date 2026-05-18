@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
-import { fmtM, fmtSignedM } from "../utils.js";
+import { fmtM, fmtSignedM, fmtSignedNative } from "../utils.js";
 import { makeVehicleDetailPath } from "../data/privateRoutes.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS } from "../data/capitalCallStrategyModel.js";
 import { Badge, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
@@ -243,8 +243,8 @@ export function TxSection({
                   { k: "data", label: "Data" },
                   { k: "fons", label: "Vehicle" },
                   { k: "tipus", label: "Tipus" },
-                  { k: "amountNative", label: "Import", right: true },
-                  { k: "eur", label: "EUR", right: true },
+                  { k: "amountNative", label: "Import (Original)", right: true },
+                  { k: "eur", label: "Import (Euros)", right: true },
                   { k: "est", label: "Estratègia" },
                   { k: "comentaris", label: "Comentaris" },
                 ].map((head) => (
@@ -298,9 +298,7 @@ export function TxSection({
                     </td>
                     <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.tipus}</td>
                     <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: isIn ? tc.navy : tc.green }}>
-                      {row.divisa && row.divisa !== "EUR" && row.amountNative != null
-                        ? `${row.divisa === "USD" ? "$" : row.divisa} ${Math.abs(row.amountNative).toLocaleString("ca-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                        : fmtSignedM(row.eur)}
+                      {fmtSignedNative(row.amountNative ?? row.eur, row.divisa ?? "EUR")}
                     </td>
                     <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: isIn ? tc.navy : tc.green }}>
                       {row.fxSource?.startsWith("ecb:estimated:") ? (

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTheme } from "../theme.js";
-import { fmtM, fmtSignedM, formatIsoDateDMY } from "../utils.js";
+import { fmtM, fmtSignedM, fmtSignedNative, formatIsoDateDMY } from "../utils.js";
 import { loadSearchers, loadCapitalCalls } from "../db.js";
 import { apiFetchJson } from "../apiClient.js";
 import { FlagImg } from "./SharedComponents.jsx";
@@ -228,8 +228,8 @@ export default function SearcherDetail() {
               <table style={{ width: "100%", borderCollapse: "collapse" }}>
                 <thead>
                   <tr style={{ background: tc.bgAlt }}>
-                    {["Data", "Tipus", "Categoria", "Import"].map((h, i) => (
-                      <th key={h} style={{ padding: "10px 12px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: tc.textLight, fontWeight: 600, textAlign: i === 3 ? "right" : "left", whiteSpace: "nowrap" }}>{h}</th>
+                    {["Data", "Tipus", "Categoria", "Import (Original)", "Import (Euros)"].map((h, i) => (
+                      <th key={h} style={{ padding: "10px 12px", fontSize: 11, textTransform: "uppercase", letterSpacing: "0.08em", color: tc.textLight, fontWeight: 600, textAlign: i >= 3 ? "right" : "left", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -239,6 +239,7 @@ export default function SearcherDetail() {
                       <td style={{ ...td, color: tc.textMid }}>{formatIsoDateDMY(r.data)}</td>
                       <td style={{ ...td }}>{r.tipus || "—"}</td>
                       <td style={{ ...td }}>{r.cat || "—"}</td>
+                      <td style={{ ...td, textAlign: "right", fontFamily: "'DM Mono',monospace", color: r.eur < 0 ? tc.green : tc.navyLight }}>{fmtSignedNative(r.amountNative ?? r.eur, r.divisa ?? "EUR")}</td>
                       <td style={{ ...td, textAlign: "right", fontFamily: "'DM Mono',monospace", color: r.eur < 0 ? tc.green : tc.navyLight }}>{fmtSignedM(r.eur)}</td>
                     </tr>
                   ))}

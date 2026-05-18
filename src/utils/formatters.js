@@ -21,6 +21,27 @@ export function fmtSignedM(n) {
   return `${value > 0 ? "+" : "-"} ${fmtM(Math.abs(value))}`;
 }
 
+function _fmtNativeAbs(n, divisa) {
+  const a = Math.abs(n);
+  if (divisa === "USD") {
+    if (a >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+    if (a >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+    return `$${n.toFixed(0)}`;
+  }
+  if (a >= 1e6) return `${(n / 1e6).toFixed(2)}M ${divisa}`;
+  if (a >= 1e3) return `${(n / 1e3).toFixed(0)}K ${divisa}`;
+  return `${n.toFixed(0)} ${divisa}`;
+}
+
+export function fmtSignedNative(n, divisa) {
+  if (n == null || !Number.isFinite(Number(n))) return "—";
+  const value = Number(n);
+  const d = String(divisa ?? "EUR").trim().toUpperCase();
+  if (d === "EUR") return fmtSignedM(value);
+  if (value === 0) return _fmtNativeAbs(0, d);
+  return `${value > 0 ? "+" : "-"} ${_fmtNativeAbs(Math.abs(value), d)}`;
+}
+
 export function fmtS(n) {
   if (n == null || !Number.isFinite(Number(n))) return "—";
   n = Number(n);
