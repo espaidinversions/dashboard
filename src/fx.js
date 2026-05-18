@@ -1,5 +1,12 @@
 import { apiFetchJson } from "./apiClient.js";
 
+export function subtractOneCalendarDay(isoDate) {
+  // Use noon UTC to avoid DST-edge midnight ambiguity when converting back to ISO.
+  const d = new Date(isoDate + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+
 function roundCurrency(value) {
   return Math.round(Number(value) * 100) / 100;
 }
