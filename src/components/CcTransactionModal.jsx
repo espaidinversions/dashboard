@@ -63,11 +63,8 @@ export function CcTransactionModal({
           onChange: (value, nextValues, { setValue }) => { setValue("divisa", defaultVehicleCurrency(value)); return nextValues; },
         },
     {
-      key: "tipus", label: "Tipus Moviment", type: "combo", options: ccTipusOptions,
+      key: "tipus", label: "Tipus Moviment", type: "select", options: ccTipusOptions,
       defaultValue: isEdit ? editRow.tipus : (addDefaults?.tipus ?? ""),
-      hint: (values) => values.tipus
-        ? `Categoria interna: ${inferCapitalCallCategoryFromTipus(values.tipus, values.eur)}`
-        : "La categoria interna es derivarà del tipus.",
     },
     { key: "data", label: "Data", type: "date", defaultValue: isEdit ? editRow.data : new Date().toISOString().slice(0, 10) },
     {
@@ -92,7 +89,7 @@ export function CcTransactionModal({
       defaultValue: isEdit ? editRow.divisa : (addDefaults?.divisa ?? defaultVehicleCurrency(addFons)),
     },
     { key: "comentaris", label: "Comentaris", type: "textarea", defaultValue: isEdit ? (editRow.comentaris ?? "") : (addDefaults?.comentaris ?? ""), placeholder: "Observacions del moviment" },
-    { key: "vcpe", label: "VCPE", type: "select", options: ["PE", "VC", "RE", "SF", "PC"], defaultValue: isEdit ? editRow.vcpe : (addDefaults?.vcpe ?? "PE") },
+    { key: "vcpe", label: "VCPE", type: "select", options: ["PE", "VC", "RE", "SF", "PC"], defaultValue: isEdit ? editRow.vcpe : (addDefaults?.vcpe ?? "PE"), visible: () => false },
     { key: "est", label: "Estratègia", type: "select", options: CAPITAL_CALL_STRATEGY_OPTIONS, defaultValue: isEdit ? editRow.est : (addDefaults?.est ?? "") },
     {
       key: "recallable", label: "Recallable (€)", type: "number",
