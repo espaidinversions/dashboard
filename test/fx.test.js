@@ -27,7 +27,9 @@ test("subtractOneCalendarDay: handles leap year Feb 29", () => {
 
 import { convertAmountToEurOnDate } from "../src/fx.js";
 
-const MOCK_RATE = 0.92;
+// D.USD.EUR.SP00.A series returns USD per EUR (e.g., ~1.08 means 1 EUR = 1.08 USD).
+// To convert USD → EUR: divide by this rate.
+const MOCK_RATE = 1.08;
 const MOCK_OBSERVED_AT = "2026-05-17";
 
 const mockFetcher = async (_url) => ({ rate: MOCK_RATE, observedAt: MOCK_OBSERVED_AT, source: "ecb" });
@@ -47,7 +49,7 @@ test("convertAmountToEurOnDate: USD past date uses T-1 ECB rate", async () => {
   };
   // date = 2025-01-15 (a genuine past date) → rateDate = 2025-01-14 (T-1)
   const result = await convertAmountToEurOnDate({ amount: 1000, currency: "USD", date: "2025-01-15" }, capturingFetcher);
-  assert.equal(result.eur, Math.round(1000 * MOCK_RATE * 100) / 100);
+  assert.equal(result.eur, Math.round(1000 / MOCK_RATE * 100) / 100);
   assert.equal(result.amountNative, 1000);
   assert.equal(result.fxRate, MOCK_RATE);
   assert.equal(result.fxSource, `ecb:${MOCK_OBSERVED_AT}`);

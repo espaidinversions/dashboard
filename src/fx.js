@@ -62,7 +62,7 @@ export async function convertAmountToEurOnDate({ amount, currency, date }, fetch
     const { rate: fxRate, observedAt } = await getEcbRateWithObservedAt(rateDate, "USD", "EUR", fetcher);
 
     return {
-      eur: roundCurrency(nativeAmount * fxRate),
+      eur: roundCurrency(nativeAmount / fxRate),
       amountNative: roundCurrency(nativeAmount),
       fxRate,
       // fxSource encodes the ECB observation date (not the transaction date).

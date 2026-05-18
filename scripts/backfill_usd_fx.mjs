@@ -141,7 +141,8 @@ async function main() {
     }
 
     const amountNative = Number(row.eur);
-    const eur = Math.round(amountNative * rate * 100) / 100;
+    // rate = USD per EUR (D.USD.EUR.SP00.A series); divide to get EUR from USD
+    const eur = Math.round(amountNative / rate * 100) / 100;
 
     console.log(
       `id=${row.id} data=${row.data} rateDate=${rateDate} observedAt=${observedAt} USD ${amountNative} → EUR ${eur} (rate ${rate})`,
