@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { TC_LIGHT, useTheme } from "../theme.js";
 import { readStoredJSON, writeStoredJSON } from "../utils.js";
-import { fmtFull } from "../utils/formatters.js";
 
 // ── Shared style helpers ──────────────────────────────────
 export const sharedStyles = {
@@ -641,19 +640,22 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                   style={{ ...inputStyleFor(f), minHeight: 88, resize: "vertical" }}
                   disabled={f.disabled}
                 />
+              ) : f.type === "number" ? (
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={String(values[f.key] ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                  onChange={e => applyFieldChange(f, e.target.value.replace(/\./g, "").replace(/[^\d]/g, ""))}
+                  placeholder={f.placeholder ?? ""}
+                  style={{ ...inputStyleFor(f), fontFamily: "'DM Mono',monospace" }}
+                  disabled={f.disabled}
+                />
               ) : (
-                <>
-                  <input type={f.type ?? "text"} value={values[f.key]}
-                    onChange={e => applyFieldChange(f, e.target.value)}
-                    placeholder={f.placeholder ?? ""}
-                    style={inputStyleFor(f)}
-                    disabled={f.disabled} />
-                  {f.type === "number" && values[f.key] !== "" && values[f.key] != null && Number.isFinite(Number(values[f.key])) && (
-                    <div style={{ fontSize: 11, marginTop: 3, color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>
-                      {fmtFull(values[f.key])}
-                    </div>
-                  )}
-                </>
+                <input type={f.type ?? "text"} value={values[f.key]}
+                  onChange={e => applyFieldChange(f, e.target.value)}
+                  placeholder={f.placeholder ?? ""}
+                  style={inputStyleFor(f)}
+                  disabled={f.disabled} />
               )}
               {f.hint && (() => {
                 const h = typeof f.hint === "function" ? f.hint(values) : f.hint;
