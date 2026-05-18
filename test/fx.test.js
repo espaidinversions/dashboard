@@ -40,13 +40,20 @@ test("convertAmountToEurOnDate: EUR identity — no conversion", async () => {
 });
 
 test("convertAmountToEurOnDate: USD past date uses T-1 ECB rate", async () => {
-  // date = 2026-05-18 → rateDate = 2026-05-17 (T-1)
-  const result = await convertAmountToEurOnDate({ amount: 1000, currency: "USD", date: "2026-05-18" }, mockFetcher);
+  let capturedUrl = null;
+  const capturingFetcher = async (url) => {
+    capturedUrl = url;
+    return { rate: MOCK_RATE, observedAt: MOCK_OBSERVED_AT, source: "ecb" };
+  };
+  // date = 2025-01-15 (a genuine past date) → rateDate = 2025-01-14 (T-1)
+  const result = await convertAmountToEurOnDate({ amount: 1000, currency: "USD", date: "2025-01-15" }, capturingFetcher);
   assert.equal(result.eur, Math.round(1000 * MOCK_RATE * 100) / 100);
   assert.equal(result.amountNative, 1000);
   assert.equal(result.fxRate, MOCK_RATE);
-  // fxSource encodes the ECB observation date (T-1), not the transaction date
   assert.equal(result.fxSource, `ecb:${MOCK_OBSERVED_AT}`);
+  // Verify T-1: the fetcher was called with the day BEFORE the transaction date
+  assert.ok(capturedUrl !== null, "fetcher should have been called");
+  assert.ok(capturedUrl.includes("2025-01-14"), `Expected T-1 date 2025-01-14 in URL, got: ${capturedUrl}`);
 });
 
 test("convertAmountToEurOnDate: USD future date uses estimated tag", async () => {

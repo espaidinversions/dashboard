@@ -25,7 +25,11 @@ async function getEcbRateWithObservedAt(date, baseCurrency, quoteCurrency = "EUR
   if (!Number.isFinite(rate) || rate <= 0) {
     throw new Error(`Invalid FX rate for ${base}/${quote} on ${isoDate}`);
   }
-  return { rate, observedAt: String(data.observedAt ?? isoDate).slice(0, 10) };
+  const observedAt = String(data.observedAt ?? "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(observedAt)) {
+    throw new Error(`ECB response missing observedAt for ${base}/${quote} on ${isoDate}`);
+  }
+  return { rate, observedAt };
 }
 
 export async function convertAmountToEurOnDate({ amount, currency, date }, fetcher) {
