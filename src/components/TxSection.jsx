@@ -243,7 +243,8 @@ export function TxSection({
                   { k: "data", label: "Data" },
                   { k: "fons", label: "Vehicle" },
                   { k: "tipus", label: "Tipus" },
-                  { k: "eur", label: "Import EUR", right: true },
+                  { k: "amountNative", label: "Import", right: true },
+                  { k: "eur", label: "EUR", right: true },
                   { k: "est", label: "Estratègia" },
                   { k: "comentaris", label: "Comentaris" },
                 ].map((head) => (
@@ -270,6 +271,7 @@ export function TxSection({
                     {tipusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                 </th>
+                <th style={{ padding: "6px 10px" }} />
                 <th style={{ padding: "6px 10px" }}><input value={filters.eur} onChange={(e) => setFilters((current) => ({ ...current, eur: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 10px" }}>
                   <select value={filters.est} onChange={(e) => setFilters((current) => ({ ...current, est: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>
@@ -283,7 +285,7 @@ export function TxSection({
             <tbody>
               {sorted.length === 0 ? (
                 <tr>
-                  <td colSpan={canEdit ? 7 : 6} style={{ padding: "24px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>Cap transacció</td>
+                  <td colSpan={canEdit ? 8 : 7} style={{ padding: "24px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>Cap transacció</td>
                 </tr>
               ) : null}
               {pagedRows.map((row, index) => {
@@ -295,6 +297,11 @@ export function TxSection({
                       <Link to={makeVehicleDetailPath(row)} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{row.fons}</Link>
                     </td>
                     <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.tipus}</td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: isIn ? tc.navy : tc.green }}>
+                      {row.divisa && row.divisa !== "EUR" && row.amountNative != null
+                        ? `${row.divisa === "USD" ? "$" : row.divisa} ${Math.abs(row.amountNative).toLocaleString("ca-ES", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : fmtSignedM(row.eur)}
+                    </td>
                     <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: isIn ? tc.navy : tc.green }}>
                       {row.fxSource?.startsWith("ecb:estimated:") ? (
                         <span
