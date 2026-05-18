@@ -93,7 +93,7 @@ async function resolveEstimatedFxRates(rows) {
       row.fxSource.startsWith("ecb:estimated:") &&
       String(row.data ?? "").slice(0, 10) <= todayUtc,
   );
-  if (!stale.length) return;
+  if (!stale.length) return false;
 
   const batch = stale.slice(0, 10);
   const results = await Promise.allSettled(
@@ -102,7 +102,8 @@ async function resolveEstimatedFxRates(rows) {
         { ...row, eur: row.amountNative },
         null,
       );
-      await updateCapitalCall(row.id, payload);
+      const { error } = await updateCapitalCall(row.id, payload);
+      if (error) throw error;
     }),
   );
 
@@ -111,6 +112,8 @@ async function resolveEstimatedFxRates(rows) {
       console.warn(`[resolveEstimatedFxRates] row ${batch[i].id} failed:`, r.reason);
     }
   });
+
+  return results.some((r) => r.status === "fulfilled");
 }
 
 export function useDashboardData() {
@@ -135,9 +138,16 @@ export function useDashboardData() {
         if (Array.isArray(data.rawCC)) {
           setRawCC(data.rawCC);
           writeStoredJSON(LS_CC, data.rawCC);
-          resolveEstimatedFxRates(data.rawCC).catch((err) =>
-            console.warn("[resolveEstimatedFxRates] unexpected error:", err),
-          );
+          resolveEstimatedFxRates(data.rawCC)
+            .then((anyResolved) => {
+              if (!anyResolved) return;
+              return loadCapitalCalls().then((fresh) => {
+                if (!fresh) return;
+                setRawCC(fresh);
+                writeStoredJSON(LS_CC, fresh);
+              });
+            })
+            .catch((err) => console.warn("[resolveEstimatedFxRates] unexpected error:", err));
         }
         if (Array.isArray(data.funds0)) {
           setFunds0(data.funds0);
