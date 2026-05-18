@@ -30,14 +30,11 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 const DRY_RUN = process.argv.includes("--dry-run");
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-// Helper to subtract one calendar day
-function subtractOneCalendarDay(dateStr) {
-  const date = new Date(dateStr);
-  date.setDate(date.getDate() - 1);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+// Helper to subtract one calendar day — noon UTC anchor avoids DST/timezone shifts
+function subtractOneCalendarDay(isoDate) {
+  const d = new Date(isoDate + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d.toISOString().slice(0, 10);
 }
 
 // Fetch ECB USD/EUR rate for a specific date
@@ -151,6 +148,12 @@ async function main() {
     );
 
     if (!DRY_RUN) {
+      if (!row.id) {
+        console.error(`Skipping row with missing id (data=${row.data})`);
+        errorCount++;
+        if (i < foundRows.length - 1) await sleep(60);
+        continue;
+      }
       const { error: updateError } = await supabase
         .from("capital_calls")
         .update({
