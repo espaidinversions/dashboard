@@ -26,10 +26,6 @@ function sanitizeCapitalCallValues(values) {
   };
 }
 
-function isLegacyUsdRow(row) {
-  return row?.divisa === "USD" && row?.amountNative == null && row?.fxRate == null;
-}
-
 async function prepareCapitalCallPayload(values, existingRow = null) {
   const sanitized = sanitizeCapitalCallValues(values);
   const rawAmount = normalizeCapitalCallSignedAmount(sanitized.tipus, parseFloat(values?.eur));
@@ -40,20 +36,6 @@ async function prepareCapitalCallPayload(values, existingRow = null) {
   const date = String(sanitized.data ?? "").slice(0, 10);
   if (!date) {
     throw new Error("Data obligatòria");
-  }
-
-  const sameVisibleAmount = existingRow && Number(rawAmount) === Number(existingRow.eur ?? NaN);
-  const sameCurrency = existingRow && sanitized.divisa === existingRow.divisa;
-  const sameDate = existingRow && date === String(existingRow.data ?? "").slice(0, 10);
-
-  if (existingRow && isLegacyUsdRow(existingRow) && sameVisibleAmount && sameCurrency && sameDate) {
-    return {
-      ...sanitized,
-      eur: rawAmount,
-      amountNative: null,
-      fxRate: null,
-      fxSource: null,
-    };
   }
 
   const conversion = await convertAmountToEurOnDate({
