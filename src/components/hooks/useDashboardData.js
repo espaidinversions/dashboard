@@ -15,14 +15,28 @@ const LS_PL = "tc_funds0";
 const LS_TS = "tc_loadedAt";
 
 function sanitizeCapitalCallValues(values) {
+  // Only pick known capital_calls columns — drop UI-only fields like nif, fiscal_name
+  const {
+    fons, tipus, cat, vcpe, est, divisa, comentaris,
+    data, eur, amountNative, fxRate, fxSource,
+    recallable, non_recallable, from_recallable,
+  } = values ?? {};
   return {
-    ...values,
-    fons: String(values?.fons ?? "").trim(),
-    tipus: normalizeCapitalCallTipus(values?.tipus),
-    vcpe: values?.vcpe || null,
-    est: normalizeCapitalCallStrategy(values?.est, values?.vcpe, values) ?? null,
-    divisa: values?.divisa || "EUR",
-    comentaris: String(values?.comentaris ?? "").trim() || null,
+    fons: String(fons ?? "").trim(),
+    tipus: normalizeCapitalCallTipus(tipus),
+    cat: cat ?? null,
+    vcpe: vcpe || null,
+    est: normalizeCapitalCallStrategy(est, vcpe, values) ?? null,
+    divisa: divisa || "EUR",
+    comentaris: String(comentaris ?? "").trim() || null,
+    data,
+    eur,
+    amountNative,
+    fxRate,
+    fxSource,
+    recallable,
+    non_recallable,
+    from_recallable,
   };
 }
 
