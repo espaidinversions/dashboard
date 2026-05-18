@@ -72,12 +72,13 @@ export function CcTransactionModal({
       defaultValue: isEdit ? (editRow.amountNative ?? editRow.eur) : undefined,
       inputStyle: amountInputStyle,
       hint: (values) => {
+        const divisa = values.divisa || "EUR";
         if (!isEdit) {
-          return values.divisa === "USD"
-            ? "Introdueix USD. Es convertirà automàticament a EUR amb el tipus BCE de la data."
-            : "Introdueix EUR.";
+          return divisa === "USD"
+            ? `Introdueix en ${divisa}. Es convertirà automàticament a EUR amb el tipus BCE de la data.`
+            : `Introdueix en ${divisa}.`;
         }
-        if (values.divisa !== "USD") return "Introdueix EUR.";
+        if (divisa !== "USD") return `Introdueix en ${divisa}.`;
         if (editRow.fxRate) {
           return `Import en USD. Tipus BCE guardat: ${Number(editRow.fxRate).toFixed(6)} · EUR guardats: ${fmtFull(editRow.eur)}`;
         }
