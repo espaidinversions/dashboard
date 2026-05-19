@@ -82,16 +82,23 @@ function excelDateToISO(serial) {
   return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
 }
 
+const VALID_VCPE = new Set(["PE", "VC", "RE", "SF", "PC"]);
+
+// Column configs (0-based) for each sheet type.
+// "Capital Calls log": fons=r[2], tipus=r[3], date=r[5], importLocal=r[6],
+//   divisa=r[7], vcpe=r[13], eur=r[15], est=r[16]
+// "Startups log": fons=r[1], tipus=r[2], date=r[4], importLocal=r[5],
+//   divisa=r[6], vcpe=r[14], eur=r[5] (no separate EUR col), est=null
+const FUNDS_COLS   = { fons: 2, tipus: 3, date: 5, importLocal: 6, divisa: 7, vcpe: 13, eur: 15, est: 16 };
+const STARTUP_COLS = { fons: 1, tipus: 2, date: 4, importLocal: 5, divisa: 6, vcpe: 14, eur: 5,  est: null };
+
 // ── Parse both sheets ─────────────────────────────────────────────────────────
-// Both sheets share the "Capital Calls log" column layout (0-based):
-//   r[2]=fons, r[3]=tipus, r[5]=dateSerial, r[6]=importLocal,
-//   r[7]=divisa, r[13]=vcpe, r[15]=importEur, r[16]=est
 // Blank fons cells inherit the previous row's fons (Excel subtable pattern).
-// Rows where eur is not a finite non-zero number are skipped.
+// Rows where eur is not finite/non-zero or vcpe is not a known code are skipped.
 export function parseSheets(wb) {
   const HEADER_ROW = 7;
 
-  function parseSheet(ws, forceVcpe) {
+  function parseSheet(ws, cols, forceVcpe) {
     const raw = XLSX.utils.sheet_to_json(ws, { defval: "", header: 1 });
     const rows = [];
     let lastFons = "";
@@ -99,34 +106,36 @@ export function parseSheets(wb) {
     for (let i = HEADER_ROW + 1; i < raw.length; i++) {
       const r = raw[i];
 
-      const cellFons = String(r[2] ?? "").trim();
+      const cellFons = String(r[cols.fons] ?? "").trim();
       if (cellFons) lastFons = cellFons;
       if (!lastFons) continue;
 
-      const eur = Number(r[15]);
+      const eur = Number(r[cols.eur]);
       if (!Number.isFinite(eur) || eur === 0) continue;
 
-      const dateSerial = r[5];
+      const dateSerial = r[cols.date];
       if (!dateSerial || typeof dateSerial !== "number") continue;
       const data = excelDateToISO(dateSerial);
       if (!data) continue;
 
-      const tipus = String(r[3] ?? "").trim();
-      const importLocal = Number(r[6]) || 0;
-      const divisa = String(r[7] || "EUR").trim();
-      const vcpe = forceVcpe ?? String(r[13] ?? "").trim();
-      const est = String(r[16] ?? "").trim() || null;
+      const vcpe = forceVcpe ?? String(r[cols.vcpe] ?? "").trim();
+      if (!VALID_VCPE.has(vcpe)) continue;
+
+      const tipus = String(r[cols.tipus] ?? "").trim();
+      const importLocal = Number(r[cols.importLocal]) || 0;
+      const divisa = String(r[cols.divisa] || "EUR").trim();
+      const est = cols.est != null ? (String(r[cols.est] ?? "").trim() || null) : null;
 
       rows.push({ fons: lastFons, tipus, data, importLocal, divisa, vcpe, eur, est });
     }
     return rows;
   }
 
-  const ws0 = wb.Sheets[wb.SheetNames[0]];
-  const ws1 = wb.Sheets[wb.SheetNames[1]];
+  const fundsSheet    = wb.Sheets["Capital Calls log"] ?? wb.Sheets[wb.SheetNames[0]];
+  const startupsSheet = wb.Sheets["Startups log"]      ?? wb.Sheets[wb.SheetNames[1]];
   return {
-    fundsRows: ws0 ? parseSheet(ws0, null) : [],
-    companiesRows: ws1 ? parseSheet(ws1, "PC") : [],
+    fundsRows:     fundsSheet    ? parseSheet(fundsSheet,    FUNDS_COLS,   null) : [],
+    companiesRows: startupsSheet ? parseSheet(startupsSheet, STARTUP_COLS, null) : [],
   };
 }
 
@@ -136,10 +145,6 @@ function parseSheetsFromFile(filePath) {
     wb = XLSX.readFile(filePath);
   } catch (err) {
     console.error("No s'ha pogut llegir l'Excel:", err.message);
-    process.exit(1);
-  }
-  if (wb.SheetNames.length < 2) {
-    console.error(`L'Excel ha de tenir almenys 2 fulles. Trobades: ${wb.SheetNames.join(", ")}`);
     process.exit(1);
   }
   return parseSheets(wb);

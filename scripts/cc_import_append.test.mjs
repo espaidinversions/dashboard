@@ -112,28 +112,39 @@ import { fileURLToPath } from "url";
 const require = createRequire(import.meta.url);
 const XLSX = require("xlsx");
 
-function makeRow(fons, tipus, dateSerial, importLocal, divisa, vcpe, importEur, est) {
+// Funds sheet row (FUNDS_COLS: fons=r[2], tipus=r[3], date=r[5], importLocal=r[6],
+//   divisa=r[7], vcpe=r[13], eur=r[15], est=r[16])
+function makeFundsRow(fons, tipus, dateSerial, importLocal, divisa, vcpe, importEur, est) {
   const r = new Array(17).fill("");
   r[2] = fons; r[3] = tipus; r[5] = dateSerial; r[6] = importLocal;
   r[7] = divisa; r[13] = vcpe; r[15] = importEur; r[16] = est;
   return r;
 }
 
-function makeWorkbook(sheet1Rows, sheet2Rows) {
+// Startups sheet row (STARTUP_COLS: fons=r[1], tipus=r[2], date=r[4], importLocal=r[5],
+//   divisa=r[6], vcpe=r[14], eur=r[5])
+function makeStartupRow(fons, tipus, dateSerial, importLocal, divisa, vcpe) {
+  const r = new Array(17).fill("");
+  r[1] = fons; r[2] = tipus; r[4] = dateSerial; r[5] = importLocal;
+  r[6] = divisa; r[14] = vcpe;
+  return r;
+}
+
+function makeWorkbook(fundsRows, startupsRows) {
   const pad = Array(8).fill(new Array(17).fill(""));
-  const ws1 = XLSX.utils.aoa_to_sheet([...pad, ...sheet1Rows]);
-  const ws2 = XLSX.utils.aoa_to_sheet([...pad, ...sheet2Rows]);
+  const ws1 = XLSX.utils.aoa_to_sheet([...pad, ...fundsRows]);
+  const ws2 = XLSX.utils.aoa_to_sheet([...pad, ...startupsRows]);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws1, "Sheet1");
-  XLSX.utils.book_append_sheet(wb, ws2, "Sheet2");
+  XLSX.utils.book_append_sheet(wb, ws1, "Capital Calls log");
+  XLSX.utils.book_append_sheet(wb, ws2, "Startups log");
   return wb;
 }
 
 test("parseSheets — blank fons row inherits lastFons", () => {
   const wb = makeWorkbook(
     [
-      makeRow("Test Fund", "Aportació", 45000, 1000, "EUR", "PE", 1000, "Fons Primari"),
-      makeRow("", "Aportació", 45000, 500, "EUR", "PE", 500, ""),
+      makeFundsRow("Test Fund", "Aportació", 45000, 1000, "EUR", "PE", 1000, "Fons Primari"),
+      makeFundsRow("", "Aportació", 45000, 500, "EUR", "PE", 500, ""),
     ],
     []
   );
@@ -145,8 +156,8 @@ test("parseSheets — blank fons row inherits lastFons", () => {
 test("parseSheets — row with non-finite eur is skipped", () => {
   const wb = makeWorkbook(
     [
-      makeRow("Fund A", "Aportació", 45000, 1000, "EUR", "PE", 1000, ""),
-      makeRow("Fund A", "Aportació", 45000, "", "EUR", "PE", "", ""),
+      makeFundsRow("Fund A", "Aportació", 45000, 1000, "EUR", "PE", 1000, ""),
+      makeFundsRow("Fund A", "Aportació", 45000, "", "EUR", "PE", "", ""),
     ],
     []
   );
@@ -154,19 +165,31 @@ test("parseSheets — row with non-finite eur is skipped", () => {
   assert.equal(fundsRows.length, 1);
 });
 
-test("parseSheets — companies sheet forces vcpe to PC", () => {
+test("parseSheets — companies sheet preserves vcpe from sheet", () => {
   const wb = makeWorkbook(
     [],
-    [makeRow("Company A", "Aportació", 45000, 500, "EUR", "SF", 500, "")]
+    [makeStartupRow("Company A", "Aportació", 45000, 500, "EUR", "VC")]
   );
   const { companiesRows } = parseSheets(wb);
   assert.equal(companiesRows.length, 1);
-  assert.equal(companiesRows[0].vcpe, "PC");
+  assert.equal(companiesRows[0].vcpe, "VC");
+});
+
+test("parseSheets — companies row with invalid vcpe is skipped", () => {
+  const wb = makeWorkbook(
+    [],
+    [
+      makeStartupRow("Company A", "Aportació", 45000, 500, "EUR", "VC"),
+      makeStartupRow("Company B", "Aportació", 45000, 500, "EUR", "INVALID"),
+    ]
+  );
+  const { companiesRows } = parseSheets(wb);
+  assert.equal(companiesRows.length, 1);
 });
 
 test("parseSheets — date serial is converted to ISO string", () => {
   const wb = makeWorkbook(
-    [makeRow("Fund A", "Aportació", 45000, 1000, "EUR", "PE", 1000, "")],
+    [makeFundsRow("Fund A", "Aportació", 45000, 1000, "EUR", "PE", 1000, "")],
     []
   );
   const { fundsRows } = parseSheets(wb);
