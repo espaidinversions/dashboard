@@ -145,6 +145,30 @@ function parseSheetsFromFile(filePath) {
   return parseSheets(wb);
 }
 
+// ── Name resolution ───────────────────────────────────────────────────────────
+export function resolveEntityId(fons, exactMap, entities) {
+  const needle = fons.trim().toLowerCase();
+  if (exactMap.has(needle)) return exactMap.get(needle);
+  for (const e of entities) {
+    const dbName = e.canonical_name.trim().toLowerCase();
+    const dbBase = dbName.split(" (")[0];
+    if (dbName.startsWith(needle) || needle.startsWith(dbBase)) return e.id;
+  }
+  return null;
+}
+
+async function buildNameToIdMap(supabase) {
+  const { data, error } = await supabase
+    .from("private_entities")
+    .select("id, canonical_name");
+  if (error) throw new Error("Failed to load private_entities: " + error.message);
+  const exactMap = new Map();
+  for (const e of data) {
+    exactMap.set(e.canonical_name.trim().toLowerCase(), e.id);
+  }
+  return { exactMap, entities: data };
+}
+
 // ── Main (only runs when executed directly, not when imported) ────────────────
 const isMain = process.argv[1]?.endsWith("cc_import_append.mjs");
 

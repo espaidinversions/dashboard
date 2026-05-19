@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildTipusConceptMap, resolveConceptFromTipus } from "./cc_import_append.mjs";
+import { buildTipusConceptMap, resolveConceptFromTipus, resolveEntityId } from "./cc_import_append.mjs";
 
 test("buildTipusConceptMap returns empty map when file does not exist", () => {
   const map = buildTipusConceptMap("/nonexistent/path.xlsx");
@@ -22,6 +22,36 @@ test("resolveConceptFromTipus is accent-insensitive via slugify", () => {
   const map = new Map([["aportacio", "Aportació"]]);
   // "aportació" slugifies to "aportacio" — should match
   assert.equal(resolveConceptFromTipus("aportació", map), "Aportació");
+});
+
+test("resolveEntityId — exact match", () => {
+  const exactMap = new Map([["fons innovation iv", "uuid-1"]]);
+  const entities = [{ id: "uuid-1", canonical_name: "Fons Innovation IV" }];
+  assert.equal(resolveEntityId("Fons Innovation IV", exactMap, entities), "uuid-1");
+});
+
+test("resolveEntityId — case-insensitive exact match", () => {
+  const exactMap = new Map([["fons innovation iv", "uuid-1"]]);
+  const entities = [{ id: "uuid-1", canonical_name: "Fons Innovation IV" }];
+  assert.equal(resolveEntityId("fons innovation iv", exactMap, entities), "uuid-1");
+});
+
+test("resolveEntityId — DB name starts with input (prefix match)", () => {
+  const exactMap = new Map([["fons innovation iv (sicav)", "uuid-2"]]);
+  const entities = [{ id: "uuid-2", canonical_name: "Fons Innovation IV (SICAV)" }];
+  assert.equal(resolveEntityId("Fons Innovation IV", exactMap, entities), "uuid-2");
+});
+
+test("resolveEntityId — input starts with DB base name", () => {
+  const exactMap = new Map([["fons innovation", "uuid-3"]]);
+  const entities = [{ id: "uuid-3", canonical_name: "Fons Innovation" }];
+  assert.equal(resolveEntityId("Fons Innovation Extended Name", exactMap, entities), "uuid-3");
+});
+
+test("resolveEntityId — no match returns null", () => {
+  const exactMap = new Map();
+  const entities = [];
+  assert.equal(resolveEntityId("Nonexistent Fund", exactMap, entities), null);
 });
 
 import { parseSheets } from "./cc_import_append.mjs";
