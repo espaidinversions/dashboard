@@ -180,6 +180,9 @@ export function normalizeRow(raw, vehicleId, tipusConceptMap) {
   const signedEur = normalizeCapitalCallSignedAmount(resolvedTipus, raw.eur);
   const signedNative = normalizeCapitalCallSignedAmount(resolvedTipus, raw.importLocal);
   const cat = inferCapitalCallCategoryFromTipus(resolvedTipus, signedEur);
+  const mes  = Number(raw.data?.slice(5, 7)) || null;
+  const year = Number(raw.data?.slice(0, 4)) || null;
+  const fy   = year ? `FY ${year}` : null;
   return {
     vehicle_id: vehicleId,
     fons: raw.fons,
@@ -189,10 +192,13 @@ export function normalizeRow(raw, vehicleId, tipusConceptMap) {
     est: raw.est || null,
     divisa: raw.divisa || "EUR",
     data: raw.data,
+    mes,
+    year,
+    fy,
     eur: signedEur,
-    amountNative: signedNative,
-    fxRate: null,
-    fxSource: null,
+    amount_native: signedNative,
+    fx_rate: null,
+    fx_source: null,
   };
 }
 

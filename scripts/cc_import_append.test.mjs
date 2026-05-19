@@ -62,7 +62,7 @@ test("normalizeRow — capital call is positive, cat=Capital Call", () => {
   assert.equal(row.tipus, "Aportació");
   assert.equal(row.cat, "Capital Call");
   assert.ok(row.eur > 0);
-  assert.ok(row.amountNative > 0);
+  assert.ok(row.amount_native > 0);
 });
 
 test("normalizeRow — distribution is negative, cat=Distribució", () => {
@@ -71,7 +71,7 @@ test("normalizeRow — distribution is negative, cat=Distribució", () => {
   const row = normalizeRow(raw, "uuid-1", tipusMap);
   assert.equal(row.cat, "Distribució");
   assert.ok(row.eur < 0);
-  assert.ok(row.amountNative < 0);
+  assert.ok(row.amount_native < 0);
 });
 
 test("normalizeRow — tipusMap override takes effect", () => {
