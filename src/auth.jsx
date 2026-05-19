@@ -14,7 +14,7 @@ import {
 
 const AuthContext = createContext(null);
 
-const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
 const ACTIVITY_EVENTS = ["mousemove", "keydown", "mousedown", "touchstart", "scroll"];
 
 export function AuthProvider({ children }) {
