@@ -30,7 +30,12 @@ function loadEnv(filePath) {
     fs.readFileSync(filePath, "utf8")
       .split("\n")
       .filter(l => l.includes("=") && !l.startsWith("#"))
-      .map(l => { const i = l.indexOf("="); return [l.slice(0, i).trim(), l.slice(i + 1).trim()]; })
+      .map(l => {
+        const i = l.indexOf("=");
+        const key = l.slice(0, i).trim();
+        const val = l.slice(i + 1).trim().replace(/^["']|["']$/g, "").replace(/\s+#.*$/, "");
+        return [key, val];
+      })
   );
 }
 
@@ -44,6 +49,10 @@ if (!args[0] || args[0] === "--help") {
 const excelArg = args[0];
 const dryRun = args.includes("--dry-run");
 const eqIdx = args.indexOf("--equivalencia");
+if (eqIdx !== -1 && (!args[eqIdx + 1] || args[eqIdx + 1].startsWith("--"))) {
+  console.error("--equivalencia requereix un argument de ruta");
+  process.exit(1);
+}
 const equivalenciaArg = eqIdx !== -1 ? args[eqIdx + 1] : null;
 
 const absExcelPath = path.isAbsolute(excelArg) ? excelArg : path.join(process.cwd(), excelArg);
@@ -56,6 +65,10 @@ const defaultEqPath = path.join(__dir, "../260424_Equivalència_Conceptes.xlsx")
 const absEqPath = equivalenciaArg
   ? (path.isAbsolute(equivalenciaArg) ? equivalenciaArg : path.join(process.cwd(), equivalenciaArg))
   : defaultEqPath;
+if (equivalenciaArg && !fs.existsSync(absEqPath)) {
+  console.error("Fitxer equivalència no trobat:", absEqPath);
+  process.exit(1);
+}
 
 // ── Supabase client ───────────────────────────────────────────────────────────
 const env = loadEnv(envPath);
