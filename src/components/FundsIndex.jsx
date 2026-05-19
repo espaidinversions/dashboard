@@ -185,6 +185,11 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     const shouldIncludeRow = (row) => {
+      if (vcpeTypes.length > 0) {
+        const sectionId = getVehiclePermissionSection(row);
+        if (vcpeTypes.includes("RE")) return sectionId === "real-estate" && canAccessRealEstate;
+        return sectionId === "alternatives" && canAccessAlternatives;
+      }
       const sectionId = getVehiclePermissionSection(row);
       if (canAccessAlternatives) return sectionId === "alternatives";
       if (canAccessRealEstate) return sectionId === "real-estate";
@@ -206,7 +211,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
       if (filters.rvpi && !String(row.rvpi ?? "").includes(filters.rvpi)) return false;
       return true;
     });
-  }, [rows, search, canAccessAlternatives, canAccessRealEstate, filters]);
+  }, [rows, search, canAccessAlternatives, canAccessRealEstate, vcpeTypes, filters]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {

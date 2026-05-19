@@ -16,7 +16,7 @@ export const PUBLIC_MARKETS_SUBSECTION_IDS = [
   "mp-transaccions",
   "mp-traçabilitat",
 ];
-export const TRANSACTION_SUBSECTION_IDS = ["tx-alt", "tx-mp"];
+export const TRANSACTION_SUBSECTION_IDS = ["tx-alt", "tx-re", "tx-mp"];
 const ALL_SECTION_IDS = [
   ...TOP_LEVEL_SECTION_IDS,
   ...ALTERNATIVES_SECTION_IDS,
@@ -107,7 +107,7 @@ export function buildSectionAccessMap({ role, sectionRoles, deniedSections } = {
     });
   }
   if (access["real-estate"] === ACCESS_NONE) {
-    REAL_ESTATE_SUBSECTION_IDS.forEach((sectionId) => {
+    [...REAL_ESTATE_SUBSECTION_IDS, "tx-re"].forEach((sectionId) => {
       access[sectionId] = ACCESS_NONE;
     });
   }

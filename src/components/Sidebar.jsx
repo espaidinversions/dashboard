@@ -41,6 +41,7 @@ const PORTFOLI_SECTIONS = [
 
 const TX_LEAVES = [
   {id:"tx-alt", label:"Alternatius",    icon:DollarSign},
+  {id:"tx-re",  label:"Real Estate",    icon:DollarSign},
   {id:"tx-mp",  label:"Mercats Públics", icon:DollarSign},
 ];
 
@@ -223,9 +224,8 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
         {PORTFOLI_SECTIONS.map(sec => <Section key={sec.id} sec={sec} />)}
 
         {/* ── Transaccions group ── */}
-        {(canAccessSection?.("tx-alt") || canAccessSection?.("tx-mp")) ? <GroupLabel label="Transaccions" /> : null}
-        {(canAccessSection?.("tx-alt") ?? true) ? <Leaf item={TX_LEAVES[0]} /> : null}
-        {(canAccessSection?.("tx-mp") ?? true) ? <Leaf item={TX_LEAVES[1]} /> : null}
+        {TX_LEAVES.some(l => canAccessSection?.(l.id) ?? true) ? <GroupLabel label="Transaccions" /> : null}
+        {TX_LEAVES.map(l => (canAccessSection?.(l.id) ?? true) ? <Leaf key={l.id} item={l} /> : null)}
 
       </div>
 

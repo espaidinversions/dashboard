@@ -276,12 +276,13 @@ function Dashboard() {
 
   const baseTx      = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.TRANSACTIONS,excluded]);
   const baseCompr   = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.COMPROMISOS,excluded]);
-  const allAltTx    = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)),[d.TRANSACTIONS,excluded]);
-  const allAltCompr = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)),[d.COMPROMISOS,excluded]);
+  const allAltTx    = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&r.vcpe!=="RE"),[d.TRANSACTIONS,excluded]);
+  const allAltCompr = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&r.vcpe!=="RE"),[d.COMPROMISOS,excluded]);
 
   const section = tab==="mercats-publics" ? "mercats-publics"
               : tab==="real-estate"     ? "real-estate"
               : tab==="tx-alt"          ? "txlog"
+              : tab==="tx-re"           ? "real-estate"
               : "alternatives";
   const currentPermissionId =
     tab === "real-estate"
@@ -297,7 +298,9 @@ function Dashboard() {
           : mercatsPublicsTab === "traçabilitat" ? "mp-traçabilitat"
           : "mp-resum"
         )
-        : tab === "tx-alt"
+        : tab === "tx-re"
+          ? "tx-re"
+          : tab === "tx-alt"
           ? "tx-alt"
           : tab === "searchers"
             ? "alternatives"
@@ -595,7 +598,11 @@ function Dashboard() {
                   <button key={item.id} onClick={() => setRealEstateTab(item.tab)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: realEstateTab === item.tab ? `2px solid ${tc.navy}` : "2px solid transparent", color: realEstateTab === item.tab ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{item.tab === "directe" ? "RE Directe" : item.tab === "altres-vehicles" ? "Altres Vehicles" : "Totes les Posicions"}</button>
                 ))}
               </div>
-              {realEstateTab === "inversions" ? <FundsIndexInner searchOverride={globalSearch} vcpeFilter="RE" /> : <TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: "Fons Real Estate" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title={`Transaccions Real Estate — ${realEstateTab === "directe" ? "Directe" : "Altres"}`} />}
+              {realEstateTab === "inversions"
+                ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} />
+                : realEstateTab === "altres-vehicles"
+                  ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} />
+                  : <TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: "Fons Real Estate" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Real Estate — Directe" />}
             </div>
           )}
 
@@ -611,6 +618,7 @@ function Dashboard() {
           )}
 
           {tab === "tx-alt" && <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" />}
+          {tab === "tx-re" && <TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: "Fons Real Estate" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" />}
         </main>
       </div>
 

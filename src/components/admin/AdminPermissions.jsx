@@ -39,6 +39,7 @@ const SECTION_GROUPS = [
       { id: "searchers", label: "Searchers" },
       { id: "companies", label: "Participades" },
       { id: "inversions", label: "Llistat d'Inversions" },
+      { id: "cash-model", label: "Model Caixa" },
       { id: "txlog", label: "Transaccions" },
     ],
   },
@@ -64,6 +65,7 @@ const SECTION_GROUPS = [
     groupLabel: "Transaccions",
     items: [
       { id: "tx-alt", label: "Alternatius" },
+      { id: "tx-re", label: "Real Estate" },
       { id: "tx-mp", label: "Mercats Públics" },
     ],
   },
@@ -257,18 +259,19 @@ export default function AdminPermissions() {
       )}
 
       <div style={{ overflowX: "auto" }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", background: tc.card, borderRadius: 10, overflow: "hidden" }}>
+        <table style={{ width: "max-content", minWidth: "100%", borderCollapse: "collapse", background: tc.card, borderRadius: 10, overflow: "hidden" }}>
           <thead>
             <tr style={{ background: tc.bgAlt }}>
-              <th style={{ ...th, minWidth: 220 }} rowSpan={2}>Usuari</th>
+              <th style={{ ...th, minWidth: 220 }}>Usuari</th>
               <th style={thCenter} colSpan={TOP_LEVEL_SECTION_IDS.length}>Seccions principals</th>
               <th style={{ ...thCenter, borderLeft: `2px solid ${tc.border}` }} colSpan={ALTERNATIVES_SECTION_IDS.length}>Dins d'Alternatives</th>
               <th style={{ ...thCenter, borderLeft: `2px solid ${tc.border}` }} colSpan={REAL_ESTATE_SUBSECTION_IDS.length}>Dins de Real Estate</th>
               <th style={{ ...thCenter, borderLeft: `2px solid ${tc.border}` }} colSpan={PUBLIC_MARKETS_SUBSECTION_IDS.length}>Dins de Mercats Públics</th>
               <th style={{ ...thCenter, borderLeft: `2px solid ${tc.border}` }} colSpan={TRANSACTION_SUBSECTION_IDS.length}>Transaccions</th>
-              <th style={th} rowSpan={2}>Desar</th>
+              <th style={th}></th>
             </tr>
             <tr style={{ background: tc.bgAlt }}>
+              <th style={{ ...th, minWidth: 220, borderBottom: `2px solid ${tc.border}` }}>—</th>
               {SECTION_GROUPS[0].items.map((section) => <th key={section.id} style={thCenter}>{section.label}</th>)}
               {SECTION_GROUPS[1].items.map((section, index) => (
                 <th key={section.id} style={{ ...thCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>{section.label}</th>
@@ -282,6 +285,7 @@ export default function AdminPermissions() {
               {SECTION_GROUPS[4].items.map((section, index) => (
                 <th key={section.id} style={{ ...thCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>{section.label}</th>
               ))}
+              <th style={th}>Desar</th>
             </tr>
           </thead>
           <tbody>
@@ -379,7 +383,11 @@ export default function AdminPermissions() {
                           value={access[section.id] ?? ACCESS_USER}
                           onChange={(event) => setSectionLevel(user, section.id, event.target.value)}
                           style={selectStyle}
-                          disabled={section.id === "tx-alt" ? access.txlog === ACCESS_NONE : access["mp-transaccions"] === ACCESS_NONE}
+                          disabled={
+                            section.id === "tx-alt" ? access.txlog === ACCESS_NONE
+                            : section.id === "tx-re" ? access["real-estate"] === ACCESS_NONE
+                            : access["mp-transaccions"] === ACCESS_NONE
+                          }
                         >
                           {ACCESS_LEVELS.map((level) => <option key={level} value={level}>{ACCESS_LABELS[level]}</option>)}
                         </select>
