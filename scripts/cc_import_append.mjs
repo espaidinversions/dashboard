@@ -75,6 +75,76 @@ export function resolveConceptFromTipus(rawTipus, tipusConceptMap) {
   return normalizeCapitalCallTipus(rawTipus);
 }
 
+// ── Date conversion ───────────────────────────────────────────────────────────
+function excelDateToISO(serial) {
+  const d = XLSX.SSF.parse_date_code(serial);
+  if (!d || d.y < 2010) return null;
+  return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
+}
+
+// ── Parse both sheets ─────────────────────────────────────────────────────────
+// Both sheets share the "Capital Calls log" column layout (0-based):
+//   r[2]=fons, r[3]=tipus, r[5]=dateSerial, r[6]=importLocal,
+//   r[7]=divisa, r[13]=vcpe, r[15]=importEur, r[16]=est
+// Blank fons cells inherit the previous row's fons (Excel subtable pattern).
+// Rows where eur is not a finite non-zero number are skipped.
+export function parseSheets(wb) {
+  const HEADER_ROW = 7;
+
+  function parseSheet(ws, forceVcpe) {
+    const raw = XLSX.utils.sheet_to_json(ws, { defval: "", header: 1 });
+    const rows = [];
+    let lastFons = "";
+
+    for (let i = HEADER_ROW + 1; i < raw.length; i++) {
+      const r = raw[i];
+
+      const cellFons = String(r[2] ?? "").trim();
+      if (cellFons) lastFons = cellFons;
+      if (!lastFons) continue;
+
+      const eur = Number(r[15]);
+      if (!Number.isFinite(eur) || eur === 0) continue;
+
+      const dateSerial = r[5];
+      if (!dateSerial || typeof dateSerial !== "number") continue;
+      const data = excelDateToISO(dateSerial);
+      if (!data) continue;
+
+      const tipus = String(r[3] ?? "").trim();
+      const importLocal = Number(r[6]) || 0;
+      const divisa = String(r[7] || "EUR").trim();
+      const vcpe = forceVcpe ?? String(r[13] ?? "").trim();
+      const est = String(r[16] ?? "").trim() || null;
+
+      rows.push({ fons: lastFons, tipus, data, importLocal, divisa, vcpe, eur, est });
+    }
+    return rows;
+  }
+
+  const ws0 = wb.Sheets[wb.SheetNames[0]];
+  const ws1 = wb.Sheets[wb.SheetNames[1]];
+  return {
+    fundsRows: ws0 ? parseSheet(ws0, null) : [],
+    companiesRows: ws1 ? parseSheet(ws1, "PC") : [],
+  };
+}
+
+function parseSheetsFromFile(filePath) {
+  let wb;
+  try {
+    wb = XLSX.readFile(filePath);
+  } catch (err) {
+    console.error("No s'ha pogut llegir l'Excel:", err.message);
+    process.exit(1);
+  }
+  if (wb.SheetNames.length < 2) {
+    console.error(`L'Excel ha de tenir almenys 2 fulles. Trobades: ${wb.SheetNames.join(", ")}`);
+    process.exit(1);
+  }
+  return parseSheets(wb);
+}
+
 // ── Main (only runs when executed directly, not when imported) ────────────────
 const isMain = process.argv[1]?.endsWith("cc_import_append.mjs");
 
