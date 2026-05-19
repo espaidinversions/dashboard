@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildTipusConceptMap, resolveConceptFromTipus, resolveEntityId } from "./cc_import_append.mjs";
+import { buildTipusConceptMap, resolveConceptFromTipus, resolveEntityId, normalizeRow } from "./cc_import_append.mjs";
 
 test("buildTipusConceptMap returns empty map when file does not exist", () => {
   const map = buildTipusConceptMap("/nonexistent/path.xlsx");
@@ -52,6 +52,33 @@ test("resolveEntityId — no match returns null", () => {
   const exactMap = new Map();
   const entities = [];
   assert.equal(resolveEntityId("Nonexistent Fund", exactMap, entities), null);
+});
+
+test("normalizeRow — capital call is positive, cat=Capital Call", () => {
+  const tipusMap = new Map();
+  const raw = { fons: "Fund A", tipus: "Aportació", data: "2024-03-01", importLocal: 1000, divisa: "EUR", vcpe: "PE", eur: 1000, est: "Fons Primari" };
+  const row = normalizeRow(raw, "uuid-1", tipusMap);
+  assert.equal(row.vehicle_id, "uuid-1");
+  assert.equal(row.tipus, "Aportació");
+  assert.equal(row.cat, "Capital Call");
+  assert.ok(row.eur > 0);
+  assert.ok(row.amountNative > 0);
+});
+
+test("normalizeRow — distribution is negative, cat=Distribució", () => {
+  const tipusMap = new Map();
+  const raw = { fons: "Fund A", tipus: "Distribució", data: "2024-03-01", importLocal: 500, divisa: "EUR", vcpe: "PE", eur: 500, est: null };
+  const row = normalizeRow(raw, "uuid-1", tipusMap);
+  assert.equal(row.cat, "Distribució");
+  assert.ok(row.eur < 0);
+  assert.ok(row.amountNative < 0);
+});
+
+test("normalizeRow — tipusMap override takes effect", () => {
+  const tipusMap = new Map([["capital call", "Aportació"]]);
+  const raw = { fons: "Fund A", tipus: "Capital Call", data: "2024-03-01", importLocal: 1000, divisa: "EUR", vcpe: "PE", eur: 1000, est: null };
+  const row = normalizeRow(raw, "uuid-1", tipusMap);
+  assert.equal(row.tipus, "Aportació");
 });
 
 import { parseSheets } from "./cc_import_append.mjs";

@@ -169,6 +169,28 @@ async function buildNameToIdMap(supabase) {
   return { exactMap, entities: data };
 }
 
+// ── Row normalization ─────────────────────────────────────────────────────────
+export function normalizeRow(raw, vehicleId, tipusConceptMap) {
+  const resolvedTipus = resolveConceptFromTipus(raw.tipus, tipusConceptMap) ?? raw.tipus;
+  const signedEur = normalizeCapitalCallSignedAmount(resolvedTipus, raw.eur);
+  const signedNative = normalizeCapitalCallSignedAmount(resolvedTipus, raw.importLocal);
+  const cat = inferCapitalCallCategoryFromTipus(resolvedTipus, signedEur);
+  return {
+    vehicle_id: vehicleId,
+    fons: raw.fons,
+    tipus: resolvedTipus,
+    cat,
+    vcpe: raw.vcpe || null,
+    est: raw.est || null,
+    divisa: raw.divisa || "EUR",
+    data: raw.data,
+    eur: signedEur,
+    amountNative: signedNative,
+    fxRate: null,
+    fxSource: null,
+  };
+}
+
 // ── Main (only runs when executed directly, not when imported) ────────────────
 const isMain = process.argv[1]?.endsWith("cc_import_append.mjs");
 
