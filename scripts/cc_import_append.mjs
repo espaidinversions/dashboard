@@ -281,27 +281,61 @@ if (isMain) {
   console.log(`  companies: ${String(companiesRows.length).padStart(4)} rows`);
   const allRaw = [...fundsRows, ...companiesRows];
 
-  // 3. Resolve entity names
+  // 3. Resolve entity names — create fallback placeholders for unmatched
   console.log("\nResolving names...");
   const { exactMap, entities } = await buildNameToIdMap(sb);
 
-  const unmatched = [];
+  // First pass: collect unmatched raw rows grouped by name
+  const unmatchedRawByName = new Map();
   const resolvedRows = [];
   for (const raw of allRaw) {
     const vehicleId = resolveEntityId(raw.fons, exactMap, entities);
     if (!vehicleId) {
-      unmatched.push(raw.fons);
-      continue;
+      if (!unmatchedRawByName.has(raw.fons)) unmatchedRawByName.set(raw.fons, []);
+      unmatchedRawByName.get(raw.fons).push(raw);
+    } else {
+      resolvedRows.push(normalizeRow(raw, vehicleId, tipusConceptMap));
     }
-    resolvedRows.push(normalizeRow(raw, vehicleId, tipusConceptMap));
   }
 
-  const matchedCount = resolvedRows.length;
-  console.log(`  ✓ matched ${matchedCount} / ${allRaw.length} rows`);
-  if (unmatched.length) {
-    const uniqueUnmatched = [...new Set(unmatched)];
-    console.log(`  ✗ unmatched (${unmatched.length} rows skipped):`);
-    uniqueUnmatched.forEach(name => console.log(`      "${name}" — no match in private_entities`));
+  // Create placeholder private_entities for unmatched names
+  if (unmatchedRawByName.size > 0) {
+    const placeholders = [];
+    for (const [name, rows] of unmatchedRawByName) {
+      const vcpe = rows[0]?.vcpe ?? "";
+      const kind = (vcpe === "SF" || vcpe === "PC") ? "company" : "vehicle";
+      const slug = name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const id = `${kind === "company" ? "COMPANY" : "VEHICLE"}:${slug}`;
+      placeholders.push({ id, kind, canonical_name: name, source_name: name, match_type: "fallback" });
+    }
+    if (!dryRun) {
+      const { error: upsertErr } = await sb.from("private_entities").upsert(placeholders, { onConflict: "id" });
+      if (upsertErr) {
+        console.error("⚠ Could not create placeholder entities:", upsertErr.message);
+      } else {
+        console.log(`  ✓ created ${placeholders.length} placeholder entities`);
+      }
+    } else {
+      console.log(`  [DRY RUN] Would create ${placeholders.length} placeholder entities`);
+    }
+    // Add placeholders to the lookup maps so we can resolve their rows
+    for (const p of placeholders) {
+      exactMap.set(p.canonical_name.trim().toLowerCase(), p.id);
+      entities.push(p);
+    }
+    // Second pass: resolve previously unmatched rows
+    for (const [, rows] of unmatchedRawByName) {
+      for (const raw of rows) {
+        const vehicleId = resolveEntityId(raw.fons, exactMap, entities);
+        if (vehicleId) resolvedRows.push(normalizeRow(raw, vehicleId, tipusConceptMap));
+      }
+    }
+  }
+
+  console.log(`  ✓ matched ${resolvedRows.length} / ${allRaw.length} rows`);
+  if (unmatchedRawByName.size > 0) {
+    console.log(`  + ${unmatchedRawByName.size} new placeholder entities created for:`);
+    for (const name of unmatchedRawByName.keys()) console.log(`      "${name}"`);
   }
 
   // 4. Deduplicate
@@ -320,14 +354,14 @@ if (isMain) {
       console.log("\nSample rows (first 3):");
       newRows.slice(0, 3).forEach(r => console.log(" ", JSON.stringify(r)));
     }
-    console.log(`\nSummary: ${allRaw.length} read · ${unmatched.length} unmatched · ${dupCount} duplicate · ${newRows.length} would insert`);
+    console.log(`\nSummary: ${allRaw.length} read · ${unmatchedRawByName.size} placeholder · ${dupCount} duplicate · ${newRows.length} would insert`);
     process.exit(0);
   }
 
   // 5. Insert in batches of 200
   if (newRows.length === 0) {
     console.log("\nNo new rows to insert.");
-    console.log(`Summary: ${allRaw.length} read · ${unmatched.length} unmatched · ${dupCount} duplicate · 0 inserted`);
+    console.log(`Summary: ${allRaw.length} read · ${unmatchedRawByName.size} placeholder · ${dupCount} duplicate · 0 inserted`);
     process.exit(0);
   }
 
@@ -348,6 +382,6 @@ if (isMain) {
   }
   console.log(" done.");
 
-  console.log(`\nSummary: ${allRaw.length} read · ${unmatched.length} unmatched · ${dupCount} duplicate · ${inserted} inserted${failed ? ` · ${failed} failed` : ""}`);
+  console.log(`\nSummary: ${allRaw.length} read · ${unmatchedRawByName.size} placeholder · ${dupCount} duplicate · ${inserted} inserted${failed ? ` · ${failed} failed` : ""}`);
   if (failed > 0) process.exit(1);
 }
