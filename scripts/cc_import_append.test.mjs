@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildTipusConceptMap, resolveConceptFromTipus, resolveEntityId, normalizeRow } from "./cc_import_append.mjs";
+import { buildTipusConceptMap, resolveConceptFromTipus, resolveEntityId, normalizeRow, buildDedupSet, buildDedupKey } from "./cc_import_append.mjs";
 
 test("buildTipusConceptMap returns empty map when file does not exist", () => {
   const map = buildTipusConceptMap("/nonexistent/path.xlsx");
@@ -79,6 +79,30 @@ test("normalizeRow — tipusMap override takes effect", () => {
   const raw = { fons: "Fund A", tipus: "Capital Call", data: "2024-03-01", importLocal: 1000, divisa: "EUR", vcpe: "PE", eur: 1000, est: null };
   const row = normalizeRow(raw, "uuid-1", tipusMap);
   assert.equal(row.tipus, "Aportació");
+});
+
+test("buildDedupKey produces consistent key", () => {
+  const row = { vehicle_id: "uuid-1", tipus: "Aportació", data: "2024-03-01", eur: 1000.005 };
+  const key = buildDedupKey(row);
+  assert.equal(key, "uuid-1|Aportació|2024-03-01|100001");
+});
+
+test("buildDedupSet returns set of keys from existing rows", () => {
+  const existing = [
+    { vehicle_id: "uuid-1", tipus: "Aportació", data: "2024-03-01", eur: 1000 },
+    { vehicle_id: "uuid-2", tipus: "Distribució", data: "2024-04-01", eur: -500 },
+  ];
+  const set = buildDedupSet(existing);
+  assert.equal(set.size, 2);
+  assert.ok(set.has("uuid-1|Aportació|2024-03-01|100000"));
+  assert.ok(set.has("uuid-2|Distribució|2024-04-01|-50000"));
+});
+
+test("a normalized new row matches its existing counterpart", () => {
+  const existingRow = { vehicle_id: "uuid-1", tipus: "Aportació", data: "2024-03-01", eur: 1000 };
+  const set = buildDedupSet([existingRow]);
+  const newRow = { vehicle_id: "uuid-1", tipus: "Aportació", data: "2024-03-01", eur: 1000 };
+  assert.ok(set.has(buildDedupKey(newRow)));
 });
 
 import { parseSheets } from "./cc_import_append.mjs";

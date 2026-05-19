@@ -191,6 +191,23 @@ export function normalizeRow(raw, vehicleId, tipusConceptMap) {
   };
 }
 
+// ── Deduplication ─────────────────────────────────────────────────────────────
+export function buildDedupKey(row) {
+  return `${row.vehicle_id}|${row.tipus}|${row.data}|${Math.round(row.eur * 100)}`;
+}
+
+export function buildDedupSet(existingRows) {
+  return new Set(existingRows.map(buildDedupKey));
+}
+
+async function fetchExistingDedupSet(supabase) {
+  const { data, error } = await supabase
+    .from("capital_calls")
+    .select("vehicle_id, tipus, data, eur");
+  if (error) throw new Error("Failed to load capital_calls: " + error.message);
+  return buildDedupSet(data);
+}
+
 // ── Main (only runs when executed directly, not when imported) ────────────────
 const isMain = process.argv[1]?.endsWith("cc_import_append.mjs");
 
