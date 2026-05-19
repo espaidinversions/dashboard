@@ -256,4 +256,87 @@ if (isMain) {
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+
+  if (dryRun) console.log("🔍 DRY RUN — no changes will be written\n");
+
+  // 1. Parse Equivalència Conceptes
+  const tipusConceptMap = buildTipusConceptMap(absEqPath);
+  console.log(`✓ Loaded ${tipusConceptMap.size} type mappings from Equivalència Conceptes`);
+
+  // 2. Parse Excel sheets
+  console.log("\nReading sheets...");
+  const { fundsRows, companiesRows } = parseSheetsFromFile(absExcelPath);
+  console.log(`  funds:     ${String(fundsRows.length).padStart(4)} rows`);
+  console.log(`  companies: ${String(companiesRows.length).padStart(4)} rows`);
+  const allRaw = [...fundsRows, ...companiesRows];
+
+  // 3. Resolve entity names
+  console.log("\nResolving names...");
+  const { exactMap, entities } = await buildNameToIdMap(sb);
+
+  const unmatched = [];
+  const resolvedRows = [];
+  for (const raw of allRaw) {
+    const vehicleId = resolveEntityId(raw.fons, exactMap, entities);
+    if (!vehicleId) {
+      unmatched.push(raw.fons);
+      continue;
+    }
+    resolvedRows.push(normalizeRow(raw, vehicleId, tipusConceptMap));
+  }
+
+  const matchedCount = resolvedRows.length;
+  console.log(`  ✓ matched ${matchedCount} / ${allRaw.length} rows`);
+  if (unmatched.length) {
+    const uniqueUnmatched = [...new Set(unmatched)];
+    console.log(`  ✗ unmatched (${unmatched.length} rows skipped):`);
+    uniqueUnmatched.forEach(name => console.log(`      "${name}" — no match in private_entities`));
+  }
+
+  // 4. Deduplicate
+  console.log("\nDeduplicating against existing rows...");
+  const dedupSet = await fetchExistingDedupSet(sb);
+  console.log(`  Deduplicating against ${dedupSet.size.toLocaleString()} existing rows...`);
+
+  const newRows = resolvedRows.filter(row => !dedupSet.has(buildDedupKey(row)));
+  const dupCount = resolvedRows.length - newRows.length;
+  console.log(`  new: ${newRows.length} / duplicate: ${dupCount}`);
+
+  if (dryRun) {
+    console.log(`\n[DRY RUN — no changes made]`);
+    console.log(`  Would insert: ${newRows.length} rows`);
+    if (newRows.length > 0) {
+      console.log("\nSample rows (first 3):");
+      newRows.slice(0, 3).forEach(r => console.log(" ", JSON.stringify(r)));
+    }
+    console.log(`\nSummary: ${allRaw.length} read · ${unmatched.length} unmatched · ${dupCount} duplicate · ${newRows.length} would insert`);
+    process.exit(0);
+  }
+
+  // 5. Insert in batches of 200
+  if (newRows.length === 0) {
+    console.log("\nNo new rows to insert.");
+    console.log(`Summary: ${allRaw.length} read · ${unmatched.length} unmatched · ${dupCount} duplicate · 0 inserted`);
+    process.exit(0);
+  }
+
+  console.log(`\nInserting ${newRows.length} rows...`);
+  const BATCH = 200;
+  let inserted = 0;
+  let failed = 0;
+  for (let i = 0; i < newRows.length; i += BATCH) {
+    const batch = newRows.slice(i, i + BATCH);
+    const { error } = await sb.from("capital_calls").insert(batch);
+    if (error) {
+      console.error(`  ✗ Batch ${i}-${i + batch.length} failed: ${error.message}`);
+      failed += batch.length;
+    } else {
+      inserted += batch.length;
+    }
+    process.stdout.write(`\r  ${inserted + failed}/${newRows.length}...`);
+  }
+  console.log(" done.");
+
+  console.log(`\nSummary: ${allRaw.length} read · ${unmatched.length} unmatched · ${dupCount} duplicate · ${inserted} inserted${failed ? ` · ${failed} failed` : ""}`);
+  if (failed > 0) process.exit(1);
 }
