@@ -64,7 +64,7 @@ export function CcTransactionModal({
         },
     {
       key: "tipus", label: "Tipus Moviment", type: "select", options: ccTipusOptions,
-      defaultValue: isEdit ? editRow.tipus : (addDefaults?.tipus ?? ""),
+      defaultValue: (isEdit ? editRow.tipus : addDefaults?.tipus) || ccTipusOptions?.[0] || "",
     },
     { key: "data", label: "Data", type: "date", defaultValue: isEdit ? editRow.data : new Date().toISOString().slice(0, 10) },
     {

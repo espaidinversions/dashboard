@@ -241,7 +241,7 @@ function FundDetailInner() {
                   label: "Tipus Moviment",
                   type: "select",
                   options: CAPITAL_CALL_TIPUS_OPTIONS,
-                  defaultValue: editingRow.tipus,
+                  defaultValue: editingRow.tipus || CAPITAL_CALL_TIPUS_OPTIONS[0] || "",
                 },
                 { key: "data", label: "Data", type: "date", defaultValue: editingRow.data },
                 { key: "eur", label: "Import EUR", type: "number", defaultValue: Math.abs(editingRow.eur ?? 0) },

@@ -59,7 +59,8 @@ function Dashboard() {
   ]), [d.companiesData, d.rawCC, d.searchersData]);
   const ccTipusOptions = useMemo(() => dedupeOptionValues([
     ...CAPITAL_CALL_TIPUS_OPTIONS,
-  ]), []);
+    ...d.rawCC.map((r) => r.tipus).filter(Boolean),
+  ]), [d.rawCC]);
   const vehicleCurrencyMap = useMemo(() => {
     const map = new Map();
     d.rawCC.forEach((row) => {
