@@ -522,7 +522,7 @@ function Dashboard() {
         <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
-              {tab === "mercats-publics" ? "Mercats Públics" : tab === "real-estate" ? "Real Estate" : "Mercats Privats"}
+              {tab === "mercats-publics" ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re") ? "Real Estate" : "Mercats Privats"}
             </div>
             {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
           </div>
