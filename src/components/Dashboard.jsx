@@ -155,7 +155,7 @@ function Dashboard() {
       case "mp-traçabilitat":setTab("mercats-publics"); setMercatsPublicsTab("traçabilitat"); break;
       case "tx-alt":         setTab("tx-alt"); break;
       case "tx-re":          setTab("tx-re"); break;
-      case "tx-mp":          setTab("mercats-publics"); setMercatsPublicsTab("transaccions"); break;
+      case "tx-mp":          setTab("tx-mp"); break;
       default: break;
     }
   }
@@ -522,7 +522,7 @@ function Dashboard() {
         <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
-              {tab === "mercats-publics" ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re") ? "Real Estate" : "Mercats Privats"}
+              {(tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re") ? "Real Estate" : "Mercats Privats"}
             </div>
             {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
           </div>
@@ -620,6 +620,7 @@ function Dashboard() {
 
           {tab === "tx-alt" && <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" />}
           {tab === "tx-re" && <TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: "Fons Real Estate" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" />}
+          {tab === "tx-mp" && <PMTransaccionsTab />}
         </main>
       </div>
 
