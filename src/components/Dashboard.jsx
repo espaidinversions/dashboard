@@ -154,6 +154,7 @@ function Dashboard() {
       case "mp-transaccions":setTab("mercats-publics"); setMercatsPublicsTab("transaccions"); break;
       case "mp-traçabilitat":setTab("mercats-publics"); setMercatsPublicsTab("traçabilitat"); break;
       case "tx-alt":         setTab("tx-alt"); break;
+      case "tx-re":          setTab("tx-re"); break;
       case "tx-mp":          setTab("mercats-publics"); setMercatsPublicsTab("transaccions"); break;
       default: break;
     }

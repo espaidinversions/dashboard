@@ -185,7 +185,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     const shouldIncludeRow = (row) => {
-      if (vcpeTypes.length > 0) {
+      if (Array.isArray(vcpeTypes) && vcpeTypes.length > 0) {
         const sectionId = getVehiclePermissionSection(row);
         if (vcpeTypes.includes("RE")) return sectionId === "real-estate" && canAccessRealEstate;
         return sectionId === "alternatives" && canAccessAlternatives;
