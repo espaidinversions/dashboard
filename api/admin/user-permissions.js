@@ -13,7 +13,7 @@ const VALID_SECTIONS = new Set([
   "fons", "searchers", "companies", "inversions", "txlog", // supra within alternatives
   "re-directe", "re-altres",
   "mp-resum", "mp-rv", "mp-rf", "mp-posicions", "mp-transaccions", "mp-traçabilitat",
-  "tx-alt", "tx-mp",
+  "tx-alt", "tx-re", "tx-mp",
 ]);
 const VALID_ACCESS_LEVELS = new Set(["none", "user", "superuser"]);
 
