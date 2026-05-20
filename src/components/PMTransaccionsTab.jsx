@@ -8,16 +8,12 @@ import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { loadPMOverrides, upsertTransaction } from "../db.js";
 import { resolvePmTransactionRouteId } from "../data/pmPositionRouting.js";
 
-const PM_POSITIONS = PM_MODEL.holdings.active;
-const PM_CLOSED = PM_MODEL.holdings.closed;
+const PM_POSITIONS    = PM_MODEL.holdings.active;
+const PM_CLOSED       = PM_MODEL.holdings.closed;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 
-const MONTH_NAMES = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
-const MESOS_SHORT = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
-const fmtYYYYMM = yyyymm => {
-  const [y, m] = yyyymm.split("-");
-  return `${MONTH_NAMES[parseInt(m, 10) - 1]} ${y}`;
-};
+const MONTH_NAMES  = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
+const MESOS_SHORT  = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
 const fmtYYYYMMShort = yyyymm => {
   const [y, m] = yyyymm.split("-");
   return `${MESOS_SHORT[parseInt(m, 10)]} '${y.slice(2)}`;
@@ -25,14 +21,13 @@ const fmtYYYYMMShort = yyyymm => {
 
 const CUSTODIANS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Credit Suisse", "Altre"];
 
+const EMPTY_FILTERS = { date: "", nom: "", tipus: "Tots", action: "Tots", units: "", nav: "", value: "", custodian: "" };
+
 export function PMTransaccionsTab() {
   const { tc, dark } = useTheme();
-  const [actionFilter,   setActionFilter]   = useState("tots");
-  const [custodianFilter, setCustodianFilter] = useState("tots");
-  const [columnFilters, setColumnFilters] = useState({ month:"", date:"", nom:"", tipus:"Tots", action:"Tots", units:"", nav:"", value:"", custodian:"" });
-  const [showModal,  setShowModal]  = useState(false);
-  const [openMonths, setOpenMonths] = useState(() => new Set());
-  const [manualTxs,  setManualTxs]  = useState([]);
+  const [filters,   setFilters]   = useState(EMPTY_FILTERS);
+  const [showModal, setShowModal] = useState(false);
+  const [manualTxs, setManualTxs] = useState([]);
 
   useEffect(() => {
     loadPMOverrides().then(data => {
@@ -43,7 +38,7 @@ export function PMTransaccionsTab() {
   const allTxs = useMemo(() => {
     const staticIds = new Set(PM_TRANSACTIONS.map(t => t.id));
     const extras = manualTxs.filter(t => !staticIds.has(t.id));
-    return [...PM_TRANSACTIONS, ...extras];
+    return [...PM_TRANSACTIONS, ...extras].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
   }, [manualTxs]);
 
   const custodians = useMemo(() =>
@@ -51,47 +46,25 @@ export function PMTransaccionsTab() {
   [allTxs]);
 
   const filtered = useMemo(() => {
-    let rows = allTxs;
-    if (actionFilter !== "tots") rows = rows.filter(t => t.action === actionFilter);
-    if (custodianFilter !== "tots") rows = rows.filter(t => t.custodian === custodianFilter);
-    rows = rows.filter((t) => {
-      const month = (t.date ?? "").slice(0, 7);
-      if (columnFilters.month && !month.includes(columnFilters.month)) return false;
-      if (columnFilters.date && !String(t.date ?? "").includes(columnFilters.date)) return false;
-      if (columnFilters.nom && !String(t.nom ?? t.isin ?? "").toLowerCase().includes(columnFilters.nom.toLowerCase())) return false;
-      if (columnFilters.tipus !== "Tots" && t.tipus !== columnFilters.tipus) return false;
-      if (columnFilters.action !== "Tots" && t.action !== columnFilters.action) return false;
-      if (columnFilters.units && !String(t.units ?? "").includes(columnFilters.units)) return false;
-      if (columnFilters.nav && !String(t.nav ?? "").includes(columnFilters.nav)) return false;
-      if (columnFilters.value && !String(t.valueEur ?? "").includes(columnFilters.value)) return false;
-      if (columnFilters.custodian && !String(t.custodian ?? "").toLowerCase().includes(columnFilters.custodian.toLowerCase())) return false;
+    return allTxs.filter(t => {
+      if (filters.date     && !String(t.date ?? "").includes(filters.date)) return false;
+      if (filters.nom      && !String(t.nom ?? t.isin ?? "").toLowerCase().includes(filters.nom.toLowerCase())) return false;
+      if (filters.tipus    !== "Tots" && t.tipus !== filters.tipus) return false;
+      if (filters.action   !== "Tots" && t.action !== filters.action) return false;
+      if (filters.units    && !String(t.units ?? "").includes(filters.units)) return false;
+      if (filters.nav      && !String(t.nav ?? "").includes(filters.nav)) return false;
+      if (filters.value    && !String(t.valueEur ?? "").includes(filters.value)) return false;
+      if (filters.custodian && !String(t.custodian ?? "").toLowerCase().includes(filters.custodian.toLowerCase())) return false;
       return true;
     });
-    return [...rows].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
-  }, [allTxs, actionFilter, custodianFilter, columnFilters]);
+  }, [allTxs, filters]);
 
-  const byMonth = useMemo(() => {
-    const map = new Map();
-    filtered.forEach(t => {
-      const m = (t.date ?? "????-??").slice(0, 7);
-      if (!map.has(m)) map.set(m, []);
-      map.get(m).push(t);
-    });
-    return [...map.entries()];
-  }, [filtered]);
+  const hasActiveFilters = Object.entries(filters).some(([k, v]) => v !== "" && v !== "Tots");
 
-  const resolvedOpen = useMemo(() => {
-    if (openMonths !== null) return openMonths;
-    return new Set();
-  }, [openMonths, byMonth]);
+  const totalBuys  = filtered.filter(t => t.action === "buy").reduce((s, t)  => s + (t.valueEur ?? 0), 0);
+  const totalSells = filtered.filter(t => t.action === "sell").reduce((s, t) => s + (t.valueEur ?? 0), 0);
 
-  const toggleMonth = m => setOpenMonths(prev => {
-    const s = new Set(prev ?? resolvedOpen);
-    s.has(m) ? s.delete(m) : s.add(m);
-    return s;
-  });
-
-  // Bar chart: buys & sells by month (all txs, ascending)
+  // Bar chart
   const chartData = useMemo(() => {
     const map = new Map();
     allTxs.forEach(t => {
@@ -105,27 +78,22 @@ export function PMTransaccionsTab() {
     return [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, v]) => v);
   }, [allTxs]);
 
-  const chip = (label, active, onClick) => (
-    <button key={label} onClick={onClick} style={{
-      padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
-      border: `1.5px solid ${active ? tc.green : tc.border}`,
-      background: active ? (dark ? "#0A2010" : "#E8F8E8") : "transparent",
-      color: active ? tc.green : tc.textLight, fontWeight: active ? 700 : 400,
-    }}>{label}</button>
-  );
+  const setF = (k, v) => setFilters(f => ({ ...f, [k]: v }));
 
+  const inputStyle = {
+    width: "100%", padding: "4px 6px", borderRadius: 4,
+    border: `1px solid ${tc.border}`, background: tc.bg,
+    color: tc.text, fontSize: 11, fontFamily: "inherit",
+  };
   const th = {
     padding: "9px 10px", fontSize: 10, letterSpacing: "0.09em", color: tc.textLight,
     textTransform: "uppercase", fontWeight: 600, textAlign: "left",
-    borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap", userSelect: "none",
+    borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap",
   };
-
-  const rowMain = dark ? tc.card  : "#fff";
-  const rowAlt  = dark ? tc.bgAlt : "#FAFBFC";
 
   return (
     <>
-      {/* ── Bar chart ── */}
+      {/* Bar chart */}
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10,
         padding: "18px 20px", marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
         <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight,
@@ -137,57 +105,34 @@ export function PMTransaccionsTab() {
           const option = {
             grid: { top: 8, right: 8, bottom: 56, left: 0, containLabel: true },
             tooltip: {
-              ...t.tooltip,
-              trigger: "axis",
-              axisPointer: { type: "shadow" },
-              formatter: (params) => {
+              ...t.tooltip, trigger: "axis", axisPointer: { type: "shadow" },
+              formatter: params => {
                 const label = params[0]?.axisValue ?? "";
                 let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
-                params.forEach(p => {
-                  if (!p.value) return;
-                  html += `<div>${p.marker}${p.seriesName}: ${fmtM(p.value)}</div>`;
-                });
+                params.forEach(p => { if (p.value) html += `<div>${p.marker}${p.seriesName}: ${fmtM(p.value)}</div>`; });
                 return html;
               },
             },
             legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
-            xAxis: {
-              type: "category",
-              data: chartData.map(d => d.label),
+            xAxis: { type: "category", data: chartData.map(d => d.label),
               axisLabel: { fontSize: 9, color: tc.textLight, rotate: -40 },
-              axisLine: { show: false },
-              axisTick: { show: false },
-            },
-            yAxis: {
-              type: "value",
+              axisLine: { show: false }, axisTick: { show: false } },
+            yAxis: { type: "value",
               axisLabel: { fontSize: 10, color: tc.textLight, formatter: v => fmtM(v) },
               splitLine: { lineStyle: { color: tc.border } },
-              axisLine: { show: false },
-              axisTick: { show: false },
-            },
+              axisLine: { show: false }, axisTick: { show: false } },
             series: [
-              {
-                name: "Compres",
-                type: "bar",
-                data: chartData.map(d => d.Compres ?? null),
-                itemStyle: { color: tc.navy, borderRadius: [4, 4, 0, 0] },
-                barMaxWidth: 28,
-                barGap: "10%",
-              },
-              {
-                name: "Vendes",
-                type: "bar",
-                data: chartData.map(d => d.Vendes ?? null),
-                itemStyle: { color: tc.green, borderRadius: [4, 4, 0, 0] },
-                barMaxWidth: 28,
-              },
+              { name: "Compres", type: "bar", data: chartData.map(d => d.Compres ?? null),
+                itemStyle: { color: tc.navy, borderRadius: [4,4,0,0] }, barMaxWidth: 28, barGap: "10%" },
+              { name: "Vendes",  type: "bar", data: chartData.map(d => d.Vendes  ?? null),
+                itemStyle: { color: tc.green, borderRadius: [4,4,0,0] }, barMaxWidth: 28 },
             ],
           };
           return <ReactECharts option={option} style={{ width: "100%", height: 220 }} opts={{ renderer: "canvas" }} />;
         })()}
       </div>
 
-      {/* ── Accordion table ── */}
+      {/* Flat table */}
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10,
         boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
 
@@ -199,153 +144,126 @@ export function PMTransaccionsTab() {
 
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-          padding: "18px 20px 14px", borderBottom: `1px solid ${tc.border}` }}>
+          padding: "14px 20px 12px", borderBottom: `1px solid ${tc.border}` }}>
           <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight,
             textTransform: "uppercase", fontWeight: 600, flex: 1 }}>
-            Detall per Mes › Transaccions · {filtered.length}
+            Transaccions Mercats Públics
           </div>
+          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textMid }}>
+            {filtered.length} op.
+            {totalBuys  > 0 && <span style={{ marginLeft: 10, color: tc.navy  }}>Compres {fmtM(totalBuys)}</span>}
+            {totalSells > 0 && <span style={{ marginLeft: 10, color: tc.green }}>Vendes {fmtM(totalSells)}</span>}
+          </div>
+          {hasActiveFilters && (
+            <button onClick={() => setFilters(EMPTY_FILTERS)}
+              style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 4,
+                padding: "2px 8px", cursor: "pointer", fontSize: 10, color: tc.textMid, fontFamily: "inherit" }}>
+              netejar
+            </button>
+          )}
           <button onClick={() => setShowModal(true)} style={{
             padding: "4px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
             border: `1.5px solid ${tc.green}`, background: dark ? "#0A2010" : "#E8F8E8",
             color: tc.green, fontWeight: 700,
           }}>+ Nova</button>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {chip("Totes",   actionFilter === "tots", () => setActionFilter("tots"))}
-            {chip("Compres", actionFilter === "buy",  () => setActionFilter("buy"))}
-            {chip("Vendes",  actionFilter === "sell", () => setActionFilter("sell"))}
-          </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-            {chip("Tot custodi", custodianFilter === "tots", () => setCustodianFilter("tots"))}
-            {custodians.map(c => chip(c, custodianFilter === c, () => setCustodianFilter(c)))}
-          </div>
-          <div style={{ display: "flex", gap: 6 }}>
-            <button onClick={() => setOpenMonths(new Set(byMonth.map(([m]) => m)))}
-              style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 4,
-                padding: "4px 12px", cursor: "pointer", fontSize: 11, color: tc.textMid, fontFamily: "inherit" }}>
-              Expandir tots
-            </button>
-            <button onClick={() => setOpenMonths(new Set())}
-              style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, borderRadius: 4,
-                padding: "4px 12px", cursor: "pointer", fontSize: 11, color: tc.textMid, fontFamily: "inherit" }}>
-              Plegar tots
-            </button>
-          </div>
         </div>
 
-        {/* Table */}
         <div style={{ overflowX: "auto" }}>
-          <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 700 }}>
+          <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 720 }}>
             <thead>
               <tr style={{ background: tc.bgAlt }}>
-                {[
-                  { l: "",        align: "left",   w: 32  },
-                  { l: "Mes",     align: "left",   w: 130 },
-                  { l: "Nom",     align: "left"         },
-                  { l: "Tipus",   align: "center"       },
-                  { l: "Acció",   align: "center"       },
-                  { l: "Units",   align: "right"        },
-                  { l: "NAV",     align: "right"        },
-                  { l: "Valor",   align: "right"        },
-                  { l: "Custodi", align: "left"         },
-                ].map(({ l, align, w }) => (
-                  <th key={l || "_"} style={{ ...th, textAlign: align, ...(w ? { width: w } : {}) }}>{l}</th>
+                {["Data", "Nom", "Tipus", "Acció", "Units", "NAV", "Valor EUR", "Custodi"].map(l => (
+                  <th key={l} style={{ ...th, textAlign: ["Units","NAV","Valor EUR"].includes(l) ? "right" : "left" }}>{l}</th>
                 ))}
               </tr>
               <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
-                <th style={{ padding: "6px 10px" }} />
-                <th style={{ padding: "6px 10px" }}><input value={columnFilters.month} onChange={e => setColumnFilters(v => ({ ...v, month: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-                <th style={{ padding: "6px 10px" }}><input value={columnFilters.nom} onChange={e => setColumnFilters(v => ({ ...v, nom: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-                <th style={{ padding: "6px 10px" }}><select value={columnFilters.tipus} onChange={e => setColumnFilters(v => ({ ...v, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots","RV","RF"].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
-                <th style={{ padding: "6px 10px" }}><select value={columnFilters.action} onChange={e => setColumnFilters(v => ({ ...v, action: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>{["Tots","buy","sell"].map(o => <option key={o} value={o}>{o}</option>)}</select></th>
-                <th style={{ padding: "6px 10px" }}><input value={columnFilters.units} onChange={e => setColumnFilters(v => ({ ...v, units: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-                <th style={{ padding: "6px 10px" }}><input value={columnFilters.nav} onChange={e => setColumnFilters(v => ({ ...v, nav: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-                <th style={{ padding: "6px 10px" }}><input value={columnFilters.value} onChange={e => setColumnFilters(v => ({ ...v, value: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-                <th style={{ padding: "6px 10px" }}><input value={columnFilters.custodian} onChange={e => setColumnFilters(v => ({ ...v, custodian: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+                <th style={{ padding: "6px 10px" }}>
+                  <input value={filters.date} onChange={e => setF("date", e.target.value)} style={inputStyle} />
+                </th>
+                <th style={{ padding: "6px 10px" }}>
+                  <input value={filters.nom} onChange={e => setF("nom", e.target.value)} style={inputStyle} />
+                </th>
+                <th style={{ padding: "6px 10px" }}>
+                  <select value={filters.tipus} onChange={e => setF("tipus", e.target.value)} style={inputStyle}>
+                    {["Tots","RV","RF"].map(o => <option key={o} value={o}>{o}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding: "6px 10px" }}>
+                  <select value={filters.action} onChange={e => setF("action", e.target.value)} style={inputStyle}>
+                    {["Tots","buy","sell"].map(o => <option key={o} value={o}>{o === "buy" ? "Compra" : o === "sell" ? "Venda" : o}</option>)}
+                  </select>
+                </th>
+                <th style={{ padding: "6px 10px" }}>
+                  <input value={filters.units} onChange={e => setF("units", e.target.value)} style={inputStyle} />
+                </th>
+                <th style={{ padding: "6px 10px" }}>
+                  <input value={filters.nav} onChange={e => setF("nav", e.target.value)} style={inputStyle} />
+                </th>
+                <th style={{ padding: "6px 10px" }}>
+                  <input value={filters.value} onChange={e => setF("value", e.target.value)} style={inputStyle} />
+                </th>
+                <th style={{ padding: "6px 10px" }}>
+                  <select value={filters.custodian} onChange={e => setF("custodian", e.target.value)} style={inputStyle}>
+                    <option value="">Tots</option>
+                    {custodians.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </th>
               </tr>
             </thead>
             <tbody>
-              {byMonth.map(([month, rows], mi) => {
-                const isOpen = resolvedOpen.has(month);
-                const monthTotal = rows.reduce((s, t) => s + (t.valueEur ?? 0), 0);
-                const buys  = rows.filter(t => t.action === "buy").length;
-                const sells = rows.filter(t => t.action === "sell").length;
-
+              {filtered.map((t, i) => {
+                const isBuy = t.action === "buy";
+                const rowBg = i % 2 === 0 ? (dark ? tc.card : "#fff") : (dark ? tc.bgAlt : "#FAFBFC");
                 return (
-                  <React.Fragment key={month}>
-                    {/* Month header row */}
-                    <tr
-                      onClick={() => toggleMonth(month)}
-                      style={{
-                        background: isOpen ? (dark ? "#0E1F0E" : "#F0F8F0") : mi % 2 === 0 ? rowMain : rowAlt,
-                        cursor: "pointer",
-                        borderTop: `1px solid ${tc.border}`,
-                        borderBottom: isOpen ? "none" : `1px solid ${tc.border}`,
-                        transition: "background 0.15s",
-                      }}
-                      onMouseEnter={e => !isOpen && (e.currentTarget.style.background = tc.bgAlt)}
-                      onMouseLeave={e => !isOpen && (e.currentTarget.style.background = mi % 2 === 0 ? rowMain : rowAlt)}
-                    >
-                      <td style={{ padding: "10px 10px 10px 14px", fontSize: 13, color: tc.green, fontWeight: 700, userSelect: "none" }}>
-                        {isOpen ? "▼" : "▶"}
-                      </td>
-                      <td colSpan={2} style={{ padding: "10px", fontWeight: 700, color: tc.text, fontSize: 13 }}>{fmtYYYYMM(month)}</td>
-                      <td colSpan={5} style={{ padding: "10px", fontSize: 10, color: tc.textLight }}>
-                        {rows.length} op.{buys > 0 ? ` · ${buys} compra${buys > 1 ? "es" : ""}` : ""}{sells > 0 ? ` · ${sells} venda${sells > 1 ? "es" : ""}` : ""}
-                      </td>
-                      <td style={{ padding: "10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11, fontWeight: 700, color: tc.navy }}>
-                        {monthTotal > 0 ? fmtM(monthTotal) : "—"}
-                      </td>
-                      <td />
-                    </tr>
-
-                    {/* Transaction rows */}
-                    {isOpen && rows.map((t, i) => {
-                      const isBuy = t.action === "buy";
-                      return (
-                        <tr key={t.id} style={{
-                          borderBottom: `1px solid ${tc.border}`,
-                          background: i % 2 === 0
-                            ? (dark ? "#091C0B" : "#F4FBF4")
-                            : (dark ? "#071A08" : "#E8F8E8"),
-                        }}>
-                          <td />
-                          <td style={{ padding: "8px 10px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight, whiteSpace: "nowrap" }}>{t.date}</td>
-                          <td style={{ padding: "8px 10px", maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            <Link to={`/mercats-publics/${encodeURIComponent(resolvePmTransactionRouteId(t, PM_POSITIONS, PM_CLOSED) ?? t.isin)}`}
-                              style={{ color: tc.navy, fontWeight: 600, textDecoration: "none" }}
-                              onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
-                              onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>
-                              {t.nom || t.isin}
-                            </Link>
-                          </td>
-                          <td style={{ padding: "8px 10px", textAlign: "center" }}>
-                            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
-                              background: t.tipus === "RV" ? "#E6EDF3" : "#FFF8E1",
-                              color:      t.tipus === "RV" ? "#2B5070" : "#7A6000" }}>{t.tipus}</span>
-                          </td>
-                          <td style={{ padding: "8px 10px", textAlign: "center" }}>
-                            <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
-                              background: isBuy ? "#E8F8E8" : "#FDECEA",
-                              color:      isBuy ? "#1C6B1D" : "#C62828", fontWeight: 600 }}>
-                              {isBuy ? "Compra" : "Venda"}
-                            </span>
-                          </td>
-                          <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
-                            {t.units != null ? t.units.toLocaleString("ca-ES", { maximumFractionDigits: 0 }) : "—"}
-                          </td>
-                          <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
-                            {t.nav != null ? t.nav.toFixed(2) : "—"}
-                          </td>
-                          <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 700, color: tc.navy }}>
-                            {t.valueEur != null ? fmtM(t.valueEur) : "—"}
-                          </td>
-                          <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textLight }}>{t.custodian}</td>
-                        </tr>
-                      );
-                    })}
-                  </React.Fragment>
+                  <tr key={t.id} style={{ borderBottom: `1px solid ${tc.border}`, background: rowBg }}>
+                    <td style={{ padding: "8px 10px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight, whiteSpace: "nowrap" }}>
+                      {t.date}
+                    </td>
+                    <td style={{ padding: "8px 10px", maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <Link
+                        to={`/mercats-publics/${encodeURIComponent(resolvePmTransactionRouteId(t, PM_POSITIONS, PM_CLOSED) ?? t.isin)}`}
+                        style={{ color: tc.navy, fontWeight: 600, textDecoration: "none" }}
+                        onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
+                        onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>
+                        {t.nom || t.isin}
+                      </Link>
+                    </td>
+                    <td style={{ padding: "8px 10px" }}>
+                      <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                        background: t.tipus === "RV" ? "#E6EDF3" : "#FFF8E1",
+                        color:      t.tipus === "RV" ? "#2B5070" : "#7A6000" }}>
+                        {t.tipus}
+                      </span>
+                    </td>
+                    <td style={{ padding: "8px 10px" }}>
+                      <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
+                        background: isBuy ? "#E8F8E8" : "#FDECEA",
+                        color:      isBuy ? "#1C6B1D" : "#C62828", fontWeight: 600 }}>
+                        {isBuy ? "Compra" : "Venda"}
+                      </span>
+                    </td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
+                      {t.units != null ? t.units.toLocaleString("ca-ES", { maximumFractionDigits: 0 }) : "—"}
+                    </td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>
+                      {t.nav != null ? t.nav.toFixed(2) : "—"}
+                    </td>
+                    <td style={{ padding: "8px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 700, color: tc.navy }}>
+                      {t.valueEur != null ? fmtM(t.valueEur) : "—"}
+                    </td>
+                    <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textLight }}>
+                      {t.custodian}
+                    </td>
+                  </tr>
                 );
               })}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={8} style={{ padding: "32px", textAlign: "center", color: tc.textLight, fontSize: 12 }}>
+                    Cap transacció trobada
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
