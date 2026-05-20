@@ -603,7 +603,11 @@ function Dashboard() {
                 ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} />
                 : realEstateTab === "altres-vehicles"
                   ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} />
-                  : <TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: "Fons Real Estate" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Real Estate — Directe" />}
+                  : <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, padding:"80px 24px", color:tc.textLight, textAlign:"center" }}>
+                      <span style={{ fontSize:36 }}>🚧</span>
+                      <div style={{ fontSize:16, fontWeight:700, color:tc.text }}>Secció en construcció</div>
+                      <div style={{ fontSize:13 }}>La cartera de Real Estate Directe estarà disponible properament.</div>
+                    </div>}
             </div>
           )}
 
