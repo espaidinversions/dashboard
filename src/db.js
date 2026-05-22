@@ -1072,6 +1072,7 @@ export async function updateCapitalCall(rowId, fields) {
   if (!supabase) return { error: null };
   const { data: old } = await supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").eq("id", rowId).single();
   const updates = { ...fields };
+  delete updates.vehicleTipus; // derived from fund_meta, not a capital_calls column
   if (Object.prototype.hasOwnProperty.call(updates, "amountNative")) {
     updates.amount_native = updates.amountNative;
     delete updates.amountNative;
