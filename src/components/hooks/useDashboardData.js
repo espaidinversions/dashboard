@@ -17,7 +17,7 @@ const LS_TS = "tc_loadedAt";
 function sanitizeCapitalCallValues(values) {
   // Only pick known capital_calls columns — drop UI-only fields like nif, fiscal_name
   const {
-    fons, tipus, cat, est, divisa, comentaris,
+    fons, tipus, cat, est, vehicleTipus, divisa, comentaris,
     data, eur, amountNative, fxRate, fxSource,
     recallable, non_recallable, from_recallable,
   } = values ?? {};
@@ -26,6 +26,7 @@ function sanitizeCapitalCallValues(values) {
     tipus: normalizeCapitalCallTipus(tipus),
     cat: cat ?? null,
     est: est ?? null,
+    vehicleTipus: vehicleTipus ?? null,
     divisa: divisa || "EUR",
     comentaris: String(comentaris ?? "").trim() || null,
     data,
@@ -67,7 +68,7 @@ async function prepareCapitalCallPayload(values, existingRow = null) {
 }
 
 async function syncSearchersFromCapitalCalls(rows) {
-  const sfRows = Array.isArray(rows) ? rows.filter((row) => row?.vehicleTipus === "SF") : [];
+  const sfRows = Array.isArray(rows) ? rows.filter((row) => (row?.vehicleTipus ?? row?.vcpe) === "SF") : [];
   if (!sfRows.length) return;
   try {
     await apiFetchJson("/api/searchers?action=sync-capital-calls", {
@@ -234,7 +235,7 @@ export function useDashboardData() {
                 tipus,
                 eur,
                 cat: row.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
-                est: normalizeCapitalCallStrategy(row.est, row.vcpe, row),
+                est: normalizeCapitalCallStrategy(row.est, row.vehicleTipus ?? row.vcpe ?? null, row),
               };
             })
           : null;
@@ -313,10 +314,10 @@ export function useDashboardData() {
   const actualCompanies = useMemo(() => (Array.isArray(companiesData) ? companiesData.filter(isActualCompany) : []), [companiesData]);
   const actualCompanyIds = useMemo(() => new Set(actualCompanies.map((company) => company.id).filter(Boolean)), [actualCompanies]);
 
-  const sfTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vcpe==="SF"),[TRANSACTIONS]);
-  const sfCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vcpe==="SF"),[COMPROMISOS]);
-  const pcTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vcpe==="PC"),[TRANSACTIONS]);
-  const pcCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vcpe==="PC"),[COMPROMISOS]);
+  const sfTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vehicleTipus==="SF"),[TRANSACTIONS]);
+  const sfCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vehicleTipus==="SF"),[COMPROMISOS]);
+  const pcTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vehicleTipus==="PC"),[TRANSACTIONS]);
+  const pcCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vehicleTipus==="PC"),[COMPROMISOS]);
   const searcherTx  = useMemo(()=>sfTx.filter((row) => !actualCompanyIds.has(row.id)),[sfTx, actualCompanyIds]);
   const searcherCompr = useMemo(()=>sfCompr.filter((row) => !actualCompanyIds.has(row.id)),[sfCompr, actualCompanyIds]);
   const { tx: reTx, compr: reCompr } = useMemo(() => splitRealEstateRows(rawCC), [rawCC]);
