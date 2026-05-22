@@ -130,7 +130,7 @@ function Dashboard() {
     const fons = defaults.fons ?? "";
     setCcAddModalDefaults({
       ...defaults,
-      est: defaults.est ?? defaultCapitalCallStrategyForVehicleTipus(defaults.vcpe ?? "PE"),
+      est: defaults.est ?? defaultCapitalCallStrategyForVehicleTipus(defaults.vehicleTipus ?? "PE"),
       divisa: defaults.divisa ?? defaultVehicleCurrency(fons),
     });
     setCcAddModalFons(fons);
@@ -193,7 +193,7 @@ function Dashboard() {
         rows: cc.map(r => ({
           "Fons": r.fons, "Tipus": r.tipus, "Categoria": r.cat,
           "Data": r.data, "Mes": r.mes, "Any": r.any, "FY": r.fy,
-          "VCPE": r.vcpe, "Estructura": r.est, "Import (€)": r.eur, "Divisa": r.divisa,
+          "VCPE": r.vehicleTipus, "Estructura": r.est, "Import (€)": r.eur, "Divisa": r.divisa,
           "Import Divisa": r.amountNative ?? "",
           "FX BCE": r.fxRate ?? "",
           "Font FX": r.fxSource ?? "",
@@ -275,13 +275,13 @@ function Dashboard() {
   const [expandedFons, setExpandedFons] = useState(new Set());
   const [ccChartF, setCcChartF] = useState(null);
 
-  const baseTx      = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.TRANSACTIONS,excluded]);
-  const baseCompr   = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.COMPROMISOS,excluded]);
+  const baseTx      = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vehicleTipus==="PE"||r.vehicleTipus==="VC")),[d.TRANSACTIONS,excluded]);
+  const baseCompr   = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vehicleTipus==="PE"||r.vehicleTipus==="VC")),[d.COMPROMISOS,excluded]);
   // Alternatives (Mercats Privats) should represent fund vehicles (PE/VC).
   // SF/PC have their own dedicated sections and including them here makes
   // "Compromis vs Capital Cridat" look almost fully utilized (misleading).
-  const allAltTx    = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.TRANSACTIONS,excluded]);
-  const allAltCompr = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.COMPROMISOS,excluded]);
+  const allAltTx    = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vehicleTipus==="PE"||r.vehicleTipus==="VC")),[d.TRANSACTIONS,excluded]);
+  const allAltCompr = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vehicleTipus==="PE"||r.vehicleTipus==="VC")),[d.COMPROMISOS,excluded]);
 
   // Company-like private markets rows (PC + active/unacquired SF searchers).
   const altCompanyTx = useMemo(
@@ -332,7 +332,7 @@ function Dashboard() {
   const filtered = useMemo(()=>{
     let dat=baseTx;
     if(fFy  !=="Tots") dat=dat.filter(r=>r.fy===fFy);
-    if(fVcpe.size>0) dat=dat.filter(r=>fVcpe.has(r.vcpe));
+    if(fVcpe.size>0) dat=dat.filter(r=>fVcpe.has(r.vehicleTipus));
     if(fEst !=="Tots") dat=dat.filter(r=>r.est===fEst);
     if(fTipus !=="Tots") dat=dat.filter(r=>r.tipus===fTipus);
     if(txSearch.trim()) {
@@ -372,7 +372,7 @@ function Dashboard() {
 
   const byVcpe = useMemo(()=>{
     const m={};
-    filtered.filter(r=>r.cat==="Capital Call").forEach(r=>{m[r.vcpe]=(m[r.vcpe]||0)+r.eur;});
+    filtered.filter(r=>r.cat==="Capital Call").forEach(r=>{m[r.vehicleTipus]=(m[r.vehicleTipus]||0)+r.eur;});
     const tot=Object.values(m).reduce((s,v)=>s+v,0);
     return Object.entries(m).map(([name,value])=>({name,value:+value.toFixed(0),pct:((value/tot)*100).toFixed(1)}));
   },[filtered]);
@@ -386,10 +386,10 @@ function Dashboard() {
 
   const FONS_MAP2 = useMemo(()=>{
     const m={};
-    baseCompr.forEach(r=>{m[r.id ?? r.fons]={id:r.id ?? null,fons:r.fons,compr:r.eur,vcpe:r.vcpe,est:r.est,calls:0,dist:0,retorn:0};});
+    baseCompr.forEach(r=>{m[r.id ?? r.fons]={id:r.id ?? null,fons:r.fons,compr:r.eur,vehicleTipus:r.vehicleTipus,est:r.est,calls:0,dist:0,retorn:0};});
     baseTx.forEach(r=>{
       const key = r.id ?? r.fons;
-      if(!m[key])m[key]={id:r.id ?? null,fons:r.fons,compr:0,vcpe:r.vcpe,est:r.est,calls:0,dist:0,retorn:0};
+      if(!m[key])m[key]={id:r.id ?? null,fons:r.fons,compr:0,vehicleTipus:r.vehicleTipus,est:r.est,calls:0,dist:0,retorn:0};
       if(r.cat==="Capital Call")   m[key].calls  +=r.eur;
       if(r.cat==="Distribució")    m[key].dist   +=Math.abs(r.eur);
       if(r.cat==="Retorn Capital") m[key].retorn +=Math.abs(r.eur);
@@ -400,10 +400,10 @@ function Dashboard() {
 
   const fonsFiltered = useMemo(()=>{
     let fl=[...FONS_MAP2];
-    if(fVcpe.size>0) fl=fl.filter(f=>fVcpe.has(f.vcpe));
+    if(fVcpe.size>0) fl=fl.filter(f=>fVcpe.has(f.vehicleTipus));
     if(fEst !=="Tots") fl=fl.filter(f=>f.est===fEst);
     if(ccChartF) {
-      if(ccChartF.type==="vcpe") fl=fl.filter(f=>f.vcpe===ccChartF.value);
+      if(ccChartF.type==="vcpe") fl=fl.filter(f=>f.vehicleTipus===ccChartF.value);
       if(ccChartF.type==="est")  fl=fl.filter(f=>f.est===ccChartF.value);
       if(ccChartF.type==="fy")   fl=fl.filter(f=>baseTx.filter(r=>r.fons===f.fons&&r.fy==="FY "+ccChartF.value&&r.cat==="Capital Call").length>0);
     }
@@ -417,7 +417,7 @@ function Dashboard() {
       if(sortFons==="retorn") return dir*(a.retorn-b.retorn);
       if(sortFons==="rebut")  return dir*((a.dist+a.retorn)-(b.dist+b.retorn));
       if(sortFons==="net")    return dir*(((a.dist+a.retorn)-a.calls)-((b.dist+b.retorn)-b.calls));
-      if(sortFons==="vcpe")   return dir*a.vcpe.localeCompare(b.vcpe);
+      if(sortFons==="vcpe")   return dir*(a.vehicleTipus ?? "").localeCompare(b.vehicleTipus ?? "");
       if(sortFons==="est")    return dir*a.est.localeCompare(b.est);
       return 0;
     });

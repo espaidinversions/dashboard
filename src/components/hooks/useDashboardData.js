@@ -68,7 +68,7 @@ async function prepareCapitalCallPayload(values, existingRow = null) {
 }
 
 async function syncSearchersFromCapitalCalls(rows) {
-  const sfRows = Array.isArray(rows) ? rows.filter((row) => (row?.vehicleTipus ?? row?.vcpe) === "SF") : [];
+  const sfRows = Array.isArray(rows) ? rows.filter((row) => row?.vehicleTipus === "SF") : [];
   if (!sfRows.length) return;
   try {
     await apiFetchJson("/api/searchers?action=sync-capital-calls", {
@@ -235,7 +235,7 @@ export function useDashboardData() {
                 tipus,
                 eur,
                 cat: row.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
-                est: normalizeCapitalCallStrategy(row.est, row.vehicleTipus ?? row.vcpe ?? null, row),
+                est: normalizeCapitalCallStrategy(row.est, row.vehicleTipus ?? null, row),
               };
             })
           : null;

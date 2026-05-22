@@ -42,7 +42,7 @@ export default function SearcherDetail() {
         const coreToken = normName.split(" ")[0];
         const ccAll = Array.isArray(cc) ? cc : [];
         const rows = ccAll
-          .filter(r => r.vcpe === "SF" && r.cat !== "Compromís")
+          .filter(r => r.vehicleTipus === "SF" && r.cat !== "Compromís")
           .filter(r => {
             const rNorm = normalizeSearcherName(r.fons);
             if (nif && String(r.id ?? "").trim() === nif) return true;

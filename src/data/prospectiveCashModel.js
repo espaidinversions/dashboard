@@ -27,7 +27,7 @@ const RE_FAMILY_PREFIXES = [
 const STATIC_RE_NAMES = (() => {
   const s = new Set();
   for (const row of STATIC_CC) {
-    if (String(row?.vcpe ?? "").trim() !== "RE") continue;
+    if (String(row?.vehicleTipus ?? "").trim() !== "RE") continue;
     const fund = String(row?.fons ?? "").trim();
     if (fund) {
       s.add(fund.toLowerCase());

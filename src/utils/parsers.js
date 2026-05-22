@@ -40,7 +40,7 @@ export function parseCapitalCallsCSV(text) {
   return parseCSVRows(text).map(r => ({
     fons: r.fons, tipus: r.tipus, cat: r.cat, data: r.data,
     mes: parseInt(r.mes, 10), any: parseInt(r.any, 10), fy: r.fy,
-    vcpe: r.vcpe, est: r.est, eur: parseFloat(r.eur), divisa: r.divisa,
+    vehicleTipus: r.vcpe, est: r.est, eur: parseFloat(r.eur), divisa: r.divisa,
   }));
 }
 
@@ -125,9 +125,9 @@ export function mergeCapitalCallRows(baseRows, extraRows) {
   const merged = [], seen = new Set(), coarseSeen = new Set();
   const add = (row) => {
     if (!row) return;
-    const coarseKey = [row.fons ?? "", row.data ?? "", Number(row.eur ?? 0), row.vcpe ?? ""].join("|");
+    const coarseKey = [row.fons ?? "", row.data ?? "", Number(row.eur ?? 0), row.vehicleTipus ?? ""].join("|");
     if (coarseSeen.has(coarseKey)) return;
-    const key = [row.fons ?? "", row.tipus ?? "", row.cat ?? "", row.data ?? "", Number(row.eur ?? 0), row.vcpe ?? ""].join("|");
+    const key = [row.fons ?? "", row.tipus ?? "", row.cat ?? "", row.data ?? "", Number(row.eur ?? 0), row.vehicleTipus ?? ""].join("|");
     if (seen.has(key)) return;
     coarseSeen.add(coarseKey); seen.add(key); merged.push(row);
   };

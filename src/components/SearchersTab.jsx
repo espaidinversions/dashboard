@@ -10,7 +10,6 @@ import { useAuth } from "../auth.jsx";
 import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { apiFetchJson } from "../apiClient.js";
-import * as XLSX from "xlsx";
 import { isSfBackedCompany } from "../data/privateCompanyModel.js";
 import {
   normalizeSearcherName,
@@ -72,7 +71,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const capitalCallsByNif = useMemo(() => {
     const map = new Map();
     (Array.isArray(capitalCalls) ? capitalCalls : []).forEach((row) => {
-      if (row?.vcpe !== "SF" || !row?.id) return;
+      if (row?.vehicleTipus !== "SF" || !row?.id) return;
       const date = String(row?.data ?? "").slice(0, 10);
       if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
       const current = map.get(row.id) ?? { firstCommitmentDate: null, firstCommitmentEur: null };
@@ -89,7 +88,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const capitalCallsBySearcher = useMemo(() => {
     const map = new Map();
     (Array.isArray(capitalCalls) ? capitalCalls : []).forEach((row) => {
-      if (row?.vcpe !== "SF") return;
+      if (row?.vehicleTipus !== "SF") return;
       const key = normalizeSearcherName(row?.fons);
       const date = String(row?.data ?? "").slice(0, 10);
       if (!key || !date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
@@ -359,12 +358,13 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
 
   const isMockNif = (nif) => !nif || String(nif).startsWith("MOCKNIF:");
 
-  const exportNifExcel = () => {
+  const exportNifExcel = async () => {
     const rows = historicData.filter(r => isMockNif(r.nif));
     if (!rows.length) {
       toast({ message: "Tots els searchers ja tenen NIF real." });
       return;
     }
+    const XLSX = await import("xlsx");
     const data = rows.map(r => ({
       id:          r.id ?? "",
       nom:         r.nom ?? "",
@@ -392,6 +392,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       try {
+        const XLSX = await import("xlsx");
         const wb = XLSX.read(ev.target.result, { type: "array" });
         const ws = wb.Sheets[wb.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });

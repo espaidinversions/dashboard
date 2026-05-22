@@ -1,5 +1,4 @@
 import React, { useState, useMemo, useEffect } from "react";
-import * as XLSX from "xlsx";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { fmtM, usePersistedState, readStoredJSON } from "../utils.js";
@@ -10,6 +9,7 @@ import { useAuth } from "../auth.jsx";
 import { insertPipelineDeal, deletePipelineDeal, upsertPipelineDeal, loadPipelineDeals } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { useCurrency } from "./hooks/useCurrency.js";
+import { normalizeCapitalCallStrategy } from "../data/capitalCallStrategyModel.js";
 
 const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
 function genMonthOpts(months = 36) {
@@ -23,6 +23,16 @@ function genMonthOpts(months = 36) {
 }
 const MONTHS_OPTS = genMonthOpts(36);
 
+function normalizePipelineStrategy(value) {
+  // Reuse the canonical strategy normalizer, but map to the pipeline's labels.
+  const canonical = normalizeCapitalCallStrategy(value, "PE", null);
+  if (canonical === "Fons Primari") return "Fons primari";
+  if (canonical === "Fons Secundari") return "Fons secundaris";
+  if (canonical === "Fons de Fons") return "Fons de fons";
+  if (canonical === "Fons de Coinversió") return "Coinversions";
+  return String(value ?? "").trim() || "";
+}
+
 // ══════════════════════════════════════════════════════════
 export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }) {
   const { rate, toEUR, toUSD } = useCurrency(eurUsd);
@@ -30,7 +40,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   const { canEditSection } = useAuth();
   const canEdit = canEditSection("fons");
   const { toast } = useToast();
-  const [funds,setFunds]   = useState(initialFunds);
+  const [funds,setFunds]   = useState(() => (initialFunds ?? []).map((d) => ({ ...d, strategy: normalizePipelineStrategy(d.strategy) })));
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,7 +48,11 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
     setLoading(true);
     loadPipelineDeals().then(data => {
       if (cancelled) return;
-      if (data) { setFunds(data); onDealsChange?.(data); }
+      if (data) {
+        const normalized = data.map((d) => ({ ...d, strategy: normalizePipelineStrategy(d.strategy) }));
+        setFunds(normalized);
+        onDealsChange?.(normalized);
+      }
       setLoading(false);
     });
     return () => { cancelled = true; };
@@ -46,7 +60,8 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
 
   const setFundsAndSync = (updater) => {
     setFunds(prev => {
-      const next = typeof updater === "function" ? updater(prev) : updater;
+      const rawNext = typeof updater === "function" ? updater(prev) : updater;
+      const next = (rawNext ?? []).map((d) => ({ ...d, strategy: normalizePipelineStrategy(d.strategy) }));
       onDealsChange?.(next);
       return next;
     });
@@ -138,11 +153,12 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   };
 
   const upd = async (id, field, val) => {
+    const normalizedVal = field === "strategy" ? normalizePipelineStrategy(val) : val;
     let updatedDeal = null;
     setFundsAndSync(p => {
       const next = p.map(f => {
         if (f.id !== id) return f;
-        updatedDeal = { ...f, [field]: val };
+        updatedDeal = { ...f, [field]: normalizedVal };
         return updatedDeal;
       });
       return next;
@@ -157,7 +173,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
     const deal = {
       name: nf.name, amount: parseFloat(nf.amount) || 0,
       currency: nf.currency, geography: nf.geography,
-      strategy: nf.strategy, sector: nf.sector,
+      strategy: normalizePipelineStrategy(nf.strategy), sector: nf.sector,
       status: nf.status, canal: nf.canal,
       manager: nf.manager || null,
       active: true, estimatedClosing: nf.estimatedClosing ?? null,
@@ -232,7 +248,8 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
 
   const t = ecTheme(TC);
 
-  const exportExcel = () => {
+  const exportExcel = async () => {
+    const XLSX = await import("xlsx");
     const rows = funds.map(f => ({
       "Nom":              f.name,
       "Gestor":           f.manager || "",

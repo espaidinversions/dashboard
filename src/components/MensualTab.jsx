@@ -48,7 +48,7 @@ export function MensualTab({filtered, fFy}) {
     Object.keys(mesMap).forEach(key => {
       const fm = {};
       mesMap[key].txs.forEach(r => {
-        if (!fm[r.fons]) fm[r.fons] = {fons:r.fons, vcpe:r.vcpe, est:r.est, calls:0, dist:0, retorn:0, txs:[]};
+        if (!fm[r.fons]) fm[r.fons] = {fons:r.fons, vehicleTipus:r.vehicleTipus, est:r.est, calls:0, dist:0, retorn:0, txs:[]};
         if (r.cat==="Capital Call")   fm[r.fons].calls  += r.eur;
         if (r.cat==="Distribució")    fm[r.fons].dist   += Math.abs(r.eur);
         if (r.cat==="Retorn Capital") fm[r.fons].retorn += Math.abs(r.eur);

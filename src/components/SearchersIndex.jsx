@@ -280,7 +280,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   const transactionRows = useMemo(() => {
     const q = search.toLowerCase();
     return (Array.isArray(rawCC) ? rawCC : [])
-      .filter((row) => row?.vcpe === "SF" && row?.cat !== "Compromís" && !actualCompanyIds.has(row?.id))
+      .filter((row) => row?.vehicleTipus === "SF" && row?.cat !== "Compromís" && !actualCompanyIds.has(row?.id))
       .filter((row) => belongsToTrackedSearcher(row))
       .filter((row) => (
         !q ||
@@ -293,7 +293,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
 
   const commitmentRows = useMemo(
     () => (Array.isArray(rawCC) ? rawCC : [])
-      .filter((row) => row?.vcpe === "SF" && row?.cat === "Compromís" && !actualCompanyIds.has(row?.id))
+      .filter((row) => row?.vehicleTipus === "SF" && row?.cat === "Compromís" && !actualCompanyIds.has(row?.id))
       .filter((row) => belongsToTrackedSearcher(row)),
     [actualCompanyIds, rawCC, trackedSearcherIds, trackedSearcherNames]
   );

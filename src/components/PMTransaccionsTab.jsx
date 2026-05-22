@@ -23,11 +23,15 @@ const CUSTODIANS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan",
 
 const EMPTY_FILTERS = { date: "", nom: "", tipus: "Tots", action: "Tots", units: "", nav: "", value: "", custodian: "" };
 
-export function PMTransaccionsTab() {
+const TX_PP = 25;
+
+export function PMTransaccionsTab({ search = "" }) {
   const { tc, dark } = useTheme();
   const [filters,   setFilters]   = useState(EMPTY_FILTERS);
   const [showModal, setShowModal] = useState(false);
   const [manualTxs, setManualTxs] = useState([]);
+  const [sort,      setSort]      = useState({ k: "date", d: "desc" });
+  const [page,      setPage]      = useState(0);
 
   useEffect(() => {
     loadPMOverrides().then(data => {
@@ -46,7 +50,9 @@ export function PMTransaccionsTab() {
   [allTxs]);
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return allTxs.filter(t => {
+      if (q && !String(t.nom ?? t.isin ?? "").toLowerCase().includes(q)) return false;
       if (filters.date     && !String(t.date ?? "").includes(filters.date)) return false;
       if (filters.nom      && !String(t.nom ?? t.isin ?? "").toLowerCase().includes(filters.nom.toLowerCase())) return false;
       if (filters.tipus    !== "Tots" && t.tipus !== filters.tipus) return false;
@@ -57,14 +63,38 @@ export function PMTransaccionsTab() {
       if (filters.custodian && !String(t.custodian ?? "").toLowerCase().includes(filters.custodian.toLowerCase())) return false;
       return true;
     });
-  }, [allTxs, filters]);
+  }, [allTxs, filters, search]);
 
-  const hasActiveFilters = Object.entries(filters).some(([k, v]) => v !== "" && v !== "Tots");
+  const sorted = useMemo(() => [...filtered].sort((a, b) => {
+    const av = a?.[sort.k] ?? "";
+    const bv = b?.[sort.k] ?? "";
+    if (typeof av === "number" || typeof bv === "number") {
+      return sort.d === "asc" ? Number(av) - Number(bv) : Number(bv) - Number(av);
+    }
+    return sort.d === "asc"
+      ? String(av).localeCompare(String(bv))
+      : String(bv).localeCompare(String(av));
+  }), [filtered, sort]);
+
+  const pageCount   = Math.max(1, Math.ceil(sorted.length / TX_PP));
+  const currentPage = Math.min(page, pageCount - 1);
+  const pagedRows   = sorted.slice(currentPage * TX_PP, (currentPage + 1) * TX_PP);
+
+  useEffect(() => { setPage(0); }, [search, sort, filters]);
+  useEffect(() => { if (page > pageCount - 1) setPage(Math.max(0, pageCount - 1)); }, [page, pageCount]);
+
+  const hasActiveFilters = Object.entries(filters).some(([, v]) => v !== "" && v !== "Tots");
 
   const totalBuys  = filtered.filter(t => t.action === "buy").reduce((s, t)  => s + (t.valueEur ?? 0), 0);
   const totalSells = filtered.filter(t => t.action === "sell").reduce((s, t) => s + (t.valueEur ?? 0), 0);
+  const netFlow    = totalBuys - totalSells;
 
-  // Bar chart
+  const cards = [
+    { label: "Compres",    value: fmtM(totalBuys),  accent: tc.navy  },
+    { label: "Vendes",     value: fmtM(totalSells), accent: tc.green },
+    { label: "Balanç Net", value: `${netFlow >= 0 ? "+" : ""}${fmtM(netFlow)}`, accent: netFlow >= 0 ? tc.navyLight : tc.green },
+  ];
+
   const chartData = useMemo(() => {
     const map = new Map();
     allTxs.forEach(t => {
@@ -79,23 +109,29 @@ export function PMTransaccionsTab() {
   }, [allTxs]);
 
   const setF = (k, v) => setFilters(f => ({ ...f, [k]: v }));
+  const toggleSort = (k) => setSort(prev => prev.k === k ? { k, d: prev.d === "desc" ? "asc" : "desc" } : { k, d: "desc" });
+  const Arr = ({ k }) => (
+    <span style={{ marginLeft: 3, opacity: sort.k === k ? 1 : 0.25, fontSize: 9 }}>
+      {sort.k === k && sort.d === "asc" ? "▲" : "▼"}
+    </span>
+  );
 
   const inputStyle = {
     width: "100%", padding: "4px 6px", borderRadius: 4,
     border: `1px solid ${tc.border}`, background: tc.bg,
     color: tc.text, fontSize: 11, fontFamily: "inherit",
   };
-  const th = {
-    padding: "9px 10px", fontSize: 10, letterSpacing: "0.09em", color: tc.textLight,
-    textTransform: "uppercase", fontWeight: 600, textAlign: "left",
-    borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap",
+  const thStyle = {
+    padding: "8px 10px", fontSize: 10, letterSpacing: "0.09em", color: tc.textLight,
+    textTransform: "uppercase", fontWeight: 600, whiteSpace: "nowrap",
+    userSelect: "none", cursor: "pointer", borderBottom: `2px solid ${tc.border}`,
   };
 
   return (
-    <>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {/* Bar chart */}
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10,
-        padding: "18px 20px", marginBottom: 16, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
+        padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
         <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight,
           textTransform: "uppercase", marginBottom: 14, fontWeight: 600 }}>
           Flux Mensual · Mercats Públics
@@ -132,9 +168,22 @@ export function PMTransaccionsTab() {
         })()}
       </div>
 
-      {/* Flat table */}
+      {/* KPI cards */}
+      <div className="grid-4" style={{ gap: 12 }}>
+        {cards.map(card => (
+          <div key={card.label} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10,
+            padding: "14px 18px", borderTop: `3px solid ${card.accent}`, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+            <div style={{ fontSize: 11, letterSpacing: "0.06em", color: tc.textLight,
+              textTransform: "uppercase", marginBottom: 4, fontWeight: 600 }}>{card.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: card.accent,
+              fontFamily: "'DM Mono',monospace" }}>{card.value}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Table */}
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10,
-        boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+        padding: "18px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
 
         {showModal && (
           <NovaTxModal tc={tc} dark={dark}
@@ -143,37 +192,46 @@ export function PMTransaccionsTab() {
         )}
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap",
-          padding: "14px 20px 12px", borderBottom: `1px solid ${tc.border}` }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight,
-            textTransform: "uppercase", fontWeight: 600, flex: 1 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+          marginBottom: 14, gap: 12 }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.11em",
+            textTransform: "uppercase", color: tc.textLight }}>
             Transaccions Mercats Públics
           </div>
-          <div style={{ fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textMid }}>
-            {filtered.length} op.
-            {totalBuys  > 0 && <span style={{ marginLeft: 10, color: tc.navy  }}>Compres {fmtM(totalBuys)}</span>}
-            {totalSells > 0 && <span style={{ marginLeft: 10, color: tc.green }}>Vendes {fmtM(totalSells)}</span>}
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {hasActiveFilters && (
+              <button onClick={() => setFilters(EMPTY_FILTERS)}
+                style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 4,
+                  padding: "2px 8px", cursor: "pointer", fontSize: 10, color: tc.textMid, fontFamily: "inherit" }}>
+                netejar
+              </button>
+            )}
+            <button onClick={() => setShowModal(true)} style={{
+              padding: "5px 14px", borderRadius: 6, fontSize: 12, cursor: "pointer", fontFamily: "inherit",
+              border: `1.5px solid ${tc.green}`, background: dark ? "#0A2010" : "#E8F8E8",
+              color: tc.green, fontWeight: 700,
+            }}>＋ Nova transacció</button>
           </div>
-          {hasActiveFilters && (
-            <button onClick={() => setFilters(EMPTY_FILTERS)}
-              style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 4,
-                padding: "2px 8px", cursor: "pointer", fontSize: 10, color: tc.textMid, fontFamily: "inherit" }}>
-              netejar
-            </button>
-          )}
-          <button onClick={() => setShowModal(true)} style={{
-            padding: "4px 12px", borderRadius: 20, fontSize: 11, cursor: "pointer", fontFamily: "inherit",
-            border: `1.5px solid ${tc.green}`, background: dark ? "#0A2010" : "#E8F8E8",
-            color: tc.green, fontWeight: 700,
-          }}>+ Nova</button>
         </div>
 
         <div style={{ overflowX: "auto" }}>
           <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%", minWidth: 720 }}>
             <thead>
               <tr style={{ background: tc.bgAlt }}>
-                {["Data", "Nom", "Tipus", "Acció", "Units", "NAV", "Valor EUR", "Custodi"].map(l => (
-                  <th key={l} style={{ ...th, textAlign: ["Units","NAV","Valor EUR"].includes(l) ? "right" : "left" }}>{l}</th>
+                {[
+                  { label: "Data",      k: "date",     align: "left"  },
+                  { label: "Nom",       k: "nom",      align: "left"  },
+                  { label: "Tipus",     k: "tipus",    align: "left"  },
+                  { label: "Acció",     k: "action",   align: "left"  },
+                  { label: "Units",     k: "units",    align: "right" },
+                  { label: "NAV",       k: "nav",      align: "right" },
+                  { label: "Valor EUR", k: "valueEur", align: "right" },
+                  { label: "Custodi",   k: "custodian",align: "left"  },
+                ].map(col => (
+                  <th key={col.k} onClick={() => toggleSort(col.k)}
+                    style={{ ...thStyle, textAlign: col.align }}>
+                    {col.label}<Arr k={col.k} />
+                  </th>
                 ))}
               </tr>
               <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
@@ -211,7 +269,7 @@ export function PMTransaccionsTab() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map((t, i) => {
+              {pagedRows.map((t, i) => {
                 const isBuy = t.action === "buy";
                 const rowBg = i % 2 === 0 ? (dark ? tc.card : "#fff") : (dark ? tc.bgAlt : "#FAFBFC");
                 return (
@@ -257,7 +315,7 @@ export function PMTransaccionsTab() {
                   </tr>
                 );
               })}
-              {filtered.length === 0 && (
+              {pagedRows.length === 0 && (
                 <tr>
                   <td colSpan={8} style={{ padding: "32px", textAlign: "center", color: tc.textLight, fontSize: 12 }}>
                     Cap transacció trobada
@@ -268,11 +326,30 @@ export function PMTransaccionsTab() {
           </table>
         </div>
 
-        <div style={{ fontSize: 10, color: tc.textLight, padding: "10px 20px", fontStyle: "italic", borderTop: `1px solid ${tc.border}` }}>
-          {filtered.length} de {allTxs.length} transaccions{manualTxs.length > 0 ? ` · ${manualTxs.length} manuals` : ""}. Dates de venda aproximades a 31/12 de l'any de tancament.
+        {/* Footer: count + pagination */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+          marginTop: 10, paddingTop: 10, borderTop: `1px solid ${tc.border}` }}>
+          <div style={{ fontSize: 10, color: tc.textLight, fontStyle: "italic" }}>
+            {filtered.length} de {allTxs.length} transaccions{manualTxs.length > 0 ? ` · ${manualTxs.length} manuals` : ""}. Dates de venda aproximades a 31/12.
+          </div>
+          {pageCount > 1 && (
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={currentPage === 0}
+                style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${tc.border}`,
+                  background: "transparent", color: tc.textMid, cursor: currentPage === 0 ? "default" : "pointer",
+                  fontSize: 11, fontFamily: "inherit", opacity: currentPage === 0 ? 0.4 : 1 }}>‹</button>
+              <span style={{ fontSize: 11, color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>
+                {currentPage + 1} / {pageCount}
+              </span>
+              <button onClick={() => setPage(p => Math.min(pageCount - 1, p + 1))} disabled={currentPage === pageCount - 1}
+                style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${tc.border}`,
+                  background: "transparent", color: tc.textMid, cursor: currentPage === pageCount - 1 ? "default" : "pointer",
+                  fontSize: 11, fontFamily: "inherit", opacity: currentPage === pageCount - 1 ? 0.4 : 1 }}>›</button>
+            </div>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
 

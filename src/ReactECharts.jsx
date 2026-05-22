@@ -1,19 +1,35 @@
-import ReactEChartsCoreModule from "echarts-for-react/lib/core.js";
-import { echarts } from "./echarts.js";
+import { useState, useEffect } from "react";
 
-function resolveReactComponent(mod) {
-  let current = mod;
-  while (current && typeof current === "object" && "default" in current) {
-    current = current.default;
-  }
-  return current;
+let _module = null;
+let _pending = null;
+
+function loadModule() {
+  if (_module) return Promise.resolve(_module);
+  if (_pending) return _pending;
+  _pending = Promise.all([
+    import("echarts-for-react/lib/core.js"),
+    import("./echarts.js"),
+  ]).then(([coreRaw, ecRaw]) => {
+    let core = coreRaw;
+    while (core && typeof core === "object" && "default" in core) core = core.default;
+    _module = { Component: core, echarts: ecRaw.echarts };
+    _pending = null;
+    return _module;
+  });
+  return _pending;
 }
 
-const ReactEChartsCore = resolveReactComponent(ReactEChartsCoreModule);
+export default function BoundReactECharts({ style, ...props }) {
+  const [mod, setMod] = useState(_module);
 
-export default function BoundReactECharts(props) {
-  if (typeof ReactEChartsCore !== "function") {
-    throw new Error("echarts-for-react did not resolve to a React component");
+  useEffect(() => {
+    if (!mod) {
+      loadModule().then(setMod);
+    }
+  }, []);
+
+  if (!mod) {
+    return <div style={{ height: style?.height ?? 200, ...style }} />;
   }
-  return <ReactEChartsCore echarts={echarts} {...props} />;
+  return <mod.Component echarts={mod.echarts} style={style} {...props} />;
 }

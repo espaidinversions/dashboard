@@ -149,9 +149,9 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
   const rows = useMemo(() => {
     const map = new Map();
     const vcpeSet = vcpeTypes ?? ["PE", "VC", "RE"];
-    for (const r of rawCC.filter((row) => vcpeSet.includes(row?.vcpe) && !(excludeIds?.has(row?.id)))) {
+    for (const r of rawCC.filter((row) => vcpeSet.includes(row?.vehicleTipus) && !(excludeIds?.has(row?.id)))) {
       const key = makeFundRouteId(r);
-      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, year: null, isMock: !!r.isMock });
+      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vehicleTipus: r.vehicleTipus, est: r.est, compromis: 0, calls: 0, dist: 0, year: null, isMock: !!r.isMock });
       const f = map.get(key);
       if (r.cat === "Compromís") {
         f.compromis += r.eur;

@@ -3,8 +3,11 @@ import { Link } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
+import { usePersistedState } from "../utils.js";
 import { fetchProspectiveCashForecasts, saveProspectiveCashForecasts, fetchCommittedOverrides, saveCommittedOverrides } from "../db.js";
 import { makeFundRouteId } from "../data/fundDetailModel.js";
+import { FUND_NAME_MAP } from "../data/fundNameMap.js";
+import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
 import {
   PROSPECTIVE_CASH_USD_FUNDS,
   buildReFundMatcher,
@@ -13,8 +16,13 @@ import {
   forecastRowsToEditorData,
 } from "../data/prospectiveCashModel.js";
 
+const EXCLUDED_CASH_MODEL_TIPUS = new Set([
+  "Transferència Participacions",
+  "Conversió Participacions",
+]);
+
 const MODES = [
-  { id: "calls", label: "Capital Calls" },
+  { id: "calls", label: "Aportacions" },
   { id: "dist", label: "Distribucions" },
   { id: "net", label: "Net CF" },
 ];
@@ -37,19 +45,21 @@ function modeValue(row, mode) {
   return { model: row.md - row.mc, real: row.rd - row.rc };
 }
 
-function fmtK(value, digits = 1) {
+function fmtK(value, digits = null) {
   const n = Number(value);
   if (!Number.isFinite(n)) return "--";
   const a = Math.abs(n);
-  if (a >= 1e6) return `${(n / 1e6).toFixed(digits)}M€`;
-  if (a >= 1e3) return `${(n / 1e3).toFixed(digits)}K€`;
+  const dM = digits == null ? 0 : digits;
+  const dK = digits == null ? 0 : digits;
+  if (a >= 1e6) return `${(n / 1e6).toFixed(dM)}M€`;
+  if (a >= 1e3) return `${(n / 1e3).toFixed(dK)}K€`;
   return `${n.toFixed(0)}€`;
 }
 
 function fmtC(value) {
   const n = Number(value) || 0;
   if (!n) return "";
-  return fmtK(n, Math.abs(n) >= 1e6 ? 1 : 0);
+  return fmtK(n, 0);
 }
 
 function pct(real, model) {
@@ -85,10 +95,10 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   const [fetchError, setFetchError] = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [saving, setSaving] = useState(false);
-  const cashData = useMemo(() => deriveProspectiveCashRows(editorData, rawCapitalCalls), [editorData, rawCapitalCalls]);
+  const [entityScope, setEntityScope] = usePersistedState("ui_cash_model_scope", "funds"); // "funds" | "companies"
   const [view, setView] = useState("dashboard");
-  const [mode, setMode] = useState("calls");
-  const [tableType, setTableType] = useState("calls");
+  const [mode, setMode] = useState("net");
+  const [tableType, setTableType] = useState("net");
   const [fund, setFund] = useState("all");
   const [periods, setPeriods] = useState({ closed: true, current: true, fwd: true });
   const [yearFilters, setYearFilters] = useState(new Set());
@@ -100,6 +110,77 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   const [dirty, setDirty] = useState(false);
   const [editorInputMode, setEditorInputMode] = useState("eur"); // "eur" | "pct"
   const [committedOverrides, setCommittedOverrides] = useState({});
+
+  const entityText = useMemo(() => {
+    if (entityScope === "companies") {
+      return {
+        singular: "companyia",
+        plural: "companyies",
+        selectLabel: "Companyies",
+        allLabel: "Totes les companyies",
+        searchPlaceholder: "Cercar companyia...",
+      };
+    }
+    return {
+      singular: "fons",
+      plural: "fons",
+      selectLabel: "Fons",
+      allLabel: "Tots els fons",
+      searchPlaceholder: "Cercar fons...",
+    };
+  }, [entityScope]);
+
+  const kindByNameLower = useMemo(() => {
+    const map = {};
+    const rows = Array.isArray(rawCapitalCalls) ? rawCapitalCalls : [];
+    for (const row of rows) {
+      const rawFund = String(row?.fons ?? "").trim();
+      const canonical = FUND_NAME_MAP[rawFund] ?? rawFund;
+      const key = canonical.trim().toLowerCase();
+      if (!key) continue;
+      const vcpe = String(row?.vehicleTipus ?? "").trim();
+      const isCompany = vcpe === "PC" || vcpe === "SF";
+      if (isCompany) map[key] = "companies";
+      else if (!map[key]) map[key] = "funds";
+    }
+    return map;
+  }, [rawCapitalCalls]);
+
+  const scopedActualRows = useMemo(() => {
+    const rows = Array.isArray(rawCapitalCalls) ? rawCapitalCalls : [];
+    return rows.filter((row) => {
+      const vcpe = String(row?.vehicleTipus ?? "").trim();
+      const isCompany = vcpe === "PC" || vcpe === "SF";
+      return entityScope === "companies" ? isCompany : !isCompany;
+    });
+  }, [entityScope, rawCapitalCalls]);
+
+  const scopedEditorData = useMemo(() => {
+    const srcFunds = editorData?.funds && typeof editorData.funds === "object" ? editorData.funds : {};
+    const funds = {};
+    for (const [name, data] of Object.entries(srcFunds)) {
+      const kind = kindByNameLower[String(name ?? "").trim().toLowerCase()] ?? "funds";
+      if (entityScope === "companies") {
+        if (kind !== "companies") continue;
+      } else {
+        if (kind === "companies") continue;
+      }
+      funds[name] = data;
+    }
+    return { ...editorData, funds };
+  }, [editorData, entityScope, kindByNameLower]);
+
+  const cashData = useMemo(() => deriveProspectiveCashRows(scopedEditorData, scopedActualRows), [scopedActualRows, scopedEditorData]);
+
+  const mergedCommitted = useMemo(() => {
+    const out = { ...(cashData.committed ?? {}) };
+    for (const [k, v] of Object.entries(committedOverrides ?? {})) {
+      const num = Number(v);
+      if (Number.isFinite(num) && num > 0) out[k] = num;
+      else delete out[k]; // null/0/NaN clears override and falls back to computed committed
+    }
+    return out;
+  }, [cashData.committed, committedOverrides]);
 
   useEffect(() => {
     let cancelled = false;
@@ -123,6 +204,11 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   const fundOptions = useMemo(() => (
     [...new Set(cashData.rows.map((row) => row.fund))].sort((a, b) => a.localeCompare(b))
   ), [cashData.rows]);
+
+  useEffect(() => {
+    if (fund === "all") return;
+    if (!fundOptions.includes(fund)) setFund("all");
+  }, [entityScope, fund, fundOptions]);
 
   const periodEnabled = useCallback((year) => periods[periodOf(year)], [periods]);
   const visibleRows = useMemo(() => (
@@ -165,6 +251,29 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     };
   }, [mode, visibleRows, yearAgg]);
 
+  const coverage = useMemo(() => {
+    const byFund = new Map();
+    for (const row of visibleRows) {
+      const cur = byFund.get(row.fund) ?? { model: 0, real: 0 };
+      cur.model += Number(row.model) || 0;
+      cur.real += Number(row.real) || 0;
+      byFund.set(row.fund, cur);
+    }
+    let modeled = 0;
+    let unmodeled = 0;
+    for (const v of byFund.values()) {
+      if (!v.real) continue;
+      if (!v.model) unmodeled += 1;
+      else modeled += 1;
+    }
+    return {
+      modeled,
+      unmodeled,
+      total: modeled + unmodeled,
+      pct: modeled + unmodeled ? (modeled / (modeled + unmodeled)) * 100 : null,
+    };
+  }, [visibleRows]);
+
   const paidInByFund = useMemo(() => {
     const map = {};
     cashData.rows.forEach((row) => {
@@ -173,10 +282,34 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     return map;
   }, [cashData.rows]);
 
-  const mergedCommitted = useMemo(
-    () => ({ ...cashData.committed, ...committedOverrides }),
-    [cashData.committed, committedOverrides],
-  );
+  const capitalSummary = useMemo(() => {
+    const fundsInView = new Set(visibleRows.map((row) => row.fund));
+    let committed = 0;
+    for (const f of fundsInView) committed += Number(mergedCommitted?.[f] ?? 0) || 0;
+    const called = Number(kpis.totalCalls) || 0;
+    const pending = committed > 0 ? Math.max(committed - called, 0) : 0;
+    const utilPct = committed > 0 ? (called / committed) * 100 : null;
+    return { committed, called, pending, utilPct };
+  }, [kpis.totalCalls, mergedCommitted, visibleRows]);
+
+  // NOTE: mergedCommitted defined above (clears null/0 overrides).
+  const entityMetaByName = useMemo(() => {
+    const map = {};
+    if (Array.isArray(rawCapitalCalls)) {
+      rawCapitalCalls.forEach((row) => {
+        if (!row?.fons) return;
+        const raw = String(row.fons);
+        const canonical = FUND_NAME_MAP[raw] ?? raw;
+        const vehicleTipus = row?.vehicleTipus ? String(row.vehicleTipus) : null;
+        const id = row?.id ? String(row.id) : null;
+        if (id && vehicleTipus) {
+          if (!map[raw]) map[raw] = { id, vehicleTipus };
+          if (!map[canonical]) map[canonical] = { id, vehicleTipus };
+        }
+      });
+    }
+    return map;
+  }, [rawCapitalCalls]);
 
   const periodBanner = useMemo(() => {
     const totals = {
@@ -202,18 +335,91 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   }, [cashData.rows, fund, mode]);
 
   const table = useMemo(() => buildTable({
-    rows: cashData.rows,
-    committed: cashData.committed,
-    firstCall: cashData.firstCall,
-    fund,
-    tableType,
-    visibleYears,
-    yearFilters,
-    vintageFilter,
-    sort,
-  }), [cashData, fund, sort, tableType, visibleYears, vintageFilter, yearFilters]);
+     rows: cashData.rows,
+     committed: mergedCommitted,
+     firstCall: cashData.firstCall,
+     fund,
+     tableType,
+     visibleYears,
+     yearFilters,
+     vintageFilter,
+     sort,
+  }), [cashData.rows, cashData.firstCall, fund, mergedCommitted, sort, tableType, visibleYears, vintageFilter, yearFilters]);
 
   const isReFund = useMemo(() => buildReFundMatcher(rawCapitalCalls), [rawCapitalCalls]);
+
+  // Add funds that have real flows but no forecast rows yet so they show up as "unmodeled"
+  // and can be modeled without first seeding the forecast table manually.
+  useEffect(() => {
+    if (loading || dirty) return;
+    if (!Array.isArray(rawCapitalCalls) || rawCapitalCalls.length === 0) return;
+
+    const flowCats = new Set(["Capital Call", "Distribució", "Retorn Capital"]);
+    const actualYears = [];
+    const fundToVehicleId = {};
+    for (const row of rawCapitalCalls) {
+      const rawFund = String(row?.fons ?? "").trim();
+      const fund = FUND_NAME_MAP[rawFund] ?? rawFund;
+      if (!fund || isReFund(rawFund) || isReFund(fund)) continue;
+      if (!flowCats.has(String(row?.cat ?? "").trim())) continue;
+      const concept = normalizeCapitalCallTipus(row?.tipus);
+      if (EXCLUDED_CASH_MODEL_TIPUS.has(concept)) continue;
+      // Keep "unmodeled actuals" consistent with the cash model: calls are Aportació-only.
+      // If tipus is missing/null but cat is Capital Call, treat it as Aportació for coverage.
+      if (String(row?.cat ?? "").trim() === "Capital Call" && concept != null && concept !== "Aportació") continue;
+      if (!fundToVehicleId[fund] && row?.id) fundToVehicleId[fund] = row.id;
+      const y = Number(row?.any ?? row?.year);
+      if (Number.isFinite(y) && y > 0) actualYears.push(y);
+    }
+    const fundsWithActuals = Object.keys(fundToVehicleId);
+    if (fundsWithActuals.length === 0) return;
+
+    const minActual = actualYears.length ? Math.min(...actualYears) : null;
+    const maxActual = actualYears.length ? Math.max(...actualYears) : null;
+
+    setEditorData((current) => {
+      let didChange = false;
+      const nextFunds = { ...(current.funds ?? {}) };
+      for (const fund of fundsWithActuals) {
+        if (!nextFunds[fund]) {
+          nextFunds[fund] = { model_calls: {}, model_dist: {} };
+          didChange = true;
+        }
+      }
+
+      let nextYears = Array.isArray(current.years) ? [...current.years] : [];
+      if (minActual != null && maxActual != null) {
+        const minExisting = nextYears.length ? Math.min(...nextYears) : Infinity;
+        const maxExisting = nextYears.length ? Math.max(...nextYears) : -Infinity;
+        const min = Math.min(minExisting, minActual);
+        const max = Math.max(maxExisting, maxActual);
+        if (min !== Infinity && max !== -Infinity) {
+          const desired = Array.from({ length: (max + 3) - min + 1 }, (_, i) => min + i);
+          if (desired.length !== nextYears.length || desired[0] !== nextYears[0] || desired.at(-1) !== nextYears.at(-1)) {
+            nextYears = desired;
+            didChange = true;
+          }
+        }
+      }
+
+      const next = didChange ? { ...current, years: nextYears, funds: nextFunds } : current;
+      if (didChange) fetchedRef.current = next;
+      return next;
+    });
+
+    setVehicleIds((current) => {
+      let changed = false;
+      const next = { ...(current ?? {}) };
+      for (const [fund, vehicleId] of Object.entries(fundToVehicleId)) {
+        if (!next[fund] && vehicleId) {
+          next[fund] = vehicleId;
+          changed = true;
+        }
+      }
+      return changed ? next : current;
+    });
+
+  }, [dirty, isReFund, loading, rawCapitalCalls]);
 
   // Map fund canonical name → proper route ID (vcpe:id or slugified fons) for FundDetail links.
   // Built from rawCapitalCalls so the format matches what FundDetail expects.
@@ -222,19 +428,21 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     if (Array.isArray(rawCapitalCalls)) {
       rawCapitalCalls.forEach((row) => {
         if (!row?.fons) return;
-        const key = String(row.fons);
-        if (!map[key]) map[key] = makeFundRouteId(row);
+        const raw = String(row.fons);
+        const canonical = FUND_NAME_MAP[raw] ?? raw;
+        if (!map[raw]) map[raw] = makeFundRouteId(row);
+        if (!map[canonical]) map[canonical] = makeFundRouteId(row);
       });
     }
     return map;
   }, [rawCapitalCalls]);
 
   const editorFundNames = useMemo(() => (
-    Object.keys(editorData.funds)
+    Object.keys(scopedEditorData.funds)
       .filter((name) => !isReFund(name))
       .filter((name) => !editorSearch || name.toLowerCase().includes(editorSearch.toLowerCase()))
       .sort((a, b) => a.localeCompare(b))
-  ), [editorData.funds, editorSearch, isReFund]);
+  ), [editorSearch, isReFund, scopedEditorData.funds]);
 
   const saveAndApply = useCallback(async () => {
     setSaving(true);
@@ -266,7 +474,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
 
   const updateCommittedOverride = useCallback((fundName, value) => {
     const num = Number(value) || 0;
-    setCommittedOverrides((prev) => ({ ...prev, [fundName]: num || undefined }));
+    setCommittedOverrides((prev) => ({ ...prev, [fundName]: num > 0 ? num : null }));
     setDirty(true);
   }, []);
 
@@ -287,7 +495,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   }, [editorData, editorType]);
 
   const text = {
-    model: mode === "calls" ? "Capital Calls" : mode === "dist" ? "Distribucions" : "Net Cash Flow",
+    model: mode === "calls" ? "Aportacions" : mode === "dist" ? "Distribucions" : "Net Cash Flow",
     table: tableType === "calls" ? "Calls" : tableType === "dist" ? "Distribucions" : "Net CF",
   };
 
@@ -333,6 +541,16 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
       {view === "dashboard" ? (
         <>
           <Toolbar tc={tc}>
+            <ToolbarLabel tc={tc}>Entitats</ToolbarLabel>
+            <Segmented
+              tc={tc}
+              value={entityScope}
+              onChange={setEntityScope}
+              options={[
+                { id: "funds", label: "Fons" },
+                { id: "companies", label: "Companyies" },
+              ]}
+            />
             <ToolbarLabel tc={tc}>Vista</ToolbarLabel>
             <Segmented tc={tc} value={mode} onChange={setMode} options={MODES} />
             <ToolbarLabel tc={tc}>Periodes</ToolbarLabel>
@@ -346,75 +564,99 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
                 onClick={() => setPeriods((current) => ({ ...current, [period.id]: !current[period.id] }))}
               />
             ))}
-            <ToolbarLabel tc={tc}>Fons</ToolbarLabel>
+            <ToolbarLabel tc={tc}>{entityText.selectLabel}</ToolbarLabel>
             <select value={fund} onChange={(event) => setFund(event.target.value)} style={selectStyle(tc)}>
-              <option value="all">Tots els fons</option>
+              <option value="all">{entityText.allLabel}</option>
               {fundOptions.map((name) => <option key={name} value={name}>{name}</option>)}
             </select>
           </Toolbar>
 
-          <div className="grid-3" style={{ gap: 10 }}>
-            {periodBanner.map((period) => (
-              <div key={period.id} style={periodCardStyle(tc, period.color, periods[period.id])}>
-                <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: "0.07em", color: colorFor(tc, period.color), fontWeight: 700 }}>{period.label}</div>
-                <div style={{ fontSize: 16, fontWeight: 750, color: tc.text, marginTop: 6 }}>Real: {fmtK(period.real)}</div>
-                <div style={{ fontSize: 11, color: tc.textLight, marginTop: 3 }}>
-                  Model: {fmtK(period.model)} | Dev: <span style={{ color: period.diff >= 0 ? tc.green : tc.red }}>{signed(period.diff)}</span> ({pct(period.real, period.model)})
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "stretch" }}>
+            <div style={{ flex: 1, minWidth: 560 }}>
+              <div className="grid-4" style={{ gap: 10 }}>
+                <Kpi tc={tc} label="Compromis" value={fmtK(capitalSummary.committed)} color={tc.navy} />
+                <Kpi tc={tc} label="Capital cridat" value={fmtK(capitalSummary.called)} color={tc.navyDark} sub="Aportacions (real)" />
+                <Kpi tc={tc} label="Pendent de cridar" value={fmtK(capitalSummary.pending)} color={capitalSummary.pending > 0 ? tc.warning : tc.textLight} />
+                <Kpi tc={tc} label="% utilitzat" value={capitalSummary.utilPct == null ? "--" : `${capitalSummary.utilPct.toFixed(1)}%`} color={capitalSummary.utilPct != null && capitalSummary.utilPct >= 98 ? tc.warning : tc.textMid} sub={capitalSummary.utilPct != null ? `${entityText.plural} amb calls visibles` : undefined} />
+                <Kpi tc={tc} label="Net CF real" value={signed(kpis.netReal)} color={kpis.netReal >= 0 ? tc.green : tc.red} sub="Dist - Calls" />
+                <Kpi tc={tc} label="Desviacio" value={signed(kpis.diff)} color={kpis.diff >= 0 ? tc.green : tc.red} sub={`${pct(kpis.realTotal, kpis.modelTotal)} vs model`} />
+                <Kpi tc={tc} label={`Real ${text.model}`} value={fmtK(kpis.realTotal)} color={mode === "dist" ? tc.green : tc.navy} />
+                <Kpi tc={tc} label={`Model ${text.model}`} value={fmtK(kpis.modelTotal)} muted />
+                <Kpi tc={tc} label="Cobertura model" value={coverage.pct == null ? "--" : `${coverage.pct.toFixed(0)}%`} color={tc.navy} sub={`${coverage.modeled}/${coverage.total} ${entityText.plural}`} />
+                <Kpi tc={tc} label="Sense model" value={String(coverage.unmodeled)} color={coverage.unmodeled ? tc.warning : tc.textLight} />
+                <Kpi tc={tc} label="Total Calls" value={fmtK(kpis.totalCalls)} color={tc.navy} />
+                <Kpi tc={tc} label="Total Dist" value={fmtK(kpis.totalDist)} color={tc.green} />
+              </div>
+            </div>
+
+            <div style={{ flex: 0, minWidth: 320, maxWidth: 420 }}>
+              <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8, overflow: "hidden", boxShadow: tc.shadows?.card }}>
+                <div style={{ padding: "11px 14px", borderBottom: `1px solid ${tc.border}`, background: tc.bgAlt, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.07em", color: tc.textLight, fontWeight: 750 }}>
+                  Periodes
+                </div>
+                <div style={{ padding: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+                  {periodBanner.map((period) => (
+                    <div key={period.id} style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, opacity: periods[period.id] ? 1 : 0.55 }}>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+                        <div style={{ fontSize: 11, fontWeight: 750, color: colorFor(tc, period.color) }}>{period.label}</div>
+                        <div style={{ fontSize: 10, color: tc.textLight }}>Model {fmtK(period.model, 0)} | Real {fmtK(period.real, 0)}</div>
+                      </div>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: period.diff >= 0 ? tc.green : tc.red }} title={pct(period.real, period.model)}>
+                        {signed(period.diff)}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            </div>
           </div>
 
-          <div className="grid-4" style={{ gap: 10 }}>
-            <Kpi tc={tc} label={`Model ${text.model}`} value={fmtK(kpis.modelTotal)} muted />
-            <Kpi tc={tc} label={`Real ${text.model}`} value={fmtK(kpis.realTotal)} color={mode === "dist" ? tc.green : tc.navy} />
-            <Kpi tc={tc} label="Desviacio" value={signed(kpis.diff)} color={kpis.diff >= 0 ? tc.green : tc.red} sub={`${pct(kpis.realTotal, kpis.modelTotal)} vs model`} />
-            <Kpi tc={tc} label="Net CF real" value={signed(kpis.netReal)} color={kpis.netReal >= 0 ? tc.green : tc.red} sub="Dist - Calls" />
-            <Kpi tc={tc} label="Total Calls" value={fmtK(kpis.totalCalls)} color={tc.navy} />
-            <Kpi tc={tc} label="Total Dist" value={fmtK(kpis.totalDist)} color={tc.green} />
-            <Kpi tc={tc} label="DPI parcial" value={kpis.dpi == null ? "--" : `${kpis.dpi.toFixed(2)}x`} color={tc.warning} />
-            <Kpi tc={tc} label="Fons" value={String(kpis.fundCount)} />
-          </div>
-
-          <div className="grid-2" style={{ gap: 12 }}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
             <ChartCard tc={tc} title={`${text.model} - Model vs Real`} wide>
-              <ReactECharts option={mainChartOption({ rows: yearAgg, mode, tc, dark })} style={{ height: 290 }} opts={{ renderer: "canvas" }} />
+              <ReactECharts option={mainChartOption({ rows: yearAgg, mode, tc, dark })} style={{ height: 300 }} opts={{ renderer: "canvas" }} />
             </ChartCard>
-            <ChartCard tc={tc} title="Acumulat">
-              <ReactECharts option={cumulativeChartOption({ rows: yearAgg, mode, tc, dark })} style={{ height: 260 }} opts={{ renderer: "canvas" }} />
-            </ChartCard>
-            <ChartCard tc={tc} title="Desviacio % per any">
-              <ReactECharts option={deviationChartOption({ rows: yearAgg, mode, tc, dark })} style={{ height: 260 }} opts={{ renderer: "canvas" }} />
-            </ChartCard>
-            <ChartCard tc={tc} title="Top 25 fons - desviacio total" wide>
-              <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
-                <Segmented tc={tc} value={devMetric} onChange={setDevMetric} options={[{ id: "eur", label: "€" }, { id: "pct", label: "%" }]} />
-              </div>
-              <ReactECharts option={fundDeviationChartOption({ rows: fundAgg, mode, tc, dark, metric: devMetric })} style={{ height: 340 }} opts={{ renderer: "canvas" }} />
-            </ChartCard>
-          </div>
 
-          <CashTable
-            tc={tc}
-            table={table}
-            tableType={tableType}
-            setTableType={setTableType}
-            allYears={allYears}
-            visibleYears={visibleYears}
-            yearFilters={yearFilters}
-            setYearFilters={setYearFilters}
-            vintageFilter={vintageFilter}
-            setVintageFilter={setVintageFilter}
-            sort={sort}
-            setSort={setSort}
-            fundRouteIds={fundRouteIds}
-          />
+            <CashTable
+              tc={tc}
+              table={table}
+              tableType={tableType}
+              setTableType={setTableType}
+              allYears={allYears}
+              visibleYears={visibleYears}
+              yearFilters={yearFilters}
+              setYearFilters={setYearFilters}
+              vintageFilter={vintageFilter}
+              setVintageFilter={setVintageFilter}
+              sort={sort}
+              setSort={setSort}
+              fundRouteIds={fundRouteIds}
+              entityScope={entityScope}
+              entityText={entityText}
+              entityMetaByName={entityMetaByName}
+            />
+
+            <div className="grid-2" style={{ gap: 12 }}>
+              <ChartCard tc={tc} title="Acumulat">
+                <ReactECharts option={cumulativeChartOption({ rows: yearAgg, mode, tc, dark })} style={{ height: 240 }} opts={{ renderer: "canvas" }} />
+              </ChartCard>
+              <ChartCard tc={tc} title="Desviacio % per any">
+                <ReactECharts option={deviationChartOption({ rows: yearAgg, mode, tc, dark })} style={{ height: 240 }} opts={{ renderer: "canvas" }} />
+              </ChartCard>
+              <ChartCard tc={tc} title="Top 25 fons - desviacio total" wide>
+                <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 6 }}>
+                  <Segmented tc={tc} value={devMetric} onChange={setDevMetric} options={[{ id: "eur", label: "€" }, { id: "pct", label: "%" }]} />
+                </div>
+                <ReactECharts option={fundDeviationChartOption({ rows: fundAgg, mode, tc, dark, metric: devMetric })} style={{ height: 320 }} opts={{ renderer: "canvas" }} />
+              </ChartCard>
+            </div>
+          </div>
         </>
       ) : (
         <EditorPanel
           tc={tc}
           editorData={editorData}
           committedByFund={mergedCommitted}
+          committedOverrides={committedOverrides}
           paidInByFund={paidInByFund}
           fundNames={editorFundNames}
           editorType={editorType}
@@ -431,6 +673,10 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
           editorInputMode={editorInputMode}
           setEditorInputMode={setEditorInputMode}
           fundRouteIds={fundRouteIds}
+          entityScope={entityScope}
+          setEntityScope={setEntityScope}
+          entityText={entityText}
+          entityMetaByName={entityMetaByName}
         />
       )}
     </div>
@@ -740,7 +986,7 @@ function PeriodPill({ tc, active, color, label, onClick }) {
   );
 }
 
-function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears, yearFilters, setYearFilters, vintageFilter, setVintageFilter, sort, setSort, fundRouteIds = {} }) {
+function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears, yearFilters, setYearFilters, vintageFilter, setVintageFilter, sort, setSort, fundRouteIds = {}, entityScope = "funds", entityText = { plural: "fons" }, entityMetaByName = {} }) {
   const hasYearFilter = yearFilters.size > 0;
   const setSortKey = (key) => {
     setSort((current) => ({ key, dir: current.key === key && current.dir === "desc" ? "asc" : "desc" }));
@@ -753,10 +999,22 @@ function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears,
       return next;
     });
   };
+
+  const entityColLabel = entityScope === "companies" ? "Companyia" : "Fons";
+  const rowLink = (name) => {
+    const meta = entityMetaByName?.[name] ?? null;
+    if (entityScope === "companies" && meta?.id) {
+      if (meta.vehicleTipus === "PC") return `/company/${encodeURIComponent(meta.id)}`;
+      if (meta.vehicleTipus === "SF") return `/searcher/${encodeURIComponent(meta.id)}`;
+    }
+    if (fundRouteIds?.[name]) return `/fund/${encodeURIComponent(fundRouteIds[name])}`;
+    return null;
+  };
+
   return (
     <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8, overflow: "hidden", boxShadow: tc.shadows?.card }}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "11px 14px", borderBottom: `1px solid ${tc.border}`, flexWrap: "wrap" }}>
-        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.07em", color: tc.textLight, fontWeight: 750 }}>Detall per fons</div>
+        <div style={{ fontSize: 11, textTransform: "uppercase", letterSpacing: "0.07em", color: tc.textLight, fontWeight: 750 }}>Detall per {entityText.plural}</div>
         <Segmented tc={tc} value={tableType} onChange={setTableType} options={[{ id: "calls", label: "Calls" }, { id: "dist", label: "Distribucions" }, { id: "net", label: "Net CF" }]} />
         {vintageFilter != null && (
           <button onClick={() => setVintageFilter(null)} style={buttonStyle(tc)}>
@@ -787,7 +1045,7 @@ function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears,
         <table style={{ width: "100%", minWidth: 980, borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr>
-              <Th tc={tc} onClick={() => setSortKey("fund")} active={sort.key === "fund"} dir={sort.dir} align="left">Fons</Th>
+              <Th tc={tc} onClick={() => setSortKey("fund")} active={sort.key === "fund"} dir={sort.dir} align="left">{entityColLabel}</Th>
               <Th tc={tc} onClick={() => setSortKey("committed")} active={sort.key === "committed"} dir={sort.dir}>Comp.</Th>
               {visibleYears.map((year) => <Th key={year} tc={tc} onClick={() => setSortKey(`r${year}`)}>{year}</Th>)}
               {hasYearFilter ? (
@@ -807,10 +1065,11 @@ function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears,
               <tr key={row.fund} className="hoverable">
                 <td style={tdStyle(tc, "left")}>
                   <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", fontWeight: 700 }}>
-                    {fundRouteIds[row.fund]
-                      ? <Link to={`/fund/${encodeURIComponent(fundRouteIds[row.fund])}`} title={row.fund} style={{ color: tc.navy, textDecoration: "none" }}>{row.fund.length > 32 ? `${row.fund.slice(0, 32)}...` : row.fund}</Link>
+                    {rowLink(row.fund)
+                      ? <Link to={rowLink(row.fund)} title={row.fund} style={{ color: tc.navy, textDecoration: "none" }}>{row.fund.length > 32 ? `${row.fund.slice(0, 32)}...` : row.fund}</Link>
                       : <span title={row.fund}>{row.fund.length > 32 ? `${row.fund.slice(0, 32)}...` : row.fund}</span>}
                     {PROSPECTIVE_CASH_USD_FUNDS.has(row.fund) ? <MiniTag tc={tc}>USD</MiniTag> : null}
+                    {row.totalReal && !row.totalModel ? <MiniTag tc={tc}>Unmodeled</MiniTag> : null}
                     {row.vintage ? <button onClick={() => setVintageFilter(row.vintage)} style={vintageStyle(tc, row.vintage)}>{row.vintage}</button> : null}
                   </div>
                 </td>
@@ -834,7 +1093,7 @@ function CashTable({ tc, table, tableType, setTableType, allYears, visibleYears,
               </tr>
             ))}
             <tr style={{ background: tc.bgAlt, fontWeight: 750 }}>
-              <td style={tdStyle(tc, "left")}>Σ TOTAL ({table.rows.length} fons)</td>
+              <td style={tdStyle(tc, "left")}>Σ TOTAL ({table.rows.length} {entityText.plural})</td>
               <td style={tdStyle(tc)}>{fmtC(table.totals.committed)}</td>
               {visibleYears.map((year) => {
                 const cell = table.totals.byYear[year] ?? { model: 0, real: 0 };
@@ -883,7 +1142,7 @@ function YearCell({ tc, year, model, real, pctValue, total = false }) {
   );
 }
 
-function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames, editorType, setEditorType, editorSearch, setEditorSearch, updateFundValue, updateCommittedOverride, saveAndApply, exportEditorCsv, resetDraft, dirty, saving, editorInputMode, setEditorInputMode, fundRouteIds = {} }) {
+function EditorPanel({ tc, editorData, committedByFund, committedOverrides, paidInByFund, fundNames, editorType, setEditorType, editorSearch, setEditorSearch, updateFundValue, updateCommittedOverride, saveAndApply, exportEditorCsv, resetDraft, dirty, saving, editorInputMode, setEditorInputMode, fundRouteIds = {}, entityScope = "funds", setEntityScope = () => {}, entityText = { plural: "fons", searchPlaceholder: "Cercar..." }, entityMetaByName = {} }) {
   const key = `model_${editorType}`;
   const yearCols = editorData.years;
   const committedNorm = useMemo(() => {
@@ -896,14 +1155,35 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
     Object.entries(paidInByFund).forEach(([k, v]) => { m[k.trim().toLowerCase()] = v; });
     return m;
   }, [paidInByFund]);
+
+  const entityColLabel = entityScope === "companies" ? "Companyia" : "Fons";
+  const rowLink = (name) => {
+    const meta = entityMetaByName?.[name] ?? null;
+    if (entityScope === "companies" && meta?.id) {
+      if (meta.vehicleTipus === "PC") return `/company/${encodeURIComponent(meta.id)}`;
+      if (meta.vehicleTipus === "SF") return `/searcher/${encodeURIComponent(meta.id)}`;
+    }
+    if (fundRouteIds?.[name]) return `/fund/${encodeURIComponent(fundRouteIds[name])}`;
+    return null;
+  };
+
   return (
     <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8, overflow: "hidden", boxShadow: tc.shadows?.card }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", padding: 12, borderBottom: `1px solid ${tc.border}`, flexWrap: "wrap" }}>
         <span style={{ fontSize: 11, color: tc.textLight, fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.07em" }}>Prediccio</span>
+        <Segmented
+          tc={tc}
+          value={entityScope}
+          onChange={setEntityScope}
+          options={[
+            { id: "funds", label: "Fons" },
+            { id: "companies", label: "Companyies" },
+          ]}
+        />
         <Segmented tc={tc} value={editorType} onChange={setEditorType} options={[{ id: "calls", label: "Capital Calls" }, { id: "dist", label: "Distribucions" }]} />
         <Segmented tc={tc} value={editorInputMode} onChange={setEditorInputMode} options={[{ id: "eur", label: "€" }, { id: "pct", label: "%" }]} />
-        <input value={editorSearch} onChange={(event) => setEditorSearch(event.target.value)} placeholder="Cercar fons..." style={{ ...inputStyle(tc), width: 220 }} />
-        <span style={{ fontSize: 11, color: tc.textLight }}>{fundNames.length} fons</span>
+        <input value={editorSearch} onChange={(event) => setEditorSearch(event.target.value)} placeholder={entityText.searchPlaceholder} style={{ ...inputStyle(tc), width: 220 }} />
+        <span style={{ fontSize: 11, color: tc.textLight }}>{fundNames.length} {entityText.plural}</span>
         <div style={{ flex: 1 }} />
         <button onClick={exportEditorCsv} style={buttonStyle(tc)}>CSV</button>
         <button onClick={resetDraft} style={buttonStyle(tc)}>Restaurar base</button>
@@ -918,7 +1198,7 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
         <table style={{ width: "max-content", minWidth: "100%", borderCollapse: "collapse", fontSize: 12 }}>
           <thead>
             <tr>
-              <Th tc={tc} align="left">Fons</Th>
+              <Th tc={tc} align="left">{entityColLabel}</Th>
               <Th tc={tc}>Base</Th>
               {yearCols.map((year) => <Th key={year} tc={tc}>{year}</Th>)}
               <Th tc={tc}>Total</Th>
@@ -937,15 +1217,15 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
               return (
                 <tr key={fundName} className="hoverable">
                   <td style={{ ...tdStyle(tc, "left"), position: "sticky", left: 0, background: tc.card, zIndex: 1, fontWeight: 700 }}>
-                    {fundRouteIds[fundName]
-                      ? <Link to={`/fund/${encodeURIComponent(fundRouteIds[fundName])}`} title={fundName} style={{ color: tc.navy, textDecoration: "none" }}>{fundName.length > 48 ? `${fundName.slice(0, 48)}...` : fundName}</Link>
+                    {rowLink(fundName)
+                      ? <Link to={rowLink(fundName)} title={fundName} style={{ color: tc.navy, textDecoration: "none" }}>{fundName.length > 48 ? `${fundName.slice(0, 48)}...` : fundName}</Link>
                       : (fundName.length > 48 ? `${fundName.slice(0, 48)}...` : fundName)}
                   </td>
                   <td style={tdStyle(tc)}>
                     {editorType === "calls" ? (
                       <input
                         type="number"
-                        value={Number(committedByFund[fundName] ?? committedNorm[normKey] ?? 0) || ""}
+                        value={Number(committedOverrides?.[fundName] ?? "") || ""}
                         onChange={(e) => updateCommittedOverride(fundName, e.target.value)}
                         style={{ ...editorNumberStyle(tc), width: 90 }}
                         placeholder="—"
@@ -956,7 +1236,7 @@ function EditorPanel({ tc, editorData, committedByFund, paidInByFund, fundNames,
                   </td>
                   {yearCols.map((year) => {
                     const value = numberAtYear(values, year);
-                    const displayValue = inPct ? (value ? ((value / base) * 100).toFixed(2) : "") : (value || "");
+                    const displayValue = inPct ? (value ? ((value / base) * 100).toFixed(1) : "") : (value || "");
                     const hint = inPct
                       ? (value ? fmtC(value) : null)
                       : (value && base ? `${((value / base) * 100).toFixed(1)}%` : null);
