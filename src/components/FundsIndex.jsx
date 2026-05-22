@@ -106,13 +106,13 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
 
   const defaultVcpe = canEditAlternatives ? "PE" : "RE";
   const [addingFund, setAddingFund] = useState(false);
-  const [newFund, setNewFund] = useState({ fons: "", vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe), compromis: "", divisa: "EUR" });
+  const [newFund, setNewFund] = useState({ fons: "", vehicleTipus: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe), compromis: "", divisa: "EUR" });
 
   useEffect(() => {
     setNewFund((current) => {
-      if (current.vcpe === "RE" && canEditRealEstate) return current;
-      if ((current.vcpe === "PE" || current.vcpe === "VC") && canEditAlternatives) return current;
-      return { ...current, vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe) };
+      if (current.vehicleTipus === "RE" && canEditRealEstate) return current;
+      if ((current.vehicleTipus === "PE" || current.vehicleTipus === "VC") && canEditAlternatives) return current;
+      return { ...current, vehicleTipus: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe) };
     });
   }, [canEditAlternatives, canEditRealEstate, defaultVcpe]);
 
@@ -133,7 +133,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     }
     const row = await insertFund(
       newFund.fons.trim(),
-      newFund.vcpe,
+      newFund.vehicleTipus,
       newFund.est,
       conversion.eur,
       newFund.divisa,
@@ -142,7 +142,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     if (!row) { toast({ message: "Error en crear el fons", type: "error" }); return; }
     persistRawCC([...rawCC, row]);
     setAddingFund(false);
-    setNewFund({ fons: "", vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe), compromis: "", divisa: "EUR" });
+    setNewFund({ fons: "", vehicleTipus: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe), compromis: "", divisa: "EUR" });
     toast({ message: `Fons "${newFund.fons.trim()}" afegit.` });
   };
 
@@ -420,7 +420,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                   placeholder="Nom del fons" style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
               </div>
               {[
-                { label: "Fons", key: "vcpe", options: [...(canEditAlternatives ? ["PE", "VC"] : []), ...(canEditRealEstate ? ["RE"] : [])] },
+                { label: "Fons", key: "vehicleTipus", options: [...(canEditAlternatives ? ["PE", "VC"] : []), ...(canEditRealEstate ? ["RE"] : [])] },
                 { label: "Estructura", key: "est", options: CAPITAL_CALL_STRATEGY_OPTIONS },
                 { label: "Divisa", key: "divisa", options: ["EUR", "USD"] },
               ].map(f => (

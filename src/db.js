@@ -632,19 +632,19 @@ export async function insertPipelineDeal(deal) {
  * @param {{ amountNative?: number | null, fxRate?: number | null, fxSource?: string | null, comentaris?: string | null }} [options]
  * @returns {Promise<CapitalCallRow | null>}
  */
-export async function insertFund(fons, vcpe, est, compromisEur, divisa, options = {}) {
+export async function insertFund(fons, vehicleTipus, est, compromisEur, divisa, options = {}) {
   if (!supabase) return null;
   const resolved = resolvePrivateEntity("vehicle", fons);
   const { error: entityError } = await upsertPrivateEntities([resolved]);
   if (entityError) { console.error(entityError); return null; }
   const data_iso = new Date().toISOString().slice(0, 10);
   const { mes, year, fy } = parseDateParts(data_iso);
-  const normalizedEst = normalizeCapitalCallStrategy(est, vcpe, { fons }) ?? defaultCapitalCallStrategyForVehicleTipus(vcpe);
+  const normalizedEst = normalizeCapitalCallStrategy(est, vehicleTipus, { fons }) ?? defaultCapitalCallStrategyForVehicleTipus(vehicleTipus);
 
   const { error: ccErr } = await supabase.from("capital_calls").insert({
     vehicle_id: resolved.id,
     fons: resolved.canonicalName,
-    vcpe, est: normalizedEst, cat: "Compromís", eur: compromisEur, divisa,
+    est: normalizedEst, cat: "Compromís", eur: compromisEur, divisa,
     comentaris: options.comentaris ?? null,
     amount_native: options.amountNative ?? (divisa === "EUR" ? compromisEur : null),
     fx_rate: options.fxRate ?? (divisa === "EUR" ? 1 : null),
@@ -654,14 +654,14 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa, options 
   if (ccErr) { console.error(ccErr); return null; }
 
   await supabase.from("fund_meta")
-    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: null, irr: null }, { onConflict: "vehicle_id" });
+    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, vehicle_tipus: vehicleTipus, tvpi: null, irr: null }, { onConflict: "vehicle_id" });
 
-  logAudit("insert", "capital_calls", resolved.id, { fons: resolved.canonicalName, vcpe, est: normalizedEst });
+  logAudit("insert", "capital_calls", resolved.id, { fons: resolved.canonicalName, vehicleTipus, est: normalizedEst });
   // Return in rawCC shape (key `any`, not `year`)
   return {
     id: resolved.id,
     fons: resolved.canonicalName,
-    vcpe,
+    vehicleTipus,
     est: normalizedEst,
     cat: "Compromís",
     eur: compromisEur,
@@ -1049,8 +1049,7 @@ export async function insertCapitalCall(cc) {
     mes,
     year,
     fy,
-    vcpe: cc.vcpe ?? null,
-    est: normalizeCapitalCallStrategy(cc.est, cc.vcpe, cc) ?? null,
+    est: normalizeCapitalCallStrategy(cc.est, cc.vehicleTipus ?? null, cc) ?? null,
     eur,
     divisa: cc.divisa ?? "EUR",
     comentaris: cc.comentaris ?? null,
@@ -1101,11 +1100,15 @@ export async function updateCapitalCall(rowId, fields) {
     const nextTipus = Object.prototype.hasOwnProperty.call(updates, "tipus") ? updates.tipus : old?.tipus;
     updates.eur = normalizeCapitalCallSignedAmount(nextTipus, fields.eur);
   }
-  if (Object.prototype.hasOwnProperty.call(fields, "est") || Object.prototype.hasOwnProperty.call(fields, "vcpe")) {
-    const nextVcpe = Object.prototype.hasOwnProperty.call(updates, "vcpe") ? updates.vcpe : old?.vcpe ?? null;
+  if (Object.prototype.hasOwnProperty.call(fields, "est")) {
     const nextEst = Object.prototype.hasOwnProperty.call(updates, "est") ? updates.est : old?.est;
     const nextFons = Object.prototype.hasOwnProperty.call(updates, "fons") ? updates.fons : old?.fons;
-    updates.est = normalizeCapitalCallStrategy(nextEst, nextVcpe, { fons: nextFons });
+    const { data: fmRow } = await supabase
+      .from("fund_meta")
+      .select("vehicle_tipus")
+      .eq("vehicle_id", old?.vehicle_id)
+      .single();
+    updates.est = normalizeCapitalCallStrategy(nextEst, fmRow?.vehicle_tipus ?? null, { fons: nextFons });
   }
   if (
     !Object.prototype.hasOwnProperty.call(fields, "cat")
