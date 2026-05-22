@@ -90,8 +90,7 @@ export function CcTransactionModal({
       defaultValue: isEdit ? editRow.divisa : (addDefaults?.divisa ?? defaultVehicleCurrency(addFons)),
     },
     { key: "comentaris", label: "Comentaris", type: "textarea", defaultValue: isEdit ? (editRow.comentaris ?? "") : (addDefaults?.comentaris ?? ""), placeholder: "Observacions del moviment" },
-    { key: "vcpe", label: "VCPE", type: "select", options: ["PE", "VC", "RE", "SF", "PC"], defaultValue: isEdit ? editRow.vcpe : (addDefaults?.vcpe ?? "PE"), visible: () => false },
-    { key: "est", label: "Tipus de Vehicle", type: "select", options: CAPITAL_CALL_STRATEGY_OPTIONS, defaultValue: isEdit ? editRow.est : (addDefaults?.est ?? "") },
+{ key: "est", label: "Tipus de Vehicle", type: "select", options: CAPITAL_CALL_STRATEGY_OPTIONS, defaultValue: isEdit ? editRow.est : (addDefaults?.est ?? "") },
     {
       key: "recallable", label: "Recallable (€)", type: "number",
       defaultValue: isEdit ? (editRow.recallable ?? "") : undefined,

@@ -17,7 +17,7 @@ const LS_TS = "tc_loadedAt";
 function sanitizeCapitalCallValues(values) {
   // Only pick known capital_calls columns — drop UI-only fields like nif, fiscal_name
   const {
-    fons, tipus, cat, vcpe, est, divisa, comentaris,
+    fons, tipus, cat, est, divisa, comentaris,
     data, eur, amountNative, fxRate, fxSource,
     recallable, non_recallable, from_recallable,
   } = values ?? {};
@@ -25,8 +25,7 @@ function sanitizeCapitalCallValues(values) {
     fons: String(fons ?? "").trim(),
     tipus: normalizeCapitalCallTipus(tipus),
     cat: cat ?? null,
-    vcpe: vcpe || null,
-    est: normalizeCapitalCallStrategy(est, vcpe, values) ?? null,
+    est: est ?? null,
     divisa: divisa || "EUR",
     comentaris: String(comentaris ?? "").trim() || null,
     data,
@@ -68,7 +67,7 @@ async function prepareCapitalCallPayload(values, existingRow = null) {
 }
 
 async function syncSearchersFromCapitalCalls(rows) {
-  const sfRows = Array.isArray(rows) ? rows.filter((row) => row?.vcpe === "SF") : [];
+  const sfRows = Array.isArray(rows) ? rows.filter((row) => row?.vehicleTipus === "SF") : [];
   if (!sfRows.length) return;
   try {
     await apiFetchJson("/api/searchers?action=sync-capital-calls", {
@@ -119,6 +118,7 @@ export function useDashboardData() {
   const [searchersData, setSearchersData] = useState(()=>readStoredJSON("tc_allSearchers", []));
   const [loadedAt,setLoadedAt]= useState(()=>readStoredJSON(LS_TS, null));
   const [eurUsd,  setEurUsd]  = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     apiFetchJson("/api/eur-usd")
@@ -163,7 +163,8 @@ export function useDashboardData() {
       })
       .catch(err => {
         console.error("Initial dashboard load failed:", err);
-      });
+      })
+      .finally(() => setIsLoading(false));
   }, []);
 
   const handleCCInsert = useCallback(async (values, setError) => {
@@ -326,6 +327,7 @@ export function useDashboardData() {
     companiesData, setCompaniesData,
     searchersData, setSearchersData,
     loadedAt, setLoadedAt,
+    isLoading,
     eurUsd,
     handleCCInsert,
     handleCCUpdate,
