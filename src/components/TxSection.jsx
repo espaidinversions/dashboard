@@ -37,7 +37,7 @@ export function TxSection({
   const [sort, setSort] = useState({ k: "data", d: "desc" });
   const storageKey = scopeStorageKey || "ui_tx_scope";
   const [scope, setScope] = usePersistedState(storageKey, defaultScope);
-  const [filters, setFilters] = useState({ year: "Tots", month: "Tots", fons: "", tipus: "Tots", eur: "", est: "Tots", comentaris: "" });
+  const [filters, setFilters] = useState({ year: "Tots", month: "Tots", fons: "", tipus: new Set(), eur: "", est: "Tots", comentaris: "" });
   const [page, setPage] = useState(0);
   const TX_PP = 25;
 
@@ -82,7 +82,7 @@ export function TxSection({
       if (filters.year !== "Tots" && !String(row.data ?? "").startsWith(filters.year)) return false;
       if (filters.month !== "Tots" && String(row.data ?? "").slice(5, 7) !== filters.month) return false;
       if (filters.fons && !String(row.fons ?? "").toLowerCase().includes(filters.fons.toLowerCase())) return false;
-      if (filters.tipus !== "Tots" && row.tipus !== filters.tipus) return false;
+      if (filters.tipus.size > 0 && !filters.tipus.has(row.tipus)) return false;
       if (filters.eur && !String(row.eur ?? "").includes(filters.eur)) return false;
       if (filters.est !== "Tots" && row.est !== filters.est) return false;
       if (filters.comentaris && !String(row.comentaris ?? "").toLowerCase().includes(filters.comentaris.toLowerCase())) return false;
@@ -92,7 +92,7 @@ export function TxSection({
   const visibleCompr = useMemo(() => visibleTx.filter((row) => row.cat === "Compromís"), [visibleTx]);
 
   const tipusOptions = useMemo(
-    () => ["Tots", ...Array.from(new Set(allRows.map((row) => row.tipus).filter(Boolean))).sort()],
+    () => Array.from(new Set(allRows.map((row) => row.tipus).filter(Boolean))).sort(),
     [allRows],
   );
 
@@ -345,7 +345,15 @@ export function TxSection({
                 </th>
                 <th style={{ padding: "6px 10px" }}><input value={filters.fons} onChange={(e) => setFilters((current) => ({ ...current, fons: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 10px" }}>
-                  <select value={filters.tipus} onChange={(e) => setFilters((current) => ({ ...current, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>
+                  <select
+                    multiple
+                    value={[...filters.tipus]}
+                    onChange={(e) => {
+                      const selected = new Set([...e.target.selectedOptions].map((o) => o.value));
+                      setFilters((current) => ({ ...current, tipus: selected }));
+                    }}
+                    style={{ width:"100%", padding:"2px 4px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit", maxHeight: 72 }}
+                  >
                     {tipusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                 </th>
@@ -357,7 +365,7 @@ export function TxSection({
                   </select>
                 </th>
                 <th style={{ padding: "6px 10px" }}><input value={filters.comentaris} onChange={(e) => setFilters((current) => ({ ...current, comentaris: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-                {canEdit ? <th style={{ padding: "6px 10px", textAlign:"center" }}>{Object.values(filters).some((value) => value !== "" && value !== "Tots") ? <button onClick={() => setFilters({ year: "Tots", month: "Tots", fons: "", tipus: "Tots", eur: "", est: "Tots", comentaris: "" })} style={{ background:"transparent", border:`1px solid ${tc.border}`, borderRadius:4, padding:"2px 8px", cursor:"pointer", fontSize:10, color:tc.textMid, fontFamily:"inherit" }}>netejar</button> : null}</th> : null}
+                {canEdit ? <th style={{ padding: "6px 10px", textAlign:"center" }}>{(filters.year !== "Tots" || filters.month !== "Tots" || filters.fons || filters.tipus.size > 0 || filters.eur || filters.est !== "Tots" || filters.comentaris) ? <button onClick={() => setFilters({ year: "Tots", month: "Tots", fons: "", tipus: new Set(), eur: "", est: "Tots", comentaris: "" })} style={{ background:"transparent", border:`1px solid ${tc.border}`, borderRadius:4, padding:"2px 8px", cursor:"pointer", fontSize:10, color:tc.textMid, fontFamily:"inherit" }}>netejar</button> : null}</th> : null}
               </tr>
             </thead>
             <tbody>
@@ -391,16 +399,7 @@ export function TxSection({
                       )}
                     </td>
                     <td style={{ padding: "8px 10px" }}>
-                      {canEdit && row._rowId && onQuickUpdate ? (
-                        <EditableCell
-                          value={row.est}
-                          type="select"
-                          options={CAPITAL_CALL_STRATEGY_OPTIONS}
-                          onSave={(value) => onQuickUpdate(row, { est: value })}
-                          badgeCfg={estCfg}
-                          emptyDisplay="—"
-                        />
-                      ) : row.est ? <Badge label={row.est} cfg={estCfg[row.est] || {}} /> : <span style={{ color: tc.textLight }}>—</span>}
+                      {row.est ? <Badge label={row.est} cfg={estCfg[row.est] || {}} /> : <span style={{ color: tc.textLight }}>—</span>}
                     </td>
                     <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={row.comentaris ?? ""}>
                       {canEdit && row._rowId && onQuickUpdate ? (
@@ -416,10 +415,10 @@ export function TxSection({
                     {canEdit ? (
                       <td style={{ padding: "4px 8px", textAlign: "center", whiteSpace: "nowrap" }}>
                         {row._rowId ? (
-                          <span style={{ display: "inline-flex", gap: 4 }}>
+                          <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                             <button
                               onClick={() => onEdit(row)}
-                              style={{ padding: "2px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 10, fontFamily: "inherit" }}
+                              style={{ padding: "3px 10px", borderRadius: 4, border: `1.5px solid ${tc.navy}`, background: "transparent", color: tc.navy, cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600 }}
                             >
                               Edita
                             </button>

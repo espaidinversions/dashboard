@@ -473,12 +473,12 @@ export function DeleteRowButton({ onDelete }) {
 
   return (
     <button onClick={() => setConfirming(true)}
-      style={{ background: "transparent", border: "none", cursor: "pointer",
-        color: tc.textLight, fontSize: 14, padding: "2px 4px", lineHeight: 1, transition:"color 0.15s" }}
-      onMouseEnter={e => { e.currentTarget.style.color="#d32f2f"; }}
-      onMouseLeave={e => { e.currentTarget.style.color=tc.textLight; }}
+      style={{ background: "transparent", border: "1.5px solid #C62828", cursor: "pointer",
+        color: "#C62828", fontSize: 11, padding: "3px 8px", lineHeight: 1, borderRadius: 4, transition:"opacity 0.15s", fontFamily: "inherit", fontWeight: 600 }}
+      onMouseEnter={e => { e.currentTarget.style.opacity="0.7"; }}
+      onMouseLeave={e => { e.currentTarget.style.opacity="1"; }}
       title="Eliminar fila">
-      🗑
+      Elimina
     </button>
   );
 }

@@ -62,6 +62,7 @@ const CAPITAL_CALL_TIPUS_MODEL = [
   { originalTipus: "Subscription Fee", concept: "Prima d'Equalització" },
   { originalTipus: "Subscription Premium", concept: "Prima d'Equalització" },
   { originalTipus: "Prima d'Equalització", concept: "Prima d'Equalització" },
+  { originalTipus: "Prima Equalització", concept: "Prima d'Equalització" },
   { originalTipus: "Desinversió", concept: "Distribució" },
   { originalTipus: "Distribució", concept: "Distribució" },
   { originalTipus: "Distribució PE", concept: "Distribució" },
