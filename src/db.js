@@ -49,7 +49,7 @@ async function loadPrivateEntityMap() {
 async function upsertFundMetaComputed(vehicleId, fallbackName = "") {
   if (!supabase || !vehicleId) return { error: null };
   const [{ data: ccRows, error: ccError }, { data: metaRow, error: metaError }] = await Promise.all([
-    supabase.from("capital_calls").select("*").eq("vehicle_id", vehicleId).order("data"),
+    supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").eq("vehicle_id", vehicleId).order("data"),
     supabase.from("fund_meta").select("*").eq("vehicle_id", vehicleId).maybeSingle(),
   ]);
   if (ccError) return { error: ccError };
@@ -71,17 +71,45 @@ const CAPITAL_CALLS_PAGE_SIZE = 1000;
 
 async function fetchAllCapitalCallRows() {
   if (!supabase) return { data: null, error: new Error("Supabase unavailable") };
-  const rows = [];
-  for (let from = 0; ; from += CAPITAL_CALLS_PAGE_SIZE) {
-    const to = from + CAPITAL_CALLS_PAGE_SIZE - 1;
-    const { data, error } = await supabase
-      .from("capital_calls")
-      .select("*")
-      .order("data")
-      .range(from, to);
+
+  // Fetch first page
+  const { data: first, error: firstError } = await supabase
+    .from("capital_calls")
+    .select("*, fund_meta(vehicle_tipus)")
+    .order("data")
+    .range(0, CAPITAL_CALLS_PAGE_SIZE - 1);
+  if (firstError) { console.error("[fetchAllCapitalCallRows] SELECT error:", firstError); return { data: null, error: firstError }; }
+  if (!first || first.length < CAPITAL_CALLS_PAGE_SIZE) return { data: first ?? [], error: null };
+
+  // First page was full — get count and fetch remaining pages in parallel
+  const { count, error: countError } = await supabase
+    .from("capital_calls")
+    .select("*", { count: "exact", head: true });
+
+  if (countError || count === null) {
+    // Fallback: sequential
+    const rows = [...first];
+    for (let from = CAPITAL_CALLS_PAGE_SIZE; ; from += CAPITAL_CALLS_PAGE_SIZE) {
+      const { data, error } = await supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").order("data").range(from, from + CAPITAL_CALLS_PAGE_SIZE - 1);
+      if (error) { console.error("[fetchAllCapitalCallRows] SELECT error:", error); return { data: null, error }; }
+      rows.push(...(data ?? []));
+      if (!data || data.length < CAPITAL_CALLS_PAGE_SIZE) break;
+    }
+    return { data: rows, error: null };
+  }
+
+  const extraPages = Math.ceil((count - CAPITAL_CALLS_PAGE_SIZE) / CAPITAL_CALLS_PAGE_SIZE);
+  const rest = await Promise.all(
+    Array.from({ length: extraPages }, (_, i) => {
+      const from = (i + 1) * CAPITAL_CALLS_PAGE_SIZE;
+      return supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").order("data").range(from, from + CAPITAL_CALLS_PAGE_SIZE - 1);
+    })
+  );
+
+  const rows = [...first];
+  for (const { data, error } of rest) {
     if (error) { console.error("[fetchAllCapitalCallRows] SELECT error:", error); return { data: null, error }; }
     rows.push(...(data ?? []));
-    if (!data || data.length < CAPITAL_CALLS_PAGE_SIZE) break;
   }
   return { data: rows, error: null };
 }
@@ -158,10 +186,18 @@ export async function fetchCommittedOverrides() {
 
 export async function saveCommittedOverrides(overrides, vehicleIds) {
   if (!supabase) return { error: null };
-  const rows = Object.entries(overrides)
-    .filter(([, v]) => v > 0)
-    .map(([fons, committed_override]) => ({ vehicle_id: vehicleIds[fons], fons, committed_override }))
-    .filter((r) => r.vehicle_id);
+  const rows = Object.entries(overrides ?? {})
+    .map(([fons, v]) => {
+      const vehicle_id = vehicleIds?.[fons];
+      if (!vehicle_id) return null;
+      const num = Number(v);
+      return {
+        vehicle_id,
+        fons,
+        committed_override: Number.isFinite(num) && num > 0 ? num : null,
+      };
+    })
+    .filter(Boolean);
   if (!rows.length) return { error: null };
   const { error } = await supabase.from("fund_meta").upsert(rows, { onConflict: "vehicle_id" });
   return { error };
@@ -1033,7 +1069,7 @@ export async function insertCapitalCall(cc) {
     non_recallable:  (cc.non_recallable  !== "" && cc.non_recallable  != null) ? Number(cc.non_recallable)  : null,
     from_recallable: (cc.from_recallable !== "" && cc.from_recallable != null) ? Number(cc.from_recallable) : null,
   };
-  const { data, error } = await supabase.from("capital_calls").insert(row).select().single();
+  const { data, error } = await supabase.from("capital_calls").insert(row).select("*, fund_meta(vehicle_tipus)").single();
   if (!error) logAudit("insert", "capital_calls", String(data?.id), row);
   if (!error) {
     const metaResult = await upsertFundMetaComputed(resolved.id, resolved.canonicalName);
@@ -1044,7 +1080,7 @@ export async function insertCapitalCall(cc) {
 
 export async function updateCapitalCall(rowId, fields) {
   if (!supabase) return { error: null };
-  const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
+  const { data: old } = await supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").eq("id", rowId).single();
   const updates = { ...fields };
   if (Object.prototype.hasOwnProperty.call(updates, "amountNative")) {
     updates.amount_native = updates.amountNative;
@@ -1111,7 +1147,7 @@ export async function updateCapitalCall(rowId, fields) {
 
 export async function deleteCapitalCall(rowId) {
   if (!supabase) return { error: null };
-  const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
+  const { data: old } = await supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").eq("id", rowId).single();
   const { error } = await supabase.from("capital_calls").delete().eq("id", rowId);
   if (!error && old?.vehicle_id) {
     const metaResult = await upsertFundMetaComputed(old.vehicle_id, old.fons ?? "");
