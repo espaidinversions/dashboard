@@ -5,8 +5,8 @@
  *   node scripts/cc_import.mjs "2022.06.16 Capital Calls.xlsx"
  *   node scripts/cc_import.mjs "2022.06.16 Capital Calls.xlsx" --dry-run
  *
- * Strategy: DELETE all capital_calls WHERE vcpe IN ('PE','VC','RE'), then INSERT
- * the parsed rows. SF rows (added via UI) are left untouched.
+ * Strategy: DELETE all capital_calls for vehicles with fund_meta.vehicle_tipus IN ('PE','VC','RE'),
+ * then INSERT the parsed rows. SF rows (added via UI) are left untouched.
  *
  * Requires SUPABASE_SERVICE_ROLE_KEY in .env.local
  */
@@ -258,7 +258,7 @@ let mockCount = 0;
 const dbRows = rows.map(r => {
   const vehicle_id = resolveVehicleId(r.fons, fundNifMap);
   if (vehicle_id.startsWith("MOCKNIF:")) mockCount++;
-  return { vehicle_id, fons: r.fons, tipus: r.tipus, vcpe: r.vcpe, est: r.est, cat: r.cat, eur: r.eur, divisa: r.divisa, mes: r.mes, year: r.any, fy: r.fy, data: r.data };
+  return { vehicle_id, fons: r.fons, tipus: r.tipus, est: r.est, cat: r.cat, eur: r.eur, divisa: r.divisa, mes: r.mes, year: r.any, fy: r.fy, data: r.data, _vehicleTipus: r.vcpe };
 });
 const fundMetaDbRows = fundMetaRows.map((row) => ({
   vehicle_id: resolveVehicleId(row.fons, fundNifMap),
@@ -289,24 +289,37 @@ if (mockRows.length) {
   else console.log(`✓ Upserted ${mockEntities.length} mock vehicle entities`);
 }
 
-// DELETE PE/VC/RE rows
+// DELETE PE/VC/RE rows (via fund_meta.vehicle_tipus)
 console.log("\nDeleting existing PE/VC/RE capital calls...");
-const { error: delErr } = await sb
-  .from("capital_calls")
-  .delete()
-  .in("vcpe", ["PE", "VC", "RE"]);
-if (delErr) { console.error("Delete failed:", delErr.message); process.exit(1); }
+const { data: fundVehicles } = await sb
+  .from("fund_meta")
+  .select("vehicle_id")
+  .in("vehicle_tipus", ["PE", "VC", "RE"]);
+const fundIds = (fundVehicles ?? []).map((r) => r.vehicle_id);
+if (fundIds.length) {
+  const { error: delErr } = await sb.from("capital_calls").delete().in("vehicle_id", fundIds);
+  if (delErr) { console.error("Delete failed:", delErr.message); process.exit(1); }
+}
 console.log("✓ Deleted");
+
+// Ensure fund_meta has vehicle_tipus for each vehicle
+const metaRows = [...new Map(dbRows.map(r => [r.vehicle_id, { vehicle_id: r.vehicle_id, fons: r.fons, vehicle_tipus: r._vehicleTipus }])).values()];
+const { error: metaErr } = await sb.from("fund_meta").upsert(metaRows, { onConflict: "vehicle_id" });
+if (metaErr) console.warn("⚠ Could not upsert vehicle_tipus to fund_meta:", metaErr.message);
+else console.log(`✓ Upserted vehicle_tipus for ${metaRows.length} vehicles into fund_meta`);
+
+// Strip internal _vehicleTipus field before insert
+const ccRows = dbRows.map(({ _vehicleTipus, ...r }) => r);
 
 // INSERT in batches of 200
 const BATCH = 200;
 let inserted = 0;
-for (let i = 0; i < dbRows.length; i += BATCH) {
-  const batch = dbRows.slice(i, i + BATCH);
+for (let i = 0; i < ccRows.length; i += BATCH) {
+  const batch = ccRows.slice(i, i + BATCH);
   const { error } = await sb.from("capital_calls").insert(batch);
   if (error) { console.error(`Insert batch ${i}-${i+BATCH} failed:`, error.message); process.exit(1); }
   inserted += batch.length;
-  process.stdout.write(`\r  Inserted ${inserted}/${dbRows.length}...`);
+  process.stdout.write(`\r  Inserted ${inserted}/${ccRows.length}...`);
 }
 console.log(`\n✓ Import complet: ${inserted} moviments`);
 

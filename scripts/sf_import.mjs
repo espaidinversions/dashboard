@@ -8,7 +8,7 @@
  *   node scripts/sf_import.mjs "260416_Seguiment_SearchFunds.xlsx" --dry-run
  *
  * Strategy:
- *   1. DELETE all capital_calls WHERE vcpe = 'SF', then INSERT parsed log rows
+ *   1. DELETE all capital_calls for vehicles with fund_meta.vehicle_tipus = 'SF', then INSERT parsed log rows
  *      where the resolved entity is kind='vehicle'. Company rows are skipped
  *      (covered by startups_import.mjs / cc_import.mjs).
  *   2. UPSERT searchers master rows by normalized `nom`, preserving non-master
@@ -422,7 +422,6 @@ for (const r of rows) {
         vehicle_id: id,
         fons: r.fons,
         tipus: r.tipus,
-        vcpe: "SF",
         est,
         cat: r.cat,
         eur: r.eur,
@@ -480,13 +479,31 @@ if (dryRun) {
 // (PC rows may have been entered via UI before the SF import existed)
 const sfVehicleIds = [...new Set(sfRows.map(r => r.vehicle_id))];
 console.log("\nDeleting existing SF capital calls...");
-const { error: delErr } = await sb.from("capital_calls").delete().eq("vcpe", "SF");
-if (delErr) { console.error("Delete SF failed:", delErr.message); process.exit(1); }
-const { error: delPcErr } = await sb.from("capital_calls").delete()
-  .eq("vcpe", "PC")
-  .in("vehicle_id", sfVehicleIds);
-if (delPcErr) { console.error("Delete PC failed:", delPcErr.message); process.exit(1); }
+const { data: sfVehiclesFromMeta } = await sb.from("fund_meta").select("vehicle_id").eq("vehicle_tipus", "SF");
+const sfMetaIds = (sfVehiclesFromMeta ?? []).map((r) => r.vehicle_id);
+if (sfMetaIds.length) {
+  const { error: delErr } = await sb.from("capital_calls").delete().in("vehicle_id", sfMetaIds);
+  if (delErr) { console.error("Delete SF failed:", delErr.message); process.exit(1); }
+}
+const { data: pcVehicles } = await sb.from("fund_meta").select("vehicle_id").eq("vehicle_tipus", "PC");
+const pcIds = (pcVehicles ?? []).map((r) => r.vehicle_id);
+const pcIdsForSf = pcIds.filter(id => sfVehicleIds.includes(id));
+if (pcIdsForSf.length) {
+  const { error: delPcErr } = await sb.from("capital_calls").delete().in("vehicle_id", pcIdsForSf);
+  if (delPcErr) { console.error("Delete PC failed:", delPcErr.message); process.exit(1); }
+}
 console.log("✓ Deleted");
+
+// Ensure fund_meta has vehicle_tipus = 'SF' for each SF vehicle
+if (sfVehicleIds.length) {
+  const sfMetaRows = sfVehicleIds.map(id => {
+    const row = sfRows.find(r => r.vehicle_id === id);
+    return { vehicle_id: id, fons: row?.fons ?? id, vehicle_tipus: "SF" };
+  });
+  const { error: metaErr } = await sb.from("fund_meta").upsert(sfMetaRows, { onConflict: "vehicle_id" });
+  if (metaErr) console.warn("⚠ Could not upsert vehicle_tipus to fund_meta:", metaErr.message);
+  else console.log(`✓ Upserted vehicle_tipus=SF for ${sfMetaRows.length} vehicles into fund_meta`);
+}
 
 // INSERT in batches
 const BATCH = 200;

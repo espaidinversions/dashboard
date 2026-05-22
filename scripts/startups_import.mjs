@@ -5,8 +5,8 @@
  *   node scripts/startups_import.mjs "2022.06.16 Capital Calls.xlsx"
  *   node scripts/startups_import.mjs "2022.06.16 Capital Calls.xlsx" --dry-run
  *
- * Strategy: DELETE all capital_calls WHERE vcpe = 'PC', then INSERT parsed rows.
- * All other vcpe types are left untouched.
+ * Strategy: DELETE all capital_calls for vehicles with fund_meta.vehicle_tipus = 'PC', then INSERT parsed rows.
+ * All other vehicle types are left untouched.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -139,7 +139,7 @@ function parseExcel(filePath) {
     const any    = Number(r[10]) || Number(data.slice(0, 4));
     const fy     = String(r[12] || `FY ${any}`).trim();
 
-    rows.push({ fons: lastFons, cat, data, eur, divisa, vcpe: "PC", est: "PC", tipus: tipusRaw || "PC", mes, any, fy });
+    rows.push({ fons: lastFons, cat, data, eur, divisa, est: "PC", tipus: tipusRaw || "PC", mes, any, fy });
   }
 
   if (skipped.noCat.size) console.log("⚠ Skipped unknown categories:", [...skipped.noCat].sort().join(", "));
@@ -209,13 +209,15 @@ let mockCount = 0;
 const mappedRows = rows.map(r => {
   const vehicle_id = resolveCompanyId(r.fons, entityMap);
   if (vehicle_id.startsWith("MOCKNIF:")) mockCount++;
-  return { vehicle_id, fons: r.fons, tipus: r.tipus, vcpe: r.vcpe, est: r.est, cat: r.cat, eur: r.eur, divisa: r.divisa, mes: r.mes, year: r.any, fy: r.fy, data: r.data };
+  return { vehicle_id, fons: r.fons, tipus: r.tipus, est: r.est, cat: r.cat, eur: r.eur, divisa: r.divisa, mes: r.mes, year: r.any, fy: r.fy, data: r.data };
 });
 
-const { data: sfRows, error: sfErr } = await sb
-  .from("capital_calls")
-  .select("vehicle_id, data, cat, eur")
-  .eq("vcpe", "SF");
+// Load SF vehicle IDs from fund_meta, then fetch their capital_calls for dedup
+const { data: sfVehiclesFromMeta } = await sb.from("fund_meta").select("vehicle_id").eq("vehicle_tipus", "SF");
+const sfVehicleIds = (sfVehiclesFromMeta ?? []).map((r) => r.vehicle_id);
+const { data: sfRows, error: sfErr } = sfVehicleIds.length
+  ? await sb.from("capital_calls").select("vehicle_id, data, cat, eur").in("vehicle_id", sfVehicleIds)
+  : { data: [], error: null };
 if (sfErr) {
   console.error("Failed to load existing SF rows:", sfErr.message);
   process.exit(1);
@@ -252,11 +254,27 @@ if (mockRows.length) {
   else console.log(`✓ Upserted ${mockEntities.length} mock company entities`);
 }
 
-// DELETE existing PC rows
+// DELETE existing PC rows (via fund_meta.vehicle_tipus)
 console.log("\nDeleting existing PC capital calls...");
-const { error: delErr } = await sb.from("capital_calls").delete().eq("vcpe", "PC");
-if (delErr) { console.error("Delete failed:", delErr.message); process.exit(1); }
+const { data: pcVehicles } = await sb.from("fund_meta").select("vehicle_id").eq("vehicle_tipus", "PC");
+const pcIds = (pcVehicles ?? []).map((r) => r.vehicle_id);
+if (pcIds.length) {
+  const { error: delErr } = await sb.from("capital_calls").delete().in("vehicle_id", pcIds);
+  if (delErr) { console.error("Delete failed:", delErr.message); process.exit(1); }
+}
 console.log("✓ Deleted");
+
+// Ensure fund_meta has vehicle_tipus = 'PC' for each company vehicle
+const pcVehicleIds = [...new Set(dbRows.map(r => r.vehicle_id))];
+if (pcVehicleIds.length) {
+  const pcMetaRows = pcVehicleIds.map(id => {
+    const row = dbRows.find(r => r.vehicle_id === id);
+    return { vehicle_id: id, fons: row?.fons ?? id, vehicle_tipus: "PC" };
+  });
+  const { error: metaErr } = await sb.from("fund_meta").upsert(pcMetaRows, { onConflict: "vehicle_id" });
+  if (metaErr) console.warn("⚠ Could not upsert vehicle_tipus to fund_meta:", metaErr.message);
+  else console.log(`✓ Upserted vehicle_tipus=PC for ${pcMetaRows.length} vehicles into fund_meta`);
+}
 
 // INSERT in batches
 const BATCH = 200;

@@ -165,17 +165,18 @@ test("parseSheets — row with non-finite eur is skipped", () => {
   assert.equal(fundsRows.length, 1);
 });
 
-test("parseSheets — companies sheet preserves vcpe from sheet", () => {
+test("parseSheets — companies sheet parses rows without vcpe field", () => {
   const wb = makeWorkbook(
     [],
     [makeStartupRow("Company A", "Aportació", 45000, 500, "EUR", "VC")]
   );
   const { companiesRows } = parseSheets(wb);
   assert.equal(companiesRows.length, 1);
-  assert.equal(companiesRows[0].vcpe, "VC");
+  // vcpe is no longer read from the sheet; vehicle_tipus comes from fund_meta
+  assert.equal(companiesRows[0].vcpe, undefined);
 });
 
-test("parseSheets — companies row with invalid vcpe is skipped", () => {
+test("parseSheets — companies rows are parsed regardless of former vcpe column value", () => {
   const wb = makeWorkbook(
     [],
     [
@@ -184,7 +185,8 @@ test("parseSheets — companies row with invalid vcpe is skipped", () => {
     ]
   );
   const { companiesRows } = parseSheets(wb);
-  assert.equal(companiesRows.length, 1);
+  // Both rows have valid eur and date, so both are kept (vcpe no longer filters rows)
+  assert.equal(companiesRows.length, 2);
 });
 
 test("parseSheets — date serial is converted to ISO string", () => {

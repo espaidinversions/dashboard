@@ -50,9 +50,9 @@ function slugifyTipus(value) {
 }
 
 // ── Parse Equivalència Conceptes ──────────────────────────────────────────────
-export function buildTipusConceptMap(filePath) {
+export function buildTipusConceptMap(filePath, { warn = false } = {}) {
   if (!fs.existsSync(filePath)) {
-    console.warn("⚠ Equivalència Conceptes not found at", filePath, "— using model fallback only");
+    if (warn) console.warn("⚠ Equivalència Conceptes not found at", filePath, "— using model fallback only");
     return new Map();
   }
   const wb = XLSX.readFile(filePath);
@@ -82,23 +82,21 @@ function excelDateToISO(serial) {
   return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
 }
 
-const VALID_VCPE = new Set(["PE", "VC", "RE", "SF", "PC"]);
-
 // Column configs (0-based) for each sheet type.
 // "Capital Calls log": fons=r[2], tipus=r[3], date=r[5], importLocal=r[6],
-//   divisa=r[7], vcpe=r[13], eur=r[15], est=r[16]
+//   divisa=r[7], eur=r[15], est=r[16]
 // "Startups log": fons=r[1], tipus=r[2], date=r[4], importLocal=r[5],
-//   divisa=r[6], vcpe=r[14], eur=r[5] (no separate EUR col), est=null
-const FUNDS_COLS   = { fons: 2, tipus: 3, date: 5, importLocal: 6, divisa: 7, vcpe: 13, eur: 15, est: 16 };
-const STARTUP_COLS = { fons: 1, tipus: 2, date: 4, importLocal: 5, divisa: 6, vcpe: 14, eur: 5,  est: null };
+//   divisa=r[6], eur=r[5] (no separate EUR col), est=null
+const FUNDS_COLS   = { fons: 2, tipus: 3, date: 5, importLocal: 6, divisa: 7, eur: 15, est: 16 };
+const STARTUP_COLS = { fons: 1, tipus: 2, date: 4, importLocal: 5, divisa: 6, eur: 5,  est: null };
 
 // ── Parse both sheets ─────────────────────────────────────────────────────────
 // Blank fons cells inherit the previous row's fons (Excel subtable pattern).
-// Rows where eur is not finite/non-zero or vcpe is not a known code are skipped.
+// Rows where eur is not finite/non-zero are skipped.
 export function parseSheets(wb) {
   const HEADER_ROW = 7;
 
-  function parseSheet(ws, cols, forceVcpe) {
+  function parseSheet(ws, cols) {
     const raw = XLSX.utils.sheet_to_json(ws, { defval: "", header: 1 });
     const rows = [];
     let lastFons = "";
@@ -118,15 +116,12 @@ export function parseSheets(wb) {
       const data = excelDateToISO(dateSerial);
       if (!data) continue;
 
-      const vcpe = forceVcpe ?? String(r[cols.vcpe] ?? "").trim();
-      if (!VALID_VCPE.has(vcpe)) continue;
-
       const tipus = String(r[cols.tipus] ?? "").trim();
       const importLocal = Number(r[cols.importLocal]) || 0;
       const divisa = String(r[cols.divisa] || "EUR").trim();
       const est = cols.est != null ? (String(r[cols.est] ?? "").trim() || null) : null;
 
-      rows.push({ fons: lastFons, tipus, data, importLocal, divisa, vcpe, eur, est });
+      rows.push({ fons: lastFons, tipus, data, importLocal, divisa, eur, est });
     }
     return rows;
   }
@@ -134,8 +129,8 @@ export function parseSheets(wb) {
   const fundsSheet    = wb.Sheets["Capital Calls log"] ?? wb.Sheets[wb.SheetNames[0]];
   const startupsSheet = wb.Sheets["Startups log"]      ?? wb.Sheets[wb.SheetNames[1]];
   return {
-    fundsRows:     fundsSheet    ? parseSheet(fundsSheet,    FUNDS_COLS,   null) : [],
-    companiesRows: startupsSheet ? parseSheet(startupsSheet, STARTUP_COLS, null) : [],
+    fundsRows:     fundsSheet    ? parseSheet(fundsSheet,    FUNDS_COLS)   : [],
+    companiesRows: startupsSheet ? parseSheet(startupsSheet, STARTUP_COLS) : [],
   };
 }
 
@@ -188,7 +183,6 @@ export function normalizeRow(raw, vehicleId, tipusConceptMap) {
     fons: raw.fons,
     tipus: resolvedTipus,
     cat,
-    vcpe: raw.vcpe || null,
     est: raw.est || null,
     divisa: raw.divisa || "EUR",
     data: raw.data,
@@ -212,11 +206,19 @@ export function buildDedupSet(existingRows) {
 }
 
 async function fetchExistingDedupSet(supabase) {
-  const { data, error } = await supabase
-    .from("capital_calls")
-    .select("vehicle_id, tipus, data, eur");
-  if (error) throw new Error("Failed to load capital_calls: " + error.message);
-  return buildDedupSet(data);
+  const PAGE = 1000;
+  const all = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("capital_calls")
+      .select("vehicle_id, tipus, data, eur")
+      .order("data")
+      .range(from, from + PAGE - 1);
+    if (error) throw new Error("Failed to load capital_calls: " + error.message);
+    all.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
+  }
+  return buildDedupSet(all);
 }
 
 // ── Main (only runs when executed directly, not when imported) ────────────────
@@ -232,6 +234,7 @@ if (isMain) {
 
   const excelArg = args[0];
   const dryRun = args.includes("--dry-run");
+  const listNew = args.includes("--list-new");
   const eqIdx = args.indexOf("--equivalencia");
   if (eqIdx !== -1 && (!args[eqIdx + 1] || args[eqIdx + 1].startsWith("--"))) {
     console.error("--equivalencia requereix un argument de ruta");
@@ -271,7 +274,7 @@ if (isMain) {
   if (dryRun) console.log("🔍 DRY RUN — no changes will be written\n");
 
   // 1. Parse Equivalència Conceptes
-  const tipusConceptMap = buildTipusConceptMap(absEqPath);
+  const tipusConceptMap = buildTipusConceptMap(absEqPath, { warn: true });
   console.log(`✓ Loaded ${tipusConceptMap.size} type mappings from Equivalència Conceptes`);
 
   // 2. Parse Excel sheets
@@ -298,14 +301,18 @@ if (isMain) {
     }
   }
 
-  // Create placeholder private_entities for unmatched names
+  // Create placeholder private_entities for unmatched names.
+  // kind is determined by looking up fund_meta.vehicle_tipus:
+  //   SF or PC → company; otherwise → vehicle.
+  // Since we don't have a vehicle_id yet, we default to "vehicle" for placeholders;
+  // the import scripts (sf_import / startups_import) handle company-kind entities separately.
   if (unmatchedRawByName.size > 0) {
     const placeholders = [];
     for (const [name, rows] of unmatchedRawByName) {
-      const vcpe = rows[0]?.vcpe ?? "";
-      const kind = (vcpe === "SF" || vcpe === "PC") ? "company" : "vehicle";
+      // Default to vehicle; SF/PC company rows come from their dedicated import scripts
+      const kind = "vehicle";
       const slug = name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
-      const id = `${kind === "company" ? "COMPANY" : "VEHICLE"}:${slug}`;
+      const id = `VEHICLE:${slug}`;
       placeholders.push({ id, kind, canonical_name: name, source_name: name, match_type: "fallback" });
     }
     if (!dryRun) {
@@ -350,7 +357,13 @@ if (isMain) {
   if (dryRun) {
     console.log(`\n[DRY RUN — no changes made]`);
     console.log(`  Would insert: ${newRows.length} rows`);
-    if (newRows.length > 0) {
+    if (newRows.length > 0 && listNew) {
+      console.log("\nNew rows:");
+      console.log("vehicle_id | fons | cat | tipus | data | eur");
+      newRows.forEach((r) => {
+        console.log([r.vehicle_id, r.fons ?? "", r.cat ?? "", r.tipus ?? "", r.data ?? "", r.eur].join(" | "));
+      });
+    } else if (newRows.length > 0) {
       console.log("\nSample rows (first 3):");
       newRows.slice(0, 3).forEach(r => console.log(" ", JSON.stringify(r)));
     }

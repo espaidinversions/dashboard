@@ -476,7 +476,6 @@ export async function saveDashboardBundle(bundle) {
         mes: r.mes,
         year: r.any,
         fy: r.fy,
-        vcpe: r.vcpe,
         est: row.est,
         eur: row.eur,
         divisa: r.divisa,
