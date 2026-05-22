@@ -394,15 +394,7 @@ export function TxSection({
                       {row.est ? <Badge label={row.est} cfg={estCfg[row.est] || {}} /> : <span style={{ color: tc.textLight }}>—</span>}
                     </td>
                     <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={row.comentaris ?? ""}>
-                      {canEdit && row._rowId && onQuickUpdate ? (
-                        <EditableCell
-                          value={row.comentaris}
-                          type="text"
-                          onSave={(value) => onQuickUpdate(row, { comentaris: value ?? "" })}
-                          emptyDisplay="—"
-                          style={{ maxWidth: 220, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}
-                        />
-                      ) : (row.comentaris || "—")}
+                      {row.comentaris || "—"}
                     </td>
                     {canEdit ? (
                       <td style={{ padding: "4px 8px", textAlign: "center", whiteSpace: "nowrap" }}>
