@@ -169,7 +169,7 @@ export function useDashboardData() {
   }, []);
 
   const handleCCInsert = useCallback(async (values, setError) => {
-    if (!values.fons || !values.data || !values.eur) { setError("Fons, data i import són obligatoris."); return; }
+    if (!values.fons || !values.data || !values.eur || !values.tipus) { setError("Fons, data, tipus i import són obligatoris."); return; }
     let payload;
     try {
       payload = await prepareCapitalCallPayload(values);
@@ -190,7 +190,7 @@ export function useDashboardData() {
   }, []);
 
   const handleCCUpdate = useCallback(async (rowId, values, setError, existingRow = null) => {
-    if (!values.data || !values.eur) { setError("Data i import són obligatoris."); return; }
+    if (!values.data || !values.eur || !values.tipus) { setError("Data, tipus i import són obligatoris."); return; }
     let payload;
     try {
       payload = await prepareCapitalCallPayload(values, existingRow);
