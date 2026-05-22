@@ -45,7 +45,7 @@ export function buildFallbackCompaniesFromCapitalCalls(capitalCallRows, entityMa
   const grouped = new Map();
 
   rows.forEach((row) => {
-    if (!["PC", "SF"].includes(row?.vcpe)) return;
+    if (!["PC", "SF"].includes(row?.vehicleTipus)) return;
     const entityId = row?.vehicle_id ?? null;
     const companyName = getPrivateEntityName(entityMap, entityId, row?.fons);
     if (!entityId || !companyName) return;
@@ -54,7 +54,7 @@ export function buildFallbackCompaniesFromCapitalCalls(capitalCallRows, entityMa
     const current = grouped.get(entityId) ?? {
       id: entityId,
       nom: companyName,
-      tipus: row.vcpe,
+      tipus: row.vehicleTipus,
       segment: null,
       entrepreneurs: null,
       origen: null,

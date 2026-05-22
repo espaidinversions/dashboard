@@ -4,7 +4,11 @@ function normalizeDealName(name) {
   return String(name ?? "")
     .trim()
     .toLowerCase()
-    .replace(/\s+/g, " ");
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 export function mergePipelineDeals(liveDeals = [], fallbackDeals = PIPELINE_SEED) {
@@ -32,4 +36,3 @@ export function mergePipelineDeals(liveDeals = [], fallbackDeals = PIPELINE_SEED
       return String(a?.name ?? "").localeCompare(String(b?.name ?? ""));
     });
 }
-

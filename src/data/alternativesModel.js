@@ -1,6 +1,6 @@
 import { slugify } from "../utils.js";
 
-export function buildPrivateSyntheticRows(rows, { vcpe, include, fons, tipus, est }) {
+export function buildPrivateSyntheticRows(rows, { vehicleTipus, include, fons, tipus, est }) {
   const source = Array.isArray(rows) ? rows : [];
   const tx = [];
   const compr = [];
@@ -19,14 +19,14 @@ export function buildPrivateSyntheticRows(rows, { vcpe, include, fons, tipus, es
     const base = {
       _synthetic: true,
       _rowId: null,
-      id: row?.id ?? slugify(`${vcpe}-${fundName}`),
+      id: row?.id ?? slugify(`${vehicleTipus}-${fundName}`),
       fons: fundName,
       data: date,
       any,
       mes,
       fy: `FY ${any}`,
       divisa: "EUR",
-      vcpe,
+      vehicleTipus,
       est: rowEst ?? null,
       tipus: tipus ? tipus(row) : "Aportació",
       eur,
@@ -42,17 +42,17 @@ export function buildPrivateSyntheticRows(rows, { vcpe, include, fons, tipus, es
 export function mergePrivateRows(actualRows, syntheticRows) {
   const actual = Array.isArray(actualRows) ? actualRows : [];
   const synthetic = Array.isArray(syntheticRows) ? syntheticRows : [];
-  const exactKeys = new Set(actual.map((row) => `${row.fons}|${row.data}|${row.cat}|${row.eur}|${row.vcpe}`));
-  const coarseKeys = new Set(actual.map((row) => `${row.fons}|${row.data}|${row.cat}|${row.vcpe}`));
+  const exactKeys = new Set(actual.map((row) => `${row.fons}|${row.data}|${row.cat}|${row.eur}|${row.vehicleTipus}`));
+  const coarseKeys = new Set(actual.map((row) => `${row.fons}|${row.data}|${row.cat}|${row.vehicleTipus}`));
   return [
     ...actual,
     ...synthetic.filter((row) => {
-      const exactKey = `${row.fons}|${row.data}|${row.cat}|${row.eur}|${row.vcpe}`;
+      const exactKey = `${row.fons}|${row.data}|${row.cat}|${row.eur}|${row.vehicleTipus}`;
       if (exactKeys.has(exactKey)) return false;
       // Synthetic rows are approximations. If a real row already exists for the
       // same fund/date/category bucket, prefer the real row even if the amount
       // differs slightly due to rounding or source precision.
-      const coarseKey = `${row.fons}|${row.data}|${row.cat}|${row.vcpe}`;
+      const coarseKey = `${row.fons}|${row.data}|${row.cat}|${row.vehicleTipus}`;
       return !coarseKeys.has(coarseKey);
     }),
   ];
@@ -107,11 +107,11 @@ function matchPrivateTxName(rawName, searchers, companies) {
   for (const variant of variants) {
     const aliased = PRIVATE_TX_NAME_ALIASES[variant];
     if (aliased) {
-      if (searcherMap.has(normalizePrivateName(aliased))) return { fons: aliased, vcpe: "SF" };
-      if (companyMap.has(normalizePrivateName(aliased))) return { fons: aliased, vcpe: "PC" };
+      if (searcherMap.has(normalizePrivateName(aliased))) return { fons: aliased, vehicleTipus: "SF" };
+      if (companyMap.has(normalizePrivateName(aliased))) return { fons: aliased, vehicleTipus: "PC" };
     }
-    if (searcherMap.has(variant)) return { fons: searcherMap.get(variant), vcpe: "SF" };
-    if (companyMap.has(variant)) return { fons: companyMap.get(variant), vcpe: "PC" };
+    if (searcherMap.has(variant)) return { fons: searcherMap.get(variant), vehicleTipus: "SF" };
+    if (companyMap.has(variant)) return { fons: companyMap.get(variant), vehicleTipus: "PC" };
   }
 
   const longestContains = (map) => {
@@ -126,15 +126,15 @@ function matchPrivateTxName(rawName, searchers, companies) {
   };
 
   const searcherHit = longestContains(searcherMap);
-  if (searcherHit) return { fons: searcherHit, vcpe: "SF" };
+  if (searcherHit) return { fons: searcherHit, vehicleTipus: "SF" };
   const companyHit = longestContains(companyMap);
-  if (companyHit) return { fons: companyHit, vcpe: "PC" };
+  if (companyHit) return { fons: companyHit, vehicleTipus: "PC" };
   return null;
 }
 
 export function normalizePrivateWorkbookRows(rows, searchers, companies) {
   return (Array.isArray(rows) ? rows : []).map((row) => {
     const match = matchPrivateTxName(row?.fons, searchers, companies);
-    return match ? { ...row, fons: match.fons, vcpe: match.vcpe, est: null } : row;
+    return match ? { ...row, fons: match.fons, vehicleTipus: match.vehicleTipus, est: null } : row;
   });
 }

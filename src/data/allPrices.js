@@ -1,6 +1,7 @@
 import { FUND_PRICES } from "../generated/prices/fundPrices.js";
 import { ESTIMATED_BOND_PRICES } from "./estimatedBondPrices.js";
-import PRICE_BRIDGES from "../../raw-data/price-bridges.json" with { type: "json" };
+// Keep "price bridges" in src/ so production builds don't depend on ignored raw-data/ inputs.
+import PRICE_BRIDGES from "./price-bridges.json" with { type: "json" };
 
 function mergeMonthlySeries(primary = [], secondary = []) {
   const map = new Map((primary ?? []).map(([month, value]) => [month, value]));

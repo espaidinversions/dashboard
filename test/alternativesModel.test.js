@@ -13,7 +13,7 @@ test("buildPrivateSyntheticRows creates paired commitment and call rows", () => 
   ];
 
   const synthetic = buildPrivateSyntheticRows(rows, {
-    vcpe: "SF",
+    vehicleTipus: "SF",
     include: () => true,
     fons: (row) => row.nom,
     tipus: (row) => row.formEntrada,
@@ -29,11 +29,11 @@ test("buildPrivateSyntheticRows creates paired commitment and call rows", () => 
 
 test("mergePrivateRows keeps real rows and skips duplicate synthetic rows", () => {
   const actual = [
-    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117, vcpe: "SF" },
+    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117, vehicleTipus: "SF" },
   ];
   const synthetic = [
-    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117, vcpe: "SF", _synthetic: true },
-    { fons: "Palette Capital", data: "2026-01-13", cat: "Capital Call", eur: 32625, vcpe: "SF", _synthetic: true },
+    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117, vehicleTipus: "SF", _synthetic: true },
+    { fons: "Palette Capital", data: "2026-01-13", cat: "Capital Call", eur: 32625, vehicleTipus: "SF", _synthetic: true },
   ];
 
   const merged = mergePrivateRows(actual, synthetic);
@@ -45,10 +45,10 @@ test("mergePrivateRows keeps real rows and skips duplicate synthetic rows", () =
 
 test("mergePrivateRows prefers real rows when synthetic rows match the same bucket with rounded amounts", () => {
   const actual = [
-    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117.02, vcpe: "SF" },
+    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117.02, vehicleTipus: "SF" },
   ];
   const synthetic = [
-    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117, vcpe: "SF", _synthetic: true },
+    { fons: "Fairmile Partners", data: "2025-05-29", cat: "Capital Call", eur: 28117, vehicleTipus: "SF", _synthetic: true },
   ];
 
   const merged = mergePrivateRows(actual, synthetic);
@@ -64,6 +64,6 @@ test("normalizePrivateWorkbookRows maps workbook aliases onto canonical company 
   const normalized = normalizePrivateWorkbookRows(workbookRows, [], companies);
 
   assert.equal(normalized[0].fons, "Greenfarm");
-  assert.equal(normalized[0].vcpe, "PC");
+  assert.equal(normalized[0].vehicleTipus, "PC");
   assert.equal(normalized[0].est, null);
 });

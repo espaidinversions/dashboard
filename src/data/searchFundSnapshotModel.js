@@ -8,7 +8,7 @@ export const STRATEGY_PARTICIPADA_ALTRES = "Participada (Altres)";
  * Build a strategy inferrer from live searcher and portfolio company data.
  * @param {{ nom: string, statusScreening?: string|null }[]} searchers
  * @param {{ nom: string, tipus?: string|null }[]} companies
- * @returns {(ctx: { fons?: string|null, vcpe?: string|null }) => string|null}
+ * @returns {(ctx: { fons?: string|null, vehicleTipus?: string|null }) => string|null}
  */
 export function buildSearchFundInferrer(searchers = [], companies = []) {
   const stageByName = new Map(
@@ -23,7 +23,7 @@ export function buildSearchFundInferrer(searchers = [], companies = []) {
       .filter(([name]) => Boolean(name)),
   );
 
-  return function inferStrategy({ fons, vcpe } = {}) {
+  return function inferStrategy({ fons, vehicleTipus } = {}) {
     const nameKey = normalizeSearcherName(fons);
     if (!nameKey) return null;
 
@@ -35,7 +35,7 @@ export function buildSearchFundInferrer(searchers = [], companies = []) {
     if (stage === "Invertit en fase d'adquisició") return SF_STRATEGY_ADQUISICIO;
     if (stage === "Invertit en fase de cerca") return SF_STRATEGY_CERCA;
 
-    if (vcpe === "PC") return STRATEGY_PARTICIPADA_ALTRES;
+    if (vehicleTipus === "PC") return STRATEGY_PARTICIPADA_ALTRES;
     return null;
   };
 }

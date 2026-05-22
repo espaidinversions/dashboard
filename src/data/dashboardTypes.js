@@ -15,7 +15,7 @@
  * @property {string} mes
  * @property {number} any
  * @property {string} fy
- * @property {string} vcpe
+ * @property {string} vehicleTipus
  * @property {string} est
  * @property {number} eur
  * @property {string} divisa

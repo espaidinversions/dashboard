@@ -1,12 +1,18 @@
 import { FUND_NAME_MAP } from "./fundNameMap.js";
 import { RAW_CC as STATIC_CC } from "./capital-calls.js";
+import { normalizeCapitalCallTipus } from "./capitalCallTipusModel.js";
+
+const EXCLUDED_CASH_MODEL_TIPUS = new Set([
+  "Transferència Participacions",
+  "Conversió Participacions",
+]);
 
 function stripLegalSuffix(name) {
   return name.replace(/\s+(A\s+)?S\.?L\.?$|\s+S\.?A\.?$|\s+SCR(,\s*S\.?A\.?)?$|\s+FCRE$/i, "").trim();
 }
 
 // Fund name PREFIXES whose entire family is RE (all static rows with these prefixes
-// have vcpe=RE and none are PE). Used for fuzzy matching when canonical names
+// have vehicleTipus=RE and none are PE). Used for fuzzy matching when canonical names
 // in the DB/forecast table strip trailing identifiers like " D" or " FICC".
 const RE_FAMILY_PREFIXES = [
   "inveractiva",
@@ -16,8 +22,8 @@ const RE_FAMILY_PREFIXES = [
   "tectum",
 ];
 
-// RE funds derived from static capital-calls.js (authoritative for vcpe classification).
-// Used as fallback when rawCapitalCalls (DB data) lacks vcpe metadata.
+// RE funds derived from static capital-calls.js (authoritative for vehicleTipus classification).
+// Used as fallback when rawCapitalCalls (DB data) lacks vehicleTipus metadata.
 const STATIC_RE_NAMES = (() => {
   const s = new Set();
   for (const row of STATIC_CC) {
@@ -38,6 +44,7 @@ const STATIC_COMMITTED = (() => {
   const m = {};
   for (const row of STATIC_CC) {
     if (row?.cat !== "Compromís") continue;
+    if (EXCLUDED_CASH_MODEL_TIPUS.has(normalizeCapitalCallTipus(row?.tipus))) continue;
     const rawFund = String(row?.fons ?? "").trim();
     if (!rawFund) continue;
     const mappedFund = FUND_NAME_MAP[rawFund];
@@ -117,7 +124,7 @@ export function buildReFundMatcher(actualCapitalCalls = []) {
   const reFundsNorm = new Set(STATIC_RE_NAMES);
   if (Array.isArray(actualCapitalCalls)) {
     for (const row of actualCapitalCalls) {
-      if (String(row?.vcpe ?? "").trim() === "RE") {
+      if (String(row?.vehicleTipus ?? "").trim() === "RE") {
         const fund = String(row?.fons ?? "").trim();
         if (fund) {
           reFundsNorm.add(fund.toLowerCase());
@@ -166,7 +173,7 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
     if (isReFund(actual.fund)) return;
     const key = rowKey(actual);
     const existing = byFundYearType.get(key);
-    if (!existing && !(actual.fund in (normalized.funds ?? {}))) return;
+    // Include actuals even when the fund is not yet present in the forecast table.
     const current = existing ?? { ...actual, model: 0, real: 0 };
     current.real += actual.real;
     byFundYearType.set(key, current);
@@ -207,9 +214,17 @@ function deriveActualsFromCapitalCalls(rows) {
     const fund = FUND_NAME_MAP[rawFund] ?? rawFund;
     const year = Number(row?.any ?? row?.year ?? String(row?.data ?? "").slice(0, 4));
     if (!fund || !year) return;
+
+    // Exclude non-cash transfers/conversions from the cash model "real" side.
+    const concept = normalizeCapitalCallTipus(row?.tipus);
+    if (EXCLUDED_CASH_MODEL_TIPUS.has(concept)) return;
+
     const category = String(row?.cat ?? "").trim();
     const amount = Number(row?.eur) || 0;
     if (category === "Capital Call") {
+      // "Capital cridat" in this model is Aportació-only (exclude fees/equalisation/etc.).
+      // If tipus is missing/null but cat is Capital Call, assume it's a contribution.
+      if (concept != null && concept !== "Aportació") return;
       result.push({ fund, year, type: "calls", model: 0, real: Math.abs(amount) });
     } else if (category === "Distribució" || category === "Retorn Capital") {
       result.push({ fund, year, type: "dist", model: 0, real: Math.abs(amount) });
@@ -226,6 +241,7 @@ function deriveCommittedFromCapitalCalls(rows) {
       const rawFund = String(row?.fons ?? "").trim();
       const fund = FUND_NAME_MAP[rawFund] ?? rawFund;
       if (!fund || row?.cat !== "Compromís") return;
+      if (EXCLUDED_CASH_MODEL_TIPUS.has(normalizeCapitalCallTipus(row?.tipus))) return;
       fromDb[fund] = (fromDb[fund] ?? 0) + Math.abs(Number(row?.eur) || 0);
     });
   }

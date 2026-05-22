@@ -16,7 +16,7 @@ function buildSearchersCapitalCallMeta(capitalCallRows) {
   const byId = new Map();
   const byName = new Map();
   rows.forEach((row) => {
-    if (row?.vcpe !== "SF") return;
+    if (row?.vehicleTipus !== "SF") return;
     const date = String(row?.data ?? "").slice(0, 10);
     if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
     if ((row?.eur ?? 0) <= 0) return;

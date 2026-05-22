@@ -67,7 +67,7 @@ export function normalizeCapitalCallStrategy(value, vehicleTipus = null, context
   // For legacy/unset values, fall back to live snapshot inference (set by db.js after loadAll)
   const snapshotStrategy = _snapshotInferrer?.({
     fons: typeof context === "string" ? context : context?.fons,
-    vcpe: vehicleTipus,   // keep 'vcpe' as the key — inferrer internal contract
+    vehicleTipus,
   }) ?? null;
   if (snapshotStrategy) return snapshotStrategy;
 

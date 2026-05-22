@@ -7,7 +7,7 @@ import {
 import { normalizeCapitalCallStrategy } from "./capitalCallStrategyModel.js";
 
 export function makeFundRouteId(row) {
-  if (row?.id && row?.vcpe) return `${row.vcpe}:${row.id}`;
+  if (row?.id && row?.vehicleTipus) return `${row.vehicleTipus}:${row.id}`;
   return row?.id ?? slugify(row?.fons ?? "");
 }
 
@@ -16,8 +16,8 @@ export function findFundRowsByRouteId(rows, routeId) {
   const match = /^([A-Z]{2,3}):(.*)$/u.exec(decodedId);
   const source = Array.isArray(rows) ? rows : [];
   if (match) {
-    const [, vcpe, entityId] = match;
-    return source.filter((row) => row?.id === entityId && row?.vcpe === vcpe);
+    const [, vehicleTipus, entityId] = match;
+    return source.filter((row) => row?.id === entityId && row?.vehicleTipus === vehicleTipus);
   }
 
   const hits = source.filter(
@@ -25,7 +25,7 @@ export function findFundRowsByRouteId(rows, routeId) {
   );
   if (hits.length === 0) return [];
 
-  const nonCompanyHits = hits.filter((row) => row?.vcpe !== "PC");
+  const nonCompanyHits = hits.filter((row) => row?.vehicleTipus !== "PC");
   return nonCompanyHits.length > 0 ? nonCompanyHits : hits;
 }
 
@@ -37,7 +37,7 @@ function normalizeFundDetailRow(row) {
     tipus,
     eur,
     cat: row?.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
-    est: normalizeCapitalCallStrategy(row?.est, row?.vcpe, row),
+    est: normalizeCapitalCallStrategy(row?.est, row?.vehicleTipus, row),
   };
 }
 
@@ -65,7 +65,7 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
 
   const fundName = txs[0].fons;
   const fundId = txs[0].id ?? null;
-  const vcpe = txs[0].vcpe;
+  const vehicleTipus = txs[0].vehicleTipus;
   const est = txs[0].est;
 
   const compromis = txs.filter((row) => row.cat === "Compromís").reduce((sum, row) => sum + row.eur, 0);
@@ -99,7 +99,7 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
     txLog,
     fundName,
     fundId,
-    vcpe,
+    vehicleTipus,
     est,
     compromis,
     calls,
