@@ -83,3 +83,23 @@ test("transaction shortcut leaves can escalate independently from display subsec
   assert.equal(getSectionAccessLevel(access, "txlog"), ACCESS_NONE);
   assert.equal(getSectionAccessLevel(access, "mp-transaccions"), ACCESS_NONE);
 });
+
+test("cash-model is superuser-only by default and cannot be granted as user-level", () => {
+  const baseUser = buildSectionAccessMap({ role: "user" });
+  assert.equal(getSectionAccessLevel(baseUser, "cash-model"), ACCESS_NONE);
+  assert.equal(hasSectionAccess(baseUser, "cash-model"), false);
+
+  const userGrantedUser = buildSectionAccessMap({
+    role: "user",
+    sectionRoles: { "cash-model": ACCESS_USER },
+  });
+  assert.equal(getSectionAccessLevel(userGrantedUser, "cash-model"), ACCESS_NONE);
+  assert.equal(hasSectionAccess(userGrantedUser, "cash-model"), false);
+
+  const userGrantedSuperuser = buildSectionAccessMap({
+    role: "user",
+    sectionRoles: { "cash-model": ACCESS_SUPERUSER },
+  });
+  assert.equal(getSectionAccessLevel(userGrantedSuperuser, "cash-model"), ACCESS_SUPERUSER);
+  assert.equal(hasSectionAccess(userGrantedSuperuser, "cash-model"), true);
+});

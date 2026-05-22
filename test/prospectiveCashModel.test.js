@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   forecastRowsToEditorData,
   editorDataToForecastRows,
+  deriveProspectiveCashRows,
 } from "../src/data/prospectiveCashModel.js";
 
 const ROWS = [
@@ -81,5 +82,43 @@ describe("editorDataToForecastRows", () => {
         r.amount === src.amount
       ));
     }
+  });
+});
+
+describe("deriveProspectiveCashRows", () => {
+  it("includes actuals for funds that have no forecast rows (unmodeled)", () => {
+    const editorData = { years: [], funds: {} };
+    const actualCapitalCalls = [
+      { fons: "Unmodeled Fund", cat: "Capital Call", eur: 1000, any: 2026, vcpe: "PE" },
+      { fons: "Unmodeled Fund", cat: "Distribució", eur: -200, any: 2027, vcpe: "PE" },
+      { fons: "Unmodeled Fund", cat: "Compromís", eur: 5000, any: 2026, vcpe: "PE" },
+    ];
+
+    const { rows, committed, firstCall } = deriveProspectiveCashRows(editorData, actualCapitalCalls);
+    assert(rows.some((r) => r.fund === "Unmodeled Fund" && r.year === 2026 && r.type === "calls" && r.real === 1000));
+    assert(rows.some((r) => r.fund === "Unmodeled Fund" && r.year === 2027 && r.type === "dist" && r.real === 200));
+    assert.equal(committed["Unmodeled Fund"], 5000);
+    assert.equal(firstCall["Unmodeled Fund"], 2026);
+  });
+
+  it("excludes transfer/conversion tipus from real and committed", () => {
+    const editorData = { years: [], funds: {} };
+    const actualCapitalCalls = [
+      { fons: "Legacy Vehicle", cat: "Compromís", eur: 1000, any: 2026, vcpe: "PE", tipus: "Saldo apertura 2019" }, // transfer
+      { fons: "Legacy Vehicle", cat: "Capital Call", eur: 1000, any: 2026, vcpe: "PE", tipus: "Saldo apertura 2019" }, // transfer
+      { fons: "Legacy Vehicle", cat: "Capital Call", eur: 500, any: 2026, vcpe: "PE", tipus: "Aportació" }, // real cash
+      { fons: "Legacy Vehicle", cat: "Distribució", eur: -200, any: 2027, vcpe: "PE", tipus: "Conversió Participacions" }, // conversion (exclude)
+      { fons: "Legacy Vehicle", cat: "Distribució", eur: -300, any: 2027, vcpe: "PE", tipus: "Distribució" }, // real cash
+    ];
+
+    const { rows, committed } = deriveProspectiveCashRows(editorData, actualCapitalCalls);
+    // Transfers are ignored: committed should not include the 1000
+    assert.equal(committed["Legacy Vehicle"] ?? 0, 0);
+    // Calls should include only the 500
+    assert(rows.some((r) => r.fund === "Legacy Vehicle" && r.year === 2026 && r.type === "calls" && r.real === 500));
+    assert(!rows.some((r) => r.fund === "Legacy Vehicle" && r.year === 2026 && r.type === "calls" && r.real === 1500));
+    // Dist should include only the 300 (conversion excluded)
+    assert(rows.some((r) => r.fund === "Legacy Vehicle" && r.year === 2027 && r.type === "dist" && r.real === 300));
+    assert(!rows.some((r) => r.fund === "Legacy Vehicle" && r.year === 2027 && r.type === "dist" && r.real === 500));
   });
 });

@@ -439,7 +439,7 @@ function Dashboard() {
     "Fons de Fons": { color:tc.greenDark, bg: dark ? "#0A2010" : "#E8F8E8" },
     "Fons de Coinversió": { color:"#0F766E", bg: dark ? "#0B1F1D" : "#DFF7F3" },
     "Search Fund - Cerca": { color:"#2563A8", bg: dark ? "#0A1828" : "#DDEAF8" },
-    "Search Fund - Adquisició/Participada (SF)": { color:"#1D4ED8", bg: dark ? "#101B3D" : "#E0E7FF" },
+    "Search Fund - Participada": { color:"#1D4ED8", bg: dark ? "#101B3D" : "#E0E7FF" },
     "Participada (Altres)": { color:"#7A5A00", bg: dark ? "#1A1200" : "#FFF5D6" },
     "Fons Real Estate": { color:tc.purple||"#9B7CC8", bg: dark ? "#20163A" : "#F3EEF8" },
   };

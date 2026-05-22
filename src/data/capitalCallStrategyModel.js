@@ -28,7 +28,7 @@ export const CAPITAL_CALL_STRATEGY_OPTIONS = [
   "Fons de Fons",
   "Fons de Coinversió",
   "Search Fund - Cerca",
-  "Search Fund - Adquisició/Participada (SF)",
+  "Search Fund - Participada",
   "Participada (Altres)",
   "Fons Real Estate",
 ];
@@ -49,7 +49,8 @@ const STRATEGY_MAP = new Map([
   ["coinversio", "Fons de Coinversió"],
   ["coinversions", "Fons de Coinversió"],
   ["search fund cerca", "Search Fund - Cerca"],
-  ["search fund adquisicio participada sf", "Search Fund - Adquisició/Participada (SF)"],
+  ["search fund participada", "Search Fund - Participada"],
+  ["search fund adquisicio participada sf", "Search Fund - Participada"],
   ["participada altres", "Participada (Altres)"],
   ["fons real estate", "Fons Real Estate"],
   ["directe", "Fons Real Estate"],

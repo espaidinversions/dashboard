@@ -31,7 +31,7 @@ export const EST_CFG = {
   "Fons de Fons":                          { color:TC.greenDark, bg:"#E8F8E8" },
   "Fons de Coinversió":                    { color:"#0F766E",    bg:"#DFF7F3" },
   "Search Fund - Cerca":                   { color:"#2563A8",    bg:"#DDEAF8" },
-  "Search Fund - Adquisició/Participada (SF)": { color:"#1D4ED8", bg:"#E0E7FF" },
+  "Search Fund - Participada": { color:"#1D4ED8", bg:"#E0E7FF" },
   "Participada (Altres)":                  { color:"#7A5A00",    bg:"#FFF5D6" },
   "Fons Real Estate":                      { color:"#6A4C8A",    bg:"#F3EEF8" },
 };

@@ -49,3 +49,14 @@ test("mergePipelineDeals lets live rows override the bundled catalog", () => {
   assert.equal(rcp.active, false);
   assert.equal(rcp.estimatedClosing, "Sep 2026");
 });
+
+test("mergePipelineDeals de-duplicates deals with punctuation/diacritics differences in name", () => {
+  const merged = mergePipelineDeals(
+    [{ id: 1, name: "Méd IV (Archimed)", active: true, status: "Aprovat" }],
+    [{ id: 1, name: "MED IV - Archimed", active: true, status: "En estudi" }],
+  );
+
+  // Both records normalize to the same key, so we keep a single deal, and live overrides fallback.
+  assert.equal(merged.length, 1);
+  assert.equal(merged[0].status, "Aprovat");
+});

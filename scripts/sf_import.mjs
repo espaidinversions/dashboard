@@ -79,7 +79,7 @@ const SF_FONS_ALLOCATION = new Map([
 ]);
 
 const SF_EST_CERCA      = "Search Fund - Cerca";
-const SF_EST_ADQUISICIO = "Search Fund - Adquisició/Participada (SF)";
+const SF_EST_ADQUISICIO = "Search Fund - Participada";
 
 // Overrides for Logs fons names that differ significantly from Master nom
 // (prefix matching handles most cases; only truly different names need explicit entries)

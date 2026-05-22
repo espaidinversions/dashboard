@@ -9,7 +9,7 @@ import { normalizeCapitalCallStrategy, setSnapshotInferrer } from "../src/data/c
 // In production, the snapshot inferrer is wired up after loading searcher/company data.
 // In tests, provide a tiny stub so the "legacy SF" fallback inference is deterministic.
 setSnapshotInferrer(({ fons }) => {
-  if (String(fons ?? "").trim().toLowerCase() === "adinor") return "Search Fund - Adquisició/Participada (SF)";
+  if (String(fons ?? "").trim().toLowerCase() === "adinor") return "Search Fund - Participada";
   return "Search Fund - Cerca";
 });
 
@@ -22,8 +22,8 @@ test("stored canonical value is trusted — cerca stays cerca", () => {
 
 test("stored canonical value is trusted — adquisicio stays adquisicio", () => {
   assert.equal(
-    normalizeCapitalCallStrategy("Search Fund - Adquisició/Participada (SF)", "SF", { fons: "Aeqor SRL" }),
-    "Search Fund - Adquisició/Participada (SF)",
+    normalizeCapitalCallStrategy("Search Fund - Participada", "SF", { fons: "Aeqor SRL" }),
+    "Search Fund - Participada",
   );
 });
 
@@ -37,7 +37,7 @@ test("fallback inference: legacy 'SF' est for active searcher → cerca", () => 
 test("fallback inference: legacy 'SF' est for SF acquisition (Adinor) → adquisicio", () => {
   assert.equal(
     normalizeCapitalCallStrategy("SF", "SF", { fons: "Adinor" }),
-    "Search Fund - Adquisició/Participada (SF)",
+    "Search Fund - Participada",
   );
 });
 
