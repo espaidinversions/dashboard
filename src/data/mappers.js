@@ -106,6 +106,7 @@ export function capitalCallToRow(row) {
     year,
     fy,
     vehicleTipus: row.fund_meta?.vehicle_tipus ?? row.vcpe ?? null,
+    vcpe: row.fund_meta?.vehicle_tipus ?? row.vcpe ?? null,  // transition alias — remove in Task 9
     est: normalizeCapitalCallStrategy(row.est, row.fund_meta?.vehicle_tipus ?? row.vcpe ?? null, row),
     eur,
     divisa: row.divisa,
@@ -141,6 +142,7 @@ export function rowToCapitalCall(row, entityMap) {
     any: year,
     fy,
     vehicleTipus: row.fund_meta?.vehicle_tipus ?? row.vcpe ?? null,
+    vcpe: row.fund_meta?.vehicle_tipus ?? row.vcpe ?? null,  // transition alias — remove in Task 9
     est: normalizeCapitalCallStrategy(row.est, row.fund_meta?.vehicle_tipus ?? row.vcpe ?? null, { fons: row.fons }),
     eur,
     divisa: row.divisa,

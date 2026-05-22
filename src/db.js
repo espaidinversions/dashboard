@@ -186,18 +186,10 @@ export async function fetchCommittedOverrides() {
 
 export async function saveCommittedOverrides(overrides, vehicleIds) {
   if (!supabase) return { error: null };
-  const rows = Object.entries(overrides ?? {})
-    .map(([fons, v]) => {
-      const vehicle_id = vehicleIds?.[fons];
-      if (!vehicle_id) return null;
-      const num = Number(v);
-      return {
-        vehicle_id,
-        fons,
-        committed_override: Number.isFinite(num) && num > 0 ? num : null,
-      };
-    })
-    .filter(Boolean);
+  const rows = Object.entries(overrides)
+    .filter(([, v]) => v > 0)
+    .map(([fons, committed_override]) => ({ vehicle_id: vehicleIds[fons], fons, committed_override }))
+    .filter((r) => r.vehicle_id);
   if (!rows.length) return { error: null };
   const { error } = await supabase.from("fund_meta").upsert(rows, { onConflict: "vehicle_id" });
   return { error };
