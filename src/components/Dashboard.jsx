@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react";
 import html2canvas from "html2canvas";
 import {
   FY_LIST, MESOS,
@@ -6,29 +6,28 @@ import {
 } from "../config.js";
 import { useTheme } from "../theme.js";
 import { usePersistedState, exportMultiXLSX, readStoredJSON, normalizeOptionValue, dedupeOptionValues } from "../utils.js";
-import { CcTransactionModal } from "./CcTransactionModal.jsx";
-import { FonsSelector } from "./FonsSelector.jsx";
-import { PipelineFY26 } from "./PipelineFY26.jsx";
-import { MensualTab } from "./MensualTab.jsx";
-import { SearchersTab } from "./SearchersTab.jsx";
-import { SearchersIndexInner } from "./SearchersIndex.jsx";
-import { PortfolioCompaniesTab } from "./PortfolioCompaniesTab.jsx";
-import { FundsIndexInner } from "./FundsIndex.jsx";
-import { CompaniesIndexInner } from "./CompaniesIndex.jsx";
 import { useAuth } from "../auth.jsx";
-import { DataLoader } from "./DataLoader.jsx";
-import { PublicMarketsTab } from "./PublicMarketsTab.jsx";
-import { ProspectiveCashTab } from "./ProspectiveCashTab.jsx";
-import { HoldingsTable } from "./HoldingsTable.jsx";
-import { PMTipusTab } from "./PMTipusTab.jsx";
-import { PMTransaccionsTab } from "./PMTransaccionsTab.jsx";
-import { PMTraçabilitatTab } from "./PMTraçabilitatTab.jsx";
 import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
-import { defaultCapitalCallStrategyForVcpe } from "../data/capitalCallStrategyModel.js";
+import { defaultCapitalCallStrategyForVehicleTipus } from "../data/capitalCallStrategyModel.js";
 import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
-import { TxSection } from "./TxSection.jsx";
+
+const CcTransactionModal  = lazy(() => import("./CcTransactionModal.jsx").then(m => ({ default: m.CcTransactionModal })));
+const DataLoader          = lazy(() => import("./DataLoader.jsx").then(m => ({ default: m.DataLoader })));
+const PipelineFY26        = lazy(() => import("./PipelineFY26.jsx").then(m => ({ default: m.PipelineFY26 })));
+const MensualTab          = lazy(() => import("./MensualTab.jsx").then(m => ({ default: m.MensualTab })));
+const SearchersTab        = lazy(() => import("./SearchersTab.jsx").then(m => ({ default: m.SearchersTab })));
+const SearchersIndexInner = lazy(() => import("./SearchersIndex.jsx").then(m => ({ default: m.SearchersIndexInner })));
+const FundsIndexInner     = lazy(() => import("./FundsIndex.jsx").then(m => ({ default: m.FundsIndexInner })));
+const CompaniesIndexInner = lazy(() => import("./CompaniesIndex.jsx").then(m => ({ default: m.CompaniesIndexInner })));
+const TxSection           = lazy(() => import("./TxSection.jsx").then(m => ({ default: m.TxSection })));
+const PublicMarketsTab    = lazy(() => import("./PublicMarketsTab.jsx").then(m => ({ default: m.PublicMarketsTab })));
+const ProspectiveCashTab  = lazy(() => import("./ProspectiveCashTab.jsx").then(m => ({ default: m.ProspectiveCashTab })));
+const HoldingsTable       = lazy(() => import("./HoldingsTable.jsx").then(m => ({ default: m.HoldingsTable })));
+const PMTipusTab          = lazy(() => import("./PMTipusTab.jsx").then(m => ({ default: m.PMTipusTab })));
+const PMTransaccionsTab   = lazy(() => import("./PMTransaccionsTab.jsx").then(m => ({ default: m.PMTransaccionsTab })));
+const PMTraçabilitatTab   = lazy(() => import("./PMTraçabilitatTab.jsx").then(m => ({ default: m.PMTraçabilitatTab })));
 
 const LS_CC = "tc_rawCC";
 
@@ -45,7 +44,8 @@ function Dashboard() {
   const [realEstateTab, setRealEstateTab] = useState("directe");
   const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
   const [searchersSubTab, setSearchersSubTab] = useState("tots");
-  const [companiesSubTab, setCompaniesSubTab] = useState("totes");
+  const [companiesSubTab, setCompaniesSubTab] = useState("portfoli");
+  const [companiesPortfoliSubTab, setCompaniesPortfoliSubTab] = useState("totes");
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
   const [activeNavItem,    setActiveNavItem]     = usePersistedState("ui_navItem", "fons");
   const [ccAddModalFons, setCcAddModalFons] = useState(null);
@@ -130,7 +130,7 @@ function Dashboard() {
     const fons = defaults.fons ?? "";
     setCcAddModalDefaults({
       ...defaults,
-      est: defaults.est ?? defaultCapitalCallStrategyForVcpe(defaults.vcpe ?? "PE"),
+      est: defaults.est ?? defaultCapitalCallStrategyForVehicleTipus(defaults.vcpe ?? "PE"),
       divisa: defaults.divisa ?? defaultVehicleCurrency(fons),
     });
     setCcAddModalFons(fons);
@@ -277,8 +277,24 @@ function Dashboard() {
 
   const baseTx      = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.TRANSACTIONS,excluded]);
   const baseCompr   = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.COMPROMISOS,excluded]);
-  const allAltTx    = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&r.vcpe!=="RE"),[d.TRANSACTIONS,excluded]);
-  const allAltCompr = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&r.vcpe!=="RE"),[d.COMPROMISOS,excluded]);
+  // Alternatives (Mercats Privats) should represent fund vehicles (PE/VC).
+  // SF/PC have their own dedicated sections and including them here makes
+  // "Compromis vs Capital Cridat" look almost fully utilized (misleading).
+  const allAltTx    = useMemo(()=>d.TRANSACTIONS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.TRANSACTIONS,excluded]);
+  const allAltCompr = useMemo(()=>d.COMPROMISOS.filter(r=>!excluded.has(r.fons)&&(r.vcpe==="PE"||r.vcpe==="VC")),[d.COMPROMISOS,excluded]);
+
+  // Company-like private markets rows (PC + active/unacquired SF searchers).
+  const altCompanyTx = useMemo(
+    () => [...d.pcTx, ...d.searcherTx].filter((r) => !excluded.has(r.fons)),
+    [d.pcTx, d.searcherTx, excluded],
+  );
+  const altCompanyCompr = useMemo(
+    () => [...d.pcCompr, ...d.searcherCompr].filter((r) => !excluded.has(r.fons)),
+    [d.pcCompr, d.searcherCompr, excluded],
+  );
+
+  const altAllTx = useMemo(() => [...allAltTx, ...altCompanyTx], [allAltTx, altCompanyTx]);
+  const altAllCompr = useMemo(() => [...allAltCompr, ...altCompanyCompr], [allAltCompr, altCompanyCompr]);
 
   const section = tab==="mercats-publics" ? "mercats-publics"
               : tab==="real-estate"     ? "real-estate"
@@ -459,9 +475,7 @@ function Dashboard() {
     { id: "transaccions", label: "Transaccions" },
   ]), []);
   const COMPANIES_SUBTABS = useMemo(() => ([
-    { id: "totes", label: "Totes" },
-    { id: "via-sf", label: "Via Search Fund" },
-    { id: "pe-directe", label: "PE Directe" },
+    { id: "portfoli", label: "Portfoli" },
     { id: "transaccions", label: "Transaccions" },
   ]), []);
   const REAL_ESTATE_NAV = useMemo(() => [
@@ -485,7 +499,7 @@ function Dashboard() {
 
   useEffect(() => {
     if (tab !== "companies") return;
-    if (!COMPANIES_SUBTABS.some((item) => item.id === companiesSubTab)) setCompaniesSubTab("totes");
+    if (!COMPANIES_SUBTABS.some((item) => item.id === companiesSubTab)) setCompaniesSubTab("portfoli");
   }, [tab, companiesSubTab, COMPANIES_SUBTABS]);
 
   useEffect(() => {
@@ -536,6 +550,15 @@ function Dashboard() {
           </div>
         </header>
 
+        {d.isLoading && d.rawCC.length === 0 && (
+          <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 200, background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 4px 16px rgba(0,0,0,.12)", fontSize: 13, color: tc.textMid }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite", flexShrink: 0 }}>
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+            Carregant dades...
+            <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+          </div>
+        )}
         <main id="dashboard-content" style={{ flex: 1, padding: "24px 32px" }}>
           {tab === "resum" && (
             <ResumTab
@@ -547,9 +570,9 @@ function Dashboard() {
             />
           )}
 
-          {tab === "mensual" && <MensualTab TRANSACTIONS={d.TRANSACTIONS} COMPROMISOS={d.COMPROMISOS} onNavigate={setTab} onExcloure={setExcluded} excluded={excluded} />}
+          {tab === "mensual" && <Suspense fallback={null}><MensualTab TRANSACTIONS={d.TRANSACTIONS} COMPROMISOS={d.COMPROMISOS} onNavigate={setTab} onExcloure={setExcluded} excluded={excluded} /></Suspense>}
 
-          {tab === "pipeline" && <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />}
+          {tab === "pipeline" && <Suspense fallback={null}><PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} /></Suspense>}
 
           {tab === "searchers" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -558,7 +581,9 @@ function Dashboard() {
                   <button key={st.id} onClick={() => setSearchersSubTab(st.id)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: searchersSubTab === st.id ? `2px solid ${tc.navy}` : "2px solid transparent", color: searchersSubTab === st.id ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{st.label}</button>
                 ))}
               </div>
-              {searchersSubTab === "resum" ? <SearchersTab search={globalSearch} subTab="resum" rawCC={d.rawCC} /> : <SearchersIndexInner searchOverride={globalSearch} subTab={searchersSubTab} rawCC={d.rawCC} />}
+              <Suspense fallback={null}>
+                {searchersSubTab === "resum" ? <SearchersTab search={globalSearch} subTab="resum" rawCC={d.rawCC} /> : <SearchersIndexInner searchOverride={globalSearch} subTab={searchersSubTab} rawCC={d.rawCC} />}
+              </Suspense>
             </div>
           )}
 
@@ -569,28 +594,45 @@ function Dashboard() {
                   <button key={st.id} onClick={() => setCompaniesSubTab(st.id)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: companiesSubTab === st.id ? `2px solid ${tc.navy}` : "2px solid transparent", color: companiesSubTab === st.id ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{st.label}</button>
                 ))}
               </div>
-              {companiesSubTab === "transaccions" ? (
-                <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "PC" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Participades (PC)" />
-              ) : <CompaniesIndexInner searchOverride={globalSearch} subTab={companiesSubTab} />}
+              <Suspense fallback={null}>
+                {companiesSubTab === "transaccions" ? (
+                  <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "PC" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Participades (PC)" />
+                ) : (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      {[{ id: "totes", label: "Tots" }, { id: "via-sf", label: "Via Search Fund" }, { id: "pe-directe", label: "PE Directe" }].map(st => (
+                        <button key={st.id} onClick={() => setCompaniesPortfoliSubTab(st.id)} style={{ padding: "5px 14px", borderRadius: 20, border: `1.5px solid ${companiesPortfoliSubTab === st.id ? tc.navy : tc.border}`, background: companiesPortfoliSubTab === st.id ? tc.navy : "transparent", color: companiesPortfoliSubTab === st.id ? "#fff" : tc.textMid, cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: "inherit" }}>{st.label}</button>
+                      ))}
+                    </div>
+                    <CompaniesIndexInner searchOverride={globalSearch} subTab={companiesPortfoliSubTab} />
+                  </div>
+                )}
+              </Suspense>
             </div>
           )}
 
           {tab === "inversions" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
-                <button onClick={() => setInversionsSubTab("fons")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "fons" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "fons" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Per Vehicle</button>
                 <button onClick={() => setInversionsSubTab("pipeline")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "pipeline" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "pipeline" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Pipeline</button>
+                <button onClick={() => setInversionsSubTab("fons")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "fons" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "fons" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Portfoli</button>
                 <button onClick={() => setInversionsSubTab("tx")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "tx" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "tx" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Transaccions</button>
               </div>
-              {inversionsSubTab === "fons"
-                ? <FundsIndexInner searchOverride={globalSearch} />
-                : inversionsSubTab === "pipeline"
-                  ? <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
-                  : <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
+              <Suspense fallback={null}>
+                {inversionsSubTab === "fons"
+                  ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["PE", "VC"]} excludeIds={d.actualCompanyIds} />
+                  : inversionsSubTab === "pipeline"
+                    ? <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
+                    : <TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_all_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
+              </Suspense>
             </div>
           )}
 
-          {tab === "cash-model" && <ProspectiveCashTab rawCapitalCalls={d.rawCC} />}
+          {tab === "cash-model" && (
+            canAccessSection("cash-model")
+              ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} /></Suspense>
+              : <div style={{ padding: 32, color: tc.textLight, fontSize: 14 }}>No tens permisos per accedir al Model Caixa.</div>
+          )}
 
           {tab === "real-estate" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -599,77 +641,81 @@ function Dashboard() {
                   <button key={item.id} onClick={() => setRealEstateTab(item.tab)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: realEstateTab === item.tab ? `2px solid ${tc.navy}` : "2px solid transparent", color: realEstateTab === item.tab ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{item.tab === "directe" ? "RE Directe" : item.tab === "altres-vehicles" ? "Vehicles Real Estate" : "Totes les Posicions"}</button>
                 ))}
               </div>
-              {realEstateTab === "inversions"
-                ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} />
-                : realEstateTab === "altres-vehicles"
-                  ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} />
-                  : <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, padding:"80px 24px", color:tc.textLight, textAlign:"center" }}>
-                      <span style={{ fontSize:36 }}>🚧</span>
-                      <div style={{ fontSize:16, fontWeight:700, color:tc.text }}>Secció en construcció</div>
-                      <div style={{ fontSize:13 }}>La cartera de Real Estate Directe estarà disponible properament.</div>
-                    </div>}
+              {(realEstateTab === "inversions" || realEstateTab === "altres-vehicles")
+                ? <Suspense fallback={null}><FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} /></Suspense>
+                : <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, padding:"80px 24px", color:tc.textLight, textAlign:"center" }}>
+                    <span style={{ fontSize:36 }}>🚧</span>
+                    <div style={{ fontSize:16, fontWeight:700, color:tc.text }}>Secció en construcció</div>
+                    <div style={{ fontSize:13 }}>La cartera de Real Estate Directe estarà disponible properament.</div>
+                  </div>}
             </div>
           )}
 
           {tab === "mercats-publics" && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              {mercatsPublicsTab === "resum" && <PublicMarketsTab />}
-              {mercatsPublicsTab === "rv" && <HoldingsTable assetClass="RV" title="Renda Variable" />}
-              {mercatsPublicsTab === "rf" && <HoldingsTable assetClass="RF" title="Renda Fixa" />}
-              {mercatsPublicsTab === "posicions" && <PMTipusTab />}
-              {mercatsPublicsTab === "transaccions" && <PMTransaccionsTab search={globalSearch} />}
-              {mercatsPublicsTab === "traçabilitat" && <PMTraçabilitatTab />}
-            </div>
+            <Suspense fallback={null}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                {mercatsPublicsTab === "resum" && <PublicMarketsTab />}
+                {mercatsPublicsTab === "rv" && <HoldingsTable assetClass="RV" title="Renda Variable" />}
+                {mercatsPublicsTab === "rf" && <HoldingsTable assetClass="RF" title="Renda Fixa" />}
+                {mercatsPublicsTab === "posicions" && <PMTipusTab />}
+                {mercatsPublicsTab === "transaccions" && <PMTransaccionsTab search={globalSearch} />}
+                {mercatsPublicsTab === "traçabilitat" && <PMTraçabilitatTab />}
+              </div>
+            </Suspense>
           )}
 
-          {tab === "tx-alt" && <TxSection tx={allAltTx} compr={allAltCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" />}
-          {tab === "tx-re" && <TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: "Fons Real Estate" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" />}
-          {tab === "tx-mp" && <PMTransaccionsTab />}
+          {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" /></Suspense>}
+          {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: "Fons Real Estate" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
+          {tab === "tx-mp" && <Suspense fallback={null}><PMTransaccionsTab search={globalSearch} /></Suspense>}
         </main>
       </div>
 
       {showLoader && (
-        <DataLoader
-          onClose={() => setShowLoader(false)}
-          onLoad={(key, rows) => d.handleLoad(key, rows, () => setExcluded(new Set()))}
-          exportAll={exportAll}
-          exportPDF={exportPDF}
-          exportPNG={exportPNG}
-          exporting={exporting}
-          loadedAt={d.loadedAt}
-        />
+        <Suspense fallback={null}>
+          <DataLoader
+            onClose={() => setShowLoader(false)}
+            onLoad={(key, rows) => d.handleLoad(key, rows, () => setExcluded(new Set()))}
+            exportAll={exportAll}
+            exportPDF={exportPDF}
+            exportPNG={exportPNG}
+            exporting={exporting}
+            loadedAt={d.loadedAt}
+          />
+        </Suspense>
       )}
 
-      {ccAddModalFons !== null && (
-        <CcTransactionModal
-          addFons={ccAddModalFons}
-          addDefaults={ccAddModalDefaults}
-          ccNameOptions={ccNameOptions}
-          ccTipusOptions={ccTipusOptions}
-          amountInputStyle={amountInputStyle}
-          defaultVehicleCurrency={defaultVehicleCurrency}
-          recallablePoolByFund={recallablePoolByFund}
-          uncalledByFund={uncalledByFund}
-          onInsert={d.handleCCInsert}
-          onUpdate={d.handleCCUpdate}
-          onClose={() => setCcAddModalFons(null)}
-        />
-      )}
+      <Suspense fallback={null}>
+        {ccAddModalFons !== null && (
+          <CcTransactionModal
+            addFons={ccAddModalFons}
+            addDefaults={ccAddModalDefaults}
+            ccNameOptions={ccNameOptions}
+            ccTipusOptions={ccTipusOptions}
+            amountInputStyle={amountInputStyle}
+            defaultVehicleCurrency={defaultVehicleCurrency}
+            recallablePoolByFund={recallablePoolByFund}
+            uncalledByFund={uncalledByFund}
+            onInsert={d.handleCCInsert}
+            onUpdate={d.handleCCUpdate}
+            onClose={() => setCcAddModalFons(null)}
+          />
+        )}
 
-      {ccEditModalRow && (
-        <CcTransactionModal
-          editRow={ccEditModalRow}
-          ccNameOptions={ccNameOptions}
-          ccTipusOptions={ccTipusOptions}
-          amountInputStyle={amountInputStyle}
-          defaultVehicleCurrency={defaultVehicleCurrency}
-          recallablePoolByFund={recallablePoolByFund}
-          uncalledByFund={uncalledByFund}
-          onInsert={d.handleCCInsert}
-          onUpdate={d.handleCCUpdate}
-          onClose={() => setCcEditModalRow(null)}
-        />
-      )}
+        {ccEditModalRow && (
+          <CcTransactionModal
+            editRow={ccEditModalRow}
+            ccNameOptions={ccNameOptions}
+            ccTipusOptions={ccTipusOptions}
+            amountInputStyle={amountInputStyle}
+            defaultVehicleCurrency={defaultVehicleCurrency}
+            recallablePoolByFund={recallablePoolByFund}
+            uncalledByFund={uncalledByFund}
+            onInsert={d.handleCCInsert}
+            onUpdate={d.handleCCUpdate}
+            onClose={() => setCcEditModalRow(null)}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

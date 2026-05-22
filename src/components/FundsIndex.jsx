@@ -10,9 +10,9 @@ import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
 import { computeFundIrrFromRows, makeFundRouteId } from "../data/fundDetailModel.js";
 import { convertAmountToEurOnDate } from "../fx.js";
-import { CAPITAL_CALL_STRATEGY_OPTIONS, defaultCapitalCallStrategyForVcpe } from "../data/capitalCallStrategyModel.js";
+import { CAPITAL_CALL_STRATEGY_OPTIONS, defaultCapitalCallStrategyForVehicleTipus } from "../data/capitalCallStrategyModel.js";
 
-export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
+export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, excludeIds }) {
   const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
   const { toast } = useToast();
   const { tc } = useTheme();
@@ -49,14 +49,13 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
   const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
 
   useEffect(() => {
-    Promise.all([loadCapitalCalls(), loadFundMeta()]).then(([capitalCalls, meta]) => {
-      if (Array.isArray(capitalCalls)) persistRawCC(capitalCalls);
+    loadFundMeta().then((meta) => {
       if (Array.isArray(meta)) {
         setFundMeta(meta);
         writeStoredJSON("tc_fundMeta", meta);
       }
     }).catch((error) => {
-      console.error("Funds index refresh failed:", error);
+      console.error("Fund meta refresh failed:", error);
     });
   }, []);
 
@@ -107,13 +106,13 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
 
   const defaultVcpe = canEditAlternatives ? "PE" : "RE";
   const [addingFund, setAddingFund] = useState(false);
-  const [newFund, setNewFund] = useState({ fons: "", vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVcpe(defaultVcpe), compromis: "", divisa: "EUR" });
+  const [newFund, setNewFund] = useState({ fons: "", vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe), compromis: "", divisa: "EUR" });
 
   useEffect(() => {
     setNewFund((current) => {
       if (current.vcpe === "RE" && canEditRealEstate) return current;
       if ((current.vcpe === "PE" || current.vcpe === "VC") && canEditAlternatives) return current;
-      return { ...current, vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVcpe(defaultVcpe) };
+      return { ...current, vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe) };
     });
   }, [canEditAlternatives, canEditRealEstate, defaultVcpe]);
 
@@ -143,14 +142,14 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes }) {
     if (!row) { toast({ message: "Error en crear el fons", type: "error" }); return; }
     persistRawCC([...rawCC, row]);
     setAddingFund(false);
-    setNewFund({ fons: "", vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVcpe(defaultVcpe), compromis: "", divisa: "EUR" });
+    setNewFund({ fons: "", vcpe: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe), compromis: "", divisa: "EUR" });
     toast({ message: `Fons "${newFund.fons.trim()}" afegit.` });
   };
 
   const rows = useMemo(() => {
     const map = new Map();
     const vcpeSet = vcpeTypes ?? ["PE", "VC", "RE"];
-    for (const r of rawCC.filter((row) => vcpeSet.includes(row?.vcpe))) {
+    for (const r of rawCC.filter((row) => vcpeSet.includes(row?.vcpe) && !(excludeIds?.has(row?.id)))) {
       const key = makeFundRouteId(r);
       if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vcpe: r.vcpe, est: r.est, compromis: 0, calls: 0, dist: 0, year: null, isMock: !!r.isMock });
       const f = map.get(key);

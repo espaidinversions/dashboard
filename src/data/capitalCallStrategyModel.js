@@ -35,7 +35,15 @@ export const CAPITAL_CALL_STRATEGY_OPTIONS = [
 
 const STRATEGY_MAP = new Map([
   ["fons primari", "Fons Primari"],
+  // Canonical: "Fons Secundari" (accept common misspellings / plural variants).
   ["fons secundari", "Fons Secundari"],
+  ["fons secondari", "Fons Secundari"],
+  ["fons secundaris", "Fons Secundari"],
+  ["fons secondaris", "Fons Secundari"],
+  ["fons de secundari", "Fons Secundari"],
+  ["fons de secondari", "Fons Secundari"],
+  ["fons de secundaris", "Fons Secundari"],
+  ["fons de secondaris", "Fons Secundari"],
   ["fons de fons", "Fons de Fons"],
   ["fons de coinversio", "Fons de Coinversió"],
   ["coinversio", "Fons de Coinversió"],
@@ -48,7 +56,7 @@ const STRATEGY_MAP = new Map([
   ["socimi", "Fons Real Estate"],
 ]);
 
-export function normalizeCapitalCallStrategy(value, vcpe = null, context = null) {
+export function normalizeCapitalCallStrategy(value, vehicleTipus = null, context = null) {
   const raw = String(value ?? "").trim();
   const key = slugifyStrategy(raw);
 
@@ -59,26 +67,26 @@ export function normalizeCapitalCallStrategy(value, vcpe = null, context = null)
   // For legacy/unset values, fall back to live snapshot inference (set by db.js after loadAll)
   const snapshotStrategy = _snapshotInferrer?.({
     fons: typeof context === "string" ? context : context?.fons,
-    vcpe,
+    vcpe: vehicleTipus,   // keep 'vcpe' as the key — inferrer internal contract
   }) ?? null;
   if (snapshotStrategy) return snapshotStrategy;
 
-  if (vcpe === "RE") return "Fons Real Estate";
-  if (vcpe === "PC") return STRATEGY_PARTICIPADA_ALTRES;
-  if (vcpe === "SF") {
+  if (vehicleTipus === "RE") return "Fons Real Estate";
+  if (vehicleTipus === "PC") return STRATEGY_PARTICIPADA_ALTRES;
+  if (vehicleTipus === "SF") {
     if (key.includes("adquis") || key.includes("particip")) return SF_STRATEGY_ADQUISICIO;
     if (key.includes("cerca") || !key) return SF_STRATEGY_CERCA;
   }
-  if ((vcpe === "PE" || vcpe === "VC") && key.startsWith("search fund")) {
+  if ((vehicleTipus === "PE" || vehicleTipus === "VC") && key.startsWith("search fund")) {
     return raw ? STRATEGY_MAP.get(key) ?? raw : null;
   }
 
   return raw || null;
 }
 
-export function defaultCapitalCallStrategyForVcpe(vcpe) {
-  if (vcpe === "RE") return "Fons Real Estate";
-  if (vcpe === "SF") return SF_STRATEGY_CERCA;
-  if (vcpe === "PC") return STRATEGY_PARTICIPADA_ALTRES;
+export function defaultCapitalCallStrategyForVehicleTipus(vehicleTipus) {
+  if (vehicleTipus === "RE") return "Fons Real Estate";
+  if (vehicleTipus === "SF") return SF_STRATEGY_CERCA;
+  if (vehicleTipus === "PC") return STRATEGY_PARTICIPADA_ALTRES;
   return "Fons Primari";
 }

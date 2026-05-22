@@ -1,10 +1,17 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { normalizeCapitalCallStrategy } from "../src/data/capitalCallStrategyModel.js";
+import { normalizeCapitalCallStrategy, setSnapshotInferrer } from "../src/data/capitalCallStrategyModel.js";
 
 // With the new design, stored canonical strategy values are trusted without re-inference.
 // Fallback inference applies only when the stored est is non-canonical (e.g. legacy "SF").
+
+// In production, the snapshot inferrer is wired up after loading searcher/company data.
+// In tests, provide a tiny stub so the "legacy SF" fallback inference is deterministic.
+setSnapshotInferrer(({ fons }) => {
+  if (String(fons ?? "").trim().toLowerCase() === "adinor") return "Search Fund - Adquisició/Participada (SF)";
+  return "Search Fund - Cerca";
+});
 
 test("stored canonical value is trusted — cerca stays cerca", () => {
   assert.equal(
@@ -39,4 +46,10 @@ test("non-SF canonical strategies are passed through unchanged", () => {
   assert.equal(normalizeCapitalCallStrategy("Fons de Fons",    "PE", null), "Fons de Fons");
   assert.equal(normalizeCapitalCallStrategy("Fons Secundari",  "PE", null), "Fons Secundari");
   assert.equal(normalizeCapitalCallStrategy("Participada (Altres)", "PC", null), "Participada (Altres)");
+});
+
+test("secondary strategy variants normalize to the canonical label", () => {
+  assert.equal(normalizeCapitalCallStrategy("Fons Secondari",     "PE", null), "Fons Secundari");
+  assert.equal(normalizeCapitalCallStrategy("Fons de Secundaris", "PE", null), "Fons Secundari");
+  assert.equal(normalizeCapitalCallStrategy("Fons secundaris",    "PE", null), "Fons Secundari");
 });

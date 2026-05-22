@@ -22,7 +22,7 @@ import {
 import { mergeSearchersWithCapitalCalls } from "./data/searcherModel.js";
 import { buildFallbackCompaniesFromCapitalCalls } from "./data/privateCompanyModel.js";
 import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "./data/capitalCallTipusModel.js";
-import { defaultCapitalCallStrategyForVcpe, normalizeCapitalCallStrategy, setSnapshotInferrer } from "./data/capitalCallStrategyModel.js";
+import { defaultCapitalCallStrategyForVehicleTipus, normalizeCapitalCallStrategy, setSnapshotInferrer } from "./data/capitalCallStrategyModel.js";
 import { buildSearchFundInferrer } from "./data/searchFundSnapshotModel.js";
 import { computeFundIrrFromRows } from "./data/fundDetailModel.js";
 
@@ -639,7 +639,7 @@ export async function insertFund(fons, vcpe, est, compromisEur, divisa, options 
   if (entityError) { console.error(entityError); return null; }
   const data_iso = new Date().toISOString().slice(0, 10);
   const { mes, year, fy } = parseDateParts(data_iso);
-  const normalizedEst = normalizeCapitalCallStrategy(est, vcpe, { fons }) ?? defaultCapitalCallStrategyForVcpe(vcpe);
+  const normalizedEst = normalizeCapitalCallStrategy(est, vcpe, { fons }) ?? defaultCapitalCallStrategyForVehicleTipus(vcpe);
 
   const { error: ccErr } = await supabase.from("capital_calls").insert({
     vehicle_id: resolved.id,
