@@ -498,7 +498,7 @@ console.log("✓ Deleted");
 if (sfVehicleIds.length) {
   const sfMetaRows = sfVehicleIds.map(id => {
     const row = sfRows.find(r => r.vehicle_id === id);
-    return { vehicle_id: id, fons: row?.fons ?? id, vehicle_tipus: "SF" };
+    return { vehicle_id: id, vehicle_tipus: "SF" };
   });
   const { error: metaErr } = await sb.from("fund_meta").upsert(sfMetaRows, { onConflict: "vehicle_id" });
   if (metaErr) console.warn("⚠ Could not upsert vehicle_tipus to fund_meta:", metaErr.message);

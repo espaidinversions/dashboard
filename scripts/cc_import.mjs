@@ -303,7 +303,7 @@ if (fundIds.length) {
 console.log("✓ Deleted");
 
 // Ensure fund_meta has vehicle_tipus for each vehicle
-const metaRows = [...new Map(dbRows.map(r => [r.vehicle_id, { vehicle_id: r.vehicle_id, fons: r.fons, vehicle_tipus: r._vehicleTipus }])).values()];
+const metaRows = [...new Map(dbRows.map(r => [r.vehicle_id, { vehicle_id: r.vehicle_id, vehicle_tipus: r._vehicleTipus }])).values()];
 const { error: metaErr } = await sb.from("fund_meta").upsert(metaRows, { onConflict: "vehicle_id" });
 if (metaErr) console.warn("⚠ Could not upsert vehicle_tipus to fund_meta:", metaErr.message);
 else console.log(`✓ Upserted vehicle_tipus for ${metaRows.length} vehicles into fund_meta`);

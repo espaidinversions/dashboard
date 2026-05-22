@@ -269,7 +269,7 @@ const pcVehicleIds = [...new Set(dbRows.map(r => r.vehicle_id))];
 if (pcVehicleIds.length) {
   const pcMetaRows = pcVehicleIds.map(id => {
     const row = dbRows.find(r => r.vehicle_id === id);
-    return { vehicle_id: id, fons: row?.fons ?? id, vehicle_tipus: "PC" };
+    return { vehicle_id: id, vehicle_tipus: "PC" };
   });
   const { error: metaErr } = await sb.from("fund_meta").upsert(pcMetaRows, { onConflict: "vehicle_id" });
   if (metaErr) console.warn("⚠ Could not upsert vehicle_tipus to fund_meta:", metaErr.message);

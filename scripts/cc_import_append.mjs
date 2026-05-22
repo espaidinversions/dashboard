@@ -128,10 +128,12 @@ export function parseSheets(wb) {
 
   const fundsSheet    = wb.Sheets["Capital Calls log"] ?? wb.Sheets[wb.SheetNames[0]];
   const startupsSheet = wb.Sheets["Startups log"]      ?? wb.Sheets[wb.SheetNames[1]];
-  return {
-    fundsRows:     fundsSheet    ? parseSheet(fundsSheet,    FUNDS_COLS)   : [],
-    companiesRows: startupsSheet ? parseSheet(startupsSheet, STARTUP_COLS) : [],
-  };
+  const fundsRows     = fundsSheet    ? parseSheet(fundsSheet,    FUNDS_COLS)   : [];
+  const companiesRows = startupsSheet ? parseSheet(startupsSheet, STARTUP_COLS) : [];
+  // Tag rows with their source sheet so the kind derivation block can distinguish them
+  for (const r of fundsRows)     r._sourceSheet = "funds";
+  for (const r of companiesRows) r._sourceSheet = "companies";
+  return { fundsRows, companiesRows };
 }
 
 function parseSheetsFromFile(filePath) {
@@ -309,10 +311,12 @@ if (isMain) {
   if (unmatchedRawByName.size > 0) {
     const placeholders = [];
     for (const [name, rows] of unmatchedRawByName) {
-      // Default to vehicle; SF/PC company rows come from their dedicated import scripts
-      const kind = "vehicle";
+      // Derive kind from source sheet: companies/startups sheet → company, funds sheet → vehicle
+      const isCompany = rows.some(r => r._sourceSheet === "companies");
+      const kind = isCompany ? "company" : "vehicle";
+      const prefix = isCompany ? "MOCKNIF:COMPANY" : "VEHICLE";
       const slug = name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
-      const id = `VEHICLE:${slug}`;
+      const id = `${prefix}:${slug}`;
       placeholders.push({ id, kind, canonical_name: name, source_name: name, match_type: "fallback" });
     }
     if (!dryRun) {
