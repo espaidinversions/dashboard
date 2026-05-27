@@ -1,4 +1,5 @@
-import { createContext, useContext } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
+import { readStoredFlag } from "./utils.js";
 
 // Brand anchors extracted from logo:
 //   Green #3DC83E — the icon mark
@@ -76,6 +77,21 @@ export const ThemeContext = createContext({
   dark: false,
   toggle: () => {},
 });
+
+export function ThemeProvider({ children }) {
+  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+  }, [dark]);
+
+  const tc = dark ? TC_DARK : TC_LIGHT;
+  return (
+    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
 
 export function useTheme() {
   const value = useContext(ThemeContext);

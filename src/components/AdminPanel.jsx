@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { readStoredFlag } from "../utils.js";
+import { ThemeProvider, useTheme } from "../theme.js";
 import { useAuth } from "../auth.jsx";
 import AdminUsers from "./admin/AdminUsers.jsx";
 import AdminActivity from "./admin/AdminActivity.jsx";
@@ -79,11 +78,9 @@ function AdminPanelInner() {
 }
 
 export default function AdminPanel() {
-  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
-  const tc = dark ? TC_DARK : TC_LIGHT;
   return (
-    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
+    <ThemeProvider>
       <AdminPanelInner />
-    </ThemeContext.Provider>
+    </ThemeProvider>
   );
 }
