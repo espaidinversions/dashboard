@@ -1,16 +1,80 @@
 /* ── Global resets & polish ─────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
-/* ── Custom easing curves ───────────────────────────────── */
+/* ── Design tokens ──────────────────────────────────────── */
 :root {
+  /* Easing */
   --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Typography scale */
+  --text-xs:   11px;   /* badges, table headers, sub-labels */
+  --text-sm:   13px;   /* secondary labels, filter controls */
+  --text-base: 14px;   /* body / table cells */
+  --text-md:   15px;   /* primary UI labels */
+  --text-lg:   18px;   /* section titles */
+  --text-xl:   20px;   /* KPI values */
+  --text-2xl:  24px;   /* hero KPI values */
+
+  /* Line height */
+  --leading-tight:  1.25;
+  --leading-normal: 1.5;
+
+  /* Focus ring */
+  --focus-color: #3DC83E;
+  --focus-ring:  0 0 0 2px var(--focus-color);
+
+  /* Spacing (4px base scale) */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Border radius */
+  --radius-sm:  4px;
+  --radius-md:  6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+
+  /* Light theme colors */
+  --color-bg:          #F1F5F8;
+  --color-bg-alt:      #E6EDF3;
+  --color-card:        #FFFFFF;
+  --color-border:      #C8D5E0;
+  --color-text:        #16303F;
+  --color-text-mid:    #3B5F75;
+  --color-text-light:  #6B8EA6;
+  --color-navy:        #2B5070;
+  --color-green:       #3DC83E;
+  --color-red:         #C62828;
+  --color-orange:      #E67E22;
+}
+
+[data-theme="dark"] {
+  --color-bg:          #0C1A26;
+  --color-bg-alt:      #112030;
+  --color-card:        #132130;
+  --color-border:      #1C3348;
+  --color-text:        #C8DDE8;
+  --color-text-mid:    #5E90AB;
+  --color-text-light:  #3A6278;
+  --color-navy:        #6AB0D8;
+  --color-green:       #4DD94E;
+  --color-red:         #EF5350;
+  --color-orange:      #E8922A;
 }
 
 body {
   margin: 0;
   padding: 0;
   font-family: 'Outfit', system-ui, sans-serif;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-text);
+  background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
@@ -116,8 +180,11 @@ tr.hoverable { transition: background 0.12s var(--ease-out); }
 
 /* ── Focus rings ────────────────────────────────────────── */
 button:focus-visible,
-input:focus-visible {
-  outline: 2px solid #3DC83E;
+input:focus-visible,
+select:focus-visible,
+a:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--focus-color);
   outline-offset: 2px;
 }
 

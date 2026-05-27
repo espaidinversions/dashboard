@@ -8,7 +8,7 @@ export const sharedStyles = {
   cardPad: (tc = TC_LIGHT, pad = "20px 24px") => ({ ...sharedStyles.card(tc), padding: pad }),
   th: (tc = TC_LIGHT) => ({ padding: "10px 12px", fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
   sec: (tc = TC_LIGHT) => ({ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
-  badge: (_tc = TC_LIGHT) => ({ fontSize: 11, borderRadius: 4, padding: "2px 8px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
+  badge: (_tc = TC_LIGHT) => ({ fontSize: 11, borderRadius: 4, padding: "2px 7px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
   kpi: (tc = TC_LIGHT) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 140, flex: 1 }),
   kpiLabel: (tc = TC_LIGHT) => ({ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }),
   kpiValue: (tc = TC_LIGHT, valueColor) => ({ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }),
@@ -117,12 +117,6 @@ export function KpiCard({ label, value, sub, valueColor, hero = false, progress,
           borderRadius: `${tc.radius?.lg ?? 14}px ${tc.radius?.lg ?? 14}px 0 0`,
         }} />
         <div style={{
-          position: "absolute", right: -12, top: -12,
-          width: 70, height: 70,
-          background: "rgba(61,200,62,0.08)",
-          borderRadius: "50%",
-        }} />
-        <div style={{
           fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
           color: "rgba(255,255,255,0.55)", fontWeight: 600, marginBottom: 6,
         }}>{label}</div>
@@ -183,11 +177,6 @@ export function SectionHeader({ title, count, action, tc: tcProp }) {
       borderBottom: `1px solid ${tc.border}`,
       marginBottom: 14,
     }}>
-      <div style={{
-        width: 3, height: 18, flexShrink: 0,
-        background: tc.gradients?.green ?? "linear-gradient(180deg, #3DC83E 0%, #28A029 100%)",
-        borderRadius: 2,
-      }} />
       <span style={{
         fontSize: 14, fontWeight: 700, color: tc.navyDark,
         letterSpacing: "-0.01em",
@@ -278,7 +267,7 @@ export function Badge({label,cfg}) {
   const { tc: TC } = useTheme();
   const s=cfg||{color:TC.textMid,bg:TC.bgAlt};
   const border = s.border ?? hexToRgba(s.color, 0.15);
-  return <span style={{fontSize:11,background:s.bg,color:s.color,borderRadius:20,padding:"3px 9px",fontWeight:600,whiteSpace:"nowrap",display:"inline-block",border:`1px solid ${border}`}}>{label}</span>;
+  return <span style={{fontSize:11,background:s.bg,color:s.color,borderRadius:4,padding:"2px 7px",fontWeight:600,whiteSpace:"nowrap",display:"inline-block",border:`1px solid ${border}`}}>{label}</span>;
 }
 
 // ── EditableCell ──────────────────────────────────────────
