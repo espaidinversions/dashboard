@@ -1,6 +1,18 @@
 /* ── Global resets & polish ─────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
 
+/* ── Text selection ─────────────────────────────────────── */
+::selection {
+  background: rgba(43, 80, 112, 0.18); /* var(--color-navy) tint */
+  color: var(--color-text);
+}
+[data-theme="dark"] ::selection {
+  background: rgba(106, 176, 216, 0.22); /* dark navy tint */
+}
+
+/* ── Table base ─────────────────────────────────────────── */
+table { border-collapse: collapse; }
+
 /* ── Design tokens ──────────────────────────────────────── */
 :root {
   /* Easing */
@@ -90,10 +102,10 @@ body {
 /* ── Custom scrollbar ───────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #C8D5DF; border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: #9FB4C2; }
-[data-theme="dark"] ::-webkit-scrollbar-thumb { background: #2A3F52; }
-[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: #3A5468; }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-text-light); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: var(--color-border); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: var(--color-text-light); }
 
 /* ── Table hover rows ───────────────────────────────────── */
 tr.hoverable { transition: background 0.12s var(--ease-out); }
@@ -168,6 +180,40 @@ tr.hoverable { transition: background 0.12s var(--ease-out); }
 .modal-overlay.closing { animation: overlayFadeOut 180ms var(--ease-out) both; }
 .modal-card.closing    { animation: modalCardExit  160ms var(--ease-out) both; }
 
+/* ── Input / select: hover border darkens slightly ─────────── */
+@media (hover: hover) and (pointer: fine) {
+  input:not(:focus):hover,
+  select:not(:focus):hover,
+  textarea:not(:focus):hover {
+    border-color: var(--color-text-mid) !important;
+  }
+}
+
+/* ── Table headers: consistent uppercase treatment ──────────── */
+th {
+  font-size: var(--text-xs);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ── Table cells: tabular numbers where .num class is impractical ── */
+td {
+  font-size: var(--text-base);
+}
+
+/* ── Delete (red) button hover ──────────────────────────── */
+@media (hover: hover) and (pointer: fine) {
+  button.btn-delete:hover {
+    filter: brightness(1.15);
+    box-shadow: 0 2px 6px rgba(198, 40, 40, 0.35);
+  }
+  button.btn-delete:active {
+    filter: brightness(0.88);
+  }
+}
+
 /* ── Top-bar ghost buttons: subtle hover background ────────── */
 @media (hover: hover) and (pointer: fine) {
   button.btn-ghost:hover {
@@ -195,10 +241,34 @@ button {
     background    0.15s ease,
     color         0.15s ease,
     border-color  0.15s ease,
+    box-shadow    0.15s ease,
     transform     0.1s  var(--ease-out);
 }
 button:active {
   transform: scale(0.97);
+}
+
+/* ── Primary (navy fill) buttons: brightness hover ──────────── */
+@media (hover: hover) and (pointer: fine) {
+  button.btn-primary:hover {
+    filter: brightness(1.12);
+    box-shadow: 0 2px 8px rgba(43, 80, 112, 0.30);
+  }
+  [data-theme="dark"] button.btn-primary:hover {
+    filter: brightness(1.10);
+    box-shadow: 0 2px 8px rgba(106, 176, 216, 0.20);
+  }
+  button.btn-primary:active {
+    filter: brightness(0.92);
+  }
+  /* Secondary (outline) buttons */
+  button.btn-secondary:hover {
+    background: var(--color-bg-alt) !important;
+    border-color: var(--color-text-mid) !important;
+  }
+  button.btn-secondary:active {
+    background: var(--color-border) !important;
+  }
 }
 
 /* ── Responsive grids ───────────────────────────────────── */

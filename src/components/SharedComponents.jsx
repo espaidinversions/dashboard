@@ -4,15 +4,15 @@ import { readStoredJSON, writeStoredJSON } from "../utils.js";
 
 // ── Shared style helpers ──────────────────────────────────
 export const sharedStyles = {
-  card: (tc = TC_LIGHT) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10 }),
-  cardPad: (tc = TC_LIGHT, pad = "20px 24px") => ({ ...sharedStyles.card(tc), padding: pad }),
-  th: (tc = TC_LIGHT) => ({ padding: "10px 12px", fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
-  sec: (tc = TC_LIGHT) => ({ fontSize: 11, letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
-  badge: (_tc = TC_LIGHT) => ({ fontSize: 11, borderRadius: 4, padding: "2px 7px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
-  kpi: (tc = TC_LIGHT) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "16px 20px", minWidth: 140, flex: 1 }),
-  kpiLabel: (tc = TC_LIGHT) => ({ fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 6 }),
-  kpiValue: (tc = TC_LIGHT, valueColor) => ({ fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }),
-  kpiSub: (tc = TC_LIGHT) => ({ fontSize: 11, color: tc.textLight, marginTop: 4 }),
+  card: (tc = TC_LIGHT) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: "var(--radius-md)" }),
+  cardPad: (tc = TC_LIGHT, pad = "var(--space-5) var(--space-6)") => ({ ...sharedStyles.card(tc), padding: pad }),
+  th: (tc = TC_LIGHT) => ({ padding: "var(--space-2) var(--space-3)", fontSize: "var(--text-xs)", letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
+  sec: (tc = TC_LIGHT) => ({ fontSize: "var(--text-xs)", letterSpacing: "0.05em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }),
+  badge: (_tc = TC_LIGHT) => ({ fontSize: "var(--text-xs)", borderRadius: "var(--radius-sm)", padding: "2px 7px", fontWeight: 600, whiteSpace: "nowrap", display: "inline-block" }),
+  kpi: (tc = TC_LIGHT) => ({ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: "var(--radius-md)", padding: "var(--space-4) var(--space-5)", minWidth: 140, flex: 1 }),
+  kpiLabel: (tc = TC_LIGHT) => ({ fontSize: "var(--text-xs)", letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: "var(--space-1)" }),
+  kpiValue: (tc = TC_LIGHT, valueColor) => ({ fontSize: "var(--text-xl)", fontWeight: 700, color: valueColor ?? tc.navy, fontFamily: "'DM Mono',monospace" }),
+  kpiSub: (tc = TC_LIGHT) => ({ fontSize: "var(--text-xs)", color: tc.textLight, marginTop: "var(--space-1)" }),
 };
 
 export const indexPageStyles = {
@@ -32,14 +32,15 @@ export const indexPageStyles = {
     gap: 16,
   }),
   searchInput: (tc = TC_LIGHT) => ({
-    padding: "6px 12px",
-    borderRadius: 6,
+    padding: "var(--space-1) var(--space-3)",
+    borderRadius: "var(--radius-md)",
     border: `1.5px solid ${tc.border}`,
     background: tc.bg,
     color: tc.text,
-    fontSize: 13,
+    fontSize: "var(--text-sm)",
     fontFamily: "inherit",
     width: 200,
+    transition: "border-color 0.15s ease",
   }),
   navRow: (tc = TC_LIGHT, inline = false) => ({
     background: tc.card,
@@ -77,23 +78,25 @@ export const indexPageStyles = {
   },
   filterControl: (tc = TC_LIGHT) => ({
     width: "100%",
-    padding: "4px 6px",
-    borderRadius: 4,
+    padding: "var(--space-1) var(--space-2)",
+    borderRadius: "var(--radius-sm)",
     border: `1px solid ${tc.border}`,
     background: tc.bg,
     color: tc.text,
-    fontSize: 11,
+    fontSize: "var(--text-xs)",
     fontFamily: "inherit",
+    transition: "border-color 0.15s ease",
   }),
   clearButton: (tc = TC_LIGHT) => ({
     background: "transparent",
     border: `1px solid ${tc.border}`,
-    borderRadius: 4,
-    padding: "2px 8px",
+    borderRadius: "var(--radius-sm)",
+    padding: "2px var(--space-2)",
     cursor: "pointer",
-    fontSize: 10,
+    fontSize: "var(--text-xs)",
     color: tc.textMid,
     fontFamily: "inherit",
+    transition: "background 0.15s ease, border-color 0.15s ease",
   }),
 };
 
@@ -117,15 +120,15 @@ export function KpiCard({ label, value, sub, valueColor, hero = false, progress,
           borderRadius: `${tc.radius?.lg ?? 14}px ${tc.radius?.lg ?? 14}px 0 0`,
         }} />
         <div style={{
-          fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
-          color: "rgba(255,255,255,0.55)", fontWeight: 600, marginBottom: 6,
+          fontSize: "var(--text-xs)", letterSpacing: "0.08em", textTransform: "uppercase",
+          color: "rgba(255,255,255,0.55)", fontWeight: 600, marginBottom: "var(--space-1)",
         }}>{label}</div>
         <div style={{
-          fontSize: 22, fontWeight: 700, color: "#fff",
+          fontSize: "var(--text-2xl)", fontWeight: 700, color: "#fff",
           fontFamily: "'DM Mono',monospace", letterSpacing: "-0.5px",
         }}>{value}</div>
         {sub && <div style={{
-          fontSize: 10, color: tc.green ?? "#3DC83E", marginTop: 4, fontWeight: 500,
+          fontSize: "var(--text-xs)", color: tc.green ?? "#3DC83E", marginTop: "var(--space-1)", fontWeight: 500,
         }}>{sub}</div>}
       </div>
     );
@@ -142,11 +145,11 @@ export function KpiCard({ label, value, sub, valueColor, hero = false, progress,
       flex: 1,
     }}>
       <div style={{
-        fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
-        color: tc.textLight, fontWeight: 600, marginBottom: 6,
+        fontSize: "var(--text-xs)", letterSpacing: "0.08em", textTransform: "uppercase",
+        color: tc.textLight, fontWeight: 600, marginBottom: "var(--space-1)",
       }}>{label}</div>
       <div style={{
-        fontSize: 20, fontWeight: 700, color: valueColor ?? tc.navy,
+        fontSize: "var(--text-xl)", fontWeight: 700, color: valueColor ?? tc.navy,
         fontFamily: "'DM Mono',monospace",
       }}>{value}</div>
       {progress != null && (
@@ -467,9 +470,8 @@ export function DeleteRowButton({ onDelete }) {
 
   return (
     <button onClick={() => setConfirming(true)}
-      style={{ minWidth: 58, padding: "4px 0", borderRadius: 4, border: "none", background: "#C62828", color: "#fff", cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600, textAlign: "center", transition: "opacity 0.15s" }}
-      onMouseEnter={e => { e.currentTarget.style.opacity="0.7"; }}
-      onMouseLeave={e => { e.currentTarget.style.opacity="1"; }}
+      className="btn-delete"
+      style={{ minWidth: 58, padding: "4px 0", borderRadius: "var(--radius-sm)", border: "none", background: "#C62828", color: "#fff", cursor: "pointer", fontSize: "var(--text-xs)", fontFamily: "inherit", fontWeight: 600, textAlign: "center" }}
       title="Eliminar fila">
       Elimina
     </button>
@@ -666,18 +668,20 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
             <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA",
               borderRadius: 6, padding: "8px 12px" }}>{error}</div>
           )}
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
+          <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end", marginTop: "var(--space-1)" }}>
             <button type="button" onClick={handleClose}
-              style={{ padding: "8px 16px", borderRadius: 6, border: `1.5px solid ${tc.border}`,
+              className="btn-secondary"
+              style={{ padding: "var(--space-2) var(--space-4)", borderRadius: "var(--radius-md)", border: `1.5px solid ${tc.border}`,
                 background: "transparent", color: tc.textMid, cursor: "pointer",
-                fontFamily: "inherit", fontSize: 13 }}>
+                fontFamily: "inherit", fontSize: "var(--text-sm)" }}>
               Cancel·lar
             </button>
             <button type="submit" disabled={saving}
-              style={{ padding: "8px 16px", borderRadius: 6, border: "none",
+              className="btn-primary"
+              style={{ padding: "var(--space-2) var(--space-4)", borderRadius: "var(--radius-md)", border: "none",
                 background: saving ? tc.navyLight : tc.navy, color: "#fff",
                 cursor: saving ? "wait" : "pointer",
-                fontFamily: "inherit", fontSize: 13, fontWeight: 600 }}>
+                fontFamily: "inherit", fontSize: "var(--text-sm)", fontWeight: 600 }}>
               {saving ? "Desant…" : submitLabel}
             </button>
           </div>
