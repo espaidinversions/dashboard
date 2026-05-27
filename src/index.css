@@ -271,6 +271,64 @@ button:active {
   }
 }
 
+/* ── Tab bar ────────────────────────────────────────────── */
+.nav-tab-bar {
+  display: flex;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-card);
+}
+
+.nav-tab-item {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-xs);
+  font-weight: 400;
+  color: var(--color-text-mid);
+  text-decoration: none;
+  font-family: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.12s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-tab-item:not(.nav-tab-item--active):hover {
+    color: var(--color-navy);
+    background: rgba(43, 80, 112, 0.05);
+  }
+}
+
+.nav-tab-item--active {
+  border-bottom-color: var(--color-green);
+  font-weight: 600;
+  color: var(--color-navy);
+}
+
+/* ── Modal inputs ───────────────────────────────────────── */
+.modal-input {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-card);
+  color: var(--color-text);
+  font-family: inherit;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 150ms ease-out;
+}
+
+.modal-input:focus {
+  outline: none;
+  border-color: var(--color-navy);
+  box-shadow: var(--focus-ring);
+}
+
 /* ── Responsive grids ───────────────────────────────────── */
 .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); }
 .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); }

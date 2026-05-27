@@ -53,8 +53,8 @@ export const indexPageStyles = {
     background: "none",
     border: "none",
     borderBottom: `2px solid ${active ? tc.green : "transparent"}`,
-    padding: "11px 20px",
-    fontSize: 12,
+    padding: "var(--space-3) var(--space-5)",
+    fontSize: "var(--text-xs)",
     fontWeight: active ? 600 : 400,
     color: active ? tc.navy : tc.textMid,
     textDecoration: "none",
@@ -511,14 +511,9 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
     });
   };
 
-  const inp = {
-    width: "100%", padding: "7px 10px", fontSize: 13,
-    border: `1.5px solid ${tc.border}`, borderRadius: 6,
-    background: tc.bg, color: tc.text, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box",
-  };
+  // Base styles now live in .modal-input CSS class (index.css).
+  // inputStyleFor merges only field-specific overrides on top.
   const inputStyleFor = (field) => ({
-    ...inp,
     ...(typeof field.inputStyle === "function" ? field.inputStyle(values) : field.inputStyle),
   });
 
@@ -559,7 +554,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                 {f.label}
               </label>
               {f.type === "select" ? (
-                <select value={values[f.key]} onChange={e => applyFieldChange(f, e.target.value)} style={inputStyleFor(f)} disabled={f.disabled}>
+                <select className="modal-input" value={values[f.key]} onChange={e => applyFieldChange(f, e.target.value)} style={inputStyleFor(f)} disabled={f.disabled}>
                   {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               ) : f.type === "combo" ? (
@@ -567,6 +562,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                   {!customOpen[f.key] ? (
                     <>
                       <select
+                        className="modal-input"
                         value={(f.options ?? []).includes(values[f.key]) ? values[f.key] : ""}
                         onChange={e => {
                           if (e.target.value === "__custom__") {
@@ -595,6 +591,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                   ) : (
                     <>
                       <input
+                        className="modal-input"
                         type="text"
                         value={values[f.key]}
                         onChange={e => applyFieldChange(f, e.target.value)}
@@ -615,6 +612,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
               ) : f.type === "datalist" ? (
                 <>
                   <input
+                    className="modal-input"
                     type="text"
                     value={values[f.key]}
                     onChange={e => applyFieldChange(f, e.target.value)}
@@ -629,6 +627,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                 </>
               ) : f.type === "textarea" ? (
                 <textarea
+                  className="modal-input"
                   value={values[f.key]}
                   onChange={e => applyFieldChange(f, e.target.value)}
                   placeholder={f.placeholder ?? ""}
@@ -637,6 +636,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                 />
               ) : f.type === "number" ? (
                 <input
+                  className="modal-input"
                   type="text"
                   inputMode="numeric"
                   value={String(values[f.key] ?? "").replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
@@ -646,7 +646,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                   disabled={f.disabled}
                 />
               ) : (
-                <input type={f.type ?? "text"} value={values[f.key]}
+                <input className="modal-input" type={f.type ?? "text"} value={values[f.key]}
                   onChange={e => applyFieldChange(f, e.target.value)}
                   placeholder={f.placeholder ?? ""}
                   style={inputStyleFor(f)}
