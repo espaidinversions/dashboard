@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, createElement } from "react";
 import { readStoredFlag } from "./utils.js";
 
 // Brand anchors extracted from logo:
@@ -86,10 +86,10 @@ export function ThemeProvider({ children }) {
   }, [dark]);
 
   const tc = dark ? TC_DARK : TC_LIGHT;
-  return (
-    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
-      {children}
-    </ThemeContext.Provider>
+  return createElement(
+    ThemeContext.Provider,
+    { value: { tc, dark, toggle: () => setDark(d => !d) } },
+    children
   );
 }
 
