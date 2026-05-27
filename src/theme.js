@@ -5,12 +5,22 @@ import { createContext, useContext } from "react";
 //   Navy  #2B5070 — the wordmark text
 
 export const TC_LIGHT = {
-  green:"#3DC83E", greenLight:"#62D963", greenDark:"#28A029",
-  navy:"#2B5070", navyLight:"#4A789A", navyDark:"#1C3A52",
-  bg:"#F1F5F8", bgAlt:"#E6EDF3", border:"#C8D5E0",
-  card:"#FFFFFF",
-  text:"#16303F", textMid:"#3B5F75", textLight:"#6B8EA6",
-  red:"#C62828", redLight:"#FDECEA", orange:"#E67E22",
+  green:"#3DC83E",   // var(--color-green)
+  greenLight:"#62D963",
+  greenDark:"#28A029",
+  navy:"#2B5070",    // var(--color-navy)
+  navyLight:"#4A789A",
+  navyDark:"#1C3A52",
+  bg:"#F1F5F8",      // var(--color-bg)
+  bgAlt:"#E6EDF3",   // var(--color-bg-alt)
+  border:"#C8D5E0",  // var(--color-border)
+  card:"#FFFFFF",    // var(--color-card)
+  text:"#16303F",    // var(--color-text)
+  textMid:"#3B5F75", // var(--color-text-mid)
+  textLight:"#6B8EA6",// var(--color-text-light)
+  red:"#C62828",     // var(--color-red)
+  redLight:"#FDECEA",
+  orange:"#E67E22",  // var(--color-orange)
   warning:"#D69E2E",
   yellow:"#B8860B", yellowLight:"#FFF8E1", purple:"#6A4C8A",
   shadows: {
@@ -19,6 +29,7 @@ export const TC_LIGHT = {
     modal:     "0 8px 40px rgba(0,0,0,0.20)",
     sm:        "0 1px 4px rgba(15,23,42,0.08)",
   },
+  // radius mirrors --radius-sm/md/lg/xl in index.css (4/6/10/14px)
   radius: { sm: 6, md: 10, lg: 14, xl: 20 },
   gradients: {
     navy:   "linear-gradient(135deg, #2B5070 0%, #1C3A52 100%)",
@@ -28,12 +39,22 @@ export const TC_LIGHT = {
 };
 
 export const TC_DARK = {
-  green:"#4DD94E", greenLight:"#76E477", greenDark:"#35B836",
-  navy:"#6AB0D8", navyLight:"#8DC6E8", navyDark:"#4A8FBD",
-  bg:"#0C1A26", bgAlt:"#112030", border:"#1C3348",
-  card:"#132130",
-  text:"#C8DDE8", textMid:"#5E90AB", textLight:"#3A6278",
-  red:"#EF5350", redLight:"#2A0F0F", orange:"#E8922A",
+  green:"#4DD94E",   // var(--color-green) dark
+  greenLight:"#76E477",
+  greenDark:"#35B836",
+  navy:"#6AB0D8",    // var(--color-navy) dark
+  navyLight:"#8DC6E8",
+  navyDark:"#4A8FBD",
+  bg:"#0C1A26",      // var(--color-bg) dark
+  bgAlt:"#112030",   // var(--color-bg-alt) dark
+  border:"#1C3348",  // var(--color-border) dark
+  card:"#132130",    // var(--color-card) dark
+  text:"#C8DDE8",    // var(--color-text) dark
+  textMid:"#5E90AB", // var(--color-text-mid) dark
+  textLight:"#3A6278",// var(--color-text-light) dark
+  red:"#EF5350",     // var(--color-red) dark
+  redLight:"#2A0F0F",
+  orange:"#E8922A",  // var(--color-orange) dark
   warning:"#F6AD55",
   yellow:"#E8C040", yellowLight:"#221900", purple:"#9B7CC8",
   shadows: {
