@@ -7,6 +7,7 @@ import { makeVehicleDetailPath } from "../data/privateRoutes.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS } from "../data/capitalCallStrategyModel.js";
 import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
 import { Badge, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
+import { useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
 
 const PM_TX_MONTHS_SHORT = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
 
@@ -25,8 +26,7 @@ export function TxSection({
   tc,
   dark,
   canEdit,
-  onAdd,
-  onEdit,
+  addDefaults,
   onDelete,
   onQuickUpdate,
   title,
@@ -34,6 +34,7 @@ export function TxSection({
   scopeStorageKey = null,
   defaultScope = "vehicles", // "vehicles" | "companies" | "all"
 }) {
+  const { openAddModal, openEditModal } = useCapitalCallModal();
   const [sort, setSort] = useState({ k: "data", d: "desc" });
   const storageKey = scopeStorageKey || "ui_tx_scope";
   const [scope, setScope] = usePersistedState(storageKey, defaultScope);
@@ -305,7 +306,7 @@ export function TxSection({
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.11em", textTransform: "uppercase", color: tc.textLight }}>{title}</div>
           {canEdit ? (
             <button
-              onClick={onAdd}
+              onClick={() => openAddModal(addDefaults ?? {})}
               style={{ padding: "5px 14px", borderRadius: 6, border: `1.5px solid ${tc.green}`, background: dark ? "#0A2010" : "#E8F8E8", color: tc.green, cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 700 }}
             >
               ＋ Afegeix moviment
@@ -401,7 +402,7 @@ export function TxSection({
                         {row._rowId ? (
                           <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                             <button
-                              onClick={() => onEdit(row)}
+                              onClick={() => openEditModal(row)}
                               style={{ minWidth: 58, padding: "4px 0", borderRadius: 4, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600, textAlign: "center" }}
                             >
                               Edita

@@ -73,6 +73,26 @@ export function formatIsoDate(iso) {
   });
 }
 
+// Assumes ISO-like strings (YYYY-MM or YYYY-MM-DD) so lexicographic compare works.
+export function minDate(a, b) {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return a < b ? a : b;
+}
+
+// Assumes ISO-like strings (YYYY-MM or YYYY-MM-DD) so lexicographic compare works.
+export function maxDate(a, b) {
+  if (!a) return b ?? null;
+  if (!b) return a;
+  return a > b ? a : b;
+}
+
+export function formatDateRange(start, end) {
+  if (!start && !end) return "—";
+  if (!end || start === end) return start ?? end ?? "—";
+  return `${start} → ${end}`;
+}
+
 export function formatIsoDateTime(iso) {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("ca-ES", {

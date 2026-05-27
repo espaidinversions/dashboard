@@ -6,11 +6,11 @@ import { GEO_NAME } from "../../config.js";
 import { KpiCard } from "../SharedComponents.jsx";
 import { SectionHeading, SANKEY_NODE_COLORS } from "../SearchersBadges.jsx";
 import { sankeyNodeToEntry } from "../../data/searcherFormatting.js";
+import { ecTheme } from "../../echartsTheme.js";
 
 export function SankeySection({
   TC,
   dark,
-  t,
   activeRows,
   totalSearchers,
   soloCount,
@@ -30,6 +30,7 @@ export function SankeySection({
   handleGeoClick,
   handleEntryFilterClick,
 }) {
+  const t = ecTheme(TC);
   const card = { background: TC.card, border: `1px solid ${TC.border}`, borderRadius: 10, padding: "20px 22px", boxShadow: "0 2px 12px rgba(0,0,0,.06)" };
   const sec  = { fontSize: 10, letterSpacing: "0.11em", color: TC.textLight, textTransform: "uppercase", marginBottom: 16, fontWeight: 600 };
 

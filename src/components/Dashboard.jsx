@@ -7,10 +7,11 @@ import { usePersistedState, exportMultiXLSX, readStoredJSON, normalizeOptionValu
 import { useAuth } from "../auth.jsx";
 import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
-import { defaultCapitalCallStrategyForVehicleTipus } from "../data/capitalCallStrategyModel.js";
 import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
+import { useTabRouter } from "./hooks/useTabRouter.js";
+import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
 
 const CcTransactionModal  = lazy(() => import("./CcTransactionModal.jsx").then(m => ({ default: m.CcTransactionModal })));
 const DataLoader          = lazy(() => import("./DataLoader.jsx").then(m => ({ default: m.DataLoader })));
@@ -30,26 +31,89 @@ const PMTraçabilitatTab   = lazy(() => import("./PMTraçabilitatTab.jsx").then(
 
 const LS_CC = "tc_rawCC";
 
+function CapitalCallModals({
+  ccNameOptions,
+  ccTipusOptions,
+  amountInputStyle,
+  defaultVehicleCurrency,
+  recallablePoolByFund,
+  uncalledByFund,
+  onInsert,
+  onUpdate,
+}) {
+  const {
+    ccAddModalFons,
+    ccAddModalDefaults,
+    ccEditModalRow,
+    closeAddModal,
+    closeEditModal,
+  } = useCapitalCallModal();
+
+  return (
+    <Suspense fallback={null}>
+      {ccAddModalFons !== null && (
+        <CcTransactionModal
+          addFons={ccAddModalFons}
+          addDefaults={ccAddModalDefaults}
+          ccNameOptions={ccNameOptions}
+          ccTipusOptions={ccTipusOptions}
+          amountInputStyle={amountInputStyle}
+          defaultVehicleCurrency={defaultVehicleCurrency}
+          recallablePoolByFund={recallablePoolByFund}
+          uncalledByFund={uncalledByFund}
+          onInsert={onInsert}
+          onUpdate={onUpdate}
+          onClose={closeAddModal}
+        />
+      )}
+
+      {ccEditModalRow && (
+        <CcTransactionModal
+          editRow={ccEditModalRow}
+          ccNameOptions={ccNameOptions}
+          ccTipusOptions={ccTipusOptions}
+          amountInputStyle={amountInputStyle}
+          defaultVehicleCurrency={defaultVehicleCurrency}
+          recallablePoolByFund={recallablePoolByFund}
+          uncalledByFund={uncalledByFund}
+          onInsert={onInsert}
+          onUpdate={onUpdate}
+          onClose={closeEditModal}
+        />
+      )}
+    </Suspense>
+  );
+}
+
 function Dashboard() {
   const { tc, dark } = useTheme();
   const { isAdmin, canAccessSection, canEditSection, canAccessAny } = useAuth();
   const d = useDashboardData();
 
-  const [tab,      setTab]     = usePersistedState("ui_tab", "resum");
+  const {
+    tab,
+    setTab,
+    inversionsSubTab,
+    setInversionsSubTab,
+    realEstateTab,
+    setRealEstateTab,
+    mercatsPublicsTab,
+    setMercatsPublicsTab,
+    searchersSubTab,
+    setSearchersSubTab,
+    companiesSubTab,
+    setCompaniesSubTab,
+    companiesPortfoliSubTab,
+    setCompaniesPortfoliSubTab,
+    activeNavItem,
+    setActiveNavItem,
+    handleNavigate,
+  } = useTabRouter();
+
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
   const [showLoader, setShowLoader] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
-  const [inversionsSubTab, setInversionsSubTab] = useState("fons");
-  const [realEstateTab, setRealEstateTab] = useState("directe");
-  const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
-  const [searchersSubTab, setSearchersSubTab] = useState("tots");
-  const [companiesSubTab, setCompaniesSubTab] = useState("portfoli");
-  const [companiesPortfoliSubTab, setCompaniesPortfoliSubTab] = useState("totes");
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
-  const [activeNavItem,    setActiveNavItem]     = usePersistedState("ui_navItem", "fons");
-  const [ccAddModalFons, setCcAddModalFons] = useState(null);
-  const [ccAddModalDefaults, setCcAddModalDefaults] = useState(null);
-  const [ccEditModalRow, setCcEditModalRow] = useState(null);
 
   const ccNameOptions = useMemo(() => dedupeOptionValues([
     ...d.rawCC.map((row) => row.fons),
@@ -125,39 +189,7 @@ function Dashboard() {
     if (errorMessage) throw new Error(errorMessage);
   }, [d]);
 
-  function openCcAddModal(defaults = {}) {
-    const fons = defaults.fons ?? "";
-    setCcAddModalDefaults({
-      ...defaults,
-      est: defaults.est ?? defaultCapitalCallStrategyForVehicleTipus(defaults.vehicleTipus ?? "PE"),
-      divisa: defaults.divisa ?? defaultVehicleCurrency(fons),
-    });
-    setCcAddModalFons(fons);
-  }
-
-  function handleNavigate(itemId) {
-    setActiveNavItem(itemId);
-    switch (itemId) {
-      case "fons":           setTab("inversions"); setInversionsSubTab("fons"); break;
-      case "searchers":      setTab("searchers"); break;
-      case "companies":      setTab("companies"); break;
-      case "cash-model":     setTab("cash-model"); break;
-      case "posicions":      setTab("inversions"); break;
-      case "re-directe":     setTab("real-estate");     setRealEstateTab("directe"); break;
-      case "re-altres":      setTab("real-estate");     setRealEstateTab("altres-vehicles"); break;
-      case "re-inversions":  setTab("real-estate");     setRealEstateTab("inversions"); break;
-      case "mp-resum":       setTab("mercats-publics"); setMercatsPublicsTab("resum"); break;
-      case "mp-rv":          setTab("mercats-publics"); setMercatsPublicsTab("rv"); break;
-      case "mp-rf":          setTab("mercats-publics"); setMercatsPublicsTab("rf"); break;
-      case "mp-posicions":   setTab("mercats-publics"); setMercatsPublicsTab("posicions"); break;
-      case "mp-transaccions":setTab("mercats-publics"); setMercatsPublicsTab("transaccions"); break;
-      case "mp-traçabilitat":setTab("mercats-publics"); setMercatsPublicsTab("traçabilitat"); break;
-      case "tx-alt":         setTab("tx-alt"); break;
-      case "tx-re":          setTab("tx-re"); break;
-      case "tx-mp":          setTab("tx-mp"); break;
-      default: break;
-    }
-  }
+  // navigation handled by useTabRouter()
 
   const [exporting, setExporting] = useState(false);
 
@@ -443,38 +475,39 @@ function Dashboard() {
   const canEdit = canEditSection(currentPermissionId);
 
   return (
-    <div className={`dashboard-wrapper ${dark ? "dark-theme" : "light-theme"}`} style={{ display: "flex", minHeight: "100vh", background: tc.bg }}>
-      <Sidebar
-        collapsed={sidebarCollapsed}
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
-        activeNavItem={activeNavItem}
-        onNavigate={handleNavigate}
-        isAdmin={isAdmin}
-        canAccessSection={canAccessSection}
-        canAccessAny={canAccessAny}
-        sections={SECTIONS}
-        realEstateNav={REAL_ESTATE_NAV}
-        publicMarketsNav={PUBLIC_MARKETS_NAV}
-        supra={SUPRA}
-      />
+    <CapitalCallModalProvider defaultVehicleCurrency={defaultVehicleCurrency}>
+      <div className={`dashboard-wrapper ${dark ? "dark-theme" : "light-theme"}`} style={{ display: "flex", minHeight: "100vh", background: tc.bg }}>
+        <Sidebar
+          collapsed={sidebarCollapsed}
+          onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+          activeNavItem={activeNavItem}
+          onNavigate={handleNavigate}
+          isAdmin={isAdmin}
+          canAccessSection={canAccessSection}
+          canAccessAny={canAccessAny}
+          sections={SECTIONS}
+          realEstateNav={REAL_ESTATE_NAV}
+          publicMarketsNav={PUBLIC_MARKETS_NAV}
+          supra={SUPRA}
+        />
 
-      <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-        <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
-              {(tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re") ? "Real Estate" : "Mercats Privats"}
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
+          <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
+                {(tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re") ? "Real Estate" : "Mercats Privats"}
+              </div>
+              {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
             </div>
-            {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
-          </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div style={{ position: "relative", width: 280 }}>
-              <input value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} placeholder="Cerca global..." style={{ width: "100%", padding: "8px 12px 8px 36px", borderRadius: 8, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, outline: "none", transition: "all 0.2s" }} />
-              <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}>🔍</span>
-              {globalSearch && <button onClick={() => setGlobalSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 14, opacity: 0.5 }}>✕</button>}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ position: "relative", width: 280 }}>
+                <input value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} placeholder="Cerca global..." style={{ width: "100%", padding: "8px 12px 8px 36px", borderRadius: 8, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, outline: "none", transition: "all 0.2s" }} />
+                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}>🔍</span>
+                {globalSearch && <button onClick={() => setGlobalSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 14, opacity: 0.5 }}>✕</button>}
+              </div>
             </div>
-          </div>
-        </header>
+          </header>
 
         {d.isLoading && d.rawCC.length === 0 && (
           <div style={{ position: "fixed", bottom: 24, right: 24, zIndex: 200, background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "10px 18px", display: "flex", alignItems: "center", gap: 10, boxShadow: "0 4px 16px rgba(0,0,0,.12)", fontSize: 13, color: tc.textMid }}>
@@ -522,7 +555,7 @@ function Dashboard() {
               </div>
               <Suspense fallback={null}>
                 {companiesSubTab === "transaccions" ? (
-                  <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "PC" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Participades (PC)" />
+                  <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ vcpe: "PC" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Participades (PC)" />
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", gap: 6 }}>
@@ -549,7 +582,7 @@ function Dashboard() {
                   ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["PE", "VC"]} excludeIds={d.actualCompanyIds} />
                   : inversionsSubTab === "pipeline"
                     ? <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
-                    : <TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_all_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
+                    : <TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_all_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
               </Suspense>
             </div>
           )}
@@ -590,8 +623,8 @@ function Dashboard() {
             </Suspense>
           )}
 
-          {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal()} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" /></Suspense>}
-          {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} onAdd={() => openCcAddModal({ vcpe: "RE", est: "Fons Real Estate" })} onEdit={setCcEditModalRow} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
+          {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" /></Suspense>}
+          {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ vcpe: "RE", est: "Fons Real Estate" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
           {tab === "tx-mp" && <Suspense fallback={null}><PMTransaccionsTab search={globalSearch} /></Suspense>}
         </main>
       </div>
@@ -610,39 +643,18 @@ function Dashboard() {
         </Suspense>
       )}
 
-      <Suspense fallback={null}>
-        {ccAddModalFons !== null && (
-          <CcTransactionModal
-            addFons={ccAddModalFons}
-            addDefaults={ccAddModalDefaults}
-            ccNameOptions={ccNameOptions}
-            ccTipusOptions={ccTipusOptions}
-            amountInputStyle={amountInputStyle}
-            defaultVehicleCurrency={defaultVehicleCurrency}
-            recallablePoolByFund={recallablePoolByFund}
-            uncalledByFund={uncalledByFund}
-            onInsert={d.handleCCInsert}
-            onUpdate={d.handleCCUpdate}
-            onClose={() => setCcAddModalFons(null)}
-          />
-        )}
-
-        {ccEditModalRow && (
-          <CcTransactionModal
-            editRow={ccEditModalRow}
-            ccNameOptions={ccNameOptions}
-            ccTipusOptions={ccTipusOptions}
-            amountInputStyle={amountInputStyle}
-            defaultVehicleCurrency={defaultVehicleCurrency}
-            recallablePoolByFund={recallablePoolByFund}
-            uncalledByFund={uncalledByFund}
-            onInsert={d.handleCCInsert}
-            onUpdate={d.handleCCUpdate}
-            onClose={() => setCcEditModalRow(null)}
-          />
-        )}
-      </Suspense>
+      <CapitalCallModals
+        ccNameOptions={ccNameOptions}
+        ccTipusOptions={ccTipusOptions}
+        amountInputStyle={amountInputStyle}
+        defaultVehicleCurrency={defaultVehicleCurrency}
+        recallablePoolByFund={recallablePoolByFund}
+        uncalledByFund={uncalledByFund}
+        onInsert={d.handleCCInsert}
+        onUpdate={d.handleCCUpdate}
+      />
     </div>
+  </CapitalCallModalProvider>
   );
 }
 

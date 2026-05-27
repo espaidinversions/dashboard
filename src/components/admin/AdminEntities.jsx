@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import ExcelJS from "exceljs";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
 import { loadPrivateEntities, renamePrivateEntity, updateEntityId, updateEntityFiscalName, deleteVehicle, deleteCompanyEntity, mergePrivateEntities } from "../../db.js";
+import { useDataLoader } from "../hooks/useDataLoader.js";
 
 // ── Duplicate detection ─────────────────────────────────────
 const DEDUPE_STOPWORDS = new Set([
@@ -44,8 +45,12 @@ const MATCH_COLORS = {
 export default function AdminEntities() {
   const { tc } = useTheme();
   const { toast } = useToast();
-  const [entities, setEntities] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: entities = [], setData: setEntities, loading } = useDataLoader({
+    deps: [toast],
+    initialData: [],
+    load: loadPrivateEntities,
+    onError: (err) => toast({ message: "Error carregant entitats: " + err.message, type: "error" }),
+  });
   const [tab, setTab] = useState("list"); // "list" | "duplicates"
   const [search, setSearch] = useState("");
   const [filterKind, setFilterKind] = useState("");
@@ -56,14 +61,6 @@ export default function AdminEntities() {
   const [confirmDelete, setConfirmDelete] = useState(null); // entity or null
   const [deleting, setDeleting] = useState(false);
   const [merging, setMerging] = useState(false);
-
-  useEffect(() => {
-    setLoading(true);
-    loadPrivateEntities()
-      .then(setEntities)
-      .catch(err => toast({ message: "Error carregant entitats: " + err.message, type: "error" }))
-      .finally(() => setLoading(false));
-  }, [toast]);
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();

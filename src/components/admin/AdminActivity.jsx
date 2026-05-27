@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
 import { loadAuditLog, revertChange } from "./adminApi.js";
 import { formatIsoDateTime } from "../../utils.js";
 import { useAuth } from "../../auth.jsx";
+import { useDataLoader } from "../hooks/useDataLoader.js";
 
 function exportCsv(logs) {
   const header = ["Data", "Usuari", "Acció", "Taula", "Registre", "Canvis"];
@@ -38,37 +39,34 @@ const REVERTABLE_TABLES = new Set(["capital_calls", "portfolio_companies", "sear
 export default function AdminActivity() {
   const { tc } = useTheme();
   const { toast } = useToast();
-  const [logs, setLogs] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState(null);
   const [reverting, setReverting] = useState(null);
   const [filterUser, setFilterUser] = useState("");
   const [filterTable, setFilterTable] = useState("");
   const [filterAction, setFilterAction] = useState("");
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 50, total: 0, totalPages: 1 });
 
-  useEffect(() => {
-    async function load() {
-      setLoading(true);
-      try {
-        const result = await loadAuditLog({
-          page,
-          pageSize: 50,
-          user: filterUser,
-          table: filterTable,
-          action: filterAction,
-        });
-        setLogs(result.logs ?? []);
-        setPagination(result.pagination ?? { page, pageSize: 50, total: result.logs?.length ?? 0, totalPages: 1 });
-      } catch (error) {
-        toast({ message: "Error carregant activitat: " + error.message, type: "error" });
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [page, filterAction, filterTable, filterUser, toast]);
+  const { data, setData, loading } = useDataLoader({
+    deps: [page, filterUser, filterTable, filterAction, toast],
+    initialData: { logs: [], pagination: { page: 1, pageSize: 50, total: 0, totalPages: 1 } },
+    load: async () => {
+      const result = await loadAuditLog({
+        page,
+        pageSize: 50,
+        user: filterUser,
+        table: filterTable,
+        action: filterAction,
+      });
+      return {
+        logs: result.logs ?? [],
+        pagination: result.pagination ?? { page, pageSize: 50, total: result.logs?.length ?? 0, totalPages: 1 },
+      };
+    },
+    onError: (error) => toast({ message: "Error carregant activitat: " + error.message, type: "error" }),
+  });
+
+  const logs = data?.logs ?? [];
+  const pagination = data?.pagination ?? { page: 1, pageSize: 50, total: 0, totalPages: 1 };
 
   const handleRevert = async (logEntry) => {
     if (!confirm(`Revertir ${logEntry.action} a ${logEntry.table_name} (${logEntry.record_id})?`)) return;
@@ -76,7 +74,7 @@ export default function AdminActivity() {
     try {
       await revertChange(logEntry.id);
       toast({ message: "Canvi revertit correctament." });
-      setLogs(prev => prev.filter(l => l.id !== logEntry.id));
+      setData(prev => ({ ...(prev ?? {}), logs: (prev?.logs ?? []).filter(l => l.id !== logEntry.id) }));
     } catch (e) {
       toast({ message: "Error revertint: " + e.message, type: "error" });
     } finally {

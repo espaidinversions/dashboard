@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { ThemeProvider, useTheme } from "../theme.js";
-import { Logo } from "./SharedComponents.jsx";
+import { Badge, Logo } from "./SharedComponents.jsx";
 
 // ── Shared typography helpers ──────────────────────────────────────────────
 function H1({ children }) {
@@ -55,18 +55,11 @@ function Note({ children }) {
     </div>
   );
 }
-function Badge({ label, color = "#1B4F72", bg = "#E8F0F7" }) {
-  return (
-    <span style={{ display: "inline-block", background: bg, color, borderRadius: 4, padding: "1px 7px", fontSize: 11, fontWeight: 700, marginLeft: 4, verticalAlign: "middle" }}>
-      {label}
-    </span>
-  );
-}
 function AdminOnly() {
-  return <Badge label="Admin o superuser" color="#7c3c00" bg="#fff0e0" />;
+  return <Badge label="Admin o superuser" cfg={{ color: "#7c3c00", bg: "#fff0e0" }} />;
 }
 function AdminStrictOnly() {
-  return <Badge label="Només admin" color="#6A1B9A" bg="#F3E5F5" />;
+  return <Badge label="Només admin" cfg={{ color: "#6A1B9A", bg: "#F3E5F5" }} />;
 }
 
 function Table({ head, rows }) {

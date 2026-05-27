@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
 import { apiFetchJson } from "../../apiClient.js";
 import { formatIsoDateTime } from "../../utils.js";
+import { useDataLoader } from "../hooks/useDataLoader.js";
 
 const TABLE_LABELS = {
   capital_calls:         "Capital Calls",
@@ -39,24 +40,15 @@ function StatCard({ label, value, sub }) {
 export default function AdminSystem() {
   const { tc } = useTheme();
   const { toast } = useToast();
-  const [status, setStatus] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [purgeDays, setPurgeDays] = useState(90);
   const [purging, setPurging] = useState(false);
 
-  const load = async () => {
-    setLoading(true);
-    try {
-      const data = await apiFetchJson("/api/admin/system-status");
-      setStatus(data);
-    } catch (e) {
-      toast({ message: "Error carregant estat: " + e.message, type: "error" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { load(); }, []);
+  const { data: status, loading, reload: load } = useDataLoader({
+    deps: [toast],
+    initialData: null,
+    load: () => apiFetchJson("/api/admin/system-status"),
+    onError: (e) => toast({ message: "Error carregant estat: " + e.message, type: "error" }),
+  });
 
   const handlePurge = async () => {
     if (!confirm(`Eliminar tots els registres d'auditoria de fa més de ${purgeDays} dies? Aquesta acció no es pot desfer.`)) return;

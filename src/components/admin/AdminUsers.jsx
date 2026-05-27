@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
 import { apiFetchJson } from "../../apiClient.js";
 import { formatIsoDate } from "../../utils.js";
 import { useAuth } from "../../auth.jsx";
+import { useDataLoader } from "../hooks/useDataLoader.js";
 
 const ROLES = ["user", "superuser", "admin"];
 
@@ -18,32 +19,35 @@ export default function AdminUsers() {
   const { tc } = useTheme();
   const { toast } = useToast();
   const { isAdmin } = useAuth();
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [subTab, setSubTab] = useState("active");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState("user");
   const [inviting, setInviting] = useState(false);
   const [page, setPage] = useState(1);
-  const [pagination, setPagination] = useState({ page: 1, pageSize: 25, total: 0, totalPages: 1 });
+
+  const {
+    data,
+    setData,
+    loading,
+    reload: loadUsers,
+  } = useDataLoader({
+    deps: [page, toast],
+    initialData: { users: [], pagination: { page: 1, pageSize: 25, total: 0, totalPages: 1 } },
+    onError: (e) => toast({ message: "Error carregant usuaris: " + e.message, type: "error" }),
+    load: async () => {
+      const json = await apiFetchJson(`/api/admin/users?page=${page}&pageSize=25`);
+      return {
+        users: json.users ?? [],
+        pagination: json.pagination ?? { page, pageSize: 25, total: json.users?.length ?? 0, totalPages: 1 },
+      };
+    },
+  });
+
+  const users = data?.users ?? [];
+  const pagination = data?.pagination ?? { page: 1, pageSize: 25, total: 0, totalPages: 1 };
 
   const getRole = (u) => u.app_metadata?.role ?? "user";
   const userEndpoint = (id) => `/api/admin/users?id=${encodeURIComponent(id)}`;
-
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
-    try {
-      const json = await apiFetchJson(`/api/admin/users?page=${page}&pageSize=25`);
-      setUsers(json.users ?? []);
-      setPagination(json.pagination ?? { page, pageSize: 25, total: json.users?.length ?? 0, totalPages: 1 });
-    } catch (e) {
-      toast({ message: "Error carregant usuaris: " + e.message, type: "error" });
-    } finally {
-      setLoading(false);
-    }
-  }, [page, toast]);
-
-  useEffect(() => { loadUsers(); }, [loadUsers]);
 
   const changeRole = async (id, role) => {
     try {
@@ -52,10 +56,13 @@ export default function AdminUsers() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
       });
-      setUsers(prev => prev.map(u => u.id === id ? {
-        ...u,
-        app_metadata: { ...u.app_metadata, role },
-      } : u));
+      setData(prev => ({
+        ...(prev ?? {}),
+        users: (prev?.users ?? []).map(u => u.id === id ? {
+          ...u,
+          app_metadata: { ...u.app_metadata, role },
+        } : u),
+      }));
       toast({ message: "Rol actualitzat." });
     } catch (e) {
       toast({ message: "Error: " + e.message, type: "error" });
@@ -66,8 +73,12 @@ export default function AdminUsers() {
     if (!confirm(`Eliminar l'usuari ${email}?`)) return;
     try {
       await apiFetchJson(userEndpoint(id), { method: "DELETE" });
-      setUsers(prev => prev.filter(u => u.id !== id));
-      setPagination(prev => ({ ...prev, total: Math.max(prev.total - 1, 0) }));
+      setData(prev => {
+        const nextUsers = (prev?.users ?? []).filter(u => u.id !== id);
+        const nextPagination = { ...(prev?.pagination ?? pagination) };
+        nextPagination.total = Math.max((nextPagination.total ?? nextUsers.length) - 1, 0);
+        return { ...(prev ?? {}), users: nextUsers, pagination: nextPagination };
+      });
       toast({ message: `Usuari ${email} eliminat.` });
     } catch (e) {
       toast({ message: "Error: " + e.message, type: "error" });

@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
-import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { calcMesos, parseSearchersCSV, usePersistedState, readStoredJSON } from "../utils.js";
 import { GEO_NAME } from "../config.js";
@@ -270,7 +269,6 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   );
   const geoTotal = geoData.reduce((s, r) => s + r.value, 0);
   const geoCountTotal = geoCountData.reduce((s, r) => s + r.count, 0);
-  const t = ecTheme(TC);
   const sortActive = (k) => setActiveSort(p => ({ k, d: p.k === k && p.d === "asc" ? "desc" : "asc" }));
 
   const isSummaryView = subTab === "resum";
@@ -554,7 +552,6 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
         <SankeySection
           TC={TC}
           dark={dark}
-          t={t}
           activeRows={activeRows}
           totalSearchers={totalSearchers}
           soloCount={soloCount}

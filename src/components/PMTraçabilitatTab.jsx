@@ -4,27 +4,12 @@ import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { FUND_PRICES } from "../generated/prices/fundPrices.js";
 import { ALL_PRICE_SERIES, ESTIMATED_PRICE_ISINS } from "../data/allPrices.js";
 import { buildPmVehicleCoverageReport } from "../data/pmVehicleCoverage.js";
+import { formatDateRange, maxDate, minDate } from "../utils/formatters.js";
 import { Badge } from "./SharedComponents.jsx";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
-
-function minDate(a, b) {
-  if (!a) return b ?? null;
-  if (!b) return a;
-  return a < b ? a : b;
-}
-function maxDate(a, b) {
-  if (!a) return b ?? null;
-  if (!b) return a;
-  return a > b ? a : b;
-}
-function formatDateRange(start, end) {
-  if (!start && !end) return "—";
-  if (!end || start === end) return start ?? end ?? "—";
-  return `${start} → ${end}`;
-}
 function monthIndex(month) {
   if (!month) return null;
   const [year, monthNum] = String(month).slice(0, 7).split("-").map(Number);

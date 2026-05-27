@@ -12,7 +12,7 @@ import { PriceHistoryChart } from "./PriceHistoryChart.jsx";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
 import { buildClosedTransactionSummaryByIsinCustodian, enrichClosedPosition } from "../data/pmClosedUtils.js";
 import { findActivePositionByRouteId, findClosedPositionByRouteId, makeIsinCustodianKey } from "../data/pmPositionRouting.js";
-import { SectionHeader } from "./SharedComponents.jsx";
+import { KpiCard, SectionHeader } from "./SharedComponents.jsx";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
@@ -23,20 +23,6 @@ const PM_POSITION_ID_ALIASES = PM_MODEL.metadata.positionIdAliases;
 
 const ISIN_RE = /([A-Z]{2}[A-Z0-9]{10})/;
 const cleanIsin = raw => (ISIN_RE.exec(String(raw ?? "").toUpperCase())?.[1]) ?? raw;
-
-function KpiCard({ label, value, accent, tc = TC_LIGHT }) {
-  return (
-    <div className="kpi-card card-hover" style={{
-      background: tc.card, border: `1px solid ${tc.border}`,
-      borderRadius: 10, padding: "16px 18px", flex: 1,
-      borderTop: `3px solid ${accent ?? tc.navy}`,
-      boxShadow: "0 2px 12px rgba(0,0,0,.06)",
-    }}>
-      <div style={{ fontSize: 10, letterSpacing: "0.11em", color: tc.textLight, textTransform: "uppercase", marginBottom: 6, fontWeight: 500 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: accent ?? tc.navy, letterSpacing: "-0.02em", fontFamily: "'DM Mono',monospace" }}>{value}</div>
-    </div>
-  );
-}
 
 function InfoRow({ label, value, tc = TC_LIGHT }) {
   return (
@@ -221,17 +207,17 @@ function PMPositionDetail() {
 
       {/* ── KPI row ── */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <KpiCard label={isClosed ? "Valor tancament" : "Valor mercat"}   value={p.valorMercat != null ? fmtM(p.valorMercat) : "—"} accent={tc.navy} tc={tc} hero />
-        <KpiCard label="Cost total"     value={p.costEur != null ? fmtM(p.costEur) : "—"} accent={tc.navyLight} tc={tc} />
-        <KpiCard label="P&L"            value={pnl != null ? `${pnl >= 0 ? "+" : ""}${fmtM(pnl)}` : "—"} accent={pnlColor} tc={tc} />
+        <KpiCard label={isClosed ? "Valor tancament" : "Valor mercat"} value={p.valorMercat != null ? fmtM(p.valorMercat) : "—"} tc={tc} hero />
+        <KpiCard label="Cost total" value={p.costEur != null ? fmtM(p.costEur) : "—"} valueColor={tc.navyLight} tc={tc} />
+        <KpiCard label="P&L" value={pnl != null ? `${pnl >= 0 ? "+" : ""}${fmtM(pnl)}` : "—"} valueColor={pnlColor} tc={tc} />
         {p.unitats != null && (
-          <KpiCard label="Participacions" value={p.unitats.toLocaleString("ca-ES")} accent={tc.navyLight} tc={tc} />
+          <KpiCard label="Participacions" value={p.unitats.toLocaleString("ca-ES")} valueColor={tc.navyLight} tc={tc} />
         )}
         {p.rendInici != null && (
-          <KpiCard label="TWR inici"    value={(p.rendInici >= 0 ? "+" : "") + p.rendInici.toFixed(2) + "%"} accent={rendIniciColor} tc={tc} />
+          <KpiCard label="TWR inici" value={(p.rendInici >= 0 ? "+" : "") + p.rendInici.toFixed(2) + "%"} valueColor={rendIniciColor} tc={tc} />
         )}
         {!isClosed && (
-          <KpiCard label="Pes cartera"  value={p.pes != null ? p.pes.toFixed(1) + "%" : "—"} accent={tc.navyLight} tc={tc} />
+          <KpiCard label="Pes cartera" value={p.pes != null ? p.pes.toFixed(1) + "%" : "—"} valueColor={tc.navyLight} tc={tc} />
         )}
       </div>
 
