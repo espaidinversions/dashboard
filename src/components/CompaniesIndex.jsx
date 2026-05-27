@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, formatMultiple, multipleColor, readStoredFlag, usePersistedState } from "../utils.js";
+import { ThemeProvider, useTheme } from "../theme.js";
+import { fmtM, formatMultiple, multipleColor, usePersistedState } from "../utils.js";
 import { Badge, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCompanies } from "../db.js";
 import { isActualCompany } from "../data/privateCompanyModel.js";
@@ -210,11 +210,9 @@ export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "
 }
 
 export default function CompaniesIndex() {
-  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
-  const tc = dark ? TC_DARK : TC_LIGHT;
   return (
-    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
+    <ThemeProvider>
       <CompaniesIndexInner />
-    </ThemeContext.Provider>
+    </ThemeProvider>
   );
 }

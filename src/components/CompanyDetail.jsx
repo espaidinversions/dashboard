@@ -5,8 +5,8 @@ import { ecTheme } from "../echartsTheme.js";
 import { useAuth } from "../auth.jsx";
 import { loadCompanies, upsertCompany } from "../db.js";
 import { useToast } from "../toast.jsx";
-import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, slugify, usePersistedState, formatMultiple, multipleColor, readStoredFlag } from "../utils.js";
+import { ThemeProvider, useTheme } from "../theme.js";
+import { fmtM, slugify, usePersistedState, formatMultiple, multipleColor } from "../utils.js";
 import { EditableCell, FlagImg, Logo, KpiCard, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 
 function MetricChart({ title, data, actualKey, budgetKey, ltmKey, color, view, tc, withMargin }) {
@@ -522,11 +522,9 @@ function CompanyDetailInner() {
 }
 
 export default function CompanyDetail() {
-  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
-  const tc = dark ? TC_DARK : TC_LIGHT;
   return (
-    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
+    <ThemeProvider>
       <CompanyDetailInner />
-    </ThemeContext.Provider>
+    </ThemeProvider>
   );
 }

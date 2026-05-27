@@ -3,8 +3,8 @@ import { useParams, Link, useNavigate } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { VCPE_CFG, EST_CFG } from "../config.js";
-import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtSignedM, fmtSignedNative, readStoredJSON, readStoredFlag, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
+import { ThemeProvider, useTheme } from "../theme.js";
+import { fmtM, fmtSignedM, fmtSignedNative, readStoredJSON, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
 import { Badge, Logo, KpiCard, AddRowModal, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCapitalCalls, loadFundMeta, updateCapitalCall } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
@@ -359,11 +359,9 @@ function FundDetailInner() {
 }
 
 export default function FundDetail() {
-  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
-  const tc = dark ? TC_DARK : TC_LIGHT;
   return (
-    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
+    <ThemeProvider>
       <FundDetailInner />
-    </ThemeContext.Provider>
+    </ThemeProvider>
   );
 }

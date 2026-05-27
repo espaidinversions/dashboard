@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { readStoredFlag } from "../utils.js";
+import { ThemeProvider, useTheme } from "../theme.js";
 import { Logo } from "./SharedComponents.jsx";
 
 // ── Shared typography helpers ──────────────────────────────────────────────
@@ -663,11 +662,9 @@ function UserGuideInner() {
 }
 
 export default function UserGuide() {
-  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
-  const tc = dark ? TC_DARK : TC_LIGHT;
   return (
-    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
+    <ThemeProvider>
       <UserGuideInner />
-    </ThemeContext.Provider>
+    </ThemeProvider>
   );
 }

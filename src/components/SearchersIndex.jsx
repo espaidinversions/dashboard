@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtSignedM, formatIsoDateDMY, readStoredFlag, usePersistedState } from "../utils.js";
+import { ThemeProvider, useTheme } from "../theme.js";
+import { fmtM, fmtSignedM, formatIsoDateDMY, usePersistedState } from "../utils.js";
 import { loadCapitalCalls, loadCompanies, loadSearchers } from "../db.js";
 import { FlagImg, Badge, AddRowModal, DeleteRowButton, indexPageStyles } from "./SharedComponents.jsx";
 import { isActualCompany } from "../data/privateCompanyModel.js";
@@ -564,11 +564,9 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
 }
 
 export default function SearchersIndex() {
-  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
-  const tc = dark ? TC_DARK : TC_LIGHT;
   return (
-    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark((value) => !value) }}>
+    <ThemeProvider>
       <SearchersIndexInner />
-    </ThemeContext.Provider>
+    </ThemeProvider>
   );
 }

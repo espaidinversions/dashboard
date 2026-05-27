@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { VCPE_CFG, EST_CFG, VEHICLE_TIPUS_CFG } from "../config.js";
-import { ThemeContext, TC_DARK, TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, readStoredJSON, writeStoredJSON, readStoredFlag, formatMultiple, multipleColor } from "../utils.js";
+import { ThemeProvider, useTheme } from "../theme.js";
+import { fmtM, readStoredJSON, writeStoredJSON, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, EditableCell, DeleteRowButton, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { upsertFundMeta, upsertFundMetaFiEnd, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
@@ -451,11 +451,9 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
 }
 
 export default function FundsIndex() {
-  const [dark, setDark] = useState(() => readStoredFlag("tc_dark"));
-  const tc = dark ? TC_DARK : TC_LIGHT;
   return (
-    <ThemeContext.Provider value={{ tc, dark, toggle: () => setDark(d => !d) }}>
+    <ThemeProvider>
       <FundsIndexInner />
-    </ThemeContext.Provider>
+    </ThemeProvider>
   );
 }
