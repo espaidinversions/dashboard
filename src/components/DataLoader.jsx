@@ -2,6 +2,7 @@ import React, { useState, useRef } from "react";
 import { useTheme } from "../theme.js";
 import { parseCapitalCallsCSV, parsePipelineCSV, mapCapitalCallsRows, mapLegacySearchFundRows, mapPipelineRows, mapCompanyRows, mapSearcherRows, mapFundMetaRows, mapKpiRows } from "../utils.js";
 import { apiFetchJson } from "../apiClient.js";
+import { readWorkbookFromArrayBuffer, sheetToRows } from "../utils/xlsx.js";
 
 function DataLoader({ onLoad, onClose, dataInfo }) {
   const { tc: TC } = useTheme();
@@ -22,39 +23,9 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
   const readXLSX = async (file) => {
     if (file.size > 10 * 1024 * 1024) { setError("El fitxer és massa gran (màxim 10 MB)."); return; }
     try {
-      const ExcelJS = (await import("exceljs")).default;
       const buf  = await file.arrayBuffer();
-      const wb   = new ExcelJS.Workbook();
-      await wb.xlsx.load(buf);
-      const MAX_SHEETS = 20;
-      if (wb.worksheets.length > MAX_SHEETS) {
-        setError(`El fitxer té massa fulls (màxim ${MAX_SHEETS}).`);
-        return;
-      }
-      const sheet = name => {
-        const ws = wb.getWorksheet(name);
-        if (!ws) return null;
-        const rows = [];
-        ws.eachRow((row, rowNumber) => {
-          if (rowNumber === 1) return; // skip header row — read it separately
-          // do nothing here; we build objects below
-        });
-        // Build array of objects keyed by header row
-        const headers = [];
-        ws.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          headers[colNumber] = cell.value != null ? String(cell.value) : "";
-        });
-        ws.eachRow((row, rowNumber) => {
-          if (rowNumber === 1) return;
-          const obj = {};
-          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
-            const key = headers[colNumber];
-            if (key) obj[key] = cell.value != null ? cell.value : "";
-          });
-          if (Object.keys(obj).length > 0) rows.push(obj);
-        });
-        return rows.length > 0 ? rows : null;
-      };
+      const { XLSX, wb } = await readWorkbookFromArrayBuffer(buf, { maxSheets: 20 });
+      const sheet = (name) => sheetToRows(XLSX, wb, name);
       const hasHeaders = (rows, headers) => Array.isArray(rows) && rows.length > 0
         && headers.every((header) => Object.prototype.hasOwnProperty.call(rows[0], header));
 

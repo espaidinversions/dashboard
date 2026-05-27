@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from "react";
-import ExcelJS from "exceljs";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
 import { loadPrivateEntities, renamePrivateEntity, updateEntityId, updateEntityFiscalName, deleteVehicle, deleteCompanyEntity, mergePrivateEntities } from "../../db.js";
 import { useDataLoader } from "../hooks/useDataLoader.js";
+import { downloadSingleSheetXlsx } from "../../utils/xlsx.js";
 
 // ── Duplicate detection ─────────────────────────────────────
 const DEDUPE_STOPWORDS = new Set([
@@ -205,27 +205,21 @@ export default function AdminEntities() {
       isin:           e.isin ?? "",
       country:        e.country ?? "",
     }));
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Entitats");
-    ws.columns = [
-      { header: "id",             key: "id",             width: 40 },
-      { header: "canonical_name", key: "canonical_name", width: 40 },
-      { header: "fiscal_name",    key: "fiscal_name",    width: 40 },
-      { header: "kind",           key: "kind",           width: 10 },
-      { header: "match_type",     key: "match_type",     width: 12 },
-      { header: "nif",            key: "nif",            width: 16 },
-      { header: "isin",           key: "isin",           width: 14 },
-      { header: "country",        key: "country",        width: 8  },
-    ];
-    rows.forEach(row => ws.addRow(row));
-    const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "entitats.xlsx";
-    a.click();
-    URL.revokeObjectURL(url);
+    await downloadSingleSheetXlsx({
+      sheetName: "Entitats",
+      filename: "entitats.xlsx",
+      columns: [
+        { header: "id",             key: "id",             width: 40 },
+        { header: "canonical_name", key: "canonical_name", width: 40 },
+        { header: "fiscal_name",    key: "fiscal_name",    width: 40 },
+        { header: "kind",           key: "kind",           width: 10 },
+        { header: "match_type",     key: "match_type",     width: 12 },
+        { header: "nif",            key: "nif",            width: 16 },
+        { header: "isin",           key: "isin",           width: 14 },
+        { header: "country",        key: "country",        width: 8  },
+      ],
+      rows,
+    });
   }
 
   const th = { ...sharedStyles.th(tc), padding: "9px 12px", textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };

@@ -15,6 +15,7 @@ import { SankeySection } from "./searchers/SankeySection.jsx";
 import { ActiveSearchersTable } from "./searchers/ActiveSearchersTable.jsx";
 import { LegacyTable } from "./searchers/LegacyTable.jsx";
 import { HistoricTable } from "./searchers/HistoricTable.jsx";
+import { downloadSingleSheetXlsx, readWorkbookFromArrayBuffer, sheetToRows } from "../utils/xlsx.js";
 
 // ── main component ─────────────────────────────────────────
 export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
@@ -340,33 +341,26 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       toast({ message: "Tots els searchers ja tenen NIF real." });
       return;
     }
-    const ExcelJS = (await import("exceljs")).default;
     const data = rows.map(r => ({
       id: r.id ?? "", nom: r.nom ?? "", nif_actual: r.nif ?? "", nif_nou: "",
       status: r.statusScreening ?? "", entrada: r.formEntrada ?? "",
       geo: r.geo ?? "", ticket: r.ticket ?? "",
     }));
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("NIFs");
-    ws.columns = [
-      { header: "id",         key: "id",         width: 10 },
-      { header: "nom",        key: "nom",        width: 40 },
-      { header: "nif_actual", key: "nif_actual", width: 30 },
-      { header: "nif_nou",    key: "nif_nou",    width: 20 },
-      { header: "status",     key: "status",     width: 30 },
-      { header: "entrada",    key: "entrada",    width: 16 },
-      { header: "geo",        key: "geo",        width: 6  },
-      { header: "ticket",     key: "ticket",     width: 10 },
-    ];
-    data.forEach(row => ws.addRow(row));
-    const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `searchers_nif_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await downloadSingleSheetXlsx({
+      sheetName: "NIFs",
+      filename: `searchers_nif_${new Date().toISOString().slice(0, 10)}.xlsx`,
+      columns: [
+        { header: "id",         key: "id",         width: 10 },
+        { header: "nom",        key: "nom",        width: 40 },
+        { header: "nif_actual", key: "nif_actual", width: 30 },
+        { header: "nif_nou",    key: "nif_nou",    width: 20 },
+        { header: "status",     key: "status",     width: 30 },
+        { header: "entrada",    key: "entrada",    width: 16 },
+        { header: "geo",        key: "geo",        width: 6  },
+        { header: "ticket",     key: "ticket",     width: 10 },
+      ],
+      rows: data,
+    });
     toast({ message: `${rows.length} searchers exportats.` });
   };
 
@@ -376,23 +370,8 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       try {
-        const ExcelJS = (await import("exceljs")).default;
-        const wbRead = new ExcelJS.Workbook();
-        await wbRead.xlsx.load(ev.target.result);
-        const wsRead = wbRead.worksheets[0];
-        const headers = [];
-        wsRead.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
-          headers[colNumber] = cell.value != null ? String(cell.value) : "";
-        });
-        const rows = [];
-        wsRead.eachRow((row, rowNumber) => {
-          if (rowNumber === 1) return;
-          const obj = {};
-          headers.forEach((key, colNumber) => {
-            if (key) obj[key] = row.getCell(colNumber).value ?? "";
-          });
-          rows.push(obj);
-        });
+        const { XLSX, wb } = await readWorkbookFromArrayBuffer(ev.target.result);
+        const rows = sheetToRows(XLSX, wb, wb.SheetNames?.[0]) ?? [];
         const updates = rows.filter(r => String(r.nif_nou ?? "").trim());
         if (!updates.length) {
           toast({ message: "Cap NIF nou trobat a la columna nif_nou." });

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { downloadMultiSheetXlsx } from "./xlsx.js";
 
 export function readStoredJSON(key, fallback) {
   try {
@@ -52,24 +53,10 @@ export function usePersistedState(key, defaultValue, { isSet = false } = {}) {
 
 /** Export multiple sheets to a single .xlsx file. */
 export async function exportMultiXLSX(sheets, filename) {
-  const ExcelJS = (await import("exceljs")).default;
-  const wb = new ExcelJS.Workbook();
-  for (const { name, rows } of sheets) {
-    const ws = wb.addWorksheet(name);
-    if (rows.length > 0) {
-      const headers = Object.keys(rows[0]);
-      ws.addRow(headers);
-      rows.forEach(row => ws.addRow(headers.map(h => row[h])));
-    }
-  }
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`;
-  a.click();
-  URL.revokeObjectURL(url);
+  await downloadMultiSheetXlsx({
+    sheets,
+    filename: `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`,
+  });
 }
 
 const TC_LS_KEYS = [

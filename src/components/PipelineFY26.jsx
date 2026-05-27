@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { fmtM, usePersistedState, readStoredJSON } from "../utils.js";
+import { downloadSingleSheetXlsx } from "../utils/xlsx.js";
 import { useTheme } from "../theme.js";
 import { STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE, PIPELINE_STATUS_OPTIONS, PIPELINE_CANAL_OPTIONS } from "../config.js";
 import { EmptyState, EditableCell, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
@@ -249,45 +250,38 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   const t = ecTheme(TC);
 
   const exportExcel = async () => {
-    const ExcelJS = (await import("exceljs")).default;
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Pipeline FY26");
-    ws.columns = [
-      { header: "Nom",              key: "nom",       width: 28 },
-      { header: "Gestor",           key: "gestor",    width: 20 },
-      { header: "Compromís (orig)", key: "compOrig",  width: 14 },
-      { header: "Moneda",           key: "moneda",    width: 9  },
-      { header: "Compromís (€M)",   key: "compEur",   width: 15 },
-      { header: "Compromís ($M)",   key: "compUsd",   width: 15 },
-      { header: "Geografia",        key: "geo",       width: 10 },
-      { header: "Estratègia",       key: "estrategia",width: 18 },
-      { header: "Sector",           key: "sector",    width: 18 },
-      { header: "Status",           key: "status",    width: 14 },
-      { header: "Canal",            key: "canal",     width: 18 },
-      { header: "Tancament Est.",   key: "tancament", width: 16 },
-    ];
-    funds.forEach(f => ws.addRow({
-      nom:       f.name,
-      gestor:    f.manager || "",
-      compOrig:  f.amount,
-      moneda:    f.currency,
-      compEur:   +toEUR(amt(f), f.currency).toFixed(3),
-      compUsd:   +toUSD(amt(f), f.currency).toFixed(3),
-      geo:       f.geography,
-      estrategia:f.strategy,
-      sector:    f.sector,
-      status:    f.status,
-      canal:     f.canal,
-      tancament: f.estimatedClosing || "",
-    }));
-    const buffer = await wb.xlsx.writeBuffer();
-    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Pipeline_FY26_${new Date().toISOString().slice(0,10)}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    await downloadSingleSheetXlsx({
+      sheetName: "Pipeline FY26",
+      filename: `Pipeline_FY26_${new Date().toISOString().slice(0,10)}.xlsx`,
+      columns: [
+        { header: "Nom",              key: "nom",       width: 28 },
+        { header: "Gestor",           key: "gestor",    width: 20 },
+        { header: "Compromís (orig)", key: "compOrig",  width: 14 },
+        { header: "Moneda",           key: "moneda",    width: 9  },
+        { header: "Compromís (€M)",   key: "compEur",   width: 15 },
+        { header: "Compromís ($M)",   key: "compUsd",   width: 15 },
+        { header: "Geografia",        key: "geo",       width: 10 },
+        { header: "Estratègia",       key: "estrategia",width: 18 },
+        { header: "Sector",           key: "sector",    width: 18 },
+        { header: "Status",           key: "status",    width: 14 },
+        { header: "Canal",            key: "canal",     width: 18 },
+        { header: "Tancament Est.",   key: "tancament", width: 16 },
+      ],
+      rows: funds.map((f) => ({
+        nom:        f.name,
+        gestor:     f.manager || "",
+        compOrig:   f.amount,
+        moneda:     f.currency,
+        compEur:    +toEUR(amt(f), f.currency).toFixed(3),
+        compUsd:    +toUSD(amt(f), f.currency).toFixed(3),
+        geo:        f.geography,
+        estrategia: f.strategy,
+        sector:     f.sector,
+        status:     f.status,
+        canal:      f.canal,
+        tancament:  f.estimatedClosing || "",
+      })),
+    });
   };
 
   return (
