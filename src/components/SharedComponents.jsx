@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { TC_LIGHT, useTheme } from "../theme.js";
 import { readStoredJSON, writeStoredJSON } from "../utils.js";
 
@@ -222,12 +222,16 @@ const GEO_TO_ISO = { EN:"gb" };
 
 // Computes Twemoji SVG URL from 2-letter ISO country code
 // Flag emoji codepoints = regional indicator letters (U+1F1E6 = A, …)
+const twemojiCache = new Map();
 const twemojiUrl = (isoCode) => {
+  if (twemojiCache.has(isoCode)) return twemojiCache.get(isoCode);
   const upper = (GEO_TO_ISO[isoCode] || isoCode).toUpperCase();
   const base = 0x1F1E6 - 65; // 65 = 'A'.charCodeAt(0)
   const cp1 = (upper.charCodeAt(0) + base).toString(16);
   const cp2 = (upper.charCodeAt(1) + base).toString(16);
-  return `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${cp1}-${cp2}.svg`;
+  const url = `https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/svg/${cp1}-${cp2}.svg`;
+  twemojiCache.set(isoCode, url);
+  return url;
 };
 
 export const FlagImg = ({ geo, size=22 }) => {
@@ -298,13 +302,14 @@ export function EditableCell({ value, onSave, type = "text", options, fmt, style
   useEffect(() => { if (editing && !addingNew) ref.current?.focus(); }, [editing, addingNew]);
   useEffect(() => { if (addingNew) newRef.current?.focus(); }, [addingNew]);
 
-  const getCustomOpts = () => {
+  const customOpts = useMemo(() => {
     if (!optionsKey) return [];
     return readStoredJSON(`copts_${optionsKey}`, []);
-  };
+  }, [optionsKey]);
+  const getCustomOpts = () => customOpts;
   const saveCustomOpt = (val) => {
     if (!optionsKey) return;
-    const existing = getCustomOpts();
+    const existing = customOpts;
     if (!existing.includes(val)) {
       writeStoredJSON(`copts_${optionsKey}`, [...existing, val]);
     }
@@ -473,8 +478,7 @@ export function DeleteRowButton({ onDelete }) {
 
   return (
     <button onClick={() => setConfirming(true)}
-      style={{ background: "transparent", border: "1.5px solid #C62828", cursor: "pointer",
-        color: "#C62828", fontSize: 11, padding: "3px 8px", lineHeight: 1, borderRadius: 4, transition:"opacity 0.15s", fontFamily: "inherit", fontWeight: 600 }}
+      style={{ minWidth: 58, padding: "4px 0", borderRadius: 4, border: "none", background: "#C62828", color: "#fff", cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600, textAlign: "center", transition: "opacity 0.15s" }}
       onMouseEnter={e => { e.currentTarget.style.opacity="0.7"; }}
       onMouseLeave={e => { e.currentTarget.style.opacity="1"; }}
       title="Eliminar fila">

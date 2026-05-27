@@ -249,29 +249,45 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   const t = ecTheme(TC);
 
   const exportExcel = async () => {
-    const XLSX = await import("xlsx");
-    const rows = funds.map(f => ({
-      "Nom":              f.name,
-      "Gestor":           f.manager || "",
-      "Compromís (orig)": f.amount,
-      "Moneda":           f.currency,
-      "Compromís (€M)":   +toEUR(amt(f), f.currency).toFixed(3),
-      "Compromís ($M)":   +toUSD(amt(f), f.currency).toFixed(3),
-      "Geografia":        f.geography,
-      "Estratègia":       f.strategy,
-      "Sector":           f.sector,
-      "Status":           f.status,
-      "Canal":            f.canal,
-      "Tancament Est.":   f.estimatedClosing || "",
-    }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [
-      {wch:28},{wch:20},{wch:14},{wch:9},{wch:15},{wch:15},
-      {wch:10},{wch:18},{wch:18},{wch:14},{wch:18},{wch:16},
+    const ExcelJS = (await import("exceljs")).default;
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Pipeline FY26");
+    ws.columns = [
+      { header: "Nom",              key: "nom",       width: 28 },
+      { header: "Gestor",           key: "gestor",    width: 20 },
+      { header: "Compromís (orig)", key: "compOrig",  width: 14 },
+      { header: "Moneda",           key: "moneda",    width: 9  },
+      { header: "Compromís (€M)",   key: "compEur",   width: 15 },
+      { header: "Compromís ($M)",   key: "compUsd",   width: 15 },
+      { header: "Geografia",        key: "geo",       width: 10 },
+      { header: "Estratègia",       key: "estrategia",width: 18 },
+      { header: "Sector",           key: "sector",    width: 18 },
+      { header: "Status",           key: "status",    width: 14 },
+      { header: "Canal",            key: "canal",     width: 18 },
+      { header: "Tancament Est.",   key: "tancament", width: 16 },
     ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Pipeline FY26");
-    XLSX.writeFile(wb, `Pipeline_FY26_${new Date().toISOString().slice(0,10)}.xlsx`);
+    funds.forEach(f => ws.addRow({
+      nom:       f.name,
+      gestor:    f.manager || "",
+      compOrig:  f.amount,
+      moneda:    f.currency,
+      compEur:   +toEUR(amt(f), f.currency).toFixed(3),
+      compUsd:   +toUSD(amt(f), f.currency).toFixed(3),
+      geo:       f.geography,
+      estrategia:f.strategy,
+      sector:    f.sector,
+      status:    f.status,
+      canal:     f.canal,
+      tancament: f.estimatedClosing || "",
+    }));
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Pipeline_FY26_${new Date().toISOString().slice(0,10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (

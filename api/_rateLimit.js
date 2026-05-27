@@ -82,6 +82,8 @@ export async function checkRateLimit(ip, bucket = "public", overrides = {}) {
   const subject = String(ip || "unknown").slice(0, 255);
   const client = makeRateLimitClient();
 
+  const FAIL_CLOSED_BUCKETS = new Set(["sensitive", "admin"]);
+
   if (client) {
     try {
       const { data, error } = await client.rpc("take_rate_limit", {
@@ -102,10 +104,19 @@ export async function checkRateLimit(ip, bucket = "public", overrides = {}) {
       }
       if (error) {
         console.warn("[rate-limit] falling back to local store:", error.message);
+        if (FAIL_CLOSED_BUCKETS.has(bucket)) {
+          return { limited: true, limit: config.max, remaining: 0, retryAfterSec: 60, resetAt: Date.now() + 60_000 };
+        }
       }
-    } catch (error) {
-      console.warn("[rate-limit] falling back to local store:", error.message);
+    } catch (err) {
+      console.warn("[rate-limit] falling back to local store:", err.message);
+      if (FAIL_CLOSED_BUCKETS.has(bucket)) {
+        return { limited: true, limit: config.max, remaining: 0, retryAfterSec: 60, resetAt: Date.now() + 60_000 };
+      }
     }
+  } else if (FAIL_CLOSED_BUCKETS.has(bucket)) {
+    // No Supabase client available — block privileged buckets rather than allow
+    return { limited: true, limit: config.max, remaining: 0, retryAfterSec: 60, resetAt: Date.now() + 60_000 };
   }
 
   return isRateLimited(subject, bucket, config);

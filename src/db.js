@@ -227,11 +227,11 @@ export async function loadAll() {
   if (!supabase) return null;
   const [cc, fm, pl, co, sr, pe] = await Promise.all([
     fetchAllCapitalCallRows(),
-    supabase.from("fund_meta").select("*"),
-    supabase.from("pipeline").select("*").order("id"),
-    supabase.from("portfolio_companies").select("*").order("nom"),
-    supabase.from("searchers").select("*").order("nom"),
-    supabase.from("private_entities").select("*"),
+    supabase.from("fund_meta").select("vehicle_id,fons,tvpi,irr,vehicle_tipus,fi_end"),
+    supabase.from("pipeline").select("id,name,amount,currency,geography,strategy,sector,status,canal,active,estimated_closing,manager").order("id"),
+    supabase.from("portfolio_companies").select("entity_id,nom,tipus,segment,entrepreneurs,origen,geo,ticket,tvpi,rvpi_eur,dpi_eur,rev,ebitda,dfn,gross_ev,mult_entry,data_compr,mesos_operant,is_mock,quarters").order("nom"),
+    supabase.from("searchers").select("id,nom,tipus,modalitat,geo,status_screening_code,status_screening,form_entrada,status_cerca_code,status_cerca,status_adquisicio_code,status_adquisicio,intro_per,searcher1,searcher2,companyia_adquirida,escola1,escola2,web,comentaris,ticket,tvpi,data_inici,database_intro_date,data_compr,mesos_cercant,equity_stake,is_mock,is_legacy,nif,label,irr,dpi").order("nom"),
+    supabase.from("private_entities").select("id,kind,canonical_name,source_name,workbook_name,match_type"),
   ]);
   if (cc.error) console.error("loadAll capital_calls failed:", cc.error);
   if (fm.error) console.error("loadAll fund_meta failed:", fm.error);
@@ -300,9 +300,22 @@ export async function loadCompanies() {
   return [...rows, ...fallbackRows];
 }
 
-/** @returns {Promise<CapitalCallRow[] | null>} */
-export async function loadCapitalCalls() {
+/**
+ * @param {{ skipCompanions?: boolean }} [options]
+ *   skipCompanions – when true, skip the searchers/portfolio_companies re-fetch
+ *   (safe after a CC-only mutation where neither table has changed).
+ * @returns {Promise<CapitalCallRow[] | null>}
+ */
+export async function loadCapitalCalls({ skipCompanions = false } = {}) {
   if (!supabase) return null;
+  if (skipCompanions) {
+    const [cc, entityMap] = await Promise.all([
+      fetchAllCapitalCallRows(),
+      loadPrivateEntityMap(),
+    ]);
+    if (cc.error) return null;
+    return cc.data.map((row) => rowToCapitalCall(row, entityMap));
+  }
   const [cc, entityMap, srResult, coResult] = await Promise.all([
     fetchAllCapitalCallRows(),
     loadPrivateEntityMap(),
@@ -1103,12 +1116,8 @@ export async function updateCapitalCall(rowId, fields) {
   if (Object.prototype.hasOwnProperty.call(fields, "est")) {
     const nextEst = Object.prototype.hasOwnProperty.call(updates, "est") ? updates.est : old?.est;
     const nextFons = Object.prototype.hasOwnProperty.call(updates, "fons") ? updates.fons : old?.fons;
-    const { data: fmRow } = await supabase
-      .from("fund_meta")
-      .select("vehicle_tipus")
-      .eq("vehicle_id", old?.vehicle_id)
-      .single();
-    updates.est = normalizeCapitalCallStrategy(nextEst, fmRow?.vehicle_tipus ?? null, { fons: nextFons });
+    const vehicleTipus = old?.fund_meta?.vehicle_tipus ?? null;
+    updates.est = normalizeCapitalCallStrategy(nextEst, vehicleTipus, { fons: nextFons });
   }
   if (
     !Object.prototype.hasOwnProperty.call(fields, "cat")

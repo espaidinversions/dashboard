@@ -42,7 +42,7 @@ export default async function handler(req, res) {
   if (!enforceHttps(req, res)) return;
   if (!enforceCors(req, res)) return;
   if (handlePreflight(req, res)) return;
-  if (!await enforceRateLimit(req, res, "default")) return;
+  if (!await enforceRateLimit(req, res, "sensitive")) return;
 
   const supabase = makeServiceClient();
   const user = await verifyUser(req, supabase);

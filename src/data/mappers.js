@@ -1,6 +1,6 @@
 import { getPrivateEntityName, resolvePrivateEntity } from "./privateEntities.js";
 import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "./capitalCallTipusModel.js";
-import { normalizeCapitalCallStrategy } from "./capitalCallStrategyModel.js";
+import { normalizeCapitalCallStrategy, defaultCapitalCallStrategyForVehicleTipus } from "./capitalCallStrategyModel.js";
 
 /** @typedef {import("./dashboardTypes.js").CapitalCallRow} CapitalCallRow */
 /** @typedef {import("./dashboardTypes.js").FundMetaRow} FundMetaRow */
@@ -130,6 +130,7 @@ export function rowToCapitalCall(row, entityMap) {
   const { mes, year, fy } = parseDateParts(dataStr);
   const tipus = normalizeCapitalCallTipus(row.tipus);
   const eur = normalizeCapitalCallSignedAmount(tipus, row.eur);
+  const vehicleTipus = row.fund_meta?.vehicle_tipus ?? null;
   return {
     _rowId: row.id,
     id: entityId ?? undefined,
@@ -140,8 +141,8 @@ export function rowToCapitalCall(row, entityMap) {
     mes,
     any: year,
     fy,
-    vehicleTipus: row.fund_meta?.vehicle_tipus ?? null,
-    est: normalizeCapitalCallStrategy(row.est, row.fund_meta?.vehicle_tipus ?? null, { fons: row.fons }),
+    vehicleTipus,
+    est: normalizeCapitalCallStrategy(row.est, vehicleTipus, { fons: row.fons }) ?? defaultCapitalCallStrategyForVehicleTipus(vehicleTipus),
     eur,
     divisa: row.divisa,
     comentaris: row.comentaris ?? null,

@@ -82,7 +82,8 @@ export function AuthProvider({ children }) {
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [session, fetchPermissions]);
 
-  // Session inactivity timeout — sign out after 30 min of no activity
+  // Session inactivity timeout — sign out after 60 min of no activity
+  const debounceTimerRef = useRef(null);
   useEffect(() => {
     if (!session) return;
 
@@ -94,11 +95,17 @@ export function AuthProvider({ children }) {
       }, IDLE_TIMEOUT_MS);
     };
 
+    const debouncedReset = () => {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = setTimeout(resetTimer, 250);
+    };
+
     resetTimer();
-    ACTIVITY_EVENTS.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
+    ACTIVITY_EVENTS.forEach(e => window.addEventListener(e, debouncedReset, { passive: true }));
     return () => {
       clearTimeout(idleTimerRef.current);
-      ACTIVITY_EVENTS.forEach(e => window.removeEventListener(e, resetTimer));
+      clearTimeout(debounceTimerRef.current);
+      ACTIVITY_EVENTS.forEach(e => window.removeEventListener(e, debouncedReset));
     };
   }, [session]);
 

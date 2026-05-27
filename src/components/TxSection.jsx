@@ -402,7 +402,7 @@ export function TxSection({
                           <span style={{ display: "inline-flex", gap: 6, alignItems: "center" }}>
                             <button
                               onClick={() => onEdit(row)}
-                              style={{ padding: "3px 10px", borderRadius: 4, border: `1.5px solid ${tc.navy}`, background: "transparent", color: tc.navy, cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600 }}
+                              style={{ minWidth: 58, padding: "4px 0", borderRadius: 4, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 11, fontFamily: "inherit", fontWeight: 600, textAlign: "center" }}
                             >
                               Edita
                             </button>

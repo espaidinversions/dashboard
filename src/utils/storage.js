@@ -52,13 +52,24 @@ export function usePersistedState(key, defaultValue, { isSet = false } = {}) {
 
 /** Export multiple sheets to a single .xlsx file. */
 export async function exportMultiXLSX(sheets, filename) {
-  const XLSX = await import("xlsx");
-  const wb = XLSX.utils.book_new();
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
   for (const { name, rows } of sheets) {
-    const ws = XLSX.utils.json_to_sheet(rows);
-    XLSX.utils.book_append_sheet(wb, ws, name);
+    const ws = wb.addWorksheet(name);
+    if (rows.length > 0) {
+      const headers = Object.keys(rows[0]);
+      ws.addRow(headers);
+      rows.forEach(row => ws.addRow(headers.map(h => row[h])));
+    }
   }
-  XLSX.writeFile(wb, `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${filename}_${new Date().toISOString().slice(0, 10)}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 const TC_LS_KEYS = [

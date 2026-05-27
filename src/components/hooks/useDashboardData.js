@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { readStoredJSON, writeStoredJSON } from "../../utils.js";
 import { loadAll, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle } from "../../db.js";
 import { apiFetchJson } from "../../apiClient.js";
@@ -121,6 +121,11 @@ export function useDashboardData() {
   const [eurUsd,  setEurUsd]  = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  const rawCCRef = useRef(rawCC);
+  const searchersDataRef = useRef(searchersData);
+  useEffect(() => { rawCCRef.current = rawCC; }, [rawCC]);
+  useEffect(() => { searchersDataRef.current = searchersData; }, [searchersData]);
+
   useEffect(() => {
     apiFetchJson("/api/eur-usd")
       .then(({ rate }) => setEurUsd(rate))
@@ -179,7 +184,7 @@ export function useDashboardData() {
     }
     const { error, data: insertedRow } = await insertCapitalCall(payload);
     if (error) { setError(error.message); return; }
-    const fresh = await loadCapitalCalls();
+    const fresh = await loadCapitalCalls({ skipCompanions: true });
     if (fresh) {
       setRawCC(fresh);
       writeStoredJSON(LS_CC, fresh);
@@ -200,7 +205,7 @@ export function useDashboardData() {
     }
     const { error } = await updateCapitalCall(rowId, payload);
     if (error) { setError(error.message); return; }
-    const fresh = await loadCapitalCalls();
+    const fresh = await loadCapitalCalls({ skipCompanions: true });
     if (fresh) {
       setRawCC(fresh);
       writeStoredJSON(LS_CC, fresh);
@@ -211,7 +216,7 @@ export function useDashboardData() {
   const handleCCDelete = useCallback(async (rowId) => {
     const { error } = await deleteCapitalCall(rowId);
     if (error) { console.error(error); return; }
-    const fresh = await loadCapitalCalls();
+    const fresh = await loadCapitalCalls({ skipCompanions: true });
     if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
   }, []);
 
@@ -225,7 +230,7 @@ export function useDashboardData() {
           const qs = byNom.get(c.nom);
           return qs ? { ...c, quarters: qs } : c;
         });
-        const baseSearchers = rows.searchers || readStoredJSON("tc_allSearchers", searchersData);
+        const baseSearchers = rows.searchers || readStoredJSON("tc_allSearchers", searchersDataRef.current);
         const normalizedCcRows = Array.isArray(rows.cc)
           ? rows.cc.map((row) => {
               const tipus = normalizeCapitalCallTipus(row.tipus);
@@ -239,7 +244,7 @@ export function useDashboardData() {
               };
             })
           : null;
-        const baseRawCC = normalizedCcRows ?? readStoredJSON(LS_CC, rawCC);
+        const baseRawCC = normalizedCcRows ?? readStoredJSON(LS_CC, rawCCRef.current);
         const hasCapitalCallsSheet = Array.isArray(rows.cc);
         const searchFundTx = hasCapitalCallsSheet
           ? []
@@ -306,7 +311,7 @@ export function useDashboardData() {
       console.error("Load failed:", err);
       throw err;
     }
-  }, [rawCC, searchersData]);
+  }, []);
 
   const TRANSACTIONS = useMemo(()=>rawCC.filter(r=>r.cat!=="Compromís"),[rawCC]);
   const COMPROMISOS  = useMemo(()=>rawCC.filter(r=>r.cat==="Compromís"),[rawCC]);

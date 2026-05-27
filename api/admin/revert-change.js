@@ -5,6 +5,7 @@ import {
   enforceHttps,
   enforceRateLimit,
   handlePreflight,
+  toInteger,
 } from "../_security.js";
 
 // Tables where revert is allowed and their primary key columns
@@ -28,7 +29,7 @@ export default async function handler(req, res) {
     const admin = await verifyAdminOnly(req, supabase);
     if (!admin) return res.status(403).json({ error: "Admin required" });
 
-    const { auditId } = req.body ?? {};
+    const auditId = toInteger(req.body?.auditId, { allowNull: false, min: 1 });
     if (!auditId) return res.status(400).json({ error: "auditId required" });
 
     // Fetch the audit log entry

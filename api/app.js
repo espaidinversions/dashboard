@@ -10,6 +10,7 @@ import {
   enforceRateLimit,
   handlePreflight,
   sanitizeDomain,
+  sanitizeText,
   toFiniteNumber,
 } from "./_security.js";
 import {
@@ -416,7 +417,8 @@ async function handleMergeEntities(req, res) {
     return res.status(403).json({ error: "Forbidden" });
   }
 
-  const { from_id, to_id } = req.body ?? {};
+  const from_id = sanitizeText(req.body?.from_id, { maxLength: 128 });
+  const to_id   = sanitizeText(req.body?.to_id,   { maxLength: 128 });
   if (!from_id || !to_id) return res.status(400).json({ error: "from_id and to_id are required" });
   if (from_id === to_id) return res.status(400).json({ error: "from_id and to_id must differ" });
 
@@ -536,23 +538,23 @@ export default async function handler(req, res) {
       return await handleFxRate(req, res);
     }
     if (route === "searchers") {
-      if (!await enforceRateLimit(req, res, "default")) return;
+      if (!await enforceRateLimit(req, res, "sensitive")) return;
       return await handleSearchers(req, res);
     }
     if (route === "pipeline") {
-      if (!await enforceRateLimit(req, res, "default")) return;
+      if (!await enforceRateLimit(req, res, "sensitive")) return;
       return await handlePipeline(req, res);
     }
     if (route === "vehicles") {
-      if (!await enforceRateLimit(req, res, "default")) return;
+      if (!await enforceRateLimit(req, res, "sensitive")) return;
       return await handleVehicles(req, res);
     }
     if (route === "companies") {
-      if (!await enforceRateLimit(req, res, "default")) return;
+      if (!await enforceRateLimit(req, res, "sensitive")) return;
       return await handleCompanies(req, res);
     }
     if (route === "merge-entity") {
-      if (!await enforceRateLimit(req, res, "default")) return;
+      if (!await enforceRateLimit(req, res, "sensitive")) return;
       return await handleMergeEntities(req, res);
     }
     return res.status(404).json({ error: "Not found" });

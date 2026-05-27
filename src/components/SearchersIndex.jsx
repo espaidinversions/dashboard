@@ -59,22 +59,29 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   const rawCC = rawCCOverride !== undefined ? rawCCOverride : rawCCStored;
 
   useEffect(() => {
-    loadSearchers().then((data) => {
-      if (Array.isArray(data)) setSearchers(data);
-    }).catch((error) => {
-      console.error("Searchers index refresh failed:", error);
-    });
-    loadCapitalCalls().then((data) => {
-      if (Array.isArray(data)) setRawCC(data);
-    }).catch((error) => {
-      console.error("Searchers transactions refresh failed:", error);
-    });
-    loadCompanies().then((data) => {
-      if (Array.isArray(data)) setCompanies(data);
-    }).catch((error) => {
-      console.error("Searchers companies refresh failed:", error);
-    });
-  }, [setCompanies, setRawCC, setSearchers]);
+    // Skip fetches when parent already provides the data via props
+    if (rawCCOverride === undefined) {
+      loadCapitalCalls().then((data) => {
+        if (Array.isArray(data)) setRawCC(data);
+      }).catch((error) => {
+        console.error("Searchers transactions refresh failed:", error);
+      });
+    }
+    if (!Array.isArray(searchers) || searchers.length === 0) {
+      loadSearchers().then((data) => {
+        if (Array.isArray(data)) setSearchers(data);
+      }).catch((error) => {
+        console.error("Searchers index refresh failed:", error);
+      });
+    }
+    if (!Array.isArray(companies) || companies.length === 0) {
+      loadCompanies().then((data) => {
+        if (Array.isArray(data)) setCompanies(data);
+      }).catch((error) => {
+        console.error("Searchers companies refresh failed:", error);
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (subTabOverride) setSubTab(subTabOverride);

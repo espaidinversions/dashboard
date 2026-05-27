@@ -14,6 +14,8 @@ export default defineConfig({
             if (id.includes("@supabase")) return "vendor-supabase";
             if (id.includes("react-router")) return "vendor-router";
             if (id.includes("react")) return "vendor-react";
+            if (id.includes("@nivo") || id.includes("d3-")) return "vendor-nivo";
+            if (id.includes("lucide-react")) return "vendor-icons";
             return undefined;
           }
           if (id.includes("/src/generated/publicMarkets/pmTer.js")) return "data-pm-ter";

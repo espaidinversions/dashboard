@@ -464,18 +464,18 @@ app.all("/api/searchers", withGuard({ auth: "user", rateLimit: "sensitive" }, as
 
 // ── GET /api/admin/users ──────────────────────────────────
 app.get("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
-  const { page, pageSize, offset } = parsePagination(req.query, { defaultPageSize: 25, maxPageSize: 100 });
-  const { data, error } = await supabase.auth.admin.listUsers();
+  const { page, pageSize } = parsePagination(req.query, { defaultPageSize: 25, maxPageSize: 100 });
+  const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: pageSize });
   if (error) throw error;
   const users = data?.users ?? [];
-  const pagedUsers = users.slice(offset, offset + pageSize);
+  const total = data?.total ?? users.length;
   return res.json({
-    users: pagedUsers,
+    users,
     pagination: {
       page,
       pageSize,
-      total: users.length,
-      totalPages: Math.max(Math.ceil(users.length / pageSize), 1),
+      total,
+      totalPages: Math.max(Math.ceil(total / pageSize), 1),
     },
   });
 }));
@@ -550,17 +550,23 @@ app.patch("/api/admin/users/:id", withGuard({ auth: "admin-only", rateLimit: "ad
   return res.json({ user: data?.user ?? null });
 }));
 
+async function guardLastAdminDelete(supabase, id) {
+  const { data: targetData } = await supabase.auth.admin.getUserById(id);
+  if (getUserRole(targetData?.user) !== "admin") return null;
+  const { data: allUsers } = await supabase.auth.admin.listUsers({ page: 1, perPage: 1000 });
+  const adminCount = (allUsers?.users ?? []).filter(u => getUserRole(u) === "admin").length;
+  if (adminCount <= 1) return "Cannot delete the last admin";
+  return null;
+}
+
 // ── DELETE /api/admin/users?id=:id ────────────────────────
 app.delete("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   const id = sanitizeText(req.query?.id, { maxLength: 128 });
   if (!id) return sendJson(res, 400, { error: "User id required" });
 
-  const { data: allUsers } = await supabase.auth.admin.listUsers();
-  const admins = (allUsers?.users ?? []).filter(user => getUserRole(user) === "admin");
-  const target = admins.find(user => user.id === id);
-  if (target && admins.length <= 1) {
-    return sendJson(res, 409, { error: "Cannot delete the last admin" });
-  }
+  const guardMsg = await guardLastAdminDelete(supabase, id);
+  if (guardMsg) return sendJson(res, 409, { error: guardMsg });
+
   const { error } = await supabase.auth.admin.deleteUser(id);
   if (error) throw error;
   return res.json({ ok: true });
@@ -569,12 +575,10 @@ app.delete("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin
 // ── DELETE /api/admin/users/:id ───────────────────────────
 app.delete("/api/admin/users/:id", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
   const id = sanitizeText(req.params.id, { maxLength: 128 });
-  const { data: allUsers } = await supabase.auth.admin.listUsers();
-  const admins = (allUsers?.users ?? []).filter(user => getUserRole(user) === "admin");
-  const target = admins.find(user => user.id === id);
-  if (target && admins.length <= 1) {
-    return sendJson(res, 409, { error: "Cannot delete the last admin" });
-  }
+
+  const guardMsg = await guardLastAdminDelete(supabase, id);
+  if (guardMsg) return sendJson(res, 409, { error: guardMsg });
+
   const { error } = await supabase.auth.admin.deleteUser(id);
   if (error) throw error;
   return res.json({ ok: true });

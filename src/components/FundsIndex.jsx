@@ -86,12 +86,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     const err = await deleteFund(fund);
     if (err) {
       toast({ message: "Error eliminant fons: " + err.message, type: "error" });
-      const data = await loadAll();
-      if (data) {
-        persistRawCC(data.rawCC);
-        setFundMeta(data.fundMeta);
-        writeStoredJSON("tc_fundMeta", data.fundMeta);
-      }
       return;
     }
     const fundId = fund?.id ?? null;

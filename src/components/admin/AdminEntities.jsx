@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
@@ -197,7 +197,7 @@ export default function AdminEntities() {
     setConfirmDelete(null);
   }
 
-  function exportXlsx() {
+  async function exportXlsx() {
     const rows = entities.map(e => ({
       id:             e.id,
       canonical_name: e.canonical_name,
@@ -208,14 +208,27 @@ export default function AdminEntities() {
       isin:           e.isin ?? "",
       country:        e.country ?? "",
     }));
-    const ws = XLSX.utils.json_to_sheet(rows);
-    ws["!cols"] = [
-      { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 10 },
-      { wch: 12 }, { wch: 16 }, { wch: 14 }, { wch: 8 },
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Entitats");
+    ws.columns = [
+      { header: "id",             key: "id",             width: 40 },
+      { header: "canonical_name", key: "canonical_name", width: 40 },
+      { header: "fiscal_name",    key: "fiscal_name",    width: 40 },
+      { header: "kind",           key: "kind",           width: 10 },
+      { header: "match_type",     key: "match_type",     width: 12 },
+      { header: "nif",            key: "nif",            width: 16 },
+      { header: "isin",           key: "isin",           width: 14 },
+      { header: "country",        key: "country",        width: 8  },
     ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Entitats");
-    XLSX.writeFile(wb, "entitats.xlsx");
+    rows.forEach(row => ws.addRow(row));
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "entitats.xlsx";
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   const th = { ...sharedStyles.th(tc), padding: "9px 12px", textAlign: "left", borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };

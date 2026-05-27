@@ -1,0 +1,6 @@
+{
+  "profile": "web",
+  "stacks": ["javascript", "web"],
+  "target": "claude",
+  "installedAt": "2026-05-26"
+}

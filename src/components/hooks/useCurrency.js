@@ -6,10 +6,11 @@ export function useCurrency(initialRate = null) {
   const [eurUsd, setEurUsd] = useState(initialRate);
 
   useEffect(() => {
+    if (initialRate > 0) return;
     apiFetchJson("/api/eur-usd")
       .then(({ rate }) => setEurUsd(rate))
       .catch(() => {});
-  }, []);
+  }, [initialRate]);
 
   const rate = eurUsd || DEFAULT_EUR_USD;
   const toEUR = useCallback((amount, currency) => {

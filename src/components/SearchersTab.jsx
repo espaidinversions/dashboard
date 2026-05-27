@@ -1,28 +1,21 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { ecTheme } from "../echartsTheme.js";
-import { SearcherYearChart, SearcherGeoPieChart, SearcherGeoBarChart } from "./SearcherCharts.jsx";
-import { ResponsiveSankey } from "@nivo/sankey";
 import { useTheme } from "../theme.js";
-import { fmtM, calcMesos, mesosColor, mesosBg, parseSearchersCSV, usePersistedState, formatIsoDateDMY, readStoredJSON, tvpiColor, tvpiBg, formatMultiple } from "../utils.js";
-import { GEO_NAME, SEARCHER_STATUS_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_FORM_ENTRADA_OPTIONS } from "../config.js";
-import { FlagImg, AddRowModal, DeleteRowButton, EditableCell, KpiCard, tableCardStyle } from "./SharedComponents.jsx";
+import { calcMesos, parseSearchersCSV, usePersistedState, readStoredJSON } from "../utils.js";
+import { GEO_NAME } from "../config.js";
+import { AddRowModal } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { apiFetchJson } from "../apiClient.js";
 import { isSfBackedCompany } from "../data/privateCompanyModel.js";
-import {
-  normalizeSearcherName,
-  describeSearcherStage,
-} from "../data/searcherModel.js";
-import {
-  StatusBadge, StageBadge, SectionHeading,
-  SANKEY_NODE_COLORS, ENTRY_BADGE_CFG,
-} from "./SearchersBadges.jsx";
-import {
-  searcherKey, splitSearcherNames, splitSchoolNames,
-  toggleActiveFilter, sankeyNodeToEntry, formatPercent, formatEquityStake,
-} from "../data/searcherFormatting.js";
+import { normalizeSearcherName, describeSearcherStage } from "../data/searcherModel.js";
+import { SEARCHER_FORM_ENTRADA_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_STATUS_OPTIONS } from "../config.js";
+import { searcherKey, splitSearcherNames, splitSchoolNames, toggleActiveFilter } from "../data/searcherFormatting.js";
+import { SankeySection } from "./searchers/SankeySection.jsx";
+import { ActiveSearchersTable } from "./searchers/ActiveSearchersTable.jsx";
+import { LegacyTable } from "./searchers/LegacyTable.jsx";
+import { HistoricTable } from "./searchers/HistoricTable.jsx";
 
 // ── main component ─────────────────────────────────────────
 export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
@@ -34,14 +27,14 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
 
   const [historicData, setHistoricData] = usePersistedState("tc_allSearchers", []);
   const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
-  const [histFilter, setHistFilter]     = useState({ status:"Tots", geo:"Tots", entrada:"Tots" });
-  const [histSort, setHistSort]         = useState({ k:"nom", d:"asc" });
+  const [histFilter, setHistFilter]     = useState({ status: "Tots", geo: "Tots", entrada: "Tots" });
+  const [histSort, setHistSort]         = useState({ k: "nom", d: "asc" });
   const [activeGeoFilter, setActiveGeoFilter] = usePersistedState("ui_searchersGeo", "Tots");
   const [activeEntryFilter, setActiveEntryFilter] = usePersistedState("ui_searchersEntry", "Tots");
   const [activeStatusFilter, setActiveStatusFilter] = usePersistedState("ui_searchersStatus", "Tots");
   const [activeTypeFilter, setActiveTypeFilter] = usePersistedState("ui_searchersType", "Tots");
   const [activeModalityFilter, setActiveModalityFilter] = usePersistedState("ui_searchersModality", "Tots");
-  const [activeSort, setActiveSort] = usePersistedState("ui_searchersSort", { k:"nom", d:"asc" });
+  const [activeSort, setActiveSort] = usePersistedState("ui_searchersSort", { k: "nom", d: "asc" });
   const csvRef    = useRef(null);
   const nifXlsRef = useRef(null);
   const capitalCalls = useMemo(
@@ -49,23 +42,22 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     [rawCC]
   );
 
-  // shared styles
-  const card = { background:TC.card, border:`1px solid ${TC.border}`, borderRadius:10, padding:"20px 22px", boxShadow:"0 2px 12px rgba(0,0,0,.06)" };
-  const th   = { padding:"9px 10px", fontSize:10, fontWeight:700, color:TC.navyLight ?? TC.textLight, textTransform:"uppercase", letterSpacing:"0.06em", background:"#F7FAFC", borderBottom:`2px solid ${TC.border}`, whiteSpace:"nowrap", userSelect:"none" };
-  const sec  = { fontSize:10, letterSpacing:"0.11em", color:TC.textLight, textTransform:"uppercase", marginBottom:16, fontWeight:600 };
-
   useEffect(() => {
-    loadSearchers().then((data) => {
-      if (Array.isArray(data)) setHistoricData(data);
-    }).catch((error) => {
-      console.error("Searchers refresh failed:", error);
-    });
-    loadCompanies().then((data) => {
-      if (Array.isArray(data)) setCompanies(data);
-    }).catch((error) => {
-      console.error("Companies refresh failed:", error);
-    });
-  }, [setCompanies, setHistoricData]);
+    if (!Array.isArray(historicData) || historicData.length === 0) {
+      loadSearchers().then((data) => {
+        if (Array.isArray(data)) setHistoricData(data);
+      }).catch((error) => {
+        console.error("Searchers refresh failed:", error);
+      });
+    }
+    if (!Array.isArray(companies) || companies.length === 0) {
+      loadCompanies().then((data) => {
+        if (Array.isArray(data)) setCompanies(data);
+      }).catch((error) => {
+        console.error("Companies refresh failed:", error);
+      });
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Keyed by private_entity NIF (= row.id in rawCC = vehicle_id)
   const capitalCallsByNif = useMemo(() => {
@@ -128,12 +120,10 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     return enrichedSearchers.filter((row) => {
       if (row.isLegacy) return false;
       if (row.companiaAdquirida) return false;
-      // Code 2 = "Invertit en fase de cerca" / "Invested - Search Phase"
       const isActive = row.statusScreeningCode != null
         ? row.statusScreeningCode === 2
         : row.statusScreening === "Invertit en fase de cerca" || row.statusScreening === "Invested - Search Phase";
       if (!isActive) return false;
-      // Deduplicate by id
       const key = row.id ?? row.nom;
       if (seen.has(key)) return false;
       seen.add(key);
@@ -193,21 +183,11 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
         (r.searchers ?? "").toLowerCase().includes(q)
       );
     }
-    if (activeGeoFilter !== "Tots") {
-      list = list.filter(r => r.geo === activeGeoFilter);
-    }
-    if (activeEntryFilter !== "Tots") {
-      list = list.filter(r => r.formEntrada === activeEntryFilter);
-    }
-    if (activeStatusFilter !== "Tots") {
-      list = list.filter(r => r.statusScreening === activeStatusFilter);
-    }
-    if (activeTypeFilter !== "Tots") {
-      list = list.filter(r => r.tipus === activeTypeFilter);
-    }
-    if (activeModalityFilter !== "Tots") {
-      list = list.filter(r => r.modalitat === activeModalityFilter);
-    }
+    if (activeGeoFilter !== "Tots") list = list.filter(r => r.geo === activeGeoFilter);
+    if (activeEntryFilter !== "Tots") list = list.filter(r => r.formEntrada === activeEntryFilter);
+    if (activeStatusFilter !== "Tots") list = list.filter(r => r.statusScreening === activeStatusFilter);
+    if (activeTypeFilter !== "Tots") list = list.filter(r => r.tipus === activeTypeFilter);
+    if (activeModalityFilter !== "Tots") list = list.filter(r => r.modalitat === activeModalityFilter);
     return [...list].sort((a, b) => {
       const va = getActiveSortValue(a, activeSort.k);
       const vb = getActiveSortValue(b, activeSort.k);
@@ -218,6 +198,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       return activeSort.d === "asc" ? cmp : -cmp;
     });
   }, [activeEntryFilter, activeGeoFilter, activeModalityFilter, activeRows, activeSort, activeStatusFilter, activeTypeFilter, search]);
+
   const displayedSearchersTicket = useMemo(
     () => displayedSearchers.reduce((sum, row) => sum + (row.ticket ?? 0), 0),
     [displayedSearchers]
@@ -259,8 +240,8 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     const eg          = real.filter(r => r.formEntrada === "Equity Gap");
     const scBacked    = sc.filter(r => r.statusScreening === "Invertit en fase de cerca").length;
     const egInvertit  = eg.filter(r => r.statusScreening === "Invertit en fase d'adquisició" || r.statusScreening === "Invertit en fase de cerca").length;
-    const allDescartat = real.filter(r => ["Descartat","Sobresuscrit","No tancat"].includes(r.statusScreening)).length;
-    const allRevisio  = real.filter(r => ["En anàlisi","Pendent de formalitzar"].includes(r.statusScreening)).length;
+    const allDescartat = real.filter(r => ["Descartat", "Sobresuscrit", "No tancat"].includes(r.statusScreening)).length;
+    const allRevisio  = real.filter(r => ["En anàlisi", "Pendent de formalitzar"].includes(r.statusScreening)).length;
     return { total: real.length, scBacked, egInvertit, allDescartat, allRevisio };
   }, [enrichedSearchers]);
 
@@ -276,12 +257,13 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const geoData = useMemo(() => {
     const m = {};
     activeRows.forEach(s => {
-      if (!m[s.geo]) m[s.geo] = { geo:s.geo, name:GEO_NAME[s.geo]||s.geo, value:0, count:0 };
+      if (!m[s.geo]) m[s.geo] = { geo: s.geo, name: GEO_NAME[s.geo] || s.geo, value: 0, count: 0 };
       m[s.geo].value += s.ticket ?? 0;
       m[s.geo].count += 1;
     });
     return Object.values(m).sort((a, b) => b.value - a.value);
   }, [activeRows]);
+
   const geoCountData = useMemo(
     () => [...geoData].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name, "ca", { sensitivity: "base" })),
     [geoData]
@@ -290,11 +272,11 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const geoCountTotal = geoCountData.reduce((s, r) => s + r.count, 0);
   const t = ecTheme(TC);
   const sortActive = (k) => setActiveSort(p => ({ k, d: p.k === k && p.d === "asc" ? "desc" : "asc" }));
-  const AArr = ({ k }) => <span style={{ marginLeft:3, opacity:activeSort.k===k?1:0.2, fontSize:9 }}>{activeSort.k===k&&activeSort.d==="asc"?"▲":"▼"}</span>;
+
   const isSummaryView = subTab === "resum";
-  const isAllView = subTab === "tots";
-  const isActiveView = subTab === "actius";
-  const isLegacyView = subTab === "legacy";
+  const isAllView     = subTab === "tots";
+  const isActiveView  = subTab === "actius";
+  const isLegacyView  = subTab === "legacy";
 
   // ── Historic table ─────────────────────────────────────────
   const getHistoricSortValue = (row, key) => {
@@ -321,10 +303,6 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   }, [enrichedSearchers, histFilter, histSort]);
 
   const sortHist = k => setHistSort(p => ({ k, d: p.k === k && p.d === "asc" ? "desc" : "asc" }));
-  const HArr = ({ k }) => <span style={{ marginLeft:3, opacity:histSort.k===k?1:0.2, fontSize:9 }}>{histSort.k===k&&histSort.d==="asc"?"▲":"▼"}</span>;
-
-  const uniq     = key => ["Tots", ...Array.from(new Set(historicData.map(r => r[key]).filter(Boolean))).sort()];
-  const uniqVals = key => Array.from(new Set(historicData.map(r => r[key]).filter(Boolean))).sort();
 
   const handleCSV = e => {
     const file = e.target.files[0];
@@ -337,8 +315,8 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
           const mapped = rows.map(r => ({
             nom: r.nom, tipus: r.tipus, modalitat: r.modalitat, geo: r.geo,
             statusScreening: r.statusScreening, formEntrada: r.formEntrada,
-            introPer: r.introPer, searcher1: r.searcher1||"", searcher2: r.searcher2||"",
-            escola1: r.escola1||"", escola2: r.escola2||"",
+            introPer: r.introPer, searcher1: r.searcher1 || "", searcher2: r.searcher2 || "",
+            escola1: r.escola1 || "", escola2: r.escola2 || "",
           }));
           const { error } = await saveSearchers(mapped);
           if (error) {
@@ -364,25 +342,33 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       toast({ message: "Tots els searchers ja tenen NIF real." });
       return;
     }
-    const XLSX = await import("xlsx");
+    const ExcelJS = (await import("exceljs")).default;
     const data = rows.map(r => ({
-      id:          r.id ?? "",
-      nom:         r.nom ?? "",
-      nif_actual:  r.nif ?? "",
-      nif_nou:     "",
-      status:      r.statusScreening ?? "",
-      entrada:     r.formEntrada ?? "",
-      geo:         r.geo ?? "",
-      ticket:      r.ticket ?? "",
+      id: r.id ?? "", nom: r.nom ?? "", nif_actual: r.nif ?? "", nif_nou: "",
+      status: r.statusScreening ?? "", entrada: r.formEntrada ?? "",
+      geo: r.geo ?? "", ticket: r.ticket ?? "",
     }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    ws["!cols"] = [
-      { wch: 10 }, { wch: 40 }, { wch: 30 }, { wch: 20 },
-      { wch: 30 }, { wch: 16 }, { wch: 6 }, { wch: 10 },
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("NIFs");
+    ws.columns = [
+      { header: "id",         key: "id",         width: 10 },
+      { header: "nom",        key: "nom",        width: 40 },
+      { header: "nif_actual", key: "nif_actual", width: 30 },
+      { header: "nif_nou",    key: "nif_nou",    width: 20 },
+      { header: "status",     key: "status",     width: 30 },
+      { header: "entrada",    key: "entrada",    width: 16 },
+      { header: "geo",        key: "geo",        width: 6  },
+      { header: "ticket",     key: "ticket",     width: 10 },
     ];
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "NIFs");
-    XLSX.writeFile(wb, `searchers_nif_${new Date().toISOString().slice(0,10)}.xlsx`);
+    data.forEach(row => ws.addRow(row));
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `searchers_nif_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
     toast({ message: `${rows.length} searchers exportats.` });
   };
 
@@ -392,10 +378,23 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     const reader = new FileReader();
     reader.onload = async (ev) => {
       try {
-        const XLSX = await import("xlsx");
-        const wb = XLSX.read(ev.target.result, { type: "array" });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        const rows = XLSX.utils.sheet_to_json(ws, { defval: "" });
+        const ExcelJS = (await import("exceljs")).default;
+        const wbRead = new ExcelJS.Workbook();
+        await wbRead.xlsx.load(ev.target.result);
+        const wsRead = wbRead.worksheets[0];
+        const headers = [];
+        wsRead.getRow(1).eachCell({ includeEmpty: true }, (cell, colNumber) => {
+          headers[colNumber] = cell.value != null ? String(cell.value) : "";
+        });
+        const rows = [];
+        wsRead.eachRow((row, rowNumber) => {
+          if (rowNumber === 1) return;
+          const obj = {};
+          headers.forEach((key, colNumber) => {
+            if (key) obj[key] = row.getCell(colNumber).value ?? "";
+          });
+          rows.push(obj);
+        });
         const updates = rows.filter(r => String(r.nif_nou ?? "").trim());
         if (!updates.length) {
           toast({ message: "Cap NIF nou trobat a la columna nif_nou." });
@@ -431,8 +430,6 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     toast({ message: "Searchers recarregats des de la base de dades." });
   };
 
-  const inp = { border:`1px solid ${TC.border}`, borderRadius:4, padding:"4px 8px", fontSize:11, color:TC.text, background:TC.card, outline:"none", fontFamily:"inherit", cursor:"pointer" };
-
   // ── Handlers for historic table ───────────────────────────
   const saveSearcherField = async (target, field, value) => {
     const targetKey = searcherKey(target);
@@ -445,9 +442,9 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       ? splitSearcherNames(value)
       : field === "schools"
         ? splitSchoolNames(value)
-      : field === "status"
-        ? { statusScreening: value }
-        : { [field]: value };
+        : field === "status"
+          ? { statusScreening: value }
+          : { [field]: value };
     const updated = historicData.map((searcher, index) => (
       index === targetIndex ? { ...searcher, ...fieldPatch } : searcher
     ));
@@ -496,10 +493,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       setError(error?.message || "Error en crear el searcher");
       return;
     }
-    if (!inserted) {
-      setError("Error en crear el searcher");
-      return;
-    }
+    if (!inserted) { setError("Error en crear el searcher"); return; }
     const refreshed = await loadSearchers();
     setHistoricData(Array.isArray(refreshed) ? refreshed : [inserted, ...historicData]);
     setShowAddModal(false);
@@ -509,9 +503,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const handleDeleteSearcher = async (target) => {
     if (target?.id) {
       try {
-        await apiFetchJson(`/api/searchers?id=${encodeURIComponent(target.id)}`, {
-          method: "DELETE",
-        });
+        await apiFetchJson(`/api/searchers?id=${encodeURIComponent(target.id)}`, { method: "DELETE" });
       } catch (error) {
         toast({ message: "Error eliminant searcher: " + (error?.message || "error desconegut"), type: "error" });
         return;
@@ -525,681 +517,120 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   };
 
   return (
-    <div style={{ padding:"0 0 40px" }}>
+    <div style={{ padding: "0 0 40px" }}>
 
       {/* ── Data load bar ── */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"flex-end", gap:8, marginBottom:14 }}>
-        <span style={{ fontSize:11, color:TC.textLight }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
+        <span style={{ fontSize: 11, color: TC.textLight }}>
           {historicData.length} searchers a base de dades
           {historicData.filter(r => isMockNif(r.nif)).length > 0 && (
-            <span style={{ marginLeft:6, color:"#B01F17", fontWeight:600 }}>
+            <span style={{ marginLeft: 6, color: "#B01F17", fontWeight: 600 }}>
               · {historicData.filter(r => isMockNif(r.nif)).length} sense NIF real
             </span>
           )}
         </span>
         <button onClick={reloadSearchers}
-          style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
+          style={{ background: "transparent", border: `1px solid ${TC.border}`, borderRadius: 6, padding: "5px 11px", cursor: "pointer", fontSize: 11, color: TC.textMid, fontFamily: "inherit" }}>
           Recarregar DB
         </button>
         <button onClick={exportNifExcel}
-          style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
+          style={{ background: "transparent", border: `1px solid ${TC.border}`, borderRadius: 6, padding: "5px 11px", cursor: "pointer", fontSize: 11, color: TC.textMid, fontFamily: "inherit" }}>
           ↓ Exportar NIFs
         </button>
-        <input ref={nifXlsRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={handleNifImport} />
+        <input ref={nifXlsRef} type="file" accept=".xlsx,.xls" style={{ display: "none" }} onChange={handleNifImport} />
         <button onClick={() => nifXlsRef.current?.click()}
-          style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:6, padding:"5px 11px", cursor:"pointer", fontSize:11, color:TC.textMid, fontFamily:"inherit" }}>
+          style={{ background: "transparent", border: `1px solid ${TC.border}`, borderRadius: 6, padding: "5px 11px", cursor: "pointer", fontSize: 11, color: TC.textMid, fontFamily: "inherit" }}>
           ↑ Importar NIFs
         </button>
-        <input ref={csvRef} type="file" accept=".csv" style={{ display:"none" }} onChange={handleCSV} />
+        <input ref={csvRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleCSV} />
         <button onClick={() => csvRef.current?.click()}
-          style={{ background:TC.navy, color:"#fff", border:"none", borderRadius:6, padding:"6px 14px", cursor:"pointer", fontSize:11, fontFamily:"inherit" }}>
+          style={{ background: TC.navy, color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
           ↑ Importar CSV
         </button>
       </div>
 
-      {/* ── KPIs ── */}
-      {isSummaryView && <>
-      <div className="grid-4" style={{ gap:12, marginBottom:18 }}>
-        <KpiCard hero label="Searchers Actius" value={activeRows.length} sub={`${soloCount} solo / ${duoCount} duo`} tc={TC} />
-        <KpiCard label="Capital Compromès" value={fmtM(totalSearchers)} sub="total search capital" tc={TC} />
-        <KpiCard label="Ticket Promig" value={activeRows.length ? fmtM(totalSearchers / activeRows.length) : "—"} sub="per searcher" tc={TC} />
-        <KpiCard label="Total DB" value={historicData.length} sub="searchers en base de dades" tc={TC} />
-      </div>
-
-      {/* ── Sankey + Geography ── */}
-      <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
-        <div style={card}>
-          <div style={{ ...sec, color:TC.textLight }}>
-            <SectionHeading icon="🧭" color={dark ? "#112030" : "#E6EDF3"}>Participades per Forma d'Entrada i Resultat</SectionHeading>
-          </div>
-
-          {/* Conversations funnel strip */}
-          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:16, padding:"10px 14px", background:TC.bgAlt, borderRadius:10 }}>
-            {[
-              { label:"Total converses", value: convStats.total,       color: TC.navy },
-              { label:"SC backed",       value: convStats.scBacked,    color: "#2563A8" },
-              { label:"Equity Gap",      value: convStats.egInvertit,  color: "#6B2E7E" },
-              { label:"Descartats",      value: convStats.allDescartat,color: "#B01F17" },
-              { label:"En Revisió",      value: convStats.allRevisio,  color: "#8A6400" },
-            ].map((s, i) => (
-              <React.Fragment key={s.label}>
-                {i > 0 && <span style={{ color:TC.border, alignSelf:"center" }}>·</span>}
-                <span style={{ fontSize:11, color:TC.textMid }}>
-                  <b style={{ color:s.color, fontFamily:"'DM Mono',monospace" }}>{s.value}</b>
-                  {" "}{s.label}
-                </span>
-              </React.Fragment>
-            ))}
-          </div>
-
-          <div style={{ height: 340 }}>
-            {sankeyData.links.length === 0 ? (
-              <div style={{ display:"flex", alignItems:"center", justifyContent:"center", height:"100%", color:TC.textLight, fontSize:12 }}>Sense dades</div>
-            ) : (
-            <ResponsiveSankey
-              data={sankeyData}
-              margin={{ top: 16, right: 180, bottom: 16, left: 180 }}
-              align="start"
-              colors={node => SANKEY_NODE_COLORS[node.id] || TC.navy}
-              nodeOpacity={0.92}
-              nodeThickness={20}
-              nodeInnerPadding={4}
-              nodeBorderWidth={0}
-              nodeBorderRadius={3}
-              nodePadding={28}
-              linkOpacity={0.22}
-              enableLinkGradient={true}
-              labelPosition="outside"
-              labelOrientation="horizontal"
-              label={node => `${node.id} (${node.value})`}
-              labelTextColor={node => SANKEY_NODE_COLORS[node.id] || TC.textMid}
-              onClick={(node) => {
-                const entry = sankeyNodeToEntry(node?.id);
-                if (entry) handleEntryFilterClick(entry);
-              }}
-              theme={{
-                text: { fontSize: 11, fontFamily: "'Outfit',system-ui,sans-serif", fill: TC.text },
-                tooltip: {
-                  container: {
-                    background: TC.card,
-                    border: `1px solid ${TC.border}`,
-                    borderRadius: 6,
-                    fontSize: 11,
-                    fontFamily: "'Outfit',system-ui,sans-serif",
-                    color: TC.text,
-                  },
-                },
-              }}
-            />
-            )}
-          </div>
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, minHeight:20 }}>
-            {activeEntryFilter !== "Tots" ? (
-              <>
-                <span style={{ fontSize:11, color:TC.textMid }}>
-                  Filtre actiu: <b style={{ color:TC.navy }}>{activeEntryFilter}</b>
-                </span>
-                <button
-                  onClick={() => setActiveEntryFilter("Tots")}
-                  style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}
-                >
-                  ✕ netejar
-                </button>
-              </>
-            ) : (
-              <span style={{ fontSize:11, color:TC.textLight }}>Clica `Searchers` o `Equity Gap` per filtrar la taula d'actius per entrada.</span>
-            )}
-          </div>
-        </div>
-
-        <div style={card}>
-          <div style={{ ...sec, color:TC.textLight }}>
-            <SectionHeading icon="🌍" color={dark ? "#0A2010" : "#E8F8E8"}>Allocation Geogràfica — Searchers (€)</SectionHeading>
-          </div>
-          <SearcherGeoPieChart
-            geoData={geoData}
-            geoTotal={geoTotal}
-            activeGeoFilter={activeGeoFilter}
-            t={t}
-            TC={TC}
-            onGeoClick={handleGeoClick}
-          />
-          <div style={{ display:"flex", alignItems:"center", gap:8, marginTop:6, minHeight:20 }}>
-            {activeGeoFilter !== "Tots" ? (
-              <>
-                <span style={{ fontSize:11, color:TC.textMid }}>
-                  Filtre actiu: <b style={{ color:TC.navy }}>{GEO_NAME[activeGeoFilter] || activeGeoFilter}</b>
-                </span>
-                <button
-                  onClick={() => setActiveGeoFilter("Tots")}
-                  style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}
-                >
-                  ✕ netejar
-                </button>
-              </>
-            ) : (
-              <span style={{ fontSize:11, color:TC.textLight }}>Clica un segment per filtrar la taula d'actius per geografia.</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid-2" style={{ gap:14, marginBottom:14 }}>
-      <div style={card}>
-        <div style={{ ...sec, color:TC.textLight }}>
-          <SectionHeading icon="📅" color={dark ? "#162840" : "#EAF2FB"}>Any de Compromís — Nombre de Searchers</SectionHeading>
-        </div>
-        {commitmentYearData.length === 0 ? (
-          <div style={{ padding:"36px 0 12px", textAlign:"center", color:TC.textLight, fontSize:12 }}>
-            Sense dades de compromís a capital calls.
-          </div>
-        ) : (
-          <SearcherYearChart commitmentYearData={commitmentYearData} t={t} TC={TC} />
-        )}
-      </div>
-      <div style={card}>
-        <div style={{ ...sec, color:TC.textLight }}>
-          <SectionHeading icon="🗺️" color={dark ? "#162840" : "#EAF2FB"}>Searchers Actius per Geografia</SectionHeading>
-        </div>
-        {geoCountData.length === 0 ? (
-          <div style={{ padding:"36px 0 12px", textAlign:"center", color:TC.textLight, fontSize:12 }}>
-            Sense dades geogràfiques.
-          </div>
-        ) : (
-          <SearcherGeoBarChart
-            geoCountData={geoCountData}
-            geoCountTotal={geoCountTotal}
-            activeGeoFilter={activeGeoFilter}
-            t={t}
-            TC={TC}
-            onGeoClick={handleGeoClick}
-          />
-        )}
-      </div>
-      </div>
-      </>}
+      {/* ── Summary view: KPIs + Sankey + Geography ── */}
+      {isSummaryView && (
+        <SankeySection
+          TC={TC}
+          dark={dark}
+          t={t}
+          activeRows={activeRows}
+          totalSearchers={totalSearchers}
+          soloCount={soloCount}
+          duoCount={duoCount}
+          historicData={historicData}
+          sankeyData={sankeyData}
+          convStats={convStats}
+          geoData={geoData}
+          geoTotal={geoTotal}
+          geoCountData={geoCountData}
+          geoCountTotal={geoCountTotal}
+          activeGeoFilter={activeGeoFilter}
+          activeEntryFilter={activeEntryFilter}
+          commitmentYearData={commitmentYearData}
+          setActiveEntryFilter={setActiveEntryFilter}
+          setActiveGeoFilter={setActiveGeoFilter}
+          handleGeoClick={handleGeoClick}
+          handleEntryFilterClick={handleEntryFilterClick}
+        />
+      )}
 
       {/* ── Active Searchers table ── */}
       {isActiveView && (
-      <div style={{ ...tableCardStyle(TC), marginBottom:14 }}>
-        <div style={{ ...sec, color:TC.textLight }}>
-          <SectionHeading icon="🔍" color={dark ? "#162840" : "#EAF2FB"}>Searchers Actius</SectionHeading>
-        </div>
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-            <thead>
-              <tr>
-                {[
-                  { label:"Search Fund", k:"nom" },
-                  { label:"Searchers", k:"searchers" },
-                  { label:"Entrada", k:"formEntrada" },
-                  { label:"Modalitat", k:"modalitat" },
-                  { label:"Pais", k:"geo" },
-                  { label:"Fase", k:"stage" },
-                  { label:"Companyia Adquirida", k:"companiaAdquirida" },
-                  { label:"Ticket", k:"ticket", right:true },
-                  { label:"TVPI", k:"tvpi", right:true },
-                  { label:"IRR", k:"irr", right:true },
-                  { label:"DPI", k:"dpi", right:true },
-                  { label:"Any Inv.", k:"investmentYear", center:true },
-                  { label:"Data Compromis", k:"dataCompr" },
-                  { label:"Mesos Cercant", k:"mesosCercant", center:true },
-                  { label:"Equity Stake", k:"equityStake", right:true },
-                ].map(h => (
-                  <th
-                    key={h.k}
-                    style={{ ...th, cursor:"pointer", textAlign:h.right ? "right" : h.center ? "center" : "left" }}
-                    onClick={() => sortActive(h.k)}
-                  >
-                    {h.label}<AArr k={h.k} />
-                  </th>
-                ))}
-                {canEdit && <th style={{ ...th, textAlign:"center" }}>Legacy</th>}
-              </tr>
-              <tr style={{ borderBottom:`1px solid ${TC.border}` }}>
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }}>
-                  <select value={activeEntryFilter} onChange={e => setActiveEntryFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
-                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.formEntrada).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding:"6px 10px" }}>
-                  <select value={activeModalityFilter} onChange={e => setActiveModalityFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
-                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.modalitat).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding:"6px 10px" }}>
-                  <select value={activeGeoFilter} onChange={e => setActiveGeoFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
-                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.geo).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding:"6px 10px" }}>
-                  <select value={activeStatusFilter} onChange={e => setActiveStatusFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
-                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.statusScreening).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px", textAlign:"right" }}>
-                  <select value={activeTypeFilter} onChange={e => setActiveTypeFilter(e.target.value)} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
-                    {["Tots", ...Array.from(new Set(activeRows.map(r => r.tipus).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px", textAlign:"center" }}>
-                  {(activeGeoFilter !== "Tots" || activeEntryFilter !== "Tots" || activeStatusFilter !== "Tots" || activeTypeFilter !== "Tots" || activeModalityFilter !== "Tots") ? (
-                    <button onClick={() => {
-                      setActiveGeoFilter("Tots");
-                      setActiveEntryFilter("Tots");
-                      setActiveStatusFilter("Tots");
-                      setActiveTypeFilter("Tots");
-                      setActiveModalityFilter("Tots");
-                    }}
-                      style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}>
-                      netejar
-                    </button>
-                  ) : null}
-                </th>
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                {canEdit && <th style={{ padding:"6px 10px" }} />}
-              </tr>
-            </thead>
-            <tbody>
-              {displayedSearchers.map((r, i) => {
-                return (
-                  <tr key={searcherKey(r) ?? r.nom} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt, opacity: r.isMock ? 0.45 : 1 }}>
-                    <td style={{ padding:"9px 10px", fontWeight:600, color:TC.navy }}>
-                      {canEdit
-                        ? <EditableCell value={r.nom} type="text" onSave={v => saveSearcherField(r, "nom", v)} />
-                        : r.nom}
-                    </td>
-                    <td style={{ padding:"9px 10px", color:TC.text, fontSize:11 }}>
-                      {canEdit
-                        ? <EditableCell value={r.searchers} type="text" onSave={v => saveSearcherField(r, "searchers", v)} />
-                        : r.searchers}
-                    </td>
-                    <td style={{ padding:"9px 10px" }}>
-                      {canEdit ? (
-                        <EditableCell
-                          value={r.formEntrada}
-                          options={SEARCHER_FORM_ENTRADA_OPTIONS}
-                          allowCustom optionsKey="s_entrada"
-                          onSave={v => saveSearcherField(r, "formEntrada", v)}
-                          badgeCfg={ENTRY_BADGE_CFG}
-                          emptyDisplay="—"
-                        />
-                      ) : (
-                        <span style={{ background:r.formEntrada==="Equity Gap"?"#E8F8E8":"#E6EDF3", color:r.formEntrada==="Equity Gap"?TC.green:TC.navy, borderRadius:20, padding:"2px 10px", fontSize:10, fontWeight:600, whiteSpace:"nowrap" }}>
-                          {r.formEntrada || "—"}
-                        </span>
-                      )}
-                    </td>
-                    <td style={{ padding:"9px 10px" }}>
-                      {canEdit ? (
-                        <EditableCell
-                          value={r.modalitat}
-                          options={SEARCHER_MODALITAT_OPTIONS}
-                          allowCustom optionsKey="s_modalitat"
-                          onSave={v => saveSearcherField(r, "modalitat", v)}
-                          badgeCfg={{
-                            Solo: { bg:"#E8F8E8", color:TC.green, border:"#E8F8E8" },
-                            Duo: { bg:"#E6EDF3", color:TC.navy, border:"#E6EDF3" },
-                            Partnership: { bg:"#F5F0FA", color:"#5A3E9A", border:"#F5F0FA" },
-                          }}
-                        />
-                      ) : (
-                        <span style={{ background:r.modalitat==="Solo"?"#E8F8E8":"#E6EDF3", color:r.modalitat==="Solo"?TC.green:TC.navy, borderRadius:20, padding:"2px 10px", fontSize:10, fontWeight:600 }}>{r.modalitat}</span>
-                      )}
-                    </td>
-                    <td style={{ padding:"9px 10px", textAlign:"center" }}>
-                      {canEdit ? (
-                        <EditableCell
-                          value={r.geo}
-                          options={["ES","EN","IT","DE","FR","PT","NL","US","CH"]}
-                          onSave={v => saveSearcherField(r, "geo", v)}
-                          fmt={v => <FlagImg geo={v} />}
-                        />
-                      ) : <FlagImg geo={r.geo} />}
-                    </td>
-                    <td style={{ padding:"9px 10px" }}>
-                      <StageBadge label={r.stageLabel} />
-                    </td>
-                    <td style={{ padding:"9px 10px", fontSize:11, color:TC.text }}>
-                      {canEdit
-                        ? <EditableCell value={r.companiaAdquirida ?? ""} type="text" emptyDisplay="—" onSave={v => saveSearcherField(r, "companiaAdquirida", v || null)} />
-                        : (r.companiaAdquirida || "—")}
-                    </td>
-                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:600, color:TC.navy }}>
-                      {canEdit
-                        ? <EditableCell value={r.ticket} type="number" align="right" fmt={fmtM} onSave={v => saveSearcherField(r, "ticket", v)} />
-                        : fmtM(r.ticket)}
-                    </td>
-                    <td style={{ padding:"9px 10px", textAlign:"center" }}>
-                      <EditableCell value={r.tvpi} type="number" align="center"
-                        fmt={v => v != null ? <span style={{ background:tvpiBg(v), color:tvpiColor(v), borderRadius:20, padding:"2px 8px", fontFamily:"'DM Mono',monospace", fontWeight:700, fontSize:11, whiteSpace:"nowrap" }}>{formatMultiple(v)}</span> : <span style={{ color:TC.textLight, fontSize:10, fontStyle:"italic" }}>Pendent</span>}
-                        onSave={v => saveSearcherField(r, "tvpi", v)}
-                        disabled={!canEdit} />
-                    </td>
-                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:11, color:TC.navyLight }}>
-                      <EditableCell value={r.irr} type="number" align="right"
-                        fmt={v => v != null ? `${Number(v).toFixed(1)}%` : "—"}
-                        onSave={v => saveSearcherField(r, "irr", v)}
-                        disabled={!canEdit} />
-                    </td>
-                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontSize:11, color:TC.navyLight }}>
-                      <EditableCell value={r.dpi} type="number" align="right"
-                        fmt={v => v != null ? formatMultiple(v) : "—"}
-                        onSave={v => saveSearcherField(r, "dpi", v)}
-                        disabled={!canEdit} />
-                    </td>
-                    <td style={{ padding:"9px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", color:TC.textMid }}>
-                      {r.investmentYear || "—"}
-                    </td>
-                    <td style={{ padding:"9px 10px", color:TC.textMid, fontSize:11 }}>
-                      {canEdit
-                        ? <EditableCell
-                            value={r.derivedDataCompr ?? ""}
-                            type="date"
-                            fmt={formatIsoDateDMY}
-                            emptyDisplay="—"
-                            onSave={v => saveSearcherField(r, "dataCompr", v || null)}
-                          />
-                        : formatIsoDateDMY(r.derivedDataCompr)}
-                    </td>
-                    <td style={{ padding:"9px 10px", textAlign:"center" }}>
-                      <span style={{
-                        display:"inline-block", minWidth:32, textAlign:"center",
-                        background:mesosBg(r.mesosCercant), color:mesosColor(r.mesosCercant),
-                        borderRadius:20, padding:"2px 8px", fontWeight:700, fontSize:11,
-                      }}>{r.mesosCercant}</span>
-                    </td>
-                    <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", color:TC.navyLight }}>
-                      {canEdit
-                        ? <EditableCell value={r.equityStake} type="number" align="right" fmt={formatEquityStake} onSave={v => saveSearcherField(r, "equityStake", v)} />
-                        : formatEquityStake(r.equityStake)}
-                    </td>
-                    {canEdit && (
-                      <td style={{ padding:"9px 10px", textAlign:"center" }}>
-                        <button
-                          title="Mou a Legacy"
-                          onClick={() => saveSearcherField(r, "isLegacy", true)}
-                          style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"2px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}
-                        >Legacy</button>
-                      </td>
-                    )}
-                  </tr>
-                );
-              })}
-            </tbody>
-            <tfoot>
-              <tr style={{ borderTop:`2px solid ${TC.border}` }}>
-                <td colSpan={7} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({displayedSearchers.length}{search.trim() || activeGeoFilter !== "Tots" || activeEntryFilter !== "Tots" ? `/${activeRows.length}` : ""} searchers)</td>
-                <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.navy }}>{fmtM(displayedSearchersTicket)}</td>
-                <td colSpan={7} />
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </div>
+        <ActiveSearchersTable
+          TC={TC}
+          dark={dark}
+          canEdit={canEdit}
+          displayedSearchers={displayedSearchers}
+          displayedSearchersTicket={displayedSearchersTicket}
+          activeRows={activeRows}
+          search={search}
+          activeGeoFilter={activeGeoFilter}
+          activeEntryFilter={activeEntryFilter}
+          activeStatusFilter={activeStatusFilter}
+          activeTypeFilter={activeTypeFilter}
+          activeModalityFilter={activeModalityFilter}
+          activeSort={activeSort}
+          setActiveEntryFilter={setActiveEntryFilter}
+          setActiveGeoFilter={setActiveGeoFilter}
+          setActiveStatusFilter={setActiveStatusFilter}
+          setActiveTypeFilter={setActiveTypeFilter}
+          setActiveModalityFilter={setActiveModalityFilter}
+          sortActive={sortActive}
+          saveSearcherField={saveSearcherField}
+          setShowAddModal={setShowAddModal}
+        />
       )}
 
       {/* ── Legacy table ── */}
       {isLegacyView && (
-      <div style={{ ...tableCardStyle(TC), marginBottom:14 }}>
-        <div style={{ ...sec, color:TC.textLight }}>
-          <SectionHeading icon="📦" color={dark ? "#1a1a2e" : "#F0EDF8"}>Searchers Legacy (Desinvertits)</SectionHeading>
-        </div>
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-            <thead>
-              <tr>
-                {[
-                  { label:"Search Fund", k:"nom" },
-                  { label:"Searchers", k:"searchers" },
-                  { label:"Entrada", k:"formEntrada" },
-                  { label:"Modalitat", k:"modalitat" },
-                  { label:"Pais", k:"geo" },
-                  { label:"Ticket", k:"ticket", right:true },
-                  { label:"TVPI", k:"tvpi", right:true },
-                  { label:"IRR", k:"irr", right:true },
-                  { label:"DPI", k:"dpi", right:true },
-                  { label:"Any Inv.", k:"investmentYear", center:true },
-                  { label:"Equity Stake", k:"equityStake", right:true },
-                ].map(h => (
-                  <th key={h.k} style={{ ...th, textAlign:h.right ? "right" : h.center ? "center" : "left" }}>{h.label}</th>
-                ))}
-                {canEdit && <th style={{ ...th, textAlign:"center" }}>Actiu</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {legacyRows.length === 0 && (
-                <tr><td colSpan={12} style={{ padding:"20px 10px", textAlign:"center", color:TC.textLight, fontSize:12 }}>Cap searcher marcat com a Legacy.</td></tr>
-              )}
-              {legacyRows.map((r, i) => (
-                <tr key={searcherKey(r) ?? r.nom} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt }}>
-                  <td style={{ padding:"9px 10px", fontWeight:600, color:TC.navy }}>{r.nom}</td>
-                  <td style={{ padding:"9px 10px", color:TC.textMid }}>{r.searchers || "—"}</td>
-                  <td style={{ padding:"9px 10px" }}>{r.formEntrada || "—"}</td>
-                  <td style={{ padding:"9px 10px" }}>{r.modalitat || "—"}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"center" }}><FlagImg geo={r.geo} /></td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", color:TC.navyLight }}>{fmtM(r.ticket)}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", color:tvpiColor(r.tvpi,TC) }}>{r.tvpi != null ? formatMultiple(r.tvpi) : "—"}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace" }}>{r.irr != null ? `${(r.irr*100).toFixed(1)}%` : "—"}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace" }}>{r.dpi != null ? formatMultiple(r.dpi) : "—"}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", color:TC.textMid }}>{r.investmentYear || "—"}</td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", color:TC.navyLight }}>{formatEquityStake(r.equityStake)}</td>
-                  {canEdit && (
-                    <td style={{ padding:"9px 10px", textAlign:"center" }}>
-                      <button
-                        title="Torna a Actius"
-                        onClick={() => saveSearcherField(r, "isLegacy", false)}
-                        style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"2px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}
-                      >Actiu</button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-            {legacyRows.length > 0 && (
-              <tfoot>
-                <tr style={{ borderTop:`2px solid ${TC.border}` }}>
-                  <td colSpan={5} style={{ padding:"9px 10px", fontWeight:700, fontSize:11, color:TC.navyLight }}>TOTAL ({legacyRows.length} searchers)</td>
-                  <td style={{ padding:"9px 10px", textAlign:"right", fontFamily:"'DM Mono',monospace", fontWeight:700, color:TC.navy }}>{fmtM(legacyRows.reduce((s,r) => s + (r.ticket ?? 0), 0))}</td>
-                  <td colSpan={canEdit ? 6 : 5} />
-                </tr>
-              </tfoot>
-            )}
-          </table>
-        </div>
-      </div>
+        <LegacyTable
+          TC={TC}
+          dark={dark}
+          canEdit={canEdit}
+          legacyRows={legacyRows}
+          saveSearcherField={saveSearcherField}
+        />
       )}
 
       {/* ── Historic table ── */}
-      {isAllView && <div style={{ ...tableCardStyle(TC), overflowX: "auto" }}>
-        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:14 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ ...sec, color:TC.textLight, marginBottom:0 }}>
-              <SectionHeading icon="🗂" color={dark ? "#112030" : "#E6EDF3"}>Historial de Searchers</SectionHeading>
-            </div>
-            {canEdit && (
-              <button onClick={() => setShowAddModal(true)}
-                style={{ padding: "7px 14px", borderRadius: 6, border: `1.5px solid ${TC.border}`,
-                  background: "transparent", color: TC.navy, cursor: "pointer",
-                  fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}>
-                + Nou searcher
-              </button>
-            )}
-          </div>
-          <div />
-        </div>
-        <div style={{ fontSize:11, color:TC.textMid, marginBottom:10 }}>
-          <b style={{ color:TC.navy }}>{filteredHistoric.length}</b> / {historicData.length} searchers
-          {Object.entries(histFilter).some(([, v]) => v !== "Tots") &&
-            <button onClick={() => setHistFilter({ status:"Tots", geo:"Tots", entrada:"Tots" })}
-              style={{ marginLeft:8, background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}>
-              ✕ netejar
-            </button>
-          }
-        </div>
-        <div style={{ overflowX:"auto" }}>
-          <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
-            <thead>
-                <tr>
-                  {[
-                    { label:"Nom SF",       k:"nom"            },
-                    { label:"NIF",          k:"nif"            },
-                    { label:"Tipus",        k:"tipus"          },
-                    { label:"Modalitat",    k:"modalitat"      },
-                    { label:"País",         k:"geo"            },
-                    { label:"Status",       k:"statusScreening"},
-                    { label:"Fase",         k:"stageLabel"     },
-                    { label:"Any Inv.",     k:"investmentYear" },
-                    { label:"Entrada",      k:"formEntrada"    },
-                    { label:"Searchers",    k:"searcher1"      },
-                    { label:"Escola/MBA",   k:"escola1"        },
-                    { label:"Intro per",    k:"introPer"       },
-                ].map(h => (
-                  <th key={h.k} style={{ ...th, cursor:"pointer" }} onClick={() => sortHist(h.k)}>
-                    {h.label}<HArr k={h.k} />
-                  </th>
-                ))}
-                {canEdit && <th style={{ ...th, width: 40 }} />}
-              </tr>
-              <tr style={{ borderBottom:`1px solid ${TC.border}` }}>
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }}>
-                  <select value={histFilter.geo} onChange={e => setHistFilter(p => ({ ...p, geo: e.target.value }))} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
-                    {["Tots", ...Array.from(new Set(historicData.map(r=>r.geo).filter(Boolean))).sort()].map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding:"6px 10px" }}>
-                  <select value={histFilter.status} onChange={e => setHistFilter(p => ({ ...p, status: e.target.value }))} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
-                    {uniq("statusScreening").map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }}>
-                  <select value={histFilter.entrada} onChange={e => setHistFilter(p => ({ ...p, entrada: e.target.value }))} style={{ ...inp, width:"100%", padding:"4px 6px", fontSize:11 }}>
-                    {["Tots","Search Capital","Equity Gap"].map(o => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px" }} />
-                <th style={{ padding:"6px 10px", textAlign:"left" }}>
-                  {Object.entries(histFilter).some(([, v]) => v !== "Tots") ? (
-                    <button onClick={() => setHistFilter({ status:"Tots", geo:"Tots", entrada:"Tots" })}
-                      style={{ background:"transparent", border:`1px solid ${TC.border}`, borderRadius:4, padding:"1px 8px", cursor:"pointer", fontSize:10, color:TC.textMid, fontFamily:"inherit" }}>
-                      netejar
-                    </button>
-                  ) : null}
-                </th>
-                {canEdit && <th style={{ padding:"6px 10px" }} />}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredHistoric.map((r, i) => (
-                <tr key={`${r.nom}-${i}`} className="hoverable" style={{ background: i % 2 === 0 ? TC.card : TC.bgAlt }}>
-                  <td style={{ padding:"7px 10px", fontWeight:500, color:TC.navy }}>
-                    <EditableCell value={r.nom} type="text"
-                      onSave={v => saveSearcherField(r, "nom", v)}
-                      disabled={!canEdit} />
-                  </td>
-                  <td style={{ padding:"7px 10px", fontFamily:"'DM Mono',monospace", fontSize:11, color:TC.textLight }}>
-                    <EditableCell value={r.nif ?? ""} type="text"
-                      emptyDisplay="—"
-                      onSave={v => saveSearcherField(r, "nif", v || null)}
-                      disabled={!canEdit} />
-                  </td>
-                  <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>
-                    <EditableCell value={r.tipus} type="text"
-                      onSave={v => saveSearcherField(r, "tipus", v)}
-                      disabled={!canEdit} />
-                  </td>
-                  <td style={{ padding:"7px 10px" }}>
-                    <EditableCell value={r.modalitat} type="text"
-                      onSave={v => saveSearcherField(r, "modalitat", v)}
-                      disabled={!canEdit}
-                      fmt={v => (
-                        <span style={{ background:v==="Solo"?"#E8F8E8":v==="Duo"?"#E6EDF3":"#F5F0FA", color:v==="Solo"?TC.green:v==="Duo"?TC.navy:"#5A3E9A", borderRadius:20, padding:"1px 8px", fontSize:10, fontWeight:600 }}>{v}</span>
-                      )} />
-                  </td>
-                  <td style={{ padding:"7px 10px", textAlign:"center" }}>
-                    <EditableCell
-                      value={r.geo}
-                      options={["ES","EN","IT","DE","FR","PT","NL","US","CH"]}
-                      onSave={v => saveSearcherField(r, "geo", v)}
-                      fmt={v => <FlagImg geo={v} />}
-                      disabled={!canEdit}
-                    />
-                  </td>
-                  <td style={{ padding:"7px 10px" }}>
-                    <EditableCell
-                      value={r.statusScreening}
-                      options={uniqVals("statusScreening")}
-                      allowCustom optionsKey="s_status"
-                      onSave={v => saveSearcherField(r, "status", v)}
-                      fmt={v => <StatusBadge s={v} />}
-                      disabled={!canEdit}
-                    />
-                  </td>
-                  <td style={{ padding:"7px 10px" }}>
-                    <StageBadge label={r.stageLabel} />
-                  </td>
-                  <td style={{ padding:"7px 10px", textAlign:"center", fontFamily:"'DM Mono',monospace", fontSize:11, color:TC.textMid }}>
-                    {r.investmentYear || "—"}
-                  </td>
-                  <td style={{ padding:"7px 10px" }}>
-                    <EditableCell value={r.formEntrada} options={SEARCHER_FORM_ENTRADA_OPTIONS}
-                      allowCustom optionsKey="s_entrada"
-                      onSave={v => saveSearcherField(r, "formEntrada", v)}
-                      disabled={!canEdit}
-                      badgeCfg={ENTRY_BADGE_CFG} />
-                  </td>
-                  <td style={{ padding:"7px 10px", fontSize:11, color:TC.text }}>
-                    <EditableCell
-                      value={[r.searcher1, r.searcher2].filter(Boolean).join(" / ") || "—"}
-                      options={uniqVals("searcher1")}
-                      allowCustom optionsKey="s_searchers"
-                      onSave={v => saveSearcherField(r, "searchers", v)}
-                      disabled={!canEdit} />
-                  </td>
-                  <td style={{ padding:"7px 10px", fontSize:11 }}>
-                    <EditableCell
-                      value={[r.escola1, r.escola2].filter(Boolean).join(" / ")}
-                      options={uniqVals("escola1")}
-                      allowCustom optionsKey="s_escola"
-                      onSave={v => saveSearcherField(r, "schools", v)}
-                      disabled={!canEdit}
-                      emptyDisplay="—"
-                    />
-                  </td>
-                  <td style={{ padding:"7px 10px", color:TC.textMid, fontSize:11 }}>
-                    <EditableCell
-                      value={r.introPer}
-                      options={uniqVals("introPer")}
-                      allowCustom optionsKey="s_introPer"
-                      onSave={v => saveSearcherField(r, "introPer", v)}
-                      disabled={!canEdit} />
-                  </td>
-                  {canEdit && (
-                    <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                      <DeleteRowButton onDelete={() => handleDeleteSearcher(r)} />
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>}
+      {isAllView && (
+        <HistoricTable
+          TC={TC}
+          dark={dark}
+          canEdit={canEdit}
+          filteredHistoric={filteredHistoric}
+          historicData={historicData}
+          histFilter={histFilter}
+          histSort={histSort}
+          setHistFilter={setHistFilter}
+          sortHist={sortHist}
+          saveSearcherField={saveSearcherField}
+          handleDeleteSearcher={handleDeleteSearcher}
+          setShowAddModal={setShowAddModal}
+        />
+      )}
 
       {showAddModal && (
         <AddRowModal
