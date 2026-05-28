@@ -76,7 +76,7 @@ function getParentSectionId(sectionId) {
 }
 
 export function getVehiclePermissionSection(row) {
-  return row?.vehicleTipus === "RE" ? "real-estate" : "alternatives";
+  return row?.est === "Fons Real Estate" ? "real-estate" : "alternatives";
 }
 
 export function buildSectionAccessMap({ role, sectionRoles, deniedSections } = {}) {

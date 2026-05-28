@@ -7,6 +7,7 @@ import { apiFetchJson } from "../apiClient.js";
 import { FlagImg } from "./SharedComponents.jsx";
 import { SEARCHER_STATUS_CFG, GEO_NAME } from "../config.js";
 import { normalizeSearcherName } from "../data/searcherModel.js";
+import { estSection } from "../data/capitalCallStrategyModel.js";
 import { useAuth } from "../auth.jsx";
 
 function calcMesos(dateIso) {
@@ -42,7 +43,7 @@ export default function SearcherDetail() {
         const coreToken = normName.split(" ")[0];
         const ccAll = Array.isArray(cc) ? cc : [];
         const rows = ccAll
-          .filter(r => r.vehicleTipus === "SF" && r.cat !== "Compromís")
+          .filter(r => estSection(r.est) === "SF" && r.cat !== "Compromís")
           .filter(r => {
             const rNorm = normalizeSearcherName(r.fons);
             if (nif && String(r.id ?? "").trim() === nif) return true;

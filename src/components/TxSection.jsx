@@ -4,7 +4,7 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { fmtM, fmtSignedM, fmtSignedNative, usePersistedState } from "../utils.js";
 import { makeVehicleDetailPath } from "../data/privateRoutes.js";
-import { CAPITAL_CALL_STRATEGY_OPTIONS } from "../data/capitalCallStrategyModel.js";
+import { CAPITAL_CALL_STRATEGY_OPTIONS, estSection } from "../data/capitalCallStrategyModel.js";
 import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
 import { Badge, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
 import { useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
@@ -126,8 +126,7 @@ export function TxSection({
   const query = search.trim().toLowerCase();
   const visibleTx = useMemo(() => {
     const normalizedRows = allRows.map((row) => {
-      const vehicleTipus = String(row?.vehicleTipus ?? "").trim();
-      if (vehicleTipus === "SF") return row;
+      if (estSection(row?.est) === "SF") return row;
       const id = String(row?.id ?? "").trim();
       const canonicalEst = id ? canonicalEstByNif.get(id) : null;
       return canonicalEst ? { ...row, est: canonicalEst } : row;

@@ -124,7 +124,7 @@ export function buildReFundMatcher(actualCapitalCalls = []) {
   const reFundsNorm = new Set(STATIC_RE_NAMES);
   if (Array.isArray(actualCapitalCalls)) {
     for (const row of actualCapitalCalls) {
-      if (String(row?.vehicleTipus ?? "").trim() === "RE") {
+      if (String(row?.est ?? "").trim() === "Fons Real Estate") {
         const fund = String(row?.fons ?? "").trim();
         if (fund) {
           reFundsNorm.add(fund.toLowerCase());

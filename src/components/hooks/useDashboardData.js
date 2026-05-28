@@ -4,7 +4,7 @@ import { loadAll, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadC
 import { apiFetchJson } from "../../apiClient.js";
 import { normalizePrivateWorkbookRows } from "../../data/alternativesModel.js";
 import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "../../data/capitalCallTipusModel.js";
-import { normalizeCapitalCallStrategy } from "../../data/capitalCallStrategyModel.js";
+import { normalizeCapitalCallStrategy, estSection } from "../../data/capitalCallStrategyModel.js";
 import { mergeCapitalCallRows } from "../../utils.js";
 import { isActualCompany, isSearchFundShell } from "../../data/privateCompanyModel.js";
 import { splitRealEstateRows } from "../../data/realEstateModel.js";
@@ -68,7 +68,7 @@ async function prepareCapitalCallPayload(values, existingRow = null) {
 }
 
 async function syncSearchersFromCapitalCalls(rows) {
-  const sfRows = Array.isArray(rows) ? rows.filter((row) => row?.vehicleTipus === "SF") : [];
+  const sfRows = Array.isArray(rows) ? rows.filter((row) => estSection(row?.est) === "SF") : [];
   if (!sfRows.length) return;
   try {
     await apiFetchJson("/api/searchers?action=sync-capital-calls", {
@@ -328,10 +328,10 @@ export function useDashboardData() {
   const actualCompanies = useMemo(() => (Array.isArray(companiesData) ? companiesData.filter(isActualCompany) : []), [companiesData]);
   const actualCompanyIds = useMemo(() => new Set(actualCompanies.map((company) => company.id).filter(Boolean)), [actualCompanies]);
 
-  const sfTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vehicleTipus==="SF"),[TRANSACTIONS]);
-  const sfCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vehicleTipus==="SF"),[COMPROMISOS]);
-  const pcTx        = useMemo(()=>TRANSACTIONS.filter(r=>r.vehicleTipus==="PC"),[TRANSACTIONS]);
-  const pcCompr     = useMemo(()=>COMPROMISOS.filter(r=>r.vehicleTipus==="PC"),[COMPROMISOS]);
+  const sfTx        = useMemo(()=>TRANSACTIONS.filter(r=>estSection(r.est)==="SF"),[TRANSACTIONS]);
+  const sfCompr     = useMemo(()=>COMPROMISOS.filter(r=>estSection(r.est)==="SF"),[COMPROMISOS]);
+  const pcTx        = useMemo(()=>TRANSACTIONS.filter(r=>estSection(r.est)==="PC"),[TRANSACTIONS]);
+  const pcCompr     = useMemo(()=>COMPROMISOS.filter(r=>estSection(r.est)==="PC"),[COMPROMISOS]);
   const searcherTx  = useMemo(()=>sfTx.filter((row) => !actualCompanyIds.has(row.id)),[sfTx, actualCompanyIds]);
   const searcherCompr = useMemo(()=>sfCompr.filter((row) => !actualCompanyIds.has(row.id)),[sfCompr, actualCompanyIds]);
   const { tx: reTx, compr: reCompr } = useMemo(() => splitRealEstateRows(rawCC), [rawCC]);

@@ -111,14 +111,6 @@ export function CcTransactionModal({
       visible: v => inferCapitalCallCategoryFromTipus(v.tipus, v.eur) === "Capital Call",
     },
     {
-      key: "vehicleTipus",
-      label: "Tipus de vehicle (PE / VC / RE / SF / PC)",
-      type: "select",
-      options: ["", "PE", "VC", "RE", "SF", "PC"],
-      defaultValue: isEdit ? "" : (addDefaults?.vehicleTipus ?? ""),
-      visible: isNewVehicle,
-    },
-    {
       key: "nif",
       label: "NIF (nou vehicle)",
       type: "text",

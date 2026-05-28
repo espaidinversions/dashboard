@@ -10,6 +10,7 @@ import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 import { apiFetchJson } from "../apiClient.js";
 import { normalizeSearcherName } from "../data/searcherModel.js";
+import { estSection } from "../data/capitalCallStrategyModel.js";
 
 const ENTRY_BADGE_CFG = {
   "Search Capital": { bg:"#E6EDF3", color:"#2563A8" },
@@ -287,7 +288,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   const transactionRows = useMemo(() => {
     const q = search.toLowerCase();
     return (Array.isArray(rawCC) ? rawCC : [])
-      .filter((row) => row?.vehicleTipus === "SF" && row?.cat !== "Compromís" && !actualCompanyIds.has(row?.id))
+      .filter((row) => estSection(row?.est) === "SF" && row?.cat !== "Compromís" && !actualCompanyIds.has(row?.id))
       .filter((row) => belongsToTrackedSearcher(row))
       .filter((row) => (
         !q ||
@@ -300,7 +301,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
 
   const commitmentRows = useMemo(
     () => (Array.isArray(rawCC) ? rawCC : [])
-      .filter((row) => row?.vehicleTipus === "SF" && row?.cat === "Compromís" && !actualCompanyIds.has(row?.id))
+      .filter((row) => estSection(row?.est) === "SF" && row?.cat === "Compromís" && !actualCompanyIds.has(row?.id))
       .filter((row) => belongsToTrackedSearcher(row)),
     [actualCompanyIds, rawCC, trackedSearcherIds, trackedSearcherNames]
   );

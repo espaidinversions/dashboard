@@ -91,3 +91,13 @@ export function defaultCapitalCallStrategyForVehicleTipus(vehicleTipus) {
   if (vehicleTipus === "PC") return STRATEGY_PARTICIPADA_ALTRES;
   return "Fons Primari";
 }
+
+/** Maps est strategy label → section key used for filtering. */
+export function estSection(est) {
+  const e = String(est ?? "").trim();
+  if (e === "Fons Real Estate") return "RE";
+  if (e === "Search Fund - Cerca" || e === "Search Fund - Participada") return "SF";
+  if (e === "Participada (Altres)") return "PC";
+  if (e === "Fons Primari" || e === "Fons Secundari" || e === "Fons de Fons" || e === "Fons de Coinversió") return "ALT";
+  return null;
+}

@@ -1,8 +1,8 @@
 export function splitRealEstateRows(rawCC) {
   const rows = Array.isArray(rawCC) ? rawCC : [];
   return {
-    tx: rows.filter((row) => row.vehicleTipus === "RE" && row.cat !== "Compromís"),
-    compr: rows.filter((row) => row.vehicleTipus === "RE" && row.cat === "Compromís"),
+    tx: rows.filter((row) => row.est === "Fons Real Estate" && row.cat !== "Compromís"),
+    compr: rows.filter((row) => row.est === "Fons Real Estate" && row.cat === "Compromís"),
   };
 }
 

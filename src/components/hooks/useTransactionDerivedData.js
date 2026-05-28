@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { estSection } from "../../data/capitalCallStrategyModel.js";
 import { FY_LIST, MESOS } from "../../config.js";
 
 /**
@@ -28,12 +29,12 @@ export function useTransactionDerivedData({
   ccChartF,
 }) {
   const baseTx = useMemo(
-    () => TRANSACTIONS.filter((r) => !excluded.has(r.fons) && (r.vehicleTipus === "PE" || r.vehicleTipus === "VC")),
+    () => TRANSACTIONS.filter((r) => !excluded.has(r.fons) && estSection(r.est) === "ALT"),
     [TRANSACTIONS, excluded],
   );
 
   const baseCompr = useMemo(
-    () => COMPROMISOS.filter((r) => !excluded.has(r.fons) && (r.vehicleTipus === "PE" || r.vehicleTipus === "VC")),
+    () => COMPROMISOS.filter((r) => !excluded.has(r.fons) && estSection(r.est) === "ALT"),
     [COMPROMISOS, excluded],
   );
 
@@ -41,12 +42,12 @@ export function useTransactionDerivedData({
   // SF/PC have their own dedicated sections and including them here makes
   // "Compromis vs Capital Cridat" look almost fully utilized (misleading).
   const allAltTx = useMemo(
-    () => TRANSACTIONS.filter((r) => !excluded.has(r.fons) && (r.vehicleTipus === "PE" || r.vehicleTipus === "VC")),
+    () => TRANSACTIONS.filter((r) => !excluded.has(r.fons) && estSection(r.est) === "ALT"),
     [TRANSACTIONS, excluded],
   );
 
   const allAltCompr = useMemo(
-    () => COMPROMISOS.filter((r) => !excluded.has(r.fons) && (r.vehicleTipus === "PE" || r.vehicleTipus === "VC")),
+    () => COMPROMISOS.filter((r) => !excluded.has(r.fons) && estSection(r.est) === "ALT"),
     [COMPROMISOS, excluded],
   );
 
