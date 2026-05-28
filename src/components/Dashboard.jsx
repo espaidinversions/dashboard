@@ -555,7 +555,7 @@ function Dashboard() {
               </div>
               <Suspense fallback={null}>
                 {companiesSubTab === "transaccions" ? (
-                  <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ vcpe: "PC" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Participades (PC)" />
+                  <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ vehicleTipus: "PC" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Participades (PC)" />
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", gap: 6 }}>
@@ -624,7 +624,7 @@ function Dashboard() {
           )}
 
           {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" /></Suspense>}
-          {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ vcpe: "RE", est: "Fons Real Estate" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
+          {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ vehicleTipus: "RE", est: "Fons Real Estate" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
           {tab === "tx-mp" && <Suspense fallback={null}><PMTransaccionsTab search={globalSearch} /></Suspense>}
         </main>
       </div>

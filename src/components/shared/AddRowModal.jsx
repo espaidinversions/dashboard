@@ -1,6 +1,59 @@
 import React, { useEffect, useState } from "react";
 import { useTheme } from "../../theme.js";
 
+/**
+ * Normalizes a user-typed number into a JS-parseable string:
+ * - supports optional leading "-" (or parentheses for negatives)
+ * - supports "." or "," as decimal separator (last separator wins)
+ * - strips grouping separators (".", ",", spaces, apostrophes)
+ *
+ * Returned value is:
+ * - "" (empty) for empty/invalid input
+ * - "-" while user is mid-typing a negative number
+ * - otherwise a string like "-1234.56" or "1234"
+ */
+function normalizeNumericInput(raw) {
+  const input = String(raw ?? "");
+  const trimmed = input.trim();
+  if (!trimmed) return "";
+
+  const parenNegative = trimmed.startsWith("(") && trimmed.endsWith(")");
+  const sign = (parenNegative || trimmed.startsWith("-")) ? "-" : "";
+
+  // Keep digits and separators only
+  const cleaned = trimmed
+    .replace(/[()]/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^0-9.,']/g, "")
+    .replace(/'/g, "");
+
+  // Allow mid-typing a negative sign without digits yet
+  if (sign === "-" && cleaned === "") return "-";
+
+  // Decide decimal separator by last occurrence of "." or ","
+  const lastDot = cleaned.lastIndexOf(".");
+  const lastComma = cleaned.lastIndexOf(",");
+  const decimalSepIndex = Math.max(lastDot, lastComma);
+  const decimalSepChar = decimalSepIndex === -1 ? null : cleaned[decimalSepIndex];
+
+  let intPart = cleaned;
+  let fracPart = "";
+  if (decimalSepChar) {
+    intPart = cleaned.slice(0, decimalSepIndex);
+    fracPart = cleaned.slice(decimalSepIndex + 1);
+  }
+
+  // Strip any grouping separators from integer part
+  intPart = intPart.replace(/[.,]/g, "");
+  // Strip any non-digits from fractional part (also strips any extra separators)
+  fracPart = fracPart.replace(/[^\d]/g, "");
+
+  const digits = intPart.replace(/[^\d]/g, "");
+  if (!digits && !fracPart) return sign ? "-" : "";
+
+  return fracPart ? `${sign}${digits || "0"}.${fracPart}` : `${sign}${digits}`;
+}
+
 export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", submitLabel = "Afegir" }) {
   const { tc } = useTheme();
   const [values, setValues] = useState(() =>
@@ -134,9 +187,9 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                 <input
                   className="modal-input"
                   type="text"
-                  inputMode="numeric"
-                  value={String(values[f.key] ?? "").replace(/\\B(?=(\\d{3})+(?!\\d))/g, ".")}
-                  onChange={e => applyFieldChange(f, e.target.value.replace(/\\./g, "").replace(/[^\\d]/g, ""))}
+                  inputMode="decimal"
+                  value={String(values[f.key] ?? "")}
+                  onChange={e => applyFieldChange(f, normalizeNumericInput(e.target.value))}
                   placeholder={f.placeholder ?? ""}
                   style={{ ...inputStyleFor(f), fontFamily: "'DM Mono',monospace" }}
                   disabled={f.disabled}
@@ -186,4 +239,3 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
     </div>
   );
 }
-
