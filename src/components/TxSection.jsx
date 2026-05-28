@@ -60,6 +60,57 @@ export function TxSection({
   }, [compr, scope, scopeToggle]);
 
   const allRows = useMemo(() => [...scopedTx, ...scopedCompr], [scopedTx, scopedCompr]);
+
+  // Enforce a single "Tipus de Vehicle" per NIF (= row.id) in the transaction register.
+  // Search Funds can legitimately change phase (cerca vs participada), so skip SF.
+  const canonicalEstByNif = useMemo(() => {
+    const ALLOWED = new Set(["PE", "VC", "RE", "PC"]);
+    const countsById = new Map(); // id -> Map(est -> count)
+    const lastSeenById = new Map(); // id -> { est, data }
+
+    for (const row of allRows) {
+      const vehicleTipus = String(row?.vehicleTipus ?? "").trim();
+      if (!ALLOWED.has(vehicleTipus)) continue;
+      const id = String(row?.id ?? "").trim();
+      if (!id) continue;
+      const est = String(row?.est ?? "").trim();
+      if (!est) continue;
+
+      if (!countsById.has(id)) countsById.set(id, new Map());
+      const estCounts = countsById.get(id);
+      estCounts.set(est, (estCounts.get(est) ?? 0) + 1);
+
+      const data = String(row?.data ?? "").slice(0, 10);
+      const prev = lastSeenById.get(id);
+      if (!prev || (data && data >= prev.data)) {
+        lastSeenById.set(id, { est, data: data || "" });
+      }
+    }
+
+    const canonical = new Map();
+    for (const [id, estCounts] of countsById.entries()) {
+      let best = null;
+      let bestCount = -1;
+      for (const [est, count] of estCounts.entries()) {
+        if (count > bestCount) { best = est; bestCount = count; }
+      }
+      // Tie-breaker: if counts are equal across strategies, prefer the most recent transaction's est.
+      const last = lastSeenById.get(id);
+      if (last && last.est) {
+        let bestIsTied = false;
+        if (best != null) {
+          const bestValue = estCounts.get(best) ?? 0;
+          for (const [est, count] of estCounts.entries()) {
+            if (est !== best && count === bestValue) { bestIsTied = true; break; }
+          }
+        }
+        if (bestIsTied) best = last.est;
+      }
+      if (best) canonical.set(id, best);
+    }
+    return canonical;
+  }, [allRows]);
+
   const yearOptions = useMemo(() => {
     const years = new Set(allRows.map((r) => String(r.data ?? "").slice(0, 4)).filter((y) => /^\d{4}$/.test(y)));
     return ["Tots", ...[...years].sort()];
@@ -74,7 +125,15 @@ export function TxSection({
 
   const query = search.trim().toLowerCase();
   const visibleTx = useMemo(() => {
-    return allRows.filter((row) => {
+    const normalizedRows = allRows.map((row) => {
+      const vehicleTipus = String(row?.vehicleTipus ?? "").trim();
+      if (vehicleTipus === "SF") return row;
+      const id = String(row?.id ?? "").trim();
+      const canonicalEst = id ? canonicalEstByNif.get(id) : null;
+      return canonicalEst ? { ...row, est: canonicalEst } : row;
+    });
+
+    return normalizedRows.filter((row) => {
       if (query && !(
         (row.fons || "").toLowerCase().includes(query) ||
         (row.tipus || "").toLowerCase().includes(query) ||
@@ -89,7 +148,7 @@ export function TxSection({
       if (filters.comentaris && !String(row.comentaris ?? "").toLowerCase().includes(filters.comentaris.toLowerCase())) return false;
       return true;
     });
-  }, [filters, query, allRows]);
+  }, [allRows, canonicalEstByNif, filters, query]);
   const visibleCompr = useMemo(() => visibleTx.filter((row) => row.cat === "Compromís"), [visibleTx]);
 
   const tipusOptions = useMemo(
