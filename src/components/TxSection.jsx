@@ -406,7 +406,15 @@ export function TxSection({
                 <th style={{ padding: "6px 10px" }}><input value={filters.fons} onChange={(e) => setFilters((current) => ({ ...current, fons: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 10px" }}>
                   <select value={filters.tipus} onChange={(e) => setFilters((current) => ({ ...current, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>
-                    {tipusOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+                    {(() => {
+                      const DIST = new Set(["Distribució","Distribució Retinguda","Dividends","Retorn Capital","Interessos"]);
+                      const flat = tipusOptions.filter(o => o === "Tots" || !DIST.has(o));
+                      const dist = tipusOptions.filter(o => DIST.has(o));
+                      return <>
+                        {flat.map(o => <option key={o} value={o}>{o}</option>)}
+                        {dist.length > 0 && <optgroup label="Distribucions">{dist.map(o => <option key={o} value={o}>{o}</option>)}</optgroup>}
+                      </>;
+                    })()}
                   </select>
                 </th>
                 <th style={{ padding: "6px 10px" }} />

@@ -127,6 +127,15 @@ export function useDashboardData() {
   useEffect(() => { searchersDataRef.current = searchersData; }, [searchersData]);
 
   useEffect(() => {
+    const handler = () => {
+      const fresh = readStoredJSON(LS_CC, []);
+      setRawCC(fresh);
+    };
+    window.addEventListener("tc-rawcc-updated", handler);
+    return () => window.removeEventListener("tc-rawcc-updated", handler);
+  }, []);
+
+  useEffect(() => {
     apiFetchJson("/api/eur-usd")
       .then(({ rate }) => setEurUsd(rate))
       .catch(() => {});

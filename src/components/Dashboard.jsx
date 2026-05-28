@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react";
 import {
   CAPITAL_CALL_TIPUS_OPTIONS,
+  CAPITAL_CALL_TIPUS_GROUPED,
 } from "../config.js";
 import { useTheme } from "../theme.js";
 import { usePersistedState, exportMultiXLSX, readStoredJSON, normalizeOptionValue, dedupeOptionValues } from "../utils.js";
@@ -120,10 +121,12 @@ function Dashboard() {
     ...d.companiesData.map((row) => row.nom),
     ...d.searchersData.map((row) => row.nom),
   ]), [d.companiesData, d.rawCC, d.searchersData]);
-  const ccTipusOptions = useMemo(() => dedupeOptionValues([
-    ...CAPITAL_CALL_TIPUS_OPTIONS,
-    ...d.rawCC.map((r) => r.tipus).filter(Boolean),
-  ]), [d.rawCC]);
+  const ccTipusOptions = useMemo(() => {
+    const known = new Set(CAPITAL_CALL_TIPUS_OPTIONS.map(v => String(v).trim().toLowerCase()));
+    const extras = [...new Set(d.rawCC.map(r => r.tipus).filter(Boolean))]
+      .filter(v => !known.has(String(v).trim().toLowerCase()));
+    return extras.length > 0 ? [...CAPITAL_CALL_TIPUS_GROUPED, ...extras] : CAPITAL_CALL_TIPUS_GROUPED;
+  }, [d.rawCC]);
   const vehicleCurrencyMap = useMemo(() => {
     const map = new Map();
     d.rawCC.forEach((row) => {

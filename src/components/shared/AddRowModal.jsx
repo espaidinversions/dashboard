@@ -51,7 +51,7 @@ function normalizeNumericInput(raw) {
   const digits = intPart.replace(/[^\d]/g, "");
   if (!digits && !fracPart) return sign ? "-" : "";
 
-  return fracPart ? `${sign}${digits || "0"}.${fracPart}` : `${sign}${digits}`;
+  return (decimalSepChar !== null) ? `${sign}${digits || "0"}.${fracPart}` : `${sign}${digits}`;
 }
 
 export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", submitLabel = "Afegir" }) {
@@ -128,7 +128,11 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
               </label>
               {f.type === "select" ? (
                 <select className="modal-input" value={values[f.key]} onChange={e => applyFieldChange(f, e.target.value)} style={inputStyleFor(f)} disabled={f.disabled}>
-                  {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
+                  {(f.options ?? []).map(o =>
+                    o && typeof o === "object"
+                      ? <optgroup key={o.group} label={o.group}>{o.items.map(i => <option key={i} value={i}>{i}</option>)}</optgroup>
+                      : <option key={o} value={o}>{o}</option>
+                  )}
                 </select>
               ) : f.type === "combo" ? (
                 <div style={{ display: "flex", gap: 8 }}>

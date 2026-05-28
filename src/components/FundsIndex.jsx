@@ -4,7 +4,7 @@ import { VCPE_CFG, EST_CFG, VEHICLE_TIPUS_CFG } from "../config.js";
 import { ThemeProvider, useTheme } from "../theme.js";
 import { fmtM, readStoredJSON, writeStoredJSON, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, EditableCell, DeleteRowButton, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
-import { upsertFundMeta, upsertFundMetaFiEnd, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
+import { upsertFundMeta, upsertFundMetaFiEnd, updateFundMetaVehicleTipus, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
@@ -82,6 +82,23 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     if (error) toast({ message: "Error desant fi inversió: " + error.message, type: "error" });
   };
 
+  const saveVehicleTipus = async (fund, vehicleTipus) => {
+    if (!fund.id) return;
+    const { error } = await updateFundMetaVehicleTipus(fund.id, vehicleTipus || null);
+    if (error) { toast({ message: "Error desant tipus: " + error.message, type: "error" }); return; }
+    const updatedMeta = fundMeta.some(m => (m.id ?? m.fons) === (fund.id ?? fund.fons))
+      ? fundMeta.map(m => (m.id ?? m.fons) === (fund.id ?? fund.fons) ? { ...m, vehicleTipus: vehicleTipus || null } : m)
+      : [...fundMeta, { id: fund.id, fons: fund.fons, vehicleTipus: vehicleTipus || null }];
+    setFundMeta(updatedMeta);
+    writeStoredJSON("tc_fundMeta", updatedMeta);
+    const freshCC = await loadCapitalCalls({ skipCompanions: true });
+    if (freshCC) {
+      persistRawCC(freshCC);
+      window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+    }
+    toast({ message: "Tipus desat" });
+  };
+
   const handleDeleteFund = async (fund) => {
     const err = await deleteFund(fund);
     if (err) {
@@ -135,6 +152,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     );
     if (!row) { toast({ message: "Error en crear el fons", type: "error" }); return; }
     persistRawCC([...rawCC, row]);
+    setFundMeta(prev => [...prev, { id: row.id, fons: row.fons, vehicleTipus: row.vehicleTipus, tvpi: null, irr: null }]);
     setAddingFund(false);
     setNewFund({ fons: "", vehicleTipus: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe), compromis: "", divisa: "EUR" });
     toast({ message: `Fons "${newFund.fons.trim()}" afegit.` });
@@ -142,8 +160,8 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
 
   const rows = useMemo(() => {
     const map = new Map();
-    const vcpeSet = vcpeTypes ?? ["PE", "VC", "RE"];
-    for (const r of rawCC.filter((row) => vcpeSet.includes(row?.vehicleTipus) && !(excludeIds?.has(row?.id)))) {
+    const vcpeSet = vcpeTypes ?? null;
+    for (const r of rawCC.filter((row) => (!vcpeSet || vcpeSet.includes(row?.vehicleTipus)) && !(excludeIds?.has(row?.id)))) {
       const key = makeFundRouteId(r);
       if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vehicleTipus: r.vehicleTipus, est: r.est, compromis: 0, calls: 0, dist: 0, year: null, isMock: !!r.isMock });
       const f = map.get(key);
@@ -347,9 +365,20 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                       {r.id ?? "—"}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
-                      {r.vehicleTipus
-                        ? <Badge label={r.vehicleTipus} cfg={VEHICLE_TIPUS_CFG[r.vehicleTipus] || {}} />
-                        : <span style={{ color: "#aaa", fontSize: 11 }}>—</span>}
+                      {rowCanEdit && r.id ? (
+                        <select
+                          value={r.vehicleTipus ?? ""}
+                          onChange={e => saveVehicleTipus(r, e.target.value)}
+                          style={{ padding: "2px 6px", borderRadius: 4, border: `1px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}
+                        >
+                          <option value="">—</option>
+                          {["PE", "VC", "RE", "SF", "PC"].map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      ) : r.vehicleTipus ? (
+                        <Badge label={r.vehicleTipus} cfg={VEHICLE_TIPUS_CFG[r.vehicleTipus] || {}} />
+                      ) : (
+                        <span style={{ color: "#aaa", fontSize: 11 }}>—</span>
+                      )}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: tc.textMid }}>
                       {r.year ?? "—"}

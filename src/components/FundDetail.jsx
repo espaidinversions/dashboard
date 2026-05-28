@@ -8,7 +8,7 @@ import { fmtM, fmtSignedM, fmtSignedNative, readStoredJSON, formatMultiple, mult
 import { Badge, Logo, KpiCard, AddRowModal, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCapitalCalls, loadFundMeta, updateCapitalCall } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
-import { CAPITAL_CALL_TIPUS_OPTIONS, inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
+import { CAPITAL_CALL_TIPUS_OPTIONS, CAPITAL_CALL_TIPUS_GROUPED, inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
 import { useAuth } from "../auth.jsx";
 
 function FundDetailInner() {
@@ -240,7 +240,7 @@ function FundDetailInner() {
                   key: "tipus",
                   label: "Tipus Moviment",
                   type: "select",
-                  options: CAPITAL_CALL_TIPUS_OPTIONS,
+                  options: CAPITAL_CALL_TIPUS_GROUPED,
                   defaultValue: editingRow.tipus || CAPITAL_CALL_TIPUS_OPTIONS[0] || "",
                 },
                 { key: "data", label: "Data", type: "date", defaultValue: editingRow.data },

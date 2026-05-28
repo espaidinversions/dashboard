@@ -79,8 +79,7 @@ export function MensualTab({filtered, fFy}) {
     return [...byMes].sort((a,b)=>a.key.localeCompare(b.key)).map(m=>({
       label: m.label,
       "Capital Call": +m.calls.toFixed(0),
-      "Distribució":  +m.dist.toFixed(0),
-      "Retorn Capital": +m.retorn.toFixed(0),
+      "Distribucions": +(m.dist + m.retorn).toFixed(0),
     }));
   }, [byMes]);
 
@@ -113,8 +112,7 @@ export function MensualTab({filtered, fFy}) {
           },
           series: [
             { name: "Capital Call",   type: "bar", data: chartData.map(d => d["Capital Call"]),   itemStyle: { color: TC.navy,      borderRadius: [4,4,0,0] }, barMaxWidth: 32 },
-            { name: "Distribució",    type: "bar", data: chartData.map(d => d["Distribució"]),    itemStyle: { color: TC.green,     borderRadius: [4,4,0,0] }, barMaxWidth: 32 },
-            { name: "Retorn Capital", type: "bar", data: chartData.map(d => d["Retorn Capital"]), itemStyle: { color: TC.greenDark, borderRadius: [4,4,0,0] }, barMaxWidth: 32 },
+            { name: "Distribucions",  type: "bar", data: chartData.map(d => d["Distribucions"]),  itemStyle: { color: TC.green,     borderRadius: [4,4,0,0] }, barMaxWidth: 32 },
           ],
         };
         return <ReactECharts option={option} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;

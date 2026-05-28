@@ -9,8 +9,7 @@ WHERE id IN (
   SELECT DISTINCT s.id
   FROM searchers s
   JOIN capital_calls cc ON cc.vehicle_id = s.nif
-  WHERE cc.vcpe   = 'SF'
-    AND cc.cat    = 'Retorn Capital'
+  WHERE cc.cat    = 'Retorn Capital'
     AND s.nif     IS NOT NULL
     AND s.nif     <> ''
     AND s.is_legacy = false
@@ -23,8 +22,7 @@ WHERE id IN (
   SELECT DISTINCT s.id
   FROM searchers s
   JOIN capital_calls cc ON lower(trim(cc.fons)) = lower(trim(s.nom))
-  WHERE cc.vcpe   = 'SF'
-    AND cc.cat    = 'Retorn Capital'
+  WHERE cc.cat    = 'Retorn Capital'
     AND (s.nif IS NULL OR s.nif = '')
     AND s.is_legacy = false
 );

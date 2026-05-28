@@ -4,6 +4,7 @@
 ALTER TABLE prospective_cash_forecasts ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS prospective_cash_forecasts_read_authenticated ON prospective_cash_forecasts;
+DROP POLICY IF EXISTS prospective_cash_forecasts_read_superuser ON prospective_cash_forecasts;
 CREATE POLICY prospective_cash_forecasts_read_superuser
   ON prospective_cash_forecasts FOR SELECT
   TO authenticated

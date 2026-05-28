@@ -40,7 +40,7 @@ export function parseCapitalCallsCSV(text) {
   return parseCSVRows(text).map(r => ({
     fons: r.fons, tipus: r.tipus, cat: r.cat, data: r.data,
     mes: parseInt(r.mes, 10), any: parseInt(r.any, 10), fy: r.fy,
-    vehicleTipus: r.vcpe, est: r.est, eur: parseFloat(r.eur), divisa: r.divisa,
+    vehicleTipus: r.vehicleTipus ?? r.vcpe, est: r.est, eur: parseFloat(r.eur), divisa: r.divisa,
   }));
 }
 
@@ -96,7 +96,7 @@ export function mapCapitalCallsRows(rows) {
       mes: Number.isFinite(mes) && mes > 0 ? mes : monthFromDate,
       any: Number.isFinite(any) && any > 0 ? any : yearFromDate,
       fy: fy || (Number.isFinite(yearFromDate) ? `FY ${yearFromDate}` : ""),
-      vcpe: String(r["VCPE"] ?? ""), est: String(r["Estructura"] ?? ""), eur,
+      vehicleTipus: String(r["VCPE"] ?? ""), est: String(r["Estructura"] ?? ""), eur,
       divisa: String(r["Divisa"] ?? ""),
     };
   });
@@ -114,7 +114,7 @@ export function mapLegacySearchFundRows(rows) {
       fons: String(row["Startup"] ?? "").trim(), tipus,
       cat: inferCapitalCallCategoryFromTipus(tipus, eur),
       data, mes, any: year, fy: `FY ${year}`,
-      vcpe: String(row["VC/PE"] ?? "").trim() || null,
+      vehicleTipus: String(row["VC/PE"] ?? "").trim() || null,
       est: null, eur,
       divisa: String(row["Divisa"] ?? "").trim() || "EUR",
     };

@@ -4,6 +4,9 @@
 -- for existing vehicles; only admins need to modify or delete them.
 
 drop policy if exists capital_calls_write_superuser on capital_calls;
+drop policy if exists capital_calls_insert_authenticated on capital_calls;
+drop policy if exists capital_calls_update_superuser on capital_calls;
+drop policy if exists capital_calls_delete_superuser on capital_calls;
 
 -- All authenticated users can INSERT new capital calls.
 create policy capital_calls_insert_authenticated

@@ -37,8 +37,7 @@ export function ResumTab({
             },
             series: [
               { name: "Capital Call",   type: "bar", data: byFy.map(d => d["Capital Call"]),   itemStyle: { color: tc.navy,      borderRadius: [5,5,0,0] }, barMaxWidth: 32 },
-              { name: "Distribució",    type: "bar", data: byFy.map(d => d["Distribució"]),    itemStyle: { color: tc.green,     borderRadius: [5,5,0,0] }, barMaxWidth: 32 },
-              { name: "Retorn Capital", type: "bar", data: byFy.map(d => d["Retorn Capital"]), itemStyle: { color: tc.greenDark, borderRadius: [5,5,0,0] }, barMaxWidth: 32 },
+              { name: "Distribucions",  type: "bar", data: byFy.map(d => d["Distribucions"]),  itemStyle: { color: tc.green,     borderRadius: [5,5,0,0] }, barMaxWidth: 32 },
             ],
           };
           return <ReactECharts option={option} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;

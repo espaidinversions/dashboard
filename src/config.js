@@ -1,6 +1,6 @@
 // ── Paleta ────────────────────────────────────────────────
 import { TC_LIGHT } from "./theme.js";
-import { CAPITAL_CALL_TIPUS_OPTIONS as CAPITAL_CALL_TIPUS_MODEL_OPTIONS } from "./data/capitalCallTipusModel.js";
+import { CAPITAL_CALL_TIPUS_OPTIONS as CAPITAL_CALL_TIPUS_MODEL_OPTIONS, CAPITAL_CALL_TIPUS_GROUPED } from "./data/capitalCallTipusModel.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS } from "./data/capitalCallStrategyModel.js";
 const TC = TC_LIGHT;
 
@@ -76,6 +76,7 @@ const CAPITAL_CALL_CAT_OPTIONS   = Object.keys(CAT_CFG).filter(k => k !== "Compr
 const CAPITAL_CALL_VCPE_OPTIONS  = Object.keys(VCPE_CFG);
 const CAPITAL_CALL_EST_OPTIONS   = CAPITAL_CALL_STRATEGY_OPTIONS;
 export const CAPITAL_CALL_TIPUS_OPTIONS = CAPITAL_CALL_TIPUS_MODEL_OPTIONS;
+export { CAPITAL_CALL_TIPUS_GROUPED };
 
 // ── Data imports ─────────────────────────────────────────
 import { RAW_CC as RAW_CC_DATA } from "./data/capital-calls.js";

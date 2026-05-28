@@ -76,11 +76,13 @@ export async function saveCapitalCalls(rows) {
   const nextMetaRows = [...grouped.entries()].map(([key, fundRows]) => {
     const existing = metaByVehicle.get(key) ?? metaByVehicle.get(fundRows[0]?.fons) ?? {};
     const tvpi = existing.tvpi ?? null;
+    const vehicleTipus = existing.vehicle_tipus ?? fundRows.find(r => r.vehicleTipus)?.vehicleTipus ?? null;
     return {
       id: fundRows[0]?.id ?? undefined,
       fons: fundRows[0]?.fons ?? existing.fons ?? "",
       tvpi,
       irr: computeFundIrrFromRows(fundRows, tvpi),
+      vehicleTipus,
     };
   });
   if (nextMetaRows.length > 0) {
@@ -150,13 +152,17 @@ export async function insertCapitalCall(cc) {
     non_recallable:  (cc.non_recallable  !== "" && cc.non_recallable  != null) ? Number(cc.non_recallable)  : null,
     from_recallable: (cc.from_recallable !== "" && cc.from_recallable != null) ? Number(cc.from_recallable) : null,
   };
-  // Ensure fund_meta has a row for this vehicle before the FK-constrained insert.
-  // capital_calls_fund_meta_fk requires fund_meta.vehicle_id to exist first;
-  // upsertFundMetaComputed runs after the insert to fill in computed IRR.
-  const { error: fmPreError } = await supabase
+  // Best-effort: seed fund_meta before the FK-constrained insert.
+  // Superusers: creates the row for new vehicles so the FK is satisfied.
+  // Non-superusers: write is blocked by RLS, but fund_meta already exists for
+  //   existing vehicles so the capital_calls insert succeeds anyway. For genuinely
+  //   new vehicles a non-superuser would get the FK error — correct behaviour.
+  await supabase
     .from("fund_meta")
-    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName }, { onConflict: "vehicle_id" });
-  if (fmPreError) return { data: null, error: fmPreError };
+    .upsert(
+      { vehicle_id: resolved.id, fons: resolved.canonicalName, vehicle_tipus: cc.vehicleTipus ?? null },
+      { onConflict: "vehicle_id", ignoreDuplicates: true },
+    );
 
   const { data, error } = await supabase.from("capital_calls").insert(row).select("*, fund_meta(vehicle_tipus)").single();
   if (!error) logAudit("insert", "capital_calls", String(data?.id), row);
@@ -222,10 +228,12 @@ export async function updateCapitalCall(rowId, fields) {
     // Ensure fund_meta has this vehicle_id before the FK-constrained update.
     // Applies whenever vehicle_id changes (including null → non-null transitions).
     if (resolved.id != null) {
-      const { error: fmPreError } = await supabase
+      // Best-effort: seed fund_meta so the FK is satisfied for new vehicles.
+      // Non-superusers are blocked by RLS here, but fund_meta already exists
+      // for any vehicle they can legitimately reference, so we ignore the error.
+      await supabase
         .from("fund_meta")
-        .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName }, { onConflict: "vehicle_id" });
-      if (fmPreError) return { error: fmPreError };
+        .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName }, { onConflict: "vehicle_id", ignoreDuplicates: true });
     }
   }
   if (fields.data) {

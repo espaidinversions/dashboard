@@ -104,15 +104,13 @@ export function useTransactionDerivedData({
       FY_LIST.map((fy) => {
         const rows = filtered.filter((r) => r.fy === fy);
         const calls = rows.filter((r) => r.cat === "Capital Call").reduce((s, r) => s + r.eur, 0);
-        const dist = rows.filter((r) => r.cat === "Distribució").reduce((s, r) => s + Math.abs(r.eur), 0);
-        const ret = rows.filter((r) => r.cat === "Retorn Capital").reduce((s, r) => s + Math.abs(r.eur), 0);
+        const dist = rows.filter((r) => r.cat === "Distribució" || r.cat === "Retorn Capital").reduce((s, r) => s + Math.abs(r.eur), 0);
         return {
           fy: fy.replace("FY ", ""),
           "Capital Call": +calls.toFixed(0),
-          "Distribució": +dist.toFixed(0),
-          "Retorn Capital": +ret.toFixed(0),
+          "Distribucions": +dist.toFixed(0),
         };
-      }).filter((r) => r["Capital Call"] || r["Distribució"] || r["Retorn Capital"]),
+      }).filter((r) => r["Capital Call"] || r["Distribucions"]),
     [filtered],
   );
 
@@ -126,12 +124,10 @@ export function useTransactionDerivedData({
           mes: k,
           label: `${MESOS[r.mes] || ""} ${r.any}`,
           "Capital Call": 0,
-          "Distribució": 0,
-          "Retorn Capital": 0,
+          "Distribucions": 0,
         };
       if (r.cat === "Capital Call") m[k]["Capital Call"] += r.eur;
-      if (r.cat === "Distribució") m[k]["Distribució"] += Math.abs(r.eur);
-      if (r.cat === "Retorn Capital") m[k]["Retorn Capital"] += Math.abs(r.eur);
+      if (r.cat === "Distribució" || r.cat === "Retorn Capital") m[k]["Distribucions"] += Math.abs(r.eur);
     });
     return Object.values(m).sort((a, b) => a.mes.localeCompare(b.mes));
   }, [filtered, fFy]);

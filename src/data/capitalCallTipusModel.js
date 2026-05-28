@@ -108,6 +108,13 @@ const tipusConceptMap = new Map(
 
 export const CAPITAL_CALL_TIPUS_OPTIONS = [...CAPITAL_CALL_TIPUS_CONCEPTS];
 
+const DISTRIBUCIONS_SET = new Set(["Distribució", "Distribució Retinguda", "Dividends", "Retorn Capital", "Interessos"]);
+
+export const CAPITAL_CALL_TIPUS_GROUPED = [
+  ...CAPITAL_CALL_TIPUS_CONCEPTS.filter(c => !DISTRIBUCIONS_SET.has(c)),
+  { group: "Distribucions", items: ["Distribució", "Distribució Retinguda", "Dividends", "Retorn Capital", "Interessos"] },
+];
+
 const VCPE_CODES = new Set(["PE", "VC", "RE", "SF", "PC"]);
 
 export function normalizeCapitalCallTipus(value) {
