@@ -2,9 +2,10 @@ import React, { useMemo, useState } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
-import { loadPrivateEntities, renamePrivateEntity, updateEntityId, updateEntityFiscalName, deleteVehicle, deleteCompanyEntity, mergePrivateEntities } from "../../db.js";
+import { loadPrivateEntities, renamePrivateEntity, updateEntityId, updateEntityVehicleEst, updateEntityFiscalName, deleteVehicle, deleteCompanyEntity, mergePrivateEntities } from "../../db.js";
 import { useDataLoader } from "../hooks/useDataLoader.js";
 import { downloadSingleSheetXlsx } from "../../utils/xlsx.js";
+import { CAPITAL_CALL_STRATEGY_OPTIONS } from "../../data/capitalCallStrategyModel.js";
 
 // ── Duplicate detection ─────────────────────────────────────
 const DEDUPE_STOPWORDS = new Set([
@@ -56,7 +57,7 @@ export default function AdminEntities() {
   const [filterKind, setFilterKind] = useState("");
   const [filterMatch, setFilterMatch] = useState("");
   const [editId, setEditId] = useState(null);
-  const [editValues, setEditValues] = useState({ name: "", entityId: "", fiscal_name: "" });
+  const [editValues, setEditValues] = useState({ name: "", entityId: "", fiscal_name: "", vehicle_est: "" });
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null); // entity or null
   const [deleting, setDeleting] = useState(false);
@@ -128,7 +129,12 @@ export default function AdminEntities() {
 
   function startEdit(entity) {
     setEditId(entity.id);
-    setEditValues({ name: entity.canonical_name, entityId: entity.id, fiscal_name: entity.fiscal_name ?? "" });
+    setEditValues({
+      name: entity.canonical_name,
+      entityId: entity.id,
+      fiscal_name: entity.fiscal_name ?? "",
+      vehicle_est: entity.vehicle_est ?? "",
+    });
   }
 
   function cancelEdit() {
@@ -139,6 +145,7 @@ export default function AdminEntities() {
     const name      = editValues.name.trim();
     const newId     = editValues.entityId.trim();
     const fiscalName = editValues.fiscal_name.trim();
+    const vehicleEst = editValues.vehicle_est.trim();
 
     if (!name) { toast({ message: "El nom no pot estar buit", type: "error" }); return; }
     if (!newId) { toast({ message: "El NIF no pot estar buit", type: "error" }); return; }
@@ -159,6 +166,13 @@ export default function AdminEntities() {
       const { error } = await updateEntityFiscalName(originalId, fiscalName);
       if (error) errors.push("Nom fiscal: " + error.message);
       else setEntities(prev => prev.map(e => e.id === originalId ? { ...e, fiscal_name: fiscalName || null } : e));
+    }
+
+    // 2.5 Update per-vehicle transaction strategy if set (vehicles only)
+    if (origEntity?.kind === "vehicle" && vehicleEst !== String(origEntity.vehicle_est ?? "")) {
+      const { error } = await updateEntityVehicleEst(originalId, vehicleEst);
+      if (error) errors.push("Tipus de vehicle (tx): " + error.message);
+      else setEntities(prev => prev.map(e => e.id === originalId ? { ...e, vehicle_est: vehicleEst || null } : e));
     }
 
     // 3. Update id (NIF) last — changes the key used for lookups above
@@ -202,6 +216,7 @@ export default function AdminEntities() {
       kind:           e.kind,
       match_type:     e.match_type ?? "",
       nif:            e.nif ?? "",
+      vehicle_est:    e.vehicle_est ?? "",
       isin:           e.isin ?? "",
       country:        e.country ?? "",
     }));
@@ -215,6 +230,7 @@ export default function AdminEntities() {
         { header: "kind",           key: "kind",           width: 10 },
         { header: "match_type",     key: "match_type",     width: 12 },
         { header: "nif",            key: "nif",            width: 16 },
+        { header: "vehicle_est",    key: "vehicle_est",    width: 22 },
         { header: "isin",           key: "isin",           width: 14 },
         { header: "country",        key: "country",        width: 8  },
       ],
@@ -348,6 +364,7 @@ export default function AdminEntities() {
                 <th style={th}>NIF</th>
                 <th style={th}>Nom canònic</th>
                 <th style={th}>Nom fiscal</th>
+                <th style={th}>Tipus vehicle (tx)</th>
                 <th style={th}>Tipus</th>
                 <th style={th}>Match</th>
                 <th style={th}>ISIN</th>
@@ -357,7 +374,7 @@ export default function AdminEntities() {
             </thead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={8} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap resultat</td></tr>
+                <tr><td colSpan={9} style={{ padding: 32, textAlign: "center", color: tc.textLight }}>Cap resultat</td></tr>
               )}
               {filtered.map(e => {
                 const isEditing = editId === e.id;
@@ -391,6 +408,25 @@ export default function AdminEntities() {
                           style={{ ...inputStyle, width: 160 }} />
                       ) : (
                         <span style={{ color: e.fiscal_name ? tc.text : tc.textLight }}>{e.fiscal_name ?? "—"}</span>
+                      )}
+                    </td>
+                    <td style={td}>
+                      {e.kind !== "vehicle" ? (
+                        <span style={{ color: tc.textLight }}>—</span>
+                      ) : isEditing ? (
+                        <select
+                          value={editValues.vehicle_est}
+                          onChange={(ev) => setEditValues((v) => ({ ...v, vehicle_est: ev.target.value }))}
+                          onKeyDown={(ev) => { if (ev.key === "Escape") cancelEdit(); }}
+                          style={{ ...inputStyle, width: 190, borderColor: tc.border, fontFamily: "inherit" }}
+                        >
+                          <option value="">(auto)</option>
+                          {CAPITAL_CALL_STRATEGY_OPTIONS.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <span style={{ color: e.vehicle_est ? tc.text : tc.textLight }}>{e.vehicle_est ?? "—"}</span>
                       )}
                     </td>
                     <td style={td}>{KIND_LABELS[e.kind] ?? e.kind}</td>

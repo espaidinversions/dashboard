@@ -50,6 +50,26 @@ export async function updateEntityNif(entityId, nif) {
   return { error };
 }
 
+export async function updateEntityVehicleEst(entityId, vehicleEst) {
+  if (!supabase) return { error: null };
+  const trimmed = String(vehicleEst ?? "").trim();
+  const updates = { vehicle_est: trimmed || null };
+  const { error } = await supabase
+    .from("private_entities")
+    .update(updates)
+    .eq("id", entityId);
+
+  if (error) {
+    if (String(error.code) === "42703") {
+      return { error: new Error("Falta la columna private_entities.vehicle_est. Aplica la migració corresponent a Supabase.") };
+    }
+    return { error };
+  }
+
+  logAudit("update", "private_entities", entityId, updates);
+  return { error: null };
+}
+
 export async function updateEntityFiscalName(entityId, fiscalName) {
   if (!supabase) return { error: null };
   const trimmed = String(fiscalName ?? "").trim();
@@ -110,4 +130,3 @@ export async function mergePrivateEntities(fromId, toId) {
     return { error: err };
   }
 }
-

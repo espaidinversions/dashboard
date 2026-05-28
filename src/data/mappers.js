@@ -126,11 +126,13 @@ export function capitalCallToRow(row) {
  */
 export function rowToCapitalCall(row, entityMap) {
   const entityId = row.vehicle_id ?? null;
+  const entity = entityId ? entityMap.get(entityId) : null;
   const dataStr = row.data ? String(row.data).slice(0, 10) : null;
   const { mes, year, fy } = parseDateParts(dataStr);
   const tipus = normalizeCapitalCallTipus(row.tipus);
   const eur = normalizeCapitalCallSignedAmount(tipus, row.eur);
   const vehicleTipus = row.fund_meta?.vehicle_tipus ?? null;
+  const estOverride = entity?.vehicle_est ?? null;
   return {
     _rowId: row.id,
     id: entityId ?? undefined,
@@ -142,7 +144,7 @@ export function rowToCapitalCall(row, entityMap) {
     any: year,
     fy,
     vehicleTipus,
-    est: normalizeCapitalCallStrategy(row.est, vehicleTipus, { fons: row.fons }) ?? defaultCapitalCallStrategyForVehicleTipus(vehicleTipus),
+    est: estOverride ?? (normalizeCapitalCallStrategy(row.est, vehicleTipus, { fons: row.fons }) ?? defaultCapitalCallStrategyForVehicleTipus(vehicleTipus)),
     eur,
     divisa: row.divisa,
     comentaris: row.comentaris ?? null,
