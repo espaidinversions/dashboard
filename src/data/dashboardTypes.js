@@ -46,6 +46,7 @@
  * @property {string|null} [matchType]
  * @property {string|null} [nif]
  * @property {string|null} [fiscalName]
+ * @property {string|null} [vehicleEst]
  */
 
 /**

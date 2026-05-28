@@ -150,6 +150,14 @@ export async function insertCapitalCall(cc) {
     non_recallable:  (cc.non_recallable  !== "" && cc.non_recallable  != null) ? Number(cc.non_recallable)  : null,
     from_recallable: (cc.from_recallable !== "" && cc.from_recallable != null) ? Number(cc.from_recallable) : null,
   };
+  // Ensure fund_meta has a row for this vehicle before the FK-constrained insert.
+  // capital_calls_fund_meta_fk requires fund_meta.vehicle_id to exist first;
+  // upsertFundMetaComputed runs after the insert to fill in computed IRR.
+  const { error: fmPreError } = await supabase
+    .from("fund_meta")
+    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName }, { onConflict: "vehicle_id" });
+  if (fmPreError) return { data: null, error: fmPreError };
+
   const { data, error } = await supabase.from("capital_calls").insert(row).select("*, fund_meta(vehicle_tipus)").single();
   if (!error) logAudit("insert", "capital_calls", String(data?.id), row);
   if (!error) {
@@ -211,6 +219,14 @@ export async function updateCapitalCall(rowId, fields) {
     if (entityError) return { error: entityError };
     updates.vehicle_id = resolved.id;
     updates.fons = resolved.canonicalName;
+    // Ensure fund_meta has this vehicle_id before the FK-constrained update.
+    // Applies whenever vehicle_id changes (including null → non-null transitions).
+    if (resolved.id != null) {
+      const { error: fmPreError } = await supabase
+        .from("fund_meta")
+        .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName }, { onConflict: "vehicle_id" });
+      if (fmPreError) return { error: fmPreError };
+    }
   }
   if (fields.data) {
     const { mes, year, fy } = parseDateParts(fields.data);

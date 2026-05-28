@@ -28,7 +28,7 @@ export async function loadAll() {
     supabase.from("pipeline").select("id,name,amount,currency,geography,strategy,sector,status,canal,active,estimated_closing,manager").order("id"),
     supabase.from("portfolio_companies").select("entity_id,nom,tipus,segment,entrepreneurs,origen,geo,ticket,tvpi,rvpi_eur,dpi_eur,rev,ebitda,dfn,gross_ev,mult_entry,data_compr,mesos_operant,is_mock,quarters").order("nom"),
     supabase.from("searchers").select("id,nom,tipus,modalitat,geo,status_screening_code,status_screening,form_entrada,status_cerca_code,status_cerca,status_adquisicio_code,status_adquisicio,intro_per,searcher1,searcher2,companyia_adquirida,escola1,escola2,web,comentaris,ticket,tvpi,data_inici,database_intro_date,data_compr,mesos_cercant,equity_stake,is_mock,is_legacy,nif,label,irr,dpi").order("nom"),
-    supabase.from("private_entities").select("id,kind,canonical_name,source_name,workbook_name,match_type"),
+    supabase.from("private_entities").select("id,kind,canonical_name,source_name,workbook_name,match_type,vehicle_est,nif,fiscal_name"),
   ]);
   if (cc.error) console.error("loadAll capital_calls failed:", cc.error);
   if (fm.error) console.error("loadAll fund_meta failed:", fm.error);
@@ -63,6 +63,9 @@ export async function loadAll() {
       sourceName: row.source_name,
       workbookName: row.workbook_name,
       matchType: row.match_type,
+      vehicleEst: row.vehicle_est ?? null,
+      nif: row.nif ?? null,
+      fiscalName: row.fiscal_name ?? null,
     })),
   };
   if (!cc.error && Array.isArray(cc.data)) result.rawCC = cc.data.map((row) => rowToCapitalCall(row, entityMap));

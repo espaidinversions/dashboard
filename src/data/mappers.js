@@ -39,6 +39,7 @@ export function privateEntityToRow(entity) {
     notes: entity.notes ?? null,
     nif: entity.nif ?? null,
     fiscal_name: entity.fiscalName ?? null,
+    vehicle_est: entity.vehicleEst ?? null,
     updated_at: new Date().toISOString(),
   };
 }

@@ -181,8 +181,8 @@ export default function AdminEntities() {
       else setEntities(prev => prev.map(e => e.id === originalId ? { ...e, fiscal_name: fiscalName || null } : e));
     }
 
-    // 2.5 Update per-vehicle transaction strategy if set (vehicles only)
-    if (origEntity?.kind === "vehicle" && vehicleEst !== String(origEntity.vehicle_est ?? "")) {
+    // 2.5 Update per-entity transaction strategy override if changed
+    if (origEntity && vehicleEst !== String(origEntity.vehicle_est ?? "")) {
       const { error } = await updateEntityVehicleEst(originalId, vehicleEst);
       if (error) errors.push("Tipus de vehicle (tx): " + error.message);
       else setEntities(prev => prev.map(e => e.id === originalId ? { ...e, vehicle_est: vehicleEst || null } : e));
@@ -424,29 +424,25 @@ export default function AdminEntities() {
                       )}
                     </td>
                     <td style={td}>
-                      {e.kind !== "vehicle" ? (
-                        <span style={{ color: tc.textLight }}>—</span>
-                      ) : (
-                        <select
-                          value={isEditing ? editValues.vehicle_est : (e.vehicle_est ?? "")}
-                          disabled={savingEstId === e.id}
-                          onChange={(ev) => {
-                            const next = ev.target.value;
-                            if (isEditing) {
-                              setEditValues((v) => ({ ...v, vehicle_est: next }));
-                            } else {
-                              void saveVehicleEstInline(e.id, next);
-                            }
-                          }}
-                          onKeyDown={(ev) => { if (ev.key === "Escape") cancelEdit(); }}
-                          style={{ ...inputStyle, width: 190, borderColor: tc.border, fontFamily: "inherit" }}
-                        >
-                          <option value="">(auto)</option>
-                          {CAPITAL_CALL_STRATEGY_OPTIONS.map((opt) => (
-                            <option key={opt} value={opt}>{opt}</option>
-                          ))}
-                        </select>
-                      )}
+                      <select
+                        value={isEditing ? editValues.vehicle_est : (e.vehicle_est ?? "")}
+                        disabled={savingEstId === e.id}
+                        onChange={(ev) => {
+                          const next = ev.target.value;
+                          if (isEditing) {
+                            setEditValues((v) => ({ ...v, vehicle_est: next }));
+                          } else {
+                            void saveVehicleEstInline(e.id, next);
+                          }
+                        }}
+                        onKeyDown={(ev) => { if (ev.key === "Escape") cancelEdit(); }}
+                        style={{ ...inputStyle, width: 190, borderColor: tc.border, fontFamily: "inherit" }}
+                      >
+                        <option value="">(auto)</option>
+                        {CAPITAL_CALL_STRATEGY_OPTIONS.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                      </select>
                     </td>
                     <td style={td}>{KIND_LABELS[e.kind] ?? e.kind}</td>
                     <td style={td}>
