@@ -1,0 +1,20 @@
+node_modules/
+dist/
+.git/
+.vercel/
+.context/
+.obsidian/
+.gstack/
+.superpowers/
+.test-artifacts/
+scripts/out/
+raw-data/
+
+# Local working documents / exports
+Mercats Públics/
+files search/
+*.xlsx
+*.pptx
+*.pdf
+*.txt
+

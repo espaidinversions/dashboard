@@ -1,0 +1,1551 @@
+{
+  "_note": "Manually review and edit where needed. Committed as source of truth.",
+  "_legend": {
+    "custodian": "Bank/account that holds the position",
+    "fund_house": "Asset manager that runs the fund",
+    "selection": "'direct' = we chose it; 'delegated' = bank mandate chose it",
+    "closed": "True if position is no longer active"
+  },
+  "map": {
+    "BE6246059354": {
+      "nom": "DPAM B REAL ESTATE E \"W\" (EUR)",
+      "custodian": "CaixaBank",
+      "fund_house": "Degroof Petercam AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "BE6246078545": {
+      "nom": "DPAM EQ EUP SUST W EUR AC",
+      "custodian": "CaixaBank",
+      "fund_house": "Degroof Petercam AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "DE000A1C5D13": {
+      "nom": "Acatis Gané Value Event Fonds B",
+      "custodian": "CaixaBank",
+      "fund_house": "Acatis",
+      "selection": "delegated",
+      "closed": false
+    },
+    "ES0125104002": {
+      "nom": "UBS Hybrid and Subordinated debt",
+      "custodian": "UBS",
+      "fund_house": "UBS AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "ES0165237019": {
+      "nom": "Mutuafondo L",
+      "custodian": "CaixaBank",
+      "fund_house": "Mutuactivos (CaixaBank)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "ES0280907025": {
+      "nom": "Unicaja Banco 3.125% CALL 04/03/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "ES0840609020": {
+      "nom": "CaixaBank 5.8575% PERP CALL 02/10/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "ES0844251019": {
+      "nom": "Ibercaja Banco 9.125% CALL 26/01/2026",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "FR0010524777": {
+      "nom": "Lyxor MSCI New Energy",
+      "custodian": "Abel Font",
+      "fund_house": "Amundi (ex-Lyxor)",
+      "selection": "direct",
+      "closed": false
+    },
+    "FR0010527275": {
+      "nom": "Lyxor MSCI Water ESG Filtered",
+      "custodian": "Abel Font",
+      "fund_house": "Amundi (ex-Lyxor)",
+      "selection": "direct",
+      "closed": false
+    },
+    "FR0013461795": {
+      "nom": "Banque Postale 3.875% CALL 13/10/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "FR0013516028": {
+      "nom": "Carmignac Credit 2025 F EUR Acc",
+      "custodian": "Credit Suisse",
+      "fund_house": "Carmignac",
+      "selection": "delegated",
+      "closed": false
+    },
+    "FR0013533999": {
+      "nom": "Credit Agricole 4% CALL 26/09/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "FR0014003S56": {
+      "nom": "EDF 2.625% PERP CALL 01/12/2027",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE0007471471": {
+      "nom": "Vanguard US Gov Bd Ind (eurhedg)",
+      "custodian": "CaixaBank",
+      "fund_house": "Vanguard",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE000F6G1DE0": {
+      "nom": "ISHARES CORP BOND 1-5 YR UCITS ETF",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE000KUAO1H5": {
+      "nom": "BNY Mellon Small Cap Euroland",
+      "custodian": "UBS",
+      "fund_house": "BNY Mellon IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE0032126645": {
+      "nom": "VANGUARD U.S. 500 ST IX \"INV\" (EUR)",
+      "custodian": "CaixaBank",
+      "fund_house": "Vanguard",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE0032464921": {
+      "nom": "ANIMA Star High Potential Europe I",
+      "custodian": "CaixaBank",
+      "fund_house": "Anima AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B03HD316": {
+      "nom": "Vanguard Global Stock Index Fund EUR Hedged Acc",
+      "custodian": "UBS",
+      "fund_house": "Vanguard",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B1G3DH73": {
+      "nom": "Vanguard U.S. 500 Stock Index Fund EUR Hedged Acc",
+      "custodian": "UBS",
+      "fund_house": "Vanguard",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B246KL88": {
+      "nom": "Vanguard 20+ Year Euro Treasury Index Fund EUR Acc",
+      "custodian": "UBS",
+      "fund_house": "Vanguard",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B3PY8J28": {
+      "nom": "Neuberger Berman US Small Cap Fund",
+      "custodian": "CaixaBank",
+      "fund_house": "Neuberger Berman",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B3VWM098": {
+      "nom": "ISHARES MSCI US SMALL CAP *XETRA*",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00B3XXRP09": {
+      "nom": "VANGUARD S&P 500 UCITS ETF",
+      "custodian": "Abel Font",
+      "fund_house": "Vanguard",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00B3ZW0K18": {
+      "nom": "iShares S&P 500 EUR Hedged UCITS ETF (Acc)",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00B3ZW0K19": {
+      "nom": "iShares S&P 500 EUR Hedged UCITS ETF (Acc)",
+      "custodian": "Bankinter",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00B42W4L06": {
+      "nom": "Vanguard Global Small-Cap Index Fund EUR Acc",
+      "custodian": "CaixaBank",
+      "fund_house": "Vanguard",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B441G979": {
+      "nom": "iShares MSCI World EUR Hedged UCITS ETF (Acc)",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00B70B9H10": {
+      "nom": "BNY Mellon Global Funds PLC - BNY Mellon Global Real Return Fund (EUR)",
+      "custodian": "CaixaBank",
+      "fund_house": "BNY Mellon IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B7MSLV86": {
+      "nom": "Ishres UK EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "BlackRock iShares",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B80G9288": {
+      "nom": "PIMCO GIS Income Fund Institutional EUR (Hedged) Accumulation",
+      "custodian": "CaixaBank",
+      "fund_house": "PIMCO",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B81TMV64": {
+      "nom": "Algebris UCITS Funds plc - Algebris Financial Credit Fund I EUR Acc",
+      "custodian": "CaixaBank",
+      "fund_house": "Algebris",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B8BS6228": {
+      "nom": "Amundi Tiedemann Arbitrage Strat I EUR",
+      "custodian": "UBS",
+      "fund_house": "Amundi",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B9DPD161": {
+      "nom": "Welligton strategic europe N",
+      "custodian": "UBS",
+      "fund_house": "Wellington Management",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00B9M6SJ31": {
+      "nom": "ISHRS GLBL CRP BND EUR HEDGED ETF",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00BCZNWT08": {
+      "nom": "Algebris Financial Income I EUR Acc",
+      "custodian": "CaixaBank",
+      "fund_house": "Algebris",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BD0NC698": {
+      "nom": "Ishares Euro Credit Bond Index",
+      "custodian": "CaixaBank",
+      "fund_house": "BlackRock iShares",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BD0NCM55": {
+      "nom": "ISHARES DEV WL ID D EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "BlackRock iShares",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BD5HXD05": {
+      "nom": "Comgest Growth Europe EUR Z Acc",
+      "custodian": "UBS",
+      "fund_house": "Comgest",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BD71WK08": {
+      "nom": "ALGEBRIS FINANCIAL CREDIT _C ACC EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "Algebris",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BD8GKT91": {
+      "nom": "LYXOR US EQ FUND I HG AC",
+      "custodian": "CaixaBank",
+      "fund_house": "Amundi (ex-Lyxor)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BDBRDM35": {
+      "nom": "Ishares Global AGG Eurh",
+      "custodian": "UBS",
+      "fund_house": "BlackRock iShares",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BF2S5F66": {
+      "nom": "Man Jpn CoreAlpha Eq IXX H EUR",
+      "custodian": "UBS",
+      "fund_house": "Man Group",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BF5B2C87": {
+      "nom": "BNY MELLON SUS GL DYNAMIC BOND _W ACC EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "BNY Mellon IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BFMXXD54": {
+      "nom": "Vanguard S&P 500 UCITS ETF USD Accumulation | VUAA",
+      "custodian": "Abel Font",
+      "fund_house": "Vanguard",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00BFPM9N11": {
+      "nom": "Vanguard Global Stock Index Fund Institutional Plus EUR",
+      "custodian": "UBS",
+      "fund_house": "Vanguard",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BFRSYK98": {
+      "nom": "Janus henderson Global Life sciences H",
+      "custodian": "UBS",
+      "fund_house": "Janus Henderson",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BFXR7900": {
+      "nom": "China Internet Etf",
+      "custodian": "Abel Font",
+      "fund_house": "KraneShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00BGCSBQ61": {
+      "nom": "BNY Mellon MObility Innovation",
+      "custodian": "Credit Suisse",
+      "fund_house": "BNY Mellon IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BGPP6473": {
+      "nom": "iShares $ Treasury Bond 3-7yr UCITS HEDG ETF DISTR",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00BJGWQN72": {
+      "nom": "WisdomTree Cloud Computing UCITS ETF - USD Acc (EUR)",
+      "custodian": "Bankinter",
+      "fund_house": "WisdomTree",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00BJQ2XG97": {
+      "nom": "Man Funds VI plc-Man GLG Alpha Select Alternative Class INH EUR Dist",
+      "custodian": "CaixaBank",
+      "fund_house": "Man Group",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BKM4GZ66": {
+      "nom": "iShares Core MSCI EM IMI UCITS ETF USD (Acc) (IS3N)",
+      "custodian": "Bankinter",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00BKPLQQ52": {
+      "nom": "Lazard Rathmore Alternative Fund S Acc EUR Hedged",
+      "custodian": "CaixaBank",
+      "fund_house": "Lazard AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BKT6FV49": {
+      "nom": "iShares Core MSCI Japan IMI UCITS ETF EUR Hedged (Acc) (SJPE)",
+      "custodian": "Bankinter",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00BNK9T448": {
+      "nom": "Lyxor Newcits IRL PLC - Lyxor/Tiedemann Arbitrage Strategy Fund SI EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Amundi (ex-Lyxor)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BQN1K786": {
+      "nom": "iShares Edge MSCI Europe Momentum Factor UCITS ETF",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00BQN1K787": {
+      "nom": "iShares Edge MSCI Europe Momentum Factor UCITS ETF",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BQN1K788": {
+      "nom": "iShares Edge MSCI Europe Momentum Factor UCITS ETF",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BQN1K901": {
+      "nom": "iShares MSCI Europe Value Factor UCITS",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "IE00BVVHP563": {
+      "nom": "BROWN ADVISORY GLOBAL LEAD B USD",
+      "custodian": "UBS",
+      "fund_house": "Brown Advisory",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BWY56Y06": {
+      "nom": "Algebris UCITS Funds plc - Algebris Financial Equity Fund I EUR Acc",
+      "custodian": "CaixaBank",
+      "fund_house": "Algebris",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BYQDND46": {
+      "nom": "PIMCO GIS Dynamic Multi-Asset Fund Institutional EUR Accumulation",
+      "custodian": "CaixaBank",
+      "fund_house": "PIMCO",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BYVQ9F29": {
+      "nom": "ISHARES NASDAQ 100 UCT ETF EUR DBE",
+      "custodian": "UBS",
+      "fund_house": "BlackRock iShares",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BYYTL524": {
+      "nom": "Tokio Marine Japanese Equity Focus Fund J EUR Hedged",
+      "custodian": "CaixaBank",
+      "fund_house": "Tokio Marine AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BYZNBH50": {
+      "nom": "PIMCO GIS Mortgage Opportunities Fund Institutional EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "PIMCO",
+      "selection": "delegated",
+      "closed": false
+    },
+    "IE00BZ4D7085": {
+      "nom": "Polar Global Tech",
+      "custodian": "UBS",
+      "fund_house": "Polar Capital",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0079555370": {
+      "nom": "JPMorgan Investment Funds - Global Balanced Fund C",
+      "custodian": "CaixaBank",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0095623541": {
+      "nom": "JPM Global Macro",
+      "custodian": "CaixaBank",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0104884605": {
+      "nom": "Pictet Water",
+      "custodian": "Credit Suisse",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0113258742": {
+      "nom": "Schroder International Selection Fund EURO Corporate Bond C Accumulation EUR",
+      "custodian": "UBS",
+      "fund_house": "Schroders",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0129494729": {
+      "nom": "JPMorgan Funds - Europe Dynamic Technologies Fund C (acc) - EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0132602656": {
+      "nom": "Morgan Stanley IEuro Corporate Bond Fund I",
+      "custodian": "CaixaBank",
+      "fund_house": "Morgan Stanley IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0208853860": {
+      "nom": "JPM GLOBAL NATURAL RESOURCES \"C\" (EUR)",
+      "custodian": "CaixaBank",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0217390060": {
+      "nom": "JPM Emerging Markets Debt (Euro H)",
+      "custodian": "Credit Suisse",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0248183658": {
+      "nom": "Schroder International Selection Fund Asian Opportunities C Accumulation EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Schroders",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0266118651": {
+      "nom": "Morgan Stanley Investment Funds - US Advantage Fund IH (EUR)",
+      "custodian": "CaixaBank",
+      "fund_house": "Morgan Stanley IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0289214545": {
+      "nom": "JPMorgan Funds - Europe Equity Plus Fund C (perf) (acc) - EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0302447452": {
+      "nom": "Schroder International Selection Fund Global Climate Change Equity C Accumulation EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Schroders",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0346388704": {
+      "nom": "Fidelity Global Financial Services",
+      "custodian": "CaixaBank",
+      "fund_house": "Fidelity International",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0346389181": {
+      "nom": "Fidelity Funds - Global Industrials Fund Y-Acc-EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Fidelity International",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0346800435": {
+      "nom": "MSS GLOBAL BRANDS I EUHD",
+      "custodian": "CaixaBank",
+      "fund_house": "Morgan Stanley IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0358423738": {
+      "nom": "UBS CONVERTIBLE GLOBAL EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "UBS AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0366534344": {
+      "nom": "Pictet-Nutrition P EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0368266499": {
+      "nom": "BlackRock Global Funds - Euro Corporate Bond Fund D2 EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "BlackRock",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0406496546": {
+      "nom": "Blackrock Continental Euflex EUR",
+      "custodian": "JPMorgan",
+      "fund_house": "BlackRock",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0415391514": {
+      "nom": "Bellevue Funds (Lux) BB Adamant Medtech & Services I EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Bellevue AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0474968293": {
+      "nom": "Pictet Security",
+      "custodian": "Credit Suisse",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0474968459": {
+      "nom": "PIC CLN ENGY HI EUR ACC",
+      "custodian": "CaixaBank",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0503631631": {
+      "nom": "Pictet Global Environment",
+      "custodian": "Credit Suisse",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0587803247": {
+      "nom": "JPM GLOBAL STRATEGIC BOND EURHDG",
+      "custodian": "CaixaBank",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0622306495": {
+      "nom": "GS EMERG MARKETS CORPORATE BD _I ACC EURH",
+      "custodian": "Credit Suisse",
+      "fund_house": "Goldman Sachs AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0625737753": {
+      "nom": "PICTET CHINA INDEX \"I\" (EUR)",
+      "custodian": "CaixaBank",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0690374029": {
+      "nom": "FundSmtih Equity Income",
+      "custodian": "UBS",
+      "fund_house": "Fundsmith",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0712123867": {
+      "nom": "Morgan Stanley Global Fixed Income Opportunities",
+      "custodian": "CaixaBank",
+      "fund_house": "Morgan Stanley IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0746605335": {
+      "nom": "AXA WF GLOBAL STRATEGIC STRATEGIC BOND F EURHDG",
+      "custodian": "CaixaBank",
+      "fund_house": "AXA IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0792910480": {
+      "nom": "Robeco New World Financial Equities F",
+      "custodian": "CaixaBank",
+      "fund_house": "Robeco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0826415720": {
+      "nom": "NORDEA US TOTAL RETURN BOND _HBC ACC EURH",
+      "custodian": "Credit Suisse",
+      "fund_house": "Nordea AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0827889485": {
+      "nom": "BGF WORLD HEALTHSCIENCE _D2 ACC",
+      "custodian": "Credit Suisse",
+      "fund_house": "BlackRock",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0832431125": {
+      "nom": "ROBECO US PREMIUM EQUITIES_F ACC\nEURH",
+      "custodian": "Credit Suisse",
+      "fund_house": "Robeco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0841586075": {
+      "nom": "NORDEA 1 GLOBAL CLIMA \"BC\" (EUR)",
+      "custodian": "CaixaBank",
+      "fund_house": "Nordea AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0861977402": {
+      "nom": "JPM JAPAN EQ EU AC",
+      "custodian": "CaixaBank",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0871827464": {
+      "nom": "Robeco Global Consumer Trends Equities F €",
+      "custodian": "CaixaBank",
+      "fund_house": "Robeco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0895805017": {
+      "nom": "JUPITER DYNAMIC BOND _D ACC EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "Jupiter AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0940006884": {
+      "nom": "ROBECO EURO SUSTAINABLE CREDIT _FH ACC EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "Robeco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0944408821": {
+      "nom": "MFS Meridian Funds - European Value Fund W1 EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "MFS Investment Management",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0950588763": {
+      "nom": "SS Sustainable Equity - Global Dividend P USD acc",
+      "custodian": "Credit Suisse",
+      "fund_house": "State Street",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0957801565": {
+      "nom": "THREADNEEDLE (LUX) PA \"ZE\" (EUR)",
+      "custodian": "CaixaBank",
+      "fund_house": "Columbia Threadneedle",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0957820193": {
+      "nom": "Threadneedle (Lux) Glb Smlr Coms ZE",
+      "custodian": "UBS",
+      "fund_house": "Columbia Threadneedle",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0966752916": {
+      "nom": "Janus HndrsnAbsolute Return G2 HUSD",
+      "custodian": "UBS",
+      "fund_house": "Janus Henderson",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0971565063": {
+      "nom": "ROBECO US SELECT OPPORTUNITIES_FH\nACC EURH",
+      "custodian": "Credit Suisse",
+      "fund_house": "Robeco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0987205969": {
+      "nom": "Amundi msci europe",
+      "custodian": "CaixaBank",
+      "fund_house": "Amundi",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU0996181086": {
+      "nom": "AMU INDEX MSCI JAP RE EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Amundi",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1028182704": {
+      "nom": "DWS Concept Kaldemorgen EUR SC",
+      "custodian": "CaixaBank",
+      "fund_house": "DWS",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1098399733": {
+      "nom": "PMorgan Funds - US Value Fund C (acc) - EUR",
+      "custodian": "JPMorgan",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1240770872": {
+      "nom": "UBS ASIAN HIGH YIELD _Q ACC EURH",
+      "custodian": "Credit Suisse",
+      "fund_house": "UBS AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1240780673": {
+      "nom": "UBS Greater China",
+      "custodian": "UBS",
+      "fund_house": "UBS AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1269890593": {
+      "nom": "Candriam Bonds Euro Short Term",
+      "custodian": "CaixaBank",
+      "fund_house": "Candriam",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1276832125": {
+      "nom": "JANUS HEN PAN EUROPEAN _H ACC EURH",
+      "custodian": "Credit Suisse",
+      "fund_house": "Janus Henderson",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1276852313": {
+      "nom": "Morgan Stanley Investment Funds - Global Opportunity Fund IH EUR",
+      "custodian": "UBS",
+      "fund_house": "Morgan Stanley IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1279334053": {
+      "nom": "Pictet - Robotics I EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1279334723": {
+      "nom": "PICTET ROBOTICS _HI ACC",
+      "custodian": "Credit Suisse",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1299707072": {
+      "nom": "Goldman India",
+      "custodian": "CaixaBank",
+      "fund_house": "Goldman Sachs AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1310447989": {
+      "nom": "CAPITAL GROUP NEW PERSPECTIVE _ZLH ACC EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "Capital Group",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1331973468": {
+      "nom": "Eleva Absolute Return R",
+      "custodian": "CaixaBank",
+      "fund_house": "Eleva Capital",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1407888137": {
+      "nom": "AMUNDI US TREASU BOND 7- 10Y HED ETF ACC",
+      "custodian": "Abel Font",
+      "fund_house": "Amundi",
+      "selection": "direct",
+      "closed": false
+    },
+    "LU1431483780": {
+      "nom": "GOLDMAN SACHS US DOLLAR CREDIT R CAP EUR (HEDGED",
+      "custodian": "UBS",
+      "fund_house": "Goldman Sachs AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1433232698": {
+      "nom": "Pictet TR - Atlas I EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1442549884": {
+      "nom": "MFS Meridian Funds - Prudent Capital Fund WH1 EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "MFS Investment Management",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1453360825": {
+      "nom": "GAMCO International SICAV - GAMCO Merger Arbitrage R USD unhgd",
+      "custodian": "CaixaBank",
+      "fund_house": "GAMCO (Gabelli)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1458465447": {
+      "nom": "JPM US SH.DURAT.BO C EUHD",
+      "custodian": "CaixaBank",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1472572954": {
+      "nom": "DWS Invest Top Dividend IC",
+      "custodian": "UBS",
+      "fund_house": "DWS",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1482751903": {
+      "nom": "Fidelity Funds - Global Technology Fund Y-Acc-EUR HEDGED",
+      "custodian": "CaixaBank",
+      "fund_house": "Fidelity International",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1587985224": {
+      "nom": "Bellevue Funds (Lux) - BB Adamant Asia Pacific Healthcare I EUR Acc",
+      "custodian": "CaixaBank",
+      "fund_house": "Bellevue AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1623119218": {
+      "nom": "MIROVA GLB SUST EQ FUND EURACC N",
+      "custodian": "JPMorgan",
+      "fund_house": "Mirova (Natixis)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1625225666": {
+      "nom": "Invesco Funds - Invesco Pan European High Income Fund Z EUR Accumulation",
+      "custodian": "Credit Suisse",
+      "fund_house": "Invesco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1663846050": {
+      "nom": "DWS Corporate Hybrid Bonds TFC",
+      "custodian": "UBS",
+      "fund_house": "DWS",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1663942362": {
+      "nom": "(TACTIC) DWS Short Dur",
+      "custodian": "Credit Suisse",
+      "fund_house": "DWS",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1663951603": {
+      "nom": "DWS Top Dividende TFD",
+      "custodian": "CaixaBank",
+      "fund_house": "DWS",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1668656116": {
+      "nom": "JPM JAPAN EQ EU AC",
+      "custodian": "Credit Suisse",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1678963163": {
+      "nom": "Janus Henderson Horizon Global Technology Leaders Fund H2 H EUR Acc",
+      "custodian": "UBS",
+      "fund_house": "Janus Henderson",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1681043599": {
+      "nom": "AMUNDI MSCI WORLD UCITS ETF - EUR ©",
+      "custodian": "Abel Font",
+      "fund_house": "Amundi",
+      "selection": "direct",
+      "closed": false
+    },
+    "LU1681043600": {
+      "nom": "AMUNDI MSCI WORLD UCITS ETF - EUR ©",
+      "custodian": "Bankinter",
+      "fund_house": "Amundi",
+      "selection": "direct",
+      "closed": false
+    },
+    "LU1681044647": {
+      "nom": "AMUNDI MSCI NORDIC UCITS ETF - EUR",
+      "custodian": "Abel Font",
+      "fund_house": "Amundi",
+      "selection": "direct",
+      "closed": false
+    },
+    "LU1694214633": {
+      "nom": "NORDEA LOW DUR EUR COVERED BD _BI ACC EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "Nordea AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1694772309": {
+      "nom": "Axa Digital Economy",
+      "custodian": "Credit Suisse",
+      "fund_house": "AXA IM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1700711077": {
+      "nom": "Robeco Global Fintech",
+      "custodian": "Credit Suisse",
+      "fund_house": "Robeco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1708488298": {
+      "nom": "Mirabaud - Sustainable Convertible Global",
+      "custodian": "CaixaBank",
+      "fund_house": "Mirabaud AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1718492769": {
+      "nom": "Robeco Financial Institutions Bonds FH",
+      "custodian": "CaixaBank",
+      "fund_house": "Robeco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1736383024": {
+      "nom": "Robeco BP Global Premium Equities FH EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Robeco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1737526365": {
+      "nom": "T. Rowe US Smaller Companies",
+      "custodian": "JPMorgan",
+      "fund_house": "T. Rowe Price",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1747711031": {
+      "nom": "DWS ESG Equity INC",
+      "custodian": "Credit Suisse",
+      "fund_house": "DWS",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1748854947": {
+      "nom": "Flossbach von Storch - Multiple Opportunities II HT",
+      "custodian": "Credit Suisse",
+      "fund_house": "Flossbach von Storch",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1762220850": {
+      "nom": "Invesco Funds - Invesco Global Consumer Trends Fund Z Accumulation EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Invesco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1769944874": {
+      "nom": "VARIOPARTNER MIV GLBL MEDTECH _N2 ACC EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "MIV / Variopartner",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1781816530": {
+      "nom": "Edmond de Rothschild Fund - Big Data CR EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "Edmond de Rothschild AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1834988518": {
+      "nom": "AMUNDI STOXX EUROPE 600 TECHNOLOGY UCITS ETF ACC",
+      "custodian": "Abel Font",
+      "fund_house": "Amundi",
+      "selection": "direct",
+      "closed": false
+    },
+    "LU1834988519": {
+      "nom": "AMUNDI STOXX EUROPE 600 TECHNOLOGY UCITS ETF ACC",
+      "custodian": "Abel Font",
+      "fund_house": "Amundi",
+      "selection": "direct",
+      "closed": false
+    },
+    "LU1862449409": {
+      "nom": "T. Rowe Price Funds SICAV - US Smaller Companies Equity Fund Qn EUR Hedged Acc",
+      "custodian": "UBS",
+      "fund_house": "T. Rowe Price",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1878469862": {
+      "nom": "Threadneedle (Lux) - American Smaller Companies 3EH",
+      "custodian": "Credit Suisse",
+      "fund_house": "Columbia Threadneedle",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1878470019": {
+      "nom": "Threadneedle (Lux) - American Smaller Companies 9EH (EUR Accumulation)",
+      "custodian": "Credit Suisse",
+      "fund_house": "Columbia Threadneedle",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1883305259": {
+      "nom": "Amundi Fds Euroland Equity J2 EUR C",
+      "custodian": "UBS",
+      "fund_house": "Amundi",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1944396289": {
+      "nom": "Vontobel Fund - Emerging Markets Corporate Bond HN EUR Hedged",
+      "custodian": "Credit Suisse",
+      "fund_house": "Vontobel AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1970471600": {
+      "nom": "Aberdeen Standard SICAV I - China A Share Equity Fund X Acc Hedged EUR",
+      "custodian": "CaixaBank",
+      "fund_house": "abrdn",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1989506966": {
+      "nom": "Bellevue Funds (Lux) BB Adamant Medtech & Services I EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "Bellevue AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1992117652": {
+      "nom": "BSF Emerging Markets Equity Strategies Fund\nI2 Euro",
+      "custodian": "UBS",
+      "fund_house": "BlackRock",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU1992155744": {
+      "nom": "BLACKROCK ASIAN GROWTH\nLEADERS_S2 ACC EURH",
+      "custodian": "Credit Suisse",
+      "fund_house": "BlackRock",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2004795212": {
+      "nom": "Schroder International Selection Fund QEP Global Emerging Markets K1 Accumulation EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "Schroders",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2005502690": {
+      "nom": "BERENBERG EUROZONE FOCUS _RE-CF ACC EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "Berenberg AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2043963961": {
+      "nom": "UBS MSCI EM Selection Index Fund EUR I A SSP acc",
+      "custodian": "UBS",
+      "fund_house": "UBS AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2049450716": {
+      "nom": "UBS US TOTAL YIELD EQUITY_QL ACC\nEURH",
+      "custodian": "Credit Suisse",
+      "fund_house": "UBS AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2053353152": {
+      "nom": "JPM Genetic Therapies",
+      "custodian": "Credit Suisse",
+      "fund_house": "JPMorgan AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2053547605": {
+      "nom": "PICTET CHINA INDEX \"IS\" (EUR)",
+      "custodian": "CaixaBank",
+      "fund_house": "Pictet AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2066072385": {
+      "nom": "BNP Paribas Samrt Food",
+      "custodian": "Credit Suisse",
+      "fund_house": "BNP Paribas AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2098119287": {
+      "nom": "TIKEHAU SHT DUR SF EUR AC",
+      "custodian": "CaixaBank",
+      "fund_house": "Tikehau Capital",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2099033859": {
+      "nom": "BlackRock Global Funds - World Mining Fund S2 EUR Hedged Acc",
+      "custodian": "CaixaBank",
+      "fund_house": "BlackRock",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2110829848": {
+      "nom": "INFUSIVE CONSUMER ALPHA GLOBAL _AA ACC EUR",
+      "custodian": "Credit Suisse",
+      "fund_house": "Infusive AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2145462300": {
+      "nom": "Robeco SAM Smart Energy",
+      "custodian": "Credit Suisse",
+      "fund_house": "Robeco",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2145464264": {
+      "nom": "Robecosam Smart Materials F (",
+      "custodian": "CaixaBank",
+      "fund_house": "Robeco SAM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2171257319": {
+      "nom": "Vontobel Fund - Emerging Markets Corporate Bond H EUR Hedged",
+      "custodian": "Credit Suisse",
+      "fund_house": "Vontobel AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2183143846": {
+      "nom": "Amundi Funds European R (eur) A",
+      "custodian": "CaixaBank",
+      "fund_house": "Amundi",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2190959374": {
+      "nom": "Goldman Sachs Global Future Technology Leaders Equity Portfolio R Shares EUR Inc",
+      "custodian": "UBS",
+      "fund_house": "Goldman Sachs AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2191389209": {
+      "nom": "UBS China Opportunity USD Eur HDg",
+      "custodian": "Credit Suisse",
+      "fund_house": "UBS AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2257995980": {
+      "nom": "ALLIANZ GLOBAL WATER RT11 EUR ACC",
+      "custodian": "JPMorgan",
+      "fund_house": "Allianz GI",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2367665606": {
+      "nom": "Lumyna MW TOPS Market Neutral UCITS Fund EUR F acc",
+      "custodian": "Credit Suisse",
+      "fund_house": "Lumyna Investments",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2369359901": {
+      "nom": "NORD 1 LOW DURT COV BN AC",
+      "custodian": "CaixaBank",
+      "fund_house": "Nordea AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2386637925": {
+      "nom": "FRANKLIN E SH D EB EU AC",
+      "custodian": "CaixaBank",
+      "fund_house": "Franklin Templeton",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2469335967": {
+      "nom": "AMU MSCI JP RHE EUHD AC",
+      "custodian": "CaixaBank",
+      "fund_house": "Amundi",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2489380217": {
+      "nom": "Nordea 1 - Global Stable Equity",
+      "custodian": "CaixaBank",
+      "fund_house": "Nordea AM",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2495342425": {
+      "nom": "MFS Meridian Contrarian Value",
+      "custodian": "UBS",
+      "fund_house": "MFS Investment Management",
+      "selection": "delegated",
+      "closed": false
+    },
+    "LU2870883613": {
+      "nom": "AMUNDI FUNDS GLOBAL EQUITY INCOME ESG - R13 EUR ©",
+      "custodian": "CaixaBank",
+      "fund_house": "Amundi",
+      "selection": "delegated",
+      "closed": false
+    },
+    "PTBCPGOM0067": {
+      "nom": "Banco Portugues 4% CALL 11/04/2024",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "US4642871507": {
+      "nom": "iShares Core S&P Total US Stock Market",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "US4642876555": {
+      "nom": "iShares Russell 2000 ETF",
+      "custodian": "Abel Font",
+      "fund_house": "BlackRock iShares",
+      "selection": "direct",
+      "closed": false
+    },
+    "US78464A8392": {
+      "nom": "SPDR® S&P 400 Mid Cap Value ETF",
+      "custodian": "Abel Font",
+      "fund_house": "State Street SPDR",
+      "selection": "direct",
+      "closed": false
+    },
+    "US89356BAB45": {
+      "nom": "TransCanada Trust 5.875% CALL 24/03/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "US9220428588": {
+      "nom": "Vanguard FTSE Emerging Markets ETF",
+      "custodian": "Abel Font",
+      "fund_house": "Vanguard",
+      "selection": "direct",
+      "closed": false
+    },
+    "US92206C7065": {
+      "nom": "VANGUARD INTRMDIAT TRM TRSRY ETF",
+      "custodian": "Abel Font",
+      "fund_house": "Vanguard",
+      "selection": "direct",
+      "closed": false
+    },
+    "USF1067PAB25": {
+      "nom": "BNP Paribas 4.625% CALL 26/03/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS1172951508": {
+      "nom": "PEMEX 2.75% 21/04/2027",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS1182150950": {
+      "nom": "SACE SPA 5.511% CALL 10/02/2027",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS1629774230": {
+      "nom": "Volkswagen Intl 3.875% CALL 23/06/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS1693822634": {
+      "nom": "ABNANV 4.75% PERP CALL 16/12/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2010028343": {
+      "nom": "SES SA 2.875% PERP CALL 06/02/2026",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2010036874": {
+      "nom": "Orsted A/S CALL 09/09/2027",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2050933972": {
+      "nom": "Rabobank 3.25% PERP CALL 18/11/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2056371334": {
+      "nom": "Telefonica Europe 2.875% PERP CALL 27/05/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2077670342": {
+      "nom": "Bayer AG 3.125% CALL 12/08/2027",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2108494837": {
+      "nom": "Erste Group 3.375% CALL 24/05/2024",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2121441856": {
+      "nom": "Unicredit 3.875% VTO 03/06/2027",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2193661324": {
+      "nom": "BP Capital Markets 3.25% CALL 02/06/2023",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2224439385": {
+      "nom": "OMV AG 2.5% CALL 01/06/2026",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2282606578": {
+      "nom": "Abertis Finance 2.625% CALL 26/01/2026",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2312744217": {
+      "nom": "Enelim 1 3/8 PERP 08/06/2027",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2321520525": {
+      "nom": "Permanent TSB 3% CALL 19/05/2026",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2332590632": {
+      "nom": "Banco Credito Social 5.25% CALL 03/03/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2342620924": {
+      "nom": "Banco Santander 4.125% CALL 16/01/2026",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2454874285": {
+      "nom": "De Volksbank NV 7% CALL 14/02/2025",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    },
+    "XS2463450408": {
+      "nom": "Intesa Sanpaolo 6.375% PERP CALL 05/03/2026",
+      "custodian": "Andbank",
+      "fund_house": "Various (Corporate Bond)",
+      "selection": "delegated",
+      "closed": false
+    }
+  }
+}
