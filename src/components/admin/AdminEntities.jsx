@@ -59,6 +59,7 @@ export default function AdminEntities() {
   const [editId, setEditId] = useState(null);
   const [editValues, setEditValues] = useState({ name: "", entityId: "", fiscal_name: "", vehicle_est: "" });
   const [saving, setSaving] = useState(false);
+  const [savingEstId, setSavingEstId] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null); // entity or null
   const [deleting, setDeleting] = useState(false);
   const [merging, setMerging] = useState(false);
@@ -139,6 +140,18 @@ export default function AdminEntities() {
 
   function cancelEdit() {
     setEditId(null);
+  }
+
+  async function saveVehicleEstInline(entityId, nextEst) {
+    setSavingEstId(entityId);
+    const { error } = await updateEntityVehicleEst(entityId, nextEst);
+    setSavingEstId(null);
+    if (error) {
+      toast({ message: "Error desant tipus vehicle (tx): " + error.message, type: "error" });
+      return;
+    }
+    setEntities((prev) => prev.map((e) => e.id === entityId ? { ...e, vehicle_est: nextEst || null } : e));
+    toast({ message: "Desat", type: "success" });
   }
 
   async function saveEdit(originalId) {
@@ -413,10 +426,18 @@ export default function AdminEntities() {
                     <td style={td}>
                       {e.kind !== "vehicle" ? (
                         <span style={{ color: tc.textLight }}>—</span>
-                      ) : isEditing ? (
+                      ) : (
                         <select
-                          value={editValues.vehicle_est}
-                          onChange={(ev) => setEditValues((v) => ({ ...v, vehicle_est: ev.target.value }))}
+                          value={isEditing ? editValues.vehicle_est : (e.vehicle_est ?? "")}
+                          disabled={savingEstId === e.id}
+                          onChange={(ev) => {
+                            const next = ev.target.value;
+                            if (isEditing) {
+                              setEditValues((v) => ({ ...v, vehicle_est: next }));
+                            } else {
+                              void saveVehicleEstInline(e.id, next);
+                            }
+                          }}
                           onKeyDown={(ev) => { if (ev.key === "Escape") cancelEdit(); }}
                           style={{ ...inputStyle, width: 190, borderColor: tc.border, fontFamily: "inherit" }}
                         >
@@ -425,8 +446,6 @@ export default function AdminEntities() {
                             <option key={opt} value={opt}>{opt}</option>
                           ))}
                         </select>
-                      ) : (
-                        <span style={{ color: e.vehicle_est ? tc.text : tc.textLight }}>{e.vehicle_est ?? "—"}</span>
                       )}
                     </td>
                     <td style={td}>{KIND_LABELS[e.kind] ?? e.kind}</td>
