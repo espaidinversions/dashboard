@@ -13,6 +13,8 @@
  *   node scripts/merge_overlap_fix_entities.mjs --dry-run
  *   node scripts/merge_overlap_fix_entities.mjs --apply
  *   node scripts/merge_overlap_fix_entities.mjs --apply --limit 50
+ *   node scripts/merge_overlap_fix_entities.mjs --dry-run --exact-name
+ *   node scripts/merge_overlap_fix_entities.mjs --apply --exact-name
  *   node scripts/merge_overlap_fix_entities.mjs --dry-run --suggest
  *   node scripts/merge_overlap_fix_entities.mjs --apply --apply-suggested --threshold=0.92 --margin=0.05
  */
@@ -71,6 +73,7 @@ function matchWeight(matchType) {
     case "normalized": return 2;
     case "local": return 3;
     case "fallback": return 6;
+    case "mock": return 8;
     case "overlap_fix": return 9;
     default: return 4;
   }
@@ -300,6 +303,7 @@ async function main() {
   const apply = args.includes("--apply");
   const applySuggested = args.includes("--apply-suggested");
   const suggest = args.includes("--suggest") || applySuggested;
+  const exactName = args.includes("--exact-name");
   const dryRun = !apply || args.includes("--dry-run");
   const limitArg = args.find((a) => a.startsWith("--limit"));
   const limit = limitArg ? Number(limitArg.split("=")[1] ?? "") : null;
@@ -333,6 +337,7 @@ async function main() {
   }
 
   const planned = [];
+  const plannedFromIds = new Set();
   for (const group of groups.values()) {
     const overlap = group.filter((e) => String(e.match_type ?? "") === "overlap_fix");
     if (overlap.length === 0) continue;
@@ -352,18 +357,56 @@ async function main() {
         fromMatch: from.match_type ?? "",
         toMatch: keeper.match_type ?? "",
       });
+      plannedFromIds.add(String(from.id));
     }
   }
 
   const overlapAll = entities.filter((e) => e.match_type === "overlap_fix");
+
+  // Optional: exact-name merge even when kind differs (useful after overlap separation).
+  if (exactName) {
+    const byName = new Map(); // canonical_name -> entities[]
+    for (const e of entities) {
+      const name = String(e.canonical_name ?? "").trim();
+      if (!name) continue;
+      if (!byName.has(name)) byName.set(name, []);
+      byName.get(name).push(e);
+    }
+
+    for (const from of overlapAll) {
+      const fromId = String(from.id);
+      if (plannedFromIds.has(fromId)) continue;
+      const name = String(from.canonical_name ?? "").trim();
+      if (!name) continue;
+      const candidates = (byName.get(name) ?? [])
+        .filter((e) => String(e.id) !== fromId)
+        .filter((e) => String(e.match_type ?? "") !== "overlap_fix");
+      if (!candidates.length) continue;
+      const keeper = pickKeeper(candidates);
+      if (!keeper) continue;
+
+      planned.push({
+        fromId,
+        toId: String(keeper.id),
+        kind: String(from.kind),
+        fromName: from.canonical_name,
+        toName: keeper.canonical_name,
+        fromMatch: from.match_type ?? "",
+        toMatch: keeper.match_type ?? "",
+        note: `exact-name kind ${String(from.kind)} -> ${String(keeper.kind)}`,
+      });
+      plannedFromIds.add(fromId);
+    }
+  }
+
   const uniqueFrom = new Set(planned.map((p) => p.fromId));
   const uniqueTo = new Set(planned.map((p) => p.toId));
   console.log(`Found overlap_fix entities: ${overlapAll.length}`);
-  console.log(`Planned merges: ${planned.length} (from=${uniqueFrom.size} into=${uniqueTo.size})${limit ? ` limit=${limit}` : ""}`);
+  console.log(`Planned merges: ${planned.length} (from=${uniqueFrom.size} into=${uniqueTo.size})${limit ? ` limit=${limit}` : ""}${exactName ? " (including --exact-name)" : ""}`);
 
   const limited = limit ? planned.slice(0, limit) : planned;
   limited.slice(0, 25).forEach((p) => {
-    console.log(`- [${p.kind}] ${p.fromId} (${p.fromMatch}) -> ${p.toId} (${p.toMatch}) :: "${p.fromName}" -> "${p.toName}"`);
+    console.log(`- [${p.kind}] ${p.fromId} (${p.fromMatch}) -> ${p.toId} (${p.toMatch}) :: "${p.fromName}" -> "${p.toName}"${p.note ? ` (${p.note})` : ""}`);
   });
   if (limited.length > 25) console.log(`… +${limited.length - 25} more`);
 
