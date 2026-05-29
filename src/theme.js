@@ -5,70 +5,75 @@ import { readStoredFlag } from "./utils.js";
 //   Green #3DC83E — the icon mark
 //   Navy  #2B5070 — the wordmark text
 
+// Hex approximations of the OKLCH token system in index.css
+// radius mirrors --radius-sm/md/lg/xl (2/4/6/8px — sharpened institutional)
 export const TC_LIGHT = {
-  green:"#3DC83E",   // var(--color-green)
+  green:"#3DC83E",
   greenLight:"#62D963",
   greenDark:"#28A029",
-  navy:"#2B5070",    // var(--color-navy)
-  navyLight:"#4A789A",
-  navyDark:"#1C3A52",
-  bg:"#F1F5F8",      // var(--color-bg)
-  bgAlt:"#E6EDF3",   // var(--color-bg-alt)
-  border:"#C8D5E0",  // var(--color-border)
-  card:"#FFFFFF",    // var(--color-card)
-  text:"#16303F",    // var(--color-text)
-  textMid:"#3B5F75", // var(--color-text-mid)
-  textLight:"#6B8EA6",// var(--color-text-light)
-  red:"#C62828",     // var(--color-red)
-  redLight:"#FDECEA",
-  orange:"#E67E22",  // var(--color-orange)
-  warning:"#D69E2E",
-  yellow:"#B8860B", yellowLight:"#FFF8E1", purple:"#6A4C8A",
+  navy:"#2B4F70",
+  navyLight:"#3D6A94",
+  navyDark:"#1C3650",
+  bg:"#EEF2F6",
+  bgAlt:"#E3E9F0",
+  bgAlt2:"#D6DFE9",
+  border:"#CFD9E4",
+  borderMid:"#B4C2D0",
+  card:"#FFFFFF",
+  text:"#1B2A36",
+  textMid:"#334F65",
+  textLight:"#5A7A90",
+  red:"#B52020",
+  redLight:"#FAEAEA",
+  orange:"#C96A10",
+  warning:"#B07B10",
+  yellow:"#96700A", yellowLight:"#FFF8E1", purple:"#6A4C8A",
   shadows: {
-    card:      "0 1px 3px rgba(15,23,42,0.06), 0 4px 16px rgba(15,23,42,0.04)",
+    card:      "0 1px 2px rgba(15,23,42,0.05), 0 2px 8px rgba(15,23,42,0.04)",
     cardHover: "0 4px 12px rgba(15,23,42,0.10), 0 8px 24px rgba(15,23,42,0.06)",
-    modal:     "0 8px 40px rgba(0,0,0,0.20)",
-    sm:        "0 1px 4px rgba(15,23,42,0.08)",
+    modal:     "0 8px 40px rgba(0,0,0,0.18)",
+    sm:        "0 1px 3px rgba(15,23,42,0.07)",
   },
-  // radius mirrors --radius-sm/md/lg/xl in index.css (4/6/10/14px)
-  radius: { sm: 6, md: 10, lg: 14, xl: 20 },
+  radius: { sm: 2, md: 4, lg: 6, xl: 8 },
   gradients: {
-    navy:   "linear-gradient(135deg, #2B5070 0%, #1C3A52 100%)",
+    navy:   "linear-gradient(135deg, #2B4F70 0%, #1C3650 100%)",
     green:  "linear-gradient(135deg, #3DC83E 0%, #28A029 100%)",
-    accent: "linear-gradient(90deg, #3DC83E 0%, #2B5070 100%)",
+    accent: "linear-gradient(90deg, #3DC83E 0%, #2B4F70 100%)",
   },
 };
 
 export const TC_DARK = {
-  green:"#4DD94E",   // var(--color-green) dark
+  green:"#4DD94E",
   greenLight:"#76E477",
   greenDark:"#35B836",
-  navy:"#6AB0D8",    // var(--color-navy) dark
-  navyLight:"#8DC6E8",
-  navyDark:"#4A8FBD",
-  bg:"#0C1A26",      // var(--color-bg) dark
-  bgAlt:"#112030",   // var(--color-bg-alt) dark
-  border:"#1C3348",  // var(--color-border) dark
-  card:"#132130",    // var(--color-card) dark
-  text:"#C8DDE8",    // var(--color-text) dark
-  textMid:"#5E90AB", // var(--color-text-mid) dark
-  textLight:"#3A6278",// var(--color-text-light) dark
-  red:"#EF5350",     // var(--color-red) dark
-  redLight:"#2A0F0F",
-  orange:"#E8922A",  // var(--color-orange) dark
+  navy:"#6AACD4",
+  navyLight:"#8DC3E6",
+  navyDark:"#4A8AB8",
+  bg:"#0E1B27",
+  bgAlt:"#131F2D",
+  bgAlt2:"#192636",
+  border:"#1E2E3F",
+  borderMid:"#26394E",
+  card:"#142130",
+  text:"#D0DDE8",
+  textMid:"#5E8EAA",
+  textLight:"#3A5F77",
+  red:"#E55050",
+  redLight:"#200C0C",
+  orange:"#E8922A",
   warning:"#F6AD55",
   yellow:"#E8C040", yellowLight:"#221900", purple:"#9B7CC8",
   shadows: {
-    card:      "0 1px 3px rgba(0,0,0,0.20), 0 4px 16px rgba(0,0,0,0.15)",
+    card:      "0 1px 3px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.16)",
     cardHover: "0 4px 12px rgba(0,0,0,0.30), 0 8px 24px rgba(0,0,0,0.20)",
     modal:     "0 8px 40px rgba(0,0,0,0.50)",
-    sm:        "0 1px 4px rgba(0,0,0,0.25)",
+    sm:        "0 1px 4px rgba(0,0,0,0.26)",
   },
-  radius: { sm: 6, md: 10, lg: 14, xl: 20 },
+  radius: { sm: 2, md: 4, lg: 6, xl: 8 },
   gradients: {
     navy:   "linear-gradient(135deg, #1a3a5c 0%, #0d1e30 100%)",
     green:  "linear-gradient(135deg, #3DC83E 0%, #28A029 100%)",
-    accent: "linear-gradient(90deg, #4DD94E 0%, #2B5070 100%)",
+    accent: "linear-gradient(90deg, #4DD94E 0%, #2B4F70 100%)",
   },
 };
 

@@ -1,13 +1,19 @@
+/* Hallmark · mood: Institutional · genre: modern-minimal · theme: swiss-editorial
+ * fonts: Newsreader (display) · IBM Plex Sans (body/UI) · IBM Plex Mono (data)
+ * palette: OKLCH anchored navy hue 245 · green hue 145
+ */
+
 /* ── Global resets & polish ─────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
+html, body { overflow-x: clip; }
 
 /* ── Text selection ─────────────────────────────────────── */
 ::selection {
-  background: rgba(43, 80, 112, 0.18); /* var(--color-navy) tint */
-  color: var(--color-text);
+  background: oklch(35% 0.10 245 / 0.18);
+  color: var(--color-ink);
 }
 [data-theme="dark"] ::selection {
-  background: rgba(106, 176, 216, 0.22); /* dark navy tint */
+  background: oklch(65% 0.10 245 / 0.22);
 }
 
 /* ── Table base ─────────────────────────────────────────── */
@@ -19,22 +25,23 @@ table { border-collapse: collapse; }
   --ease-out:    cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
 
+  /* Fonts */
+  --font-display: 'Newsreader', Georgia, serif;
+  --font-body:    'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono:    'IBM Plex Mono', 'Courier New', monospace;
+
   /* Typography scale */
-  --text-xs:   11px;   /* badges, table headers, sub-labels */
-  --text-sm:   13px;   /* secondary labels, filter controls */
-  --text-base: 14px;   /* body / table cells */
-  --text-md:   15px;   /* primary UI labels */
-  --text-lg:   18px;   /* section titles */
-  --text-xl:   20px;   /* KPI values */
-  --text-2xl:  24px;   /* hero KPI values */
+  --text-xs:   11px;
+  --text-sm:   13px;
+  --text-base: 14px;
+  --text-md:   15px;
+  --text-lg:   18px;
+  --text-xl:   20px;
+  --text-2xl:  24px;
 
   /* Line height */
   --leading-tight:  1.25;
   --leading-normal: 1.5;
-
-  /* Focus ring */
-  --focus-color: #3DC83E;
-  --focus-ring:  0 0 0 2px var(--focus-color);
 
   /* Spacing (4px base scale) */
   --space-1:  4px;
@@ -45,56 +52,87 @@ table { border-collapse: collapse; }
   --space-6: 24px;
   --space-8: 32px;
 
-  /* Border radius */
-  --radius-sm:  4px;
-  --radius-md:  6px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  /* Border radius — sharpened for institutional tone */
+  --radius-sm:  2px;
+  --radius-md:  4px;
+  --radius-lg:  6px;
+  --radius-xl:  8px;
 
-  /* Light theme colors */
-  --color-bg:          #F1F5F8;
-  --color-bg-alt:      #E6EDF3;
-  --color-card:        #FFFFFF;
-  --color-border:      #C8D5E0;
-  --color-text:        #16303F;
-  --color-text-mid:    #3B5F75;
-  --color-text-light:  #6B8EA6;
-  --color-navy:        #2B5070;
-  --color-green:       #3DC83E;
-  --color-red:         #C62828;
-  --color-orange:      #E67E22;
+  /* OKLCH color system — light mode */
+  --color-paper:     oklch(97% 0.008 245);
+  --color-paper-2:   oklch(94% 0.012 245);
+  --color-paper-3:   oklch(91% 0.015 245);
+  --color-surface:   oklch(100% 0 0);
+  --color-rule:      oklch(87% 0.018 245);
+  --color-rule-mid:  oklch(78% 0.022 245);
+  --color-ink:       oklch(22% 0.06 245);
+  --color-ink-2:     oklch(38% 0.07 245);
+  --color-ink-3:     oklch(55% 0.06 245);
+  --color-accent:    oklch(35% 0.10 245);
+  --color-accent-hi: oklch(45% 0.12 245);
+  --color-accent-lo: oklch(93% 0.015 245);
+  --color-vivid:     oklch(60% 0.19 145);
+  --color-vivid-lo:  oklch(95% 0.04 145);
+  --color-danger:    oklch(42% 0.18 27);
+  --color-danger-lo: oklch(96% 0.03 27);
+  --color-warn:      oklch(62% 0.16 60);
+  --color-focus:     oklch(60% 0.19 145);
+
+  /* Focus ring */
+  --focus-color: var(--color-focus);
+  --focus-ring:  0 0 0 2px var(--color-focus);
+
+  /* Backward-compat aliases */
+  --color-bg:         var(--color-paper);
+  --color-bg-alt:     var(--color-paper-2);
+  --color-card:       var(--color-surface);
+  --color-border:     var(--color-rule);
+  --color-text:       var(--color-ink);
+  --color-text-mid:   var(--color-ink-2);
+  --color-text-light: var(--color-ink-3);
+  --color-navy:       var(--color-accent);
+  --color-green:      var(--color-vivid);
+  --color-red:        var(--color-danger);
+  --color-orange:     var(--color-warn);
 }
 
 [data-theme="dark"] {
-  --color-bg:          #0C1A26;
-  --color-bg-alt:      #112030;
-  --color-card:        #132130;
-  --color-border:      #1C3348;
-  --color-text:        #C8DDE8;
-  --color-text-mid:    #5E90AB;
-  --color-text-light:  #3A6278;
-  --color-navy:        #6AB0D8;
-  --color-green:       #4DD94E;
-  --color-red:         #EF5350;
-  --color-orange:      #E8922A;
+  --color-paper:     oklch(14% 0.04 245);
+  --color-paper-2:   oklch(18% 0.05 245);
+  --color-paper-3:   oklch(22% 0.06 245);
+  --color-surface:   oklch(19% 0.05 245);
+  --color-rule:      oklch(26% 0.06 245);
+  --color-rule-mid:  oklch(32% 0.07 245);
+  --color-ink:       oklch(88% 0.03 245);
+  --color-ink-2:     oklch(65% 0.06 245);
+  --color-ink-3:     oklch(46% 0.06 245);
+  --color-accent:    oklch(68% 0.10 245);
+  --color-accent-hi: oklch(75% 0.11 245);
+  --color-accent-lo: oklch(22% 0.06 245);
+  --color-vivid:     oklch(65% 0.19 145);
+  --color-vivid-lo:  oklch(20% 0.05 145);
+  --color-danger:    oklch(65% 0.18 27);
+  --color-danger-lo: oklch(18% 0.04 27);
+  --color-warn:      oklch(70% 0.14 60);
+  --color-focus:     oklch(65% 0.19 145);
 }
 
 body {
   margin: 0;
   padding: 0;
-  font-family: 'Outfit', system-ui, sans-serif;
+  font-family: var(--font-body);
   font-size: var(--text-base);
   line-height: var(--leading-normal);
-  color: var(--color-text);
-  background: var(--color-bg);
+  color: var(--color-ink);
+  background: var(--color-paper);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
 }
 
-/* ── Numbers: tabular, monospaced via DM Mono ───────────── */
+/* ── Numbers: tabular, monospaced via IBM Plex Mono ─────── */
 .num {
-  font-family: 'DM Mono', 'Courier New', monospace;
+  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 }
@@ -327,6 +365,11 @@ button:active {
   outline: none;
   border-color: var(--color-navy);
   box-shadow: var(--focus-ring);
+}
+
+/* ── Login: hide brand panel on narrow viewports ────────── */
+@media (max-width: 720px) {
+  .login-brand-panel { display: none !important; }
 }
 
 /* ── Responsive grids ───────────────────────────────────── */

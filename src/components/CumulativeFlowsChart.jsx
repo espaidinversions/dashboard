@@ -6,7 +6,7 @@ import { fmtM, fmtMonthKey } from "../utils.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
 import { START_MONTH_2019, buildMonthGrid, forwardFillMonthValues, getPriceScale, toMonthKey } from "../chartSeries.js";
-import { MGR_COLORS, CHART_PALETTE } from "../chartColors.js";
+import { MGR_COLORS, CHART_PALETTE, FLOW_COLORS, ASSET_COLORS, NEUTRAL, PORTFOLIO_VALUE_COLOR } from "../chartColors.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 
@@ -49,7 +49,6 @@ function estimateTxValue(t) {
 }
 
 const MGR_NAMES  = { caixa: "CaixaBank", ubs: "UBS", creditSuisse: "Credit Suisse", bankinter: "Bankinter", interactiveBrokers: "Interactive Brokers", andbank: "WAM–Andbank", jpmorgan: "JPMorgan", altres: "Altres" };
-const ASSET_COLORS = { RV: "#2B5070", RF: "#F28E2B" };
 const ASSET_NAMES  = { RV: "Renda Variable", RF: "Renda Fixa" };
 
 /**
@@ -139,11 +138,7 @@ export function CumulativeFlowsChart({
       return {
         chartData: rows,
         keys: ["inflow", "outflow", "cumulative"],
-        colorMap: {
-          inflow: "#3DC83E",
-          outflow: "#E15759",
-          cumulative: "#2B5070",
-        },
+        colorMap: { ...FLOW_COLORS },
         nameMap: {
           inflow: "Entrades",
           outflow: "Sortides",
@@ -193,28 +188,28 @@ export function CumulativeFlowsChart({
     const nameMap  = {};
     if (groupBy === "manager" || groupBy === "custodian") {
       allKeys.forEach(k => {
-        colorMap[k] = MGR_COLORS[k] ?? "#BAB0AC";
+        colorMap[k] = MGR_COLORS[k] ?? NEUTRAL;
         nameMap[k]  = MGR_NAMES[k]  ?? k;
       });
-      colorMap.altres = colorMap.altres ?? "#BAB0AC";
+      colorMap.altres = colorMap.altres ?? NEUTRAL;
       nameMap.altres = "Altres";
     } else if (groupBy === "assetType") {
       allKeys.forEach(k => {
-        colorMap[k] = ASSET_COLORS[k] ?? "#BAB0AC";
+        colorMap[k] = ASSET_COLORS[k] ?? NEUTRAL;
         nameMap[k]  = ASSET_NAMES[k]  ?? k;
       });
     } else if (groupBy === "position") {
       topIsins.forEach((isin, i) => {
         const pos = PM_POSITIONS.find(p => p.isin === isin);
-        colorMap[isin] = CHART_PALETTE[i] ?? "#BAB0AC";
+        colorMap[isin] = CHART_PALETTE[i] ?? NEUTRAL;
         nameMap[isin]  = pos
           ? pos.nom.replace(/\bUCITS ETF\b.*/, "ETF").replace(/\bUCITS\b.*/, "").trim()
           : isin;
       });
-      colorMap["altres"] = "#BAB0AC";
+      colorMap["altres"] = NEUTRAL;
       nameMap["altres"]  = "Altres";
     } else {
-      colorMap["total"] = "#2B5070";
+      colorMap["total"] = FLOW_COLORS.cumulative;
       nameMap["total"]  = "Capital invertit";
     }
 
@@ -309,8 +304,8 @@ export function CumulativeFlowsChart({
           name: nameMap[k] ?? k,
           type: "line",
           data: chartData.map(r => r[k] ?? null),
-          lineStyle: { color: colorMap[k] ?? "#BAB0AC", width: 2 },
-          itemStyle: { color: colorMap[k] ?? "#BAB0AC" },
+          lineStyle: { color: colorMap[k] ?? NEUTRAL, width: 2 },
+          itemStyle: { color: colorMap[k] ?? NEUTRAL },
           symbol: "none",
           connectNulls: true,
         })),
@@ -320,8 +315,8 @@ export function CumulativeFlowsChart({
         type: "line",
         yAxisIndex: 1,
         data: chartData.map(r => r.portfolioValue ?? null),
-        lineStyle: { color: "#59A14F", width: 2, type: "dashed" },
-        itemStyle: { color: "#59A14F" },
+        lineStyle: { color: PORTFOLIO_VALUE_COLOR, width: 2, type: "dashed" },
+        itemStyle: { color: PORTFOLIO_VALUE_COLOR },
         symbol: "none",
         connectNulls: true,
       }] : []),

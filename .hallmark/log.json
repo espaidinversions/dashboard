@@ -1,0 +1,37 @@
+{
+  "project": "turtle-capital-dashboard",
+  "design_system": "design.md",
+  "mood": "Institutional",
+  "genre": "modern-minimal",
+  "theme": "swiss-editorial",
+  "fonts": {
+    "display": "Newsreader",
+    "body": "IBM Plex Sans",
+    "mono": "IBM Plex Mono"
+  },
+  "palette": {
+    "anchor": "OKLCH hue 245 (navy) + hue 145 (green)",
+    "mode": "dual (light + dark)"
+  },
+  "runs": [
+    {
+      "date": "2026-05-29",
+      "verb": "redesign",
+      "target": "src/",
+      "scope": "multi-page",
+      "files_modified": [
+        "index.html",
+        "src/index.css",
+        "src/theme.js",
+        "src/components/LoginPage.jsx",
+        "src/components/Sidebar.jsx",
+        "src/components/shared/KpiCard.jsx"
+      ],
+      "files_created": [
+        "tokens.css",
+        "design.md",
+        ".hallmark/log.json"
+      ]
+    }
+  ]
+}

@@ -83,139 +83,169 @@ export default function LoginPage() {
   };
 
   const inp = {
-    width: "100%", padding: "11px 14px", fontSize: 14,
-    border: "1.5px solid #D0D8E4", borderRadius: 10,
-    fontFamily: "'Outfit',system-ui,sans-serif", outline: "none",
-    background: "#F8FAFB", color: "#1A2B3C", boxSizing: "border-box",
-    transition: "border-color 0.15s",
+    width: "100%", padding: "10px 12px", fontSize: 14,
+    border: "1px solid #CFD9E4", borderRadius: 4,
+    fontFamily: "'IBM Plex Sans',system-ui,sans-serif", outline: "none",
+    background: "#FFFFFF", color: "#1B2A36", boxSizing: "border-box",
+    transition: "border-color 0.15s, box-shadow 0.15s",
+  };
+
+  const labelStyle = {
+    fontSize: 11, fontWeight: 600, color: "#5A7A90",
+    letterSpacing: "0.08em", textTransform: "uppercase",
+    display: "block", marginBottom: 5,
   };
 
   return (
     <div style={{
-      minHeight: "100vh", background: "#F0F4F8",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontFamily: "'Outfit',system-ui,sans-serif",
+      minHeight: "100vh", display: "flex",
+      fontFamily: "'IBM Plex Sans',system-ui,sans-serif",
     }}>
+      {/* Left brand panel — hidden on narrow screens via media query in index.css */}
       <div style={{
-        background: "#fff", borderRadius: 14, padding: "40px 40px 36px",
-        width: 360, boxShadow: "0 4px 32px rgba(0,0,0,.10)",
+        flex: "0 0 420px", background: "#1C3650",
+        display: "flex", flexDirection: "column",
+        justifyContent: "space-between",
+        padding: "48px 52px",
       }}>
-        {/* Logo */}
-        <div style={{ textAlign: "center", marginBottom: 28 }}>
-          <img src="/logo.jpg" alt="Turtle Capital" style={{ height: 64, objectFit: "contain" }} />
+        <div>
+          <img src="/logo.jpg" alt="Turtle Capital" style={{ height: 44, objectFit: "contain", filter: "brightness(0) invert(1)", opacity: 0.92 }} />
         </div>
-
-        {/* Mode tabs — hidden in forgot mode */}
-        {mode !== "forgot" && (
-          <div style={{ display: "flex", gap: 0, marginBottom: 24, border: "1.5px solid #D0D8E4", borderRadius: 10, overflow: "hidden" }}>
-            {["login", "register"].map(m => (
-              <button key={m} type="button" onClick={() => switchMode(m)} style={{
-                flex: 1, padding: "9px 0", fontSize: 13, fontWeight: 600, border: "none",
-                fontFamily: "inherit", cursor: "pointer", transition: "background 0.15s, color 0.15s",
-                background: mode === m ? "#2B5070" : "#F8FAFB",
-                color: mode === m ? "#fff" : "#4A5A6A",
-              }}>
-                {m === "login" ? "Entrar" : "Registrar-se"}
-              </button>
-            ))}
+        <div>
+          <div style={{ fontSize: 28, fontWeight: 300, color: "rgba(255,255,255,0.92)", lineHeight: 1.3, fontFamily: "'Newsreader',Georgia,serif", letterSpacing: "-0.01em", marginBottom: 16 }}>
+            Gestió d'inversions<br />privades
           </div>
-        )}
-
-        {/* Forgot password header */}
-        {mode === "forgot" && (
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: "#1A2B3C", marginBottom: 4 }}>Restablir contrasenya</div>
-            <div style={{ fontSize: 13, color: "#7A8A9A" }}>Introdueix el teu correu i t'enviarem un enllaç.</div>
+          <div style={{ width: 32, height: 2, background: "#3DC83E", marginBottom: 16 }} />
+          <div style={{ fontSize: 13, color: "rgba(255,255,255,0.42)", lineHeight: 1.6, fontWeight: 400 }}>
+            Turtle Capital · Dashboard
           </div>
-        )}
+        </div>
+        <div style={{ fontSize: 11, color: "rgba(255,255,255,0.28)", letterSpacing: "0.04em" }}>
+          © {new Date().getFullYear()} Turtle Capital
+        </div>
+      </div>
 
-        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-          <div>
-            <label style={{ fontSize: 11, fontWeight: 600, color: "#4A5A6A", letterSpacing: "0.08em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-              Correu electrònic
-            </label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
-              required placeholder="nom@empresa.com" style={inp}
-              onFocus={e => e.target.style.borderColor = "#2B5070"}
-              onBlur={e => e.target.style.borderColor = "#D0D8E4"} />
-          </div>
-
+      {/* Right form panel */}
+      <div style={{
+        flex: 1, background: "#EEF2F6",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        padding: "32px 24px",
+      }}>
+        <div style={{
+          background: "#fff", borderRadius: 6, padding: "40px 40px 36px",
+          width: "100%", maxWidth: 360,
+          boxShadow: "0 1px 2px rgba(15,23,42,0.05), 0 2px 8px rgba(15,23,42,0.04)",
+          border: "1px solid #CFD9E4",
+        }}>
+          {/* Mode tabs — hidden in forgot mode */}
           {mode !== "forgot" && (
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: "#4A5A6A", letterSpacing: "0.08em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                Contrasenya
-              </label>
-              <input type="password" value={password} onChange={e => setPassword(e.target.value)}
-                required placeholder="••••••••" style={inp}
-                onFocus={e => e.target.style.borderColor = "#2B5070"}
-                onBlur={e => e.target.style.borderColor = "#D0D8E4"} />
+            <div style={{ display: "flex", gap: 0, marginBottom: 28, borderBottom: "1px solid #CFD9E4" }}>
+              {["login", "register"].map(m => (
+                <button key={m} type="button" onClick={() => switchMode(m)} style={{
+                  flex: 1, padding: "10px 0", fontSize: 12, fontWeight: 600, border: "none",
+                  borderBottom: mode === m ? "2px solid #3DC83E" : "2px solid transparent",
+                  fontFamily: "inherit", cursor: "pointer", transition: "color 0.15s, border-color 0.15s",
+                  background: "transparent", letterSpacing: "0.06em", textTransform: "uppercase",
+                  color: mode === m ? "#1B2A36" : "#5A7A90",
+                  marginBottom: -1,
+                }}>
+                  {m === "login" ? "Entrar" : "Registrar-se"}
+                </button>
+              ))}
             </div>
           )}
 
-          {mode === "register" && (
-            <div>
-              <label style={{ fontSize: 11, fontWeight: 600, color: "#4A5A6A", letterSpacing: "0.08em", textTransform: "uppercase", display: "block", marginBottom: 6 }}>
-                Confirma la contrasenya
-              </label>
-              <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
-                required placeholder="••••••••" style={inp}
-                onFocus={e => e.target.style.borderColor = "#2B5070"}
-                onBlur={e => e.target.style.borderColor = "#D0D8E4"} />
-            </div>
-          )}
-
-          {error && (
-            <div style={{ fontSize: 12, color: "#C62828", background: "#FDECEA", borderRadius: 6, padding: "9px 12px" }}>
-              {error}
-            </div>
-          )}
-          {info && (
-            <div style={{ fontSize: 12, color: "#1B5E20", background: "#E8F5E9", borderRadius: 6, padding: "9px 12px" }}>
-              {info}
-            </div>
-          )}
-
-          {canResend && !resendDone && (
-            <button type="button" onClick={handleResend} style={{
-              background: "none", border: "none", padding: 0, fontSize: 12,
-              color: "#2B5070", textDecoration: "underline", cursor: "pointer",
-              fontFamily: "inherit", textAlign: "left",
-            }}>
-              Reenviar correu de confirmació
-            </button>
-          )}
-
-          <button type="submit" disabled={loading} style={{
-            marginTop: 4, padding: "12px", background: "#2B5070", color: "#fff",
-            border: "none", borderRadius: 10, fontSize: 14, fontWeight: 600,
-            fontFamily: "inherit", cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading ? 0.7 : 1, transition: "opacity 0.15s",
-          }}>
-            {loading
-              ? (mode === "login" ? "Entrant…" : mode === "register" ? "Registrant…" : "Enviant…")
-              : (mode === "login" ? "Entrar" : mode === "register" ? "Crear compte" : "Enviar enllaç")}
-          </button>
-
-          {mode === "login" && (
-            <button type="button" onClick={() => switchMode("forgot")} style={{
-              background: "none", border: "none", padding: 0, fontSize: 12,
-              color: "#7A8A9A", textDecoration: "underline", cursor: "pointer",
-              fontFamily: "inherit", textAlign: "center",
-            }}>
-              Heu oblidat la contrasenya?
-            </button>
-          )}
-
+          {/* Forgot password header */}
           {mode === "forgot" && (
-            <button type="button" onClick={() => switchMode("login")} style={{
-              background: "none", border: "none", padding: 0, fontSize: 12,
-              color: "#7A8A9A", textDecoration: "underline", cursor: "pointer",
-              fontFamily: "inherit", textAlign: "center",
-            }}>
-              Tornar a l'inici de sessió
-            </button>
+            <div style={{ marginBottom: 24 }}>
+              <div style={{ fontSize: 16, fontWeight: 600, color: "#1B2A36", marginBottom: 6 }}>Restablir contrasenya</div>
+              <div style={{ fontSize: 13, color: "#5A7A90", lineHeight: 1.5 }}>Introdueix el teu correu i t'enviarem un enllaç.</div>
+            </div>
           )}
-        </form>
+
+          <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+            <div>
+              <label style={labelStyle}>Correu electrònic</label>
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                required placeholder="nom@empresa.com" style={inp}
+                onFocus={e => { e.target.style.borderColor = "#2B4F70"; e.target.style.boxShadow = "0 0 0 2px rgba(61,200,62,0.18)"; }}
+                onBlur={e => { e.target.style.borderColor = "#CFD9E4"; e.target.style.boxShadow = "none"; }} />
+            </div>
+
+            {mode !== "forgot" && (
+              <div>
+                <label style={labelStyle}>Contrasenya</label>
+                <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+                  required placeholder="••••••••" style={inp}
+                  onFocus={e => { e.target.style.borderColor = "#2B4F70"; e.target.style.boxShadow = "0 0 0 2px rgba(61,200,62,0.18)"; }}
+                  onBlur={e => { e.target.style.borderColor = "#CFD9E4"; e.target.style.boxShadow = "none"; }} />
+              </div>
+            )}
+
+            {mode === "register" && (
+              <div>
+                <label style={labelStyle}>Confirma la contrasenya</label>
+                <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)}
+                  required placeholder="••••••••" style={inp}
+                  onFocus={e => { e.target.style.borderColor = "#2B4F70"; e.target.style.boxShadow = "0 0 0 2px rgba(61,200,62,0.18)"; }}
+                  onBlur={e => { e.target.style.borderColor = "#CFD9E4"; e.target.style.boxShadow = "none"; }} />
+              </div>
+            )}
+
+            {error && (
+              <div style={{ fontSize: 12, color: "#B52020", background: "#FAEAEA", borderRadius: 4, padding: "9px 12px", borderLeft: "3px solid #B52020" }}>
+                {error}
+              </div>
+            )}
+            {info && (
+              <div style={{ fontSize: 12, color: "#1B5E20", background: "#E8F5E9", borderRadius: 4, padding: "9px 12px", borderLeft: "3px solid #3DC83E" }}>
+                {info}
+              </div>
+            )}
+
+            {canResend && !resendDone && (
+              <button type="button" onClick={handleResend} style={{
+                background: "none", border: "none", padding: 0, fontSize: 12,
+                color: "#2B4F70", textDecoration: "underline", cursor: "pointer",
+                fontFamily: "inherit", textAlign: "left",
+              }}>
+                Reenviar correu de confirmació
+              </button>
+            )}
+
+            <button type="submit" disabled={loading} style={{
+              marginTop: 4, padding: "11px 16px", background: "#2B4F70", color: "#fff",
+              border: "none", borderRadius: 4, fontSize: 13, fontWeight: 600,
+              fontFamily: "inherit", cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.7 : 1, transition: "opacity 0.15s, filter 0.15s",
+              letterSpacing: "0.03em",
+            }}>
+              {loading
+                ? (mode === "login" ? "Entrant…" : mode === "register" ? "Registrant…" : "Enviant…")
+                : (mode === "login" ? "Entrar" : mode === "register" ? "Crear compte" : "Enviar enllaç")}
+            </button>
+
+            {mode === "login" && (
+              <button type="button" onClick={() => switchMode("forgot")} style={{
+                background: "none", border: "none", padding: 0, fontSize: 12,
+                color: "#5A7A90", textDecoration: "underline", cursor: "pointer",
+                fontFamily: "inherit", textAlign: "center",
+              }}>
+                Heu oblidat la contrasenya?
+              </button>
+            )}
+
+            {mode === "forgot" && (
+              <button type="button" onClick={() => switchMode("login")} style={{
+                background: "none", border: "none", padding: 0, fontSize: 12,
+                color: "#5A7A90", textDecoration: "underline", cursor: "pointer",
+                fontFamily: "inherit", textAlign: "center",
+              }}>
+                Tornar a l'inici de sessió
+              </button>
+            )}
+          </form>
+        </div>
       </div>
     </div>
   );

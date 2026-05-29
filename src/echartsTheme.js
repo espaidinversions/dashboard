@@ -3,17 +3,26 @@
 // Usage: const t = ecTheme(tc); then spread t.grid, t.tooltip, etc. into option.
 
 export function ecTheme(tc) {
+  const borderColor = tc.border ?? "#CFD9E4";
   return {
     grid: { containLabel: true },
-    axisLabel: { fontSize: 9, color: tc.textLight ?? "#8A9BAC" },
+    axisLabel: {
+      fontSize: 10,
+      color: tc.textLight ?? "#8A9BAC",
+      fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+    },
     axisLine:  { show: false },
     axisTick:  { show: false },
-    splitLine: { lineStyle: { color: tc.border ?? "#E5EAF0" } },
+    splitLine: { lineStyle: { color: borderColor, opacity: 0.7 } },
     tooltip: {
-      backgroundColor: tc.card  ?? "#fff",
-      borderColor:     tc.border ?? "#E5EAF0",
-      textStyle: { color: tc.text ?? "#1A2B3C", fontSize: 11 },
-      extraCssText: "border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,.12);",
+      backgroundColor: tc.card ?? "#fff",
+      borderColor,
+      textStyle: {
+        color: tc.text ?? "#1B2A36",
+        fontSize: 11,
+        fontFamily: "'IBM Plex Sans', system-ui, sans-serif",
+      },
+      extraCssText: "border-radius:4px;box-shadow:0 2px 12px rgba(0,0,0,.10);padding:8px 10px;",
     },
   };
 }

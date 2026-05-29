@@ -60,13 +60,13 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
     setExpanded(p => { const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n; });
 
   const C = {
-    bg:           dark ? "#0d1e30" : "#1a3a5c",
-    bgHover:      dark ? "#162840" : "#1f4570",
-    bgActive:     dark ? "#1a3a5c" : "#2461a0",
-    text:         "rgba(255,255,255,0.85)",
-    textFade:     "rgba(255,255,255,0.4)",
-    groupLabel:   "rgba(255,255,255,0.32)",
-    border:       "rgba(255,255,255,0.08)",
+    bg:           dark ? "#0E1B27" : "#1C3650",
+    bgHover:      dark ? "#142030" : "#22425F",
+    bgActive:     dark ? "#1A2E42" : "#0F2A44",
+    text:         "rgba(255,255,255,0.80)",
+    textFade:     "rgba(255,255,255,0.36)",
+    groupLabel:   "rgba(255,255,255,0.28)",
+    border:       "rgba(255,255,255,0.07)",
     activeBorder: "#3DC83E",
   };
 
@@ -155,7 +155,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
             position:"absolute", left:RAIL_W+6, top:0, zIndex:300,
             background: dark ? "#0d1e30" : "#1a3a5c",
             border:`1px solid ${C.border}`,
-            borderRadius:10, padding:"6px 0", minWidth:170,
+            borderRadius:4, padding:"6px 0", minWidth:170,
             boxShadow:"0 6px 24px rgba(0,0,0,.35)",
             pointerEvents:"all",
           }}>
