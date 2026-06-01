@@ -215,18 +215,16 @@ function deriveActualsFromCapitalCalls(rows) {
     const year = Number(row?.any ?? row?.year ?? String(row?.data ?? "").slice(0, 4));
     if (!fund || !year) return;
 
-    // Exclude non-cash transfers/conversions from the cash model "real" side.
     const concept = normalizeCapitalCallTipus(row?.tipus);
-    if (EXCLUDED_CASH_MODEL_TIPUS.has(concept)) return;
-
     const category = String(row?.cat ?? "").trim();
     const amount = Number(row?.eur) || 0;
     if (category === "Capital Call") {
-      // "Capital cridat" in this model is Aportació-only (exclude fees/equalisation/etc.).
-      // If tipus is missing/null but cat is Capital Call, assume it's a contribution.
+      // Aportació-only; non-cash transfers/conversions also excluded.
+      if (EXCLUDED_CASH_MODEL_TIPUS.has(concept)) return;
       if (concept != null && concept !== "Aportació") return;
       result.push({ fund, year, type: "calls", model: 0, real: Math.abs(amount) });
     } else if (category === "Distribució" || category === "Retorn Capital") {
+      // All distribution concepts included — matches TxSection (cat-only filter).
       result.push({ fund, year, type: "dist", model: 0, real: Math.abs(amount) });
     }
   });
