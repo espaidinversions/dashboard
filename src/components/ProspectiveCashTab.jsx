@@ -86,6 +86,15 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
         searchPlaceholder: "Cercar companyia...",
       };
     }
+    if (entityScope === "re") {
+      return {
+        singular: "fons RE",
+        plural: "fons RE",
+        selectLabel: "Real Estate",
+        allLabel: "Tots els fons RE",
+        searchPlaceholder: "Cercar fons RE...",
+      };
+    }
     return {
       singular: "fons",
       plural: "fons",
@@ -105,7 +114,9 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
       if (!key) continue;
       const vcpe = String(row?.vehicleTipus ?? "").trim();
       const isCompany = vcpe === "PC" || vcpe === "SF";
+      const isRE = vcpe === "RE";
       if (isCompany) map[key] = "companies";
+      else if (isRE) map[key] = "re";
       else if (!map[key]) map[key] = "funds";
     }
     return map;
@@ -116,7 +127,10 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     return rows.filter((row) => {
       const vcpe = String(row?.vehicleTipus ?? "").trim();
       const isCompany = vcpe === "PC" || vcpe === "SF";
-      return entityScope === "companies" ? isCompany : !isCompany;
+      const isRE = vcpe === "RE";
+      if (entityScope === "companies") return isCompany;
+      if (entityScope === "re") return isRE;
+      return !isCompany && !isRE;
     });
   }, [entityScope, rawCapitalCalls]);
 
@@ -127,8 +141,10 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
       const kind = kindByNameLower[String(name ?? "").trim().toLowerCase()] ?? "funds";
       if (entityScope === "companies") {
         if (kind !== "companies") continue;
+      } else if (entityScope === "re") {
+        if (kind !== "re") continue;
       } else {
-        if (kind === "companies") continue;
+        if (kind === "companies" || kind === "re") continue;
       }
       funds[name] = data;
     }
@@ -136,8 +152,8 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   }, [editorData, entityScope, kindByNameLower]);
 
   const cashData = useMemo(
-    () => deriveProspectiveCashRows(scopedEditorData, scopedActualRows),
-    [scopedActualRows, scopedEditorData],
+    () => deriveProspectiveCashRows(scopedEditorData, scopedActualRows, { reScope: entityScope === "re" }),
+    [scopedActualRows, scopedEditorData, entityScope],
   );
 
   const mergedCommitted = useMemo(() => {
@@ -471,7 +487,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
         <>
           <Toolbar tc={tc}>
             <ToolbarLabel tc={tc}>Entitats</ToolbarLabel>
-            <Segmented tc={tc} value={entityScope} onChange={setEntityScope} options={[{ id: "funds", label: "Fons" }, { id: "companies", label: "Companyies" }]} />
+            <Segmented tc={tc} value={entityScope} onChange={setEntityScope} options={[{ id: "funds", label: "Fons" }, { id: "re", label: "Real Estate" }, { id: "companies", label: "Companyies" }]} />
             <ToolbarLabel tc={tc}>Vista</ToolbarLabel>
             <Segmented tc={tc} value={mode} onChange={setMode} options={MODES} />
             <ToolbarLabel tc={tc}>Periodes</ToolbarLabel>

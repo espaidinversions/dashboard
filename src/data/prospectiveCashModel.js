@@ -141,7 +141,7 @@ export function buildReFundMatcher(actualCapitalCalls = []) {
   };
 }
 
-export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
+export function deriveProspectiveCashRows(editorData, actualCapitalCalls = [], { reScope = false } = {}) {
   const normalized = editorData && typeof editorData === "object" ? editorData : { years: [], funds: {} };
 
   const isReFund = buildReFundMatcher(actualCapitalCalls);
@@ -155,7 +155,7 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
   const actuals = deriveActualsFromCapitalCalls(actualCapitalCalls);
 
   for (const [fund, fundData] of Object.entries(normalized.funds ?? {})) {
-    if (isReFund(fund)) continue;
+    if (reScope ? !isReFund(fund) : isReFund(fund)) continue;
     if (!committed[fund]) committed[fund] = committedLower[fund.trim().toLowerCase()] ?? (Number(fundData.committed) || 0);
     const years = new Set();
     ["model_calls", "model_dist"].forEach((key) => {
@@ -170,7 +170,7 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = []) {
   }
 
   actuals.forEach((actual) => {
-    if (isReFund(actual.fund)) return;
+    if (reScope ? !isReFund(actual.fund) : isReFund(actual.fund)) return;
     const key = rowKey(actual);
     const existing = byFundYearType.get(key);
     // Include actuals even when the fund is not yet present in the forecast table.

@@ -44,7 +44,7 @@ export function EditorPanel({
     return m;
   }, [paidInByFund]);
 
-  const entityColLabel = entityScope === "companies" ? "Companyia" : "Fons";
+  const entityColLabel = entityScope === "companies" ? "Companyia" : entityScope === "re" ? "Fons RE" : "Fons";
 
   const rowLink = (name) => {
     const meta = entityMetaByName?.[name] ?? null;
@@ -66,6 +66,7 @@ export function EditorPanel({
           onChange={setEntityScope}
           options={[
             { id: "funds", label: "Fons" },
+            { id: "re", label: "Real Estate" },
             { id: "companies", label: "Companyies" },
           ]}
         />
