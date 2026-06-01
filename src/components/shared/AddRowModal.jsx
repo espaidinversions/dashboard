@@ -134,7 +134,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
             <div key={f.key}>
               <label style={{ fontSize: 11, fontWeight: 600, color: tc.textLight,
                 letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
-                {f.label}
+                {typeof f.label === "function" ? f.label(values) : f.label}
               </label>
               {f.type === "select" ? (
                 <select className="modal-input" value={values[f.key]} onChange={e => applyFieldChange(f, e.target.value)} style={inputStyleFor(f)} disabled={f.disabled}>

@@ -68,26 +68,26 @@ export function CcTransactionModal({
     },
     { key: "data", label: "Data", type: "date", defaultValue: isEdit ? editRow.data : new Date().toISOString().slice(0, 10) },
     {
-      key: "eur", label: "Import", type: "number",
+      key: "divisa", label: "Divisa", type: "select", options: ["EUR", "USD"],
+      defaultValue: isEdit ? editRow.divisa : (addDefaults?.divisa ?? defaultVehicleCurrency(addFons)),
+    },
+    {
+      key: "eur", label: (values) => `Import (${values.divisa || "EUR"})`, type: "number",
       defaultValue: isEdit ? (editRow.amountNative ?? editRow.eur) : undefined,
       inputStyle: amountInputStyle,
       hint: (values) => {
         const divisa = values.divisa || "EUR";
         if (!isEdit) {
           return divisa === "USD"
-            ? `Introdueix en ${divisa}. Es convertirà automàticament a EUR amb el tipus BCE de la data.`
-            : `Introdueix en ${divisa}.`;
+            ? `Es convertirà automàticament a EUR amb el tipus BCE de la data.`
+            : null;
         }
-        if (divisa !== "USD") return `Introdueix en ${divisa}.`;
+        if (divisa !== "USD") return null;
         if (editRow.fxRate) {
-          return `Import en USD. Tipus BCE guardat: ${Number(editRow.fxRate).toFixed(6)} · EUR guardats: ${fmtFull(editRow.eur)}`;
+          return `Tipus BCE guardat: ${Number(editRow.fxRate).toFixed(6)} · EUR guardats: ${fmtFull(editRow.eur)}`;
         }
-        return "Import en USD. Si aquest moviment és legacy, el canvi a EUR es recalcularà quan modifiquis l'import o la data.";
+        return "Si aquest moviment és legacy, el canvi a EUR es recalcularà quan modifiquis l'import o la data.";
       },
-    },
-    {
-      key: "divisa", label: "Divisa", type: "select", options: ["EUR", "USD"],
-      defaultValue: isEdit ? editRow.divisa : (addDefaults?.divisa ?? defaultVehicleCurrency(addFons)),
     },
     { key: "comentaris", label: "Comentaris", type: "textarea", defaultValue: isEdit ? (editRow.comentaris ?? "") : (addDefaults?.comentaris ?? ""), placeholder: "Observacions del moviment" },
     { key: "est", label: "Tipus de Vehicle", type: "select", options: CAPITAL_CALL_STRATEGY_OPTIONS, defaultValue: isEdit ? editRow.est : (addDefaults?.est ?? "") },
