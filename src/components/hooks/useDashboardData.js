@@ -197,6 +197,7 @@ export function useDashboardData() {
     if (fresh) {
       setRawCC(fresh);
       writeStoredJSON(LS_CC, fresh);
+      window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
       await syncSearchersFromCapitalCalls(fresh);
     } else {
       console.error("[handleCCInsert] loadCapitalCalls returned null after successful insert", { insertedRow });
@@ -218,6 +219,7 @@ export function useDashboardData() {
     if (fresh) {
       setRawCC(fresh);
       writeStoredJSON(LS_CC, fresh);
+      window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
       await syncSearchersFromCapitalCalls(fresh);
     }
   }, []);
@@ -226,7 +228,11 @@ export function useDashboardData() {
     const { error } = await deleteCapitalCall(rowId);
     if (error) { console.error(error); return; }
     const fresh = await loadCapitalCalls({ skipCompanions: true });
-    if (fresh) { setRawCC(fresh); writeStoredJSON(LS_CC, fresh); }
+    if (fresh) {
+      setRawCC(fresh);
+      writeStoredJSON(LS_CC, fresh);
+      window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+    }
   }, []);
 
   const handleLoad = useCallback(async (key, rows, clearExcluded) => {

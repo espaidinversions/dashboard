@@ -41,6 +41,12 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
 
   const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
 
+  useEffect(() => {
+    const handler = () => setRawCC(readStoredJSON("tc_rawCC", []));
+    window.addEventListener("tc-rawcc-updated", handler);
+    return () => window.removeEventListener("tc-rawcc-updated", handler);
+  }, []);
+
   const persistRawCC = (updated) => {
     setRawCC(updated);
     writeStoredJSON("tc_rawCC", updated);

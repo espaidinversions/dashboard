@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useTheme } from "../theme.js";
 import { calcMesos, parseSearchersCSV, usePersistedState, readStoredJSON } from "../utils.js";
 import { GEO_NAME } from "../config.js";
+import { estSection } from "../data/capitalCallStrategyModel.js";
 import { AddRowModal } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
@@ -63,7 +64,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const capitalCallsByNif = useMemo(() => {
     const map = new Map();
     (Array.isArray(capitalCalls) ? capitalCalls : []).forEach((row) => {
-      if (row?.vehicleTipus !== "SF" || !row?.id) return;
+      if (estSection(row?.est) !== "SF" || !row?.id) return;
       const date = String(row?.data ?? "").slice(0, 10);
       if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
       const current = map.get(row.id) ?? { firstCommitmentDate: null, firstCommitmentEur: null };
@@ -80,7 +81,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const capitalCallsBySearcher = useMemo(() => {
     const map = new Map();
     (Array.isArray(capitalCalls) ? capitalCalls : []).forEach((row) => {
-      if (row?.vehicleTipus !== "SF") return;
+      if (estSection(row?.est) !== "SF") return;
       const key = normalizeSearcherName(row?.fons);
       const date = String(row?.data ?? "").slice(0, 10);
       if (!key || !date.match(/^\d{4}-\d{2}-\d{2}$/)) return;

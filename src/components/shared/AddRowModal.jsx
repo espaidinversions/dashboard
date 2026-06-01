@@ -30,28 +30,38 @@ function normalizeNumericInput(raw) {
   // Allow mid-typing a negative sign without digits yet
   if (sign === "-" && cleaned === "") return "-";
 
-  // Decide decimal separator by last occurrence of "." or ","
+  const dotCount = (cleaned.match(/\./g) ?? []).length;
   const lastDot = cleaned.lastIndexOf(".");
   const lastComma = cleaned.lastIndexOf(",");
-  const decimalSepIndex = Math.max(lastDot, lastComma);
-  const decimalSepChar = decimalSepIndex === -1 ? null : cleaned[decimalSepIndex];
 
-  let intPart = cleaned;
-  let fracPart = "";
-  if (decimalSepChar) {
-    intPart = cleaned.slice(0, decimalSepIndex);
-    fracPart = cleaned.slice(decimalSepIndex + 1);
+  let intPart, fracPart, hasDecimal;
+
+  if (lastComma !== -1) {
+    // Comma present → comma is decimal separator, all dots are thousand separators
+    intPart = cleaned.slice(0, lastComma).replace(/\./g, "");
+    fracPart = cleaned.slice(lastComma + 1).replace(/[^\d]/g, "");
+    hasDecimal = true;
+  } else if (dotCount > 1) {
+    // Multiple dots, no comma → all dots are thousand separators (European style)
+    // A trailing dot means the user is about to type a decimal part
+    intPart = cleaned.replace(/\./g, "");
+    fracPart = "";
+    hasDecimal = cleaned.endsWith(".");
+  } else if (lastDot !== -1) {
+    // Single dot, no comma → dot is the decimal separator
+    intPart = cleaned.slice(0, lastDot);
+    fracPart = cleaned.slice(lastDot + 1).replace(/[^\d]/g, "");
+    hasDecimal = true;
+  } else {
+    intPart = cleaned;
+    fracPart = "";
+    hasDecimal = false;
   }
 
-  // Strip any grouping separators from integer part
-  intPart = intPart.replace(/[.,]/g, "");
-  // Strip any non-digits from fractional part (also strips any extra separators)
-  fracPart = fracPart.replace(/[^\d]/g, "");
+  intPart = intPart.replace(/[^\d]/g, "");
+  if (!intPart && !fracPart) return sign ? "-" : "";
 
-  const digits = intPart.replace(/[^\d]/g, "");
-  if (!digits && !fracPart) return sign ? "-" : "";
-
-  return (decimalSepChar !== null) ? `${sign}${digits || "0"}.${fracPart}` : `${sign}${digits}`;
+  return hasDecimal ? `${sign}${intPart || "0"}.${fracPart}` : `${sign}${intPart}`;
 }
 
 export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", submitLabel = "Afegir" }) {
@@ -151,8 +161,8 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                       disabled={f.disabled}
                     >
                       <option value="">—</option>
+                      <option value="__custom__">Nou…</option>
                       {(f.options ?? []).map(o => <option key={o} value={o}>{o}</option>)}
-                      <option value="__custom__">Escriure…</option>
                     </select>
                   ) : (
                     <>
