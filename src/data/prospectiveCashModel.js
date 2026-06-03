@@ -1,7 +1,7 @@
 import { FUND_NAME_MAP } from "./fundNameMap.js";
 import { normalizeCapitalCallTipus } from "./capitalCallTipusModel.js";
 
-const EXCLUDED_CASH_MODEL_TIPUS = new Set([
+export const EXCLUDED_CASH_MODEL_TIPUS = new Set([
   "Transferència Participacions",
   "Conversió Participacions",
 ]);
@@ -56,7 +56,12 @@ export function preloadStaticCapitalCallData() {
   if (_initPromise) return;
   _initPromise = import("./capital-calls.js")
     .then(({ RAW_CC }) => { initStaticData(RAW_CC); _initPromise = null; })
-    .catch(() => { _initPromise = null; _staticRENames = new Set(); _staticCommitted = {}; });
+    .catch((err) => {
+      console.error("[prospectiveCashModel] static data load failed:", err);
+      _staticRENames = new Set();
+      _staticCommitted = {};
+      _initPromise = null;
+    });
 }
 
 // Committed amounts from static capital-calls.js.

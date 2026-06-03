@@ -38,7 +38,7 @@ export default async function handler(req, res) {
 
     if (req.method === "GET") {
       const { page, pageSize, offset } = parsePagination(req.query, { defaultPageSize: 25, maxPageSize: 100 });
-      const { data, error } = await supabase.auth.admin.listUsers();
+      const { data, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
       if (error) return serverError(res, error, "listUsers");
       const users = data?.users ?? [];
       return res.json({
@@ -60,9 +60,8 @@ export default async function handler(req, res) {
       if (!isAllowedRole(role)) {
         return res.status(400).json({ error: "Invalid role" });
       }
-      if (role !== "user") {
-        const privilegedAdmin = await verifyAdminOnly(req, supabase);
-        if (!privilegedAdmin) return res.status(403).json({ error: "Assigning elevated roles requires admin" });
+      if (role !== "user" && getUserRole(admin) !== "admin") {
+        return res.status(403).json({ error: "Assigning elevated roles requires admin" });
       }
 
       const { data: setting } = await supabase
@@ -98,8 +97,7 @@ export default async function handler(req, res) {
       const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
       const updates = {};
       if (role !== undefined) {
-        const privilegedAdmin = await verifyAdminOnly(req, supabase);
-        if (!privilegedAdmin) return res.status(403).json({ error: "Role changes require admin" });
+        if (getUserRole(admin) !== "admin") return res.status(403).json({ error: "Role changes require admin" });
         if (!isAllowedRole(role)) return res.status(400).json({ error: "Invalid role" });
         updates.app_metadata = { role };
       }
@@ -113,7 +111,7 @@ export default async function handler(req, res) {
     if (req.method === "DELETE") {
       if (!id) return res.status(400).json({ error: "User id required" });
 
-      const { data: allUsers, error } = await supabase.auth.admin.listUsers();
+      const { data: allUsers, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
       if (error) return serverError(res, error, "listUsers(delete)");
       const admins = (allUsers?.users ?? []).filter(user => getUserRole(user) === "admin");
       const target = admins.find(user => user.id === id);

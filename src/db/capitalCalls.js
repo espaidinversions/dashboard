@@ -59,11 +59,33 @@ export async function saveCapitalCalls(rows) {
   if (entitiesError) return { error: entitiesError };
   const { data: existingMeta, error: metaReadError } = await supabase.from("fund_meta").select("*");
   if (metaReadError) return { error: metaReadError };
-  const { error: delError } = await supabase.from("capital_calls").delete().neq("id", 0);
-  if (delError) return { error: delError };
-  if (rows.length) {
-    const { error } = await supabase.from("capital_calls").insert(rows.map(capitalCallToRow));
-    if (error) return { error };
+  const ccRows = rows.map(capitalCallToRow).map(r => ({
+    vehicle_id: r.vehicle_id, fons: r.fons, tipus: r.tipus, cat: r.cat,
+    data: r.data, mes: r.mes, year: r.year, fy: r.fy, est: r.est, eur: r.eur, divisa: r.divisa,
+    comentaris: r.comentaris ?? null, amount_native: r.amount_native ?? null,
+    fx_rate: r.fx_rate ?? null, fx_source: r.fx_source ?? null,
+    recallable: r.recallable ?? null, non_recallable: r.non_recallable ?? null,
+    from_recallable: r.from_recallable ?? null,
+  }));
+  const { error: rpcError } = await supabase.rpc("replace_capital_calls", { p_rows: ccRows });
+  if (rpcError) {
+    if (rpcError.code === "PGRST202" || rpcError.message?.includes("replace_capital_calls")) {
+      // RPC not deployed yet — fall back to snapshot-guarded delete+insert
+      const { data: snapshot } = await supabase.from("capital_calls").select("*");
+      const { error: delError } = await supabase.from("capital_calls").delete().neq("id", 0);
+      if (delError) return { error: delError };
+      if (rows.length) {
+        const { error } = await supabase.from("capital_calls").insert(ccRows);
+        if (error) {
+          if (snapshot?.length) {
+            await supabase.from("capital_calls").insert(snapshot).catch(e => console.error("[saveCapitalCalls] restore failed:", e));
+          }
+          return { error };
+        }
+      }
+    } else {
+      return { error: rpcError };
+    }
   }
   const metaByVehicle = new Map((existingMeta ?? []).map((row) => [row.vehicle_id ?? row.fons, row]));
   const grouped = new Map();

@@ -123,51 +123,5 @@ export default async function handler(req, res) {
     }
   }
 
-  // POST — apply the DB migration (creates user_permissions table if it doesn't exist)
-  if (req.method === "POST") {
-    try {
-      const { action } = req.body ?? {};
-      if (action !== "apply-migration") return res.status(400).json({ error: "Unknown action" });
-
-      const sql = `
-        CREATE TABLE IF NOT EXISTS user_permissions (
-          user_id  TEXT PRIMARY KEY,
-          denied_sections TEXT[] NOT NULL DEFAULT '{}',
-          section_roles JSONB NOT NULL DEFAULT '{}'::jsonb
-        );
-        ALTER TABLE user_permissions ADD COLUMN IF NOT EXISTS denied_sections TEXT[] NOT NULL DEFAULT '{}';
-        ALTER TABLE user_permissions ADD COLUMN IF NOT EXISTS section_roles JSONB NOT NULL DEFAULT '{}'::jsonb;
-        ALTER TABLE user_permissions ENABLE ROW LEVEL SECURITY;
-        DO $$ BEGIN
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_policies
-            WHERE tablename = 'user_permissions' AND policyname = 'user_permissions_admin_all'
-          ) THEN
-            CREATE POLICY user_permissions_admin_all ON user_permissions
-              FOR ALL TO authenticated
-              USING ((auth.jwt() ->> 'role') IN ('admin', 'superuser'))
-              WITH CHECK ((auth.jwt() ->> 'role') IN ('admin', 'superuser'));
-          END IF;
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_policies
-            WHERE tablename = 'user_permissions' AND policyname = 'user_permissions_own_read'
-          ) THEN
-            CREATE POLICY user_permissions_own_read ON user_permissions
-              FOR SELECT TO authenticated
-              USING (auth.uid()::text = user_id);
-          END IF;
-        END $$;
-      `;
-      const { error } = await supabase.rpc("exec_sql", { sql }).catch(() => ({ error: { message: "exec_sql not available" } }));
-      if (error) {
-        // Fallback: try direct query approach via postgrest
-        return res.status(200).json({ ok: false, hint: "Run the SQL manually in the Supabase SQL Editor. The exec_sql RPC is not installed.", sql });
-      }
-      return res.status(200).json({ ok: true });
-    } catch (e) {
-      return serverError(res, e, "POST apply-migration");
-    }
-  }
-
   return res.status(405).json({ error: "Method not allowed" });
 }

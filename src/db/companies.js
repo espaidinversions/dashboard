@@ -32,11 +32,24 @@ export async function saveCompanies(rows) {
   const entities = buildPrivateEntitiesFromDashboardBundle({ companies: rows });
   const { error: entitiesError } = await upsertPrivateEntities(entities);
   if (entitiesError) return { error: entitiesError };
-  const { error: delError } = await supabase.from("portfolio_companies").delete().neq("id", 0);
-  if (delError) return { error: delError };
-  if (rows.length) {
-    const { error } = await supabase.from("portfolio_companies").insert(rows.map(companyToRow));
-    if (error) return { error };
+  const { error: rpcError } = await supabase.rpc("replace_portfolio_companies", { p_rows: rows.map(companyToRow) });
+  if (rpcError) {
+    if (rpcError.code === "PGRST202" || rpcError.message?.includes("replace_portfolio_companies")) {
+      const { data: snapshot } = await supabase.from("portfolio_companies").select("*");
+      const { error: delError } = await supabase.from("portfolio_companies").delete().neq("id", 0);
+      if (delError) return { error: delError };
+      if (rows.length) {
+        const { error } = await supabase.from("portfolio_companies").insert(rows.map(companyToRow));
+        if (error) {
+          if (snapshot?.length) {
+            await supabase.from("portfolio_companies").insert(snapshot).catch(e => console.error("[saveCompanies] restore failed:", e));
+          }
+          return { error };
+        }
+      }
+    } else {
+      return { error: rpcError };
+    }
   }
   return { error: null };
 }

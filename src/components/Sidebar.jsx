@@ -12,10 +12,9 @@ const PORTFOLI_SECTIONS = [
   {
     id:"alt", label:"Alternatius", icon:Briefcase,
     children:[
-      {id:"fons",           label:"Fons",        icon:Building2},
-      {id:"searchers",      label:"Searchers",   icon:Search},
-      {id:"companies",      label:"Participades",icon:Building},
-      {id:"alt-cash-model", label:"Model",       icon:LineChart},
+      {id:"fons",      label:"Fons",        icon:Building2},
+      {id:"searchers", label:"Searchers",   icon:Search},
+      {id:"companies", label:"Participades",icon:Building},
     ],
   },
   {
@@ -24,7 +23,6 @@ const PORTFOLI_SECTIONS = [
       {id:"re-directe",    label:"Directe"},
       {id:"re-altres",     label:"Vehicles Real Estate"},
       {id:"re-inversions", label:"Totes les Posicions"},
-      {id:"re-cash-model", label:"Model"},
     ],
   },
   {

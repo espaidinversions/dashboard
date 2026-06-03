@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabase.js";
 import { clearTurtleCapitalLS } from "./utils.js";
 import {
@@ -20,7 +20,7 @@ const ACTIVITY_EVENTS = ["mousemove", "keydown", "mousedown", "touchstart", "scr
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
   const [role, setRole] = useState("user");
-  const [sectionRoles, setSectionRoles] = useState({});
+  const [rawPermissions, setRawPermissions] = useState({ sectionRoles: {}, deniedSections: [] });
   const [isRecovery, setIsRecovery] = useState(false);
   const idleTimerRef = useRef(null);
 
@@ -37,7 +37,7 @@ export function AuthProvider({ children }) {
       }
       setSession(s ?? null);
       setRole(s?.user?.app_metadata?.role ?? "user");
-      if (!s) { setSectionRoles({}); setIsRecovery(false); }
+      if (!s) { setRawPermissions({ sectionRoles: {}, deniedSections: [] }); setIsRecovery(false); }
     });
 
     return () => subscription.unsubscribe();
@@ -52,25 +52,24 @@ export function AuthProvider({ children }) {
       .then(({ data: { user } }) => {
         if (user?.app_metadata?.role) setRole(user.app_metadata.role);
       })
-      .catch(() => {});
+      .catch((err) => console.error("[auth] getUser refresh failed:", err));
   }, [session]);
 
   // Load per-user section permissions after session is ready.
+  // Store the raw API response; the access map is derived from it + current role in useMemo below.
   const fetchPermissions = useCallback((token) => {
     fetch("/api/admin/user-permissions", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        const accessMap = buildSectionAccessMap({
-          role,
-          sectionRoles: data?.sectionRoles,
-          deniedSections: data?.deniedSections,
+        setRawPermissions({
+          sectionRoles: data?.sectionRoles ?? {},
+          deniedSections: data?.deniedSections ?? [],
         });
-        setSectionRoles(accessMap);
       })
-      .catch(() => {});
-  }, [role]);
+      .catch((err) => console.error("[auth] fetchPermissions failed:", err));
+  }, []);
 
   useEffect(() => {
     if (!session || !supabase) return;
@@ -124,7 +123,10 @@ export function AuthProvider({ children }) {
 
   const isAdmin = isAdminRole(role);
   const isSuperuser = isLegacySuperuserRole(role);
-  const sectionAccess = buildSectionAccessMap({ role, sectionRoles });
+  const sectionAccess = useMemo(
+    () => buildSectionAccessMap({ role, sectionRoles: rawPermissions.sectionRoles, deniedSections: rawPermissions.deniedSections }),
+    [role, rawPermissions],
+  );
   const deniedSections = sectionAccessMapToDeniedSections(sectionAccess);
   const canEdit = isAdmin || canAccessAnySection(sectionAccess, Object.keys(sectionAccess), ACCESS_SUPERUSER);
   const isElevated = isAdmin || isSuperuser;
