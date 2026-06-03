@@ -1,5 +1,6 @@
 import {
   apiFetchJson,
+  atomicReplace,
   dealToRow,
   logAudit,
   mergePipelineDeals,
@@ -23,26 +24,7 @@ export async function savePipeline(rows) {
     status: r.status, canal: r.canal, active: r.active,
     estimated_closing: r.estimatedClosing ?? null, manager: r.manager ?? null,
   }));
-  const { error: rpcError } = await supabase.rpc("replace_pipeline", { p_rows: plRows });
-  if (rpcError) {
-    if (rpcError.code === "PGRST202" || rpcError.message?.includes("replace_pipeline")) {
-      const { data: snapshot } = await supabase.from("pipeline").select("*");
-      const { error: delError } = await supabase.from("pipeline").delete().neq("id", -1);
-      if (delError) return { error: delError };
-      if (rows.length) {
-        const { error } = await supabase.from("pipeline").insert(plRows);
-        if (error) {
-          if (snapshot?.length) {
-            await supabase.from("pipeline").insert(snapshot).catch(e => console.error("[savePipeline] restore failed:", e));
-          }
-          return { error };
-        }
-      }
-    } else {
-      return { error: rpcError };
-    }
-  }
-  return { error: null };
+  return atomicReplace("replace_pipeline", "pipeline", plRows);
 }
 
 /**

@@ -58,6 +58,31 @@ export {
 
 // ── Helpers ───────────────────────────────────────────────
 
+export async function atomicReplace(rpcName, table, rows) {
+  if (!supabase) return { error: null };
+  const { error: rpcError } = await supabase.rpc(rpcName, { p_rows: rows });
+  if (!rpcError) return { error: null };
+  const isMissing = rpcError.code === "PGRST202" || rpcError.message?.includes(rpcName);
+  if (!isMissing) return { error: rpcError };
+  // RPC not deployed — snapshot-guarded delete+insert
+  const { data: snapshot } = await supabase.from(table).select("*");
+  const { error: delError } = await supabase.from(table).delete().neq("id", 0);
+  if (delError) return { error: delError };
+  if (!rows.length) return { error: null };
+  const { error: insertError } = await supabase.from(table).insert(rows);
+  if (insertError) {
+    if (snapshot?.length) {
+      const { error: restoreError } = await supabase.from(table).insert(snapshot).catch(e => ({ error: e }));
+      if (restoreError) {
+        console.error(`[atomicReplace:${table}] restore failed:`, restoreError);
+        return { error: new Error(`Insert failed AND restore failed — "${table}" may be empty. Insert: ${insertError.message}. Restore: ${restoreError.message}`) };
+      }
+    }
+    return { error: insertError };
+  }
+  return { error: null };
+}
+
 export async function loadPrivateEntityMap() {
   if (!supabase) return new Map();
   const { data, error } = await supabase.from("private_entities").select("*");

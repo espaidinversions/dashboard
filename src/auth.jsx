@@ -14,13 +14,15 @@ import {
 
 const AuthContext = createContext(null);
 
+const EMPTY_PERMISSIONS = { sectionRoles: {}, deniedSections: [] };
+
 const IDLE_TIMEOUT_MS = 60 * 60 * 1000; // 60 minutes
 const ACTIVITY_EVENTS = ["mousemove", "keydown", "mousedown", "touchstart", "scroll"];
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = loading
   const [role, setRole] = useState("user");
-  const [rawPermissions, setRawPermissions] = useState({ sectionRoles: {}, deniedSections: [] });
+  const [rawPermissions, setRawPermissions] = useState(EMPTY_PERMISSIONS);
   const [isRecovery, setIsRecovery] = useState(false);
   const idleTimerRef = useRef(null);
 
@@ -37,7 +39,7 @@ export function AuthProvider({ children }) {
       }
       setSession(s ?? null);
       setRole(s?.user?.app_metadata?.role ?? "user");
-      if (!s) { setRawPermissions({ sectionRoles: {}, deniedSections: [] }); setIsRecovery(false); }
+      if (!s) { setRawPermissions(EMPTY_PERMISSIONS); setIsRecovery(false); }
     });
 
     return () => subscription.unsubscribe();
@@ -123,12 +125,14 @@ export function AuthProvider({ children }) {
 
   const isAdmin = isAdminRole(role);
   const isSuperuser = isLegacySuperuserRole(role);
-  const sectionAccess = useMemo(
-    () => buildSectionAccessMap({ role, sectionRoles: rawPermissions.sectionRoles, deniedSections: rawPermissions.deniedSections }),
-    [role, rawPermissions],
-  );
-  const deniedSections = sectionAccessMapToDeniedSections(sectionAccess);
-  const canEdit = isAdmin || canAccessAnySection(sectionAccess, Object.keys(sectionAccess), ACCESS_SUPERUSER);
+  const { sectionAccess, deniedSections, canEdit } = useMemo(() => {
+    const map = buildSectionAccessMap({ role, sectionRoles: rawPermissions.sectionRoles, deniedSections: rawPermissions.deniedSections });
+    return {
+      sectionAccess: map,
+      deniedSections: sectionAccessMapToDeniedSections(map),
+      canEdit: isAdmin || canAccessAnySection(map, Object.keys(map), ACCESS_SUPERUSER),
+    };
+  }, [role, rawPermissions, isAdmin]);
   const isElevated = isAdmin || isSuperuser;
   const canAccessSection = useCallback((sectionId) => hasSectionAccess(sectionAccess, sectionId), [sectionAccess]);
   const canEditSection = useCallback((sectionId) => hasSectionAccess(sectionAccess, sectionId, ACCESS_SUPERUSER), [sectionAccess]);
