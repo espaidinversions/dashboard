@@ -12,9 +12,10 @@ const PORTFOLI_SECTIONS = [
   {
     id:"alt", label:"Alternatius", icon:Briefcase,
     children:[
-      {id:"fons",      label:"Fons",        icon:Building2},
-      {id:"searchers", label:"Searchers",   icon:Search},
-      {id:"companies", label:"Participades",icon:Building},
+      {id:"fons",           label:"Fons",        icon:Building2},
+      {id:"searchers",      label:"Searchers",   icon:Search},
+      {id:"companies",      label:"Participades",icon:Building},
+      {id:"alt-cash-model", label:"Model",       icon:LineChart},
     ],
   },
   {
@@ -23,6 +24,7 @@ const PORTFOLI_SECTIONS = [
       {id:"re-directe",    label:"Directe"},
       {id:"re-altres",     label:"Vehicles Real Estate"},
       {id:"re-inversions", label:"Totes les Posicions"},
+      {id:"re-cash-model", label:"Model"},
     ],
   },
   {
@@ -108,9 +110,13 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
     const visibleChildren = sec.children.filter((child) => {
       if (sec.id === "alt") {
         if (child.id === "searchers") return canAccessSection?.("alternatives") ?? true;
+        if (child.id === "alt-cash-model") return canAccessSection?.("cash-model") ?? true;
         return canAccessSection?.(child.id === "posicions" ? "inversions" : child.id) ?? true;
       }
-      if (sec.id === "re") return canAccessSection?.(child.id) ?? true;
+      if (sec.id === "re") {
+        if (child.id === "re-cash-model") return canAccessSection?.("cash-model") ?? true;
+        return canAccessSection?.(child.id) ?? true;
+      }
       if (sec.id === "mp") return canAccessSection?.(child.id) ?? true;
       if (sec.id === "cm") return canAccessSection?.("cash-model") ?? true;
       return true;

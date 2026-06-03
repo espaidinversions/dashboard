@@ -88,12 +88,6 @@ export function buildSectionAccessMap({ role, sectionRoles, deniedSections } = {
 
   const access = Object.fromEntries(ALL_SECTION_IDS.map((sectionId) => [sectionId, baseLevel]));
 
-  // By default, restrict the cash model to superusers/admins.
-  // (Users can still be granted ACCESS_SUPERUSER explicitly for this section.)
-  if (!isAdminRole(role) && !isLegacySuperuserRole(role)) {
-    access["cash-model"] = ACCESS_NONE;
-  }
-
   for (const [sectionIdRaw, levelRaw] of Object.entries(sectionRoles ?? {})) {
     const sectionId = normalizeSectionId(sectionIdRaw);
     if (!ALL_SECTION_IDS.includes(sectionId)) continue;
@@ -104,11 +98,6 @@ export function buildSectionAccessMap({ role, sectionRoles, deniedSections } = {
     const sectionId = normalizeSectionId(sectionIdRaw);
     if (!ALL_SECTION_IDS.includes(sectionId)) continue;
     access[sectionId] = ACCESS_NONE;
-  }
-
-  // Enforce "cash-model" as superuser-only even when a normal user has explicit section roles.
-  if (!isAdminRole(role) && !isLegacySuperuserRole(role)) {
-    access["cash-model"] = access["cash-model"] === ACCESS_SUPERUSER ? ACCESS_SUPERUSER : ACCESS_NONE;
   }
 
   if (access.alternatives === ACCESS_NONE) {
