@@ -39,6 +39,8 @@ export function useTabRouter() {
       case "searchers":      setTab("searchers"); break;
       case "companies":      setTab("companies"); break;
       case "cash-model":     setTab("cash-model"); break;
+      case "alt-cash-model": setTab("alt-cash-model"); break;
+      case "re-cash-model":  setTab("re-cash-model");  break;
       case "posicions":      setTab("inversions"); break;
       case "re-directe":     setTab("real-estate");     setRealEstateTab("directe"); break;
       case "re-altres":      setTab("real-estate");     setRealEstateTab("altres-vehicles"); break;

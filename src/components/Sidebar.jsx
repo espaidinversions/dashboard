@@ -36,6 +36,13 @@ const PORTFOLI_SECTIONS = [
       {id:"mp-traçabilitat", label:"Traçabilitat"},
     ],
   },
+  {
+    id:"cm", label:"Model Caixa", icon:LineChart,
+    children:[
+      {id:"alt-cash-model", label:"Alternatius"},
+      {id:"re-cash-model",  label:"Real Estate"},
+    ],
+  },
 ];
 
 const TX_LEAVES = [
@@ -105,6 +112,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
       }
       if (sec.id === "re") return canAccessSection?.(child.id) ?? true;
       if (sec.id === "mp") return canAccessSection?.(child.id) ?? true;
+      if (sec.id === "cm") return canAccessSection?.("cash-model") ?? true;
       return true;
     });
     if (visibleChildren.length === 0) return null;
@@ -221,9 +229,6 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
         {/* ── Portfoli group ── */}
         <GroupLabel label="Portfoli" />
         {PORTFOLI_SECTIONS.map(sec => <Section key={sec.id} sec={sec} />)}
-        {(canAccessSection?.("cash-model") ?? true) && (
-          <Leaf item={{ id: "cash-model", label: "Model Caixa", icon: LineChart }} />
-        )}
 
         {/* ── Transaccions group ── */}
         {TX_LEAVES.some(l => canAccessSection?.(l.id) ?? true) ? <GroupLabel label="Transaccions" /> : null}

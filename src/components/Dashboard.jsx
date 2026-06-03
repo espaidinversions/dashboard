@@ -312,6 +312,7 @@ function Dashboard() {
 
   const section = tab==="mercats-publics" ? "mercats-publics"
               : tab==="real-estate"     ? "real-estate"
+              : tab==="re-cash-model"   ? "real-estate"
               : tab==="tx-alt"          ? "txlog"
               : tab==="tx-re"           ? "real-estate"
               : "alternatives";
@@ -375,6 +376,10 @@ function Dashboard() {
           : tab === "searchers"
             ? "alternatives"
             : tab === "cash-model"
+              ? "cash-model"
+              : tab === "alt-cash-model"
+              ? "cash-model"
+              : tab === "re-cash-model"
               ? "cash-model"
               : tab === "companies"
               ? "companies"
@@ -470,7 +475,9 @@ function Dashboard() {
   useEffect(() => {
     if (tab === "searchers" && activeNavItem !== "searchers") setActiveNavItem("searchers");
     if (tab === "companies" && activeNavItem !== "companies") setActiveNavItem("companies");
-    if (tab === "cash-model" && activeNavItem !== "cash-model") setActiveNavItem("cash-model");
+    if (tab === "cash-model"     && activeNavItem !== "cash-model")     setActiveNavItem("cash-model");
+    if (tab === "alt-cash-model" && activeNavItem !== "alt-cash-model") setActiveNavItem("alt-cash-model");
+    if (tab === "re-cash-model"  && activeNavItem !== "re-cash-model")  setActiveNavItem("re-cash-model");
     if (tab === "inversions" && activeNavItem !== "posicions") setActiveNavItem("posicions");
     if (tab === "pipeline" && activeNavItem !== "fons") setActiveNavItem("fons");
   }, [tab, activeNavItem, setActiveNavItem]);
@@ -498,7 +505,7 @@ function Dashboard() {
           <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
-                {(tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re") ? "Real Estate" : tab === "cash-model" ? "Model Caixa" : "Mercats Privats"}
+                {(tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re" || tab === "re-cash-model") ? "Real Estate" : tab === "cash-model" ? "Model Caixa" : "Mercats Privats"}
               </div>
               {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
             </div>
@@ -594,6 +601,18 @@ function Dashboard() {
           {tab === "cash-model" && (
             canAccessSection("cash-model")
               ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} /></Suspense>
+              : <div style={{ padding: 32, color: tc.textLight, fontSize: 14 }}>No tens permisos per accedir al Model Caixa.</div>
+          )}
+
+          {tab === "alt-cash-model" && (
+            canAccessSection("cash-model")
+              ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} forceScope="alt" /></Suspense>
+              : <div style={{ padding: 32, color: tc.textLight, fontSize: 14 }}>No tens permisos per accedir al Model Caixa.</div>
+          )}
+
+          {tab === "re-cash-model" && (
+            canAccessSection("cash-model")
+              ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} forceScope="re" /></Suspense>
               : <div style={{ padding: 32, color: tc.textLight, fontSize: 14 }}>No tens permisos per accedir al Model Caixa.</div>
           )}
 
