@@ -218,7 +218,7 @@ export function CumulativeFlowsChart({
 
   if (chartData.length === 0) {
     return (
-      <p style={{ fontSize: 11, color: "#8A9BAC", padding: "12px 0", fontStyle: "italic" }}>
+      <p style={{ fontSize: 11, color: NEUTRAL, padding: "12px 0", fontStyle: "italic" }}>
         Sense dades de fluxos disponibles.
       </p>
     );
@@ -280,22 +280,22 @@ export function CumulativeFlowsChart({
           name: nameMap.inflow ?? "Entrades",
           type: "bar",
           data: chartData.map(r => r.inflow ?? null),
-          itemStyle: { color: colorMap.inflow ?? "#3DC83E", opacity: 0.8, borderRadius: [3, 3, 0, 0] },
+          itemStyle: { color: colorMap.inflow ?? FLOW_COLORS.inflow, opacity: 0.8, borderRadius: [3, 3, 0, 0] },
           barMaxWidth: 32,
         },
         {
           name: nameMap.outflow ?? "Sortides",
           type: "bar",
           data: chartData.map(r => r.outflow ?? null),
-          itemStyle: { color: colorMap.outflow ?? "#E15759", opacity: 0.8, borderRadius: [3, 3, 0, 0] },
+          itemStyle: { color: colorMap.outflow ?? FLOW_COLORS.outflow, opacity: 0.8, borderRadius: [3, 3, 0, 0] },
           barMaxWidth: 32,
         },
         {
           name: nameMap.cumulative ?? "Cumulat agregat",
           type: "line",
           data: chartData.map(r => r.cumulative ?? null),
-          lineStyle: { color: colorMap.cumulative ?? "#2B5070", width: 2 },
-          itemStyle: { color: colorMap.cumulative ?? "#2B5070" },
+          lineStyle: { color: colorMap.cumulative ?? FLOW_COLORS.cumulative, width: 2 },
+          itemStyle: { color: colorMap.cumulative ?? FLOW_COLORS.cumulative },
           symbol: "none",
           connectNulls: true,
         },
