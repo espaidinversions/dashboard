@@ -12,9 +12,7 @@ import {
   buildSectionAccessMap,
   PUBLIC_MARKETS_SUBSECTION_IDS,
   REAL_ESTATE_SUBSECTION_IDS,
-  TRANSACTION_SUBSECTION_IDS,
   sectionAccessMapToDeniedSections,
-  TOP_LEVEL_SECTION_IDS,
 } from "../../permissions.js";
 
 const ACCESS_LABELS = {
@@ -262,139 +260,83 @@ export default function AdminPermissions() {
         <table style={{ width: "max-content", minWidth: "100%", borderCollapse: "collapse", background: tc.card, borderRadius: 10, overflow: "hidden" }}>
           <thead>
             <tr style={{ background: tc.bgAlt }}>
-              <th style={{ ...th, minWidth: 220 }}>Usuari</th>
-              <th style={thCenter} colSpan={TOP_LEVEL_SECTION_IDS.length}>Seccions principals</th>
-              <th style={{ ...thCenter, borderLeft: `2px solid ${tc.border}` }} colSpan={ALTERNATIVES_SECTION_IDS.length}>Dins d'Alternatives</th>
-              <th style={{ ...thCenter, borderLeft: `2px solid ${tc.border}` }} colSpan={REAL_ESTATE_SUBSECTION_IDS.length}>Dins de Real Estate</th>
-              <th style={{ ...thCenter, borderLeft: `2px solid ${tc.border}` }} colSpan={PUBLIC_MARKETS_SUBSECTION_IDS.length}>Dins de Mercats Públics</th>
-              <th style={{ ...thCenter, borderLeft: `2px solid ${tc.border}` }} colSpan={TRANSACTION_SUBSECTION_IDS.length}>Transaccions</th>
-              <th style={th}></th>
-            </tr>
-            <tr style={{ background: tc.bgAlt }}>
-              <th style={{ ...th, minWidth: 220, borderBottom: `2px solid ${tc.border}` }}>—</th>
-              {SECTION_GROUPS[0].items.map((section) => <th key={section.id} style={thCenter}>{section.label}</th>)}
-              {SECTION_GROUPS[1].items.map((section, index) => (
-                <th key={section.id} style={{ ...thCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>{section.label}</th>
-              ))}
-              {SECTION_GROUPS[2].items.map((section, index) => (
-                <th key={section.id} style={{ ...thCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>{section.label}</th>
-              ))}
-              {SECTION_GROUPS[3].items.map((section, index) => (
-                <th key={section.id} style={{ ...thCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>{section.label}</th>
-              ))}
-              {SECTION_GROUPS[4].items.map((section, index) => (
-                <th key={section.id} style={{ ...thCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>{section.label}</th>
-              ))}
-              <th style={th}>Desar</th>
+              <th style={{ ...th, minWidth: 200 }}>Secció</th>
+              {users.map((user) => {
+                const role = getRole(user);
+                return (
+                  <th key={user.id} style={{ ...thCenter, minWidth: 130 }}>
+                    <div>{user.email}</div>
+                    <div style={{ fontSize: 10, fontWeight: 400, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.04em", color: role === "admin" ? tc.green : role === "superuser" ? "#B45309" : tc.textLight }}>
+                      {role}
+                    </div>
+                  </th>
+                );
+              })}
             </tr>
           </thead>
           <tbody>
             {users.length === 0 && (
               <tr>
-                <td colSpan={ALL_SECTIONS.length + 2} style={{ ...td, textAlign: "center", color: tc.textLight }}>
+                <td colSpan={2} style={{ ...td, textAlign: "center", color: tc.textLight }}>
                   No hi ha usuaris.
                 </td>
               </tr>
             )}
-            {users.map((user) => {
-              const role = getRole(user);
-              const isAdmin = role === "admin";
-              const access = getPermissions(user);
-              const isLegacySuperuser = role === "superuser";
-              return (
-                <tr key={user.id} style={{ background: isAdmin ? tc.bgAlt : "transparent" }}>
-                  <td style={td}>
-                    <div style={{ fontWeight: 500 }}>{user.email}</div>
-                    <div style={{ fontSize: 11, color: tc.textLight, marginTop: 2, textTransform: "uppercase", letterSpacing: "0.04em" }}>
-                      {role}
-                      {isAdmin && <span style={{ marginLeft: 6, color: tc.green, fontSize: 10 }}>accés total</span>}
-                      {isLegacySuperuser && <span style={{ marginLeft: 6, color: "#B45309", fontSize: 10 }}>mode legacy</span>}
-                    </div>
+            {SECTION_GROUPS.map((group, gi) => (
+              <React.Fragment key={group.groupLabel}>
+                <tr>
+                  <td
+                    colSpan={users.length + 1}
+                    style={{ ...td, background: tc.bgAlt, fontWeight: 700, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em", color: tc.textLight, borderTop: gi > 0 ? `2px solid ${tc.border}` : undefined }}
+                  >
+                    {group.groupLabel}
                   </td>
-                  {SECTION_GROUPS[0].items.map((section) => (
-                    <td key={section.id} style={tdCenter}>
-                      {isAdmin ? (
-                        <span style={{ fontSize: 11, color: tc.textLight }}>Admin</span>
-                      ) : (
-                        <select
-                          value={access[section.id] ?? ACCESS_USER}
-                          onChange={(event) => setSectionLevel(user, section.id, event.target.value)}
-                          style={selectStyle}
-                        >
-                          {ACCESS_LEVELS.map((level) => <option key={level} value={level}>{ACCESS_LABELS[level]}</option>)}
-                        </select>
-                      )}
-                    </td>
-                  ))}
-                  {SECTION_GROUPS[1].items.map((section, index) => (
-                    <td key={section.id} style={{ ...tdCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>
-                      {isAdmin ? (
-                        <span style={{ fontSize: 11, color: tc.textLight }}>Admin</span>
-                      ) : (
-                        <select
-                          value={access[section.id] ?? ACCESS_USER}
-                          onChange={(event) => setSectionLevel(user, section.id, event.target.value)}
-                          style={selectStyle}
-                          disabled={access.alternatives === ACCESS_NONE}
-                        >
-                          {ACCESS_LEVELS.map((level) => <option key={level} value={level}>{ACCESS_LABELS[level]}</option>)}
-                        </select>
-                      )}
-                    </td>
-                  ))}
-                  {SECTION_GROUPS[2].items.map((section, index) => (
-                    <td key={section.id} style={{ ...tdCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>
-                      {isAdmin ? (
-                        <span style={{ fontSize: 11, color: tc.textLight }}>Admin</span>
-                      ) : (
-                        <select
-                          value={access[section.id] ?? ACCESS_USER}
-                          onChange={(event) => setSectionLevel(user, section.id, event.target.value)}
-                          style={selectStyle}
-                          disabled={access["real-estate"] === ACCESS_NONE}
-                        >
-                          {ACCESS_LEVELS.map((level) => <option key={level} value={level}>{ACCESS_LABELS[level]}</option>)}
-                        </select>
-                      )}
-                    </td>
-                  ))}
-                  {SECTION_GROUPS[3].items.map((section, index) => (
-                    <td key={section.id} style={{ ...tdCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>
-                      {isAdmin ? (
-                        <span style={{ fontSize: 11, color: tc.textLight }}>Admin</span>
-                      ) : (
-                        <select
-                          value={access[section.id] ?? ACCESS_USER}
-                          onChange={(event) => setSectionLevel(user, section.id, event.target.value)}
-                          style={selectStyle}
-                          disabled={access["mercats-publics"] === ACCESS_NONE}
-                        >
-                          {ACCESS_LEVELS.map((level) => <option key={level} value={level}>{ACCESS_LABELS[level]}</option>)}
-                        </select>
-                      )}
-                    </td>
-                  ))}
-                  {SECTION_GROUPS[4].items.map((section, index) => (
-                    <td key={section.id} style={{ ...tdCenter, borderLeft: index === 0 ? `2px solid ${tc.border}` : undefined }}>
-                      {isAdmin ? (
-                        <span style={{ fontSize: 11, color: tc.textLight }}>Admin</span>
-                      ) : (
-                        <select
-                          value={access[section.id] ?? ACCESS_USER}
-                          onChange={(event) => setSectionLevel(user, section.id, event.target.value)}
-                          style={selectStyle}
-                          disabled={
+                </tr>
+                {group.items.map((section) => (
+                  <tr key={section.id}>
+                    <td style={{ ...td, paddingLeft: 20 }}>{section.label}</td>
+                    {users.map((user) => {
+                      const isAdmin = getRole(user) === "admin";
+                      const access = getPermissions(user);
+                      const disabled =
+                        gi === 1 ? access.alternatives === ACCESS_NONE
+                        : gi === 2 ? access["real-estate"] === ACCESS_NONE
+                        : gi === 3 ? access["mercats-publics"] === ACCESS_NONE
+                        : gi === 4 ? (
                             section.id === "tx-alt" ? access.txlog === ACCESS_NONE
                             : section.id === "tx-re" ? access["real-estate"] === ACCESS_NONE
-                            : access["mp-transaccions"] === ACCESS_NONE
-                          }
-                        >
-                          {ACCESS_LEVELS.map((level) => <option key={level} value={level}>{ACCESS_LABELS[level]}</option>)}
-                        </select>
-                      )}
-                    </td>
-                  ))}
-                  <td style={tdCenter}>
+                            : access["mercats-publics"] === ACCESS_NONE
+                          )
+                        : false;
+                      return (
+                        <td key={user.id} style={tdCenter}>
+                          {isAdmin ? (
+                            <span style={{ fontSize: 11, color: tc.textLight }}>Admin</span>
+                          ) : (
+                            <select
+                              value={access[section.id] ?? ACCESS_USER}
+                              onChange={(e) => setSectionLevel(user, section.id, e.target.value)}
+                              style={selectStyle}
+                              disabled={disabled}
+                            >
+                              {ACCESS_LEVELS.map((level) => (
+                                <option key={level} value={level}>{ACCESS_LABELS[level]}</option>
+                              ))}
+                            </select>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </React.Fragment>
+            ))}
+            <tr style={{ borderTop: `2px solid ${tc.border}` }}>
+              <td style={{ ...td, background: tc.bgAlt }}></td>
+              {users.map((user) => {
+                const isAdmin = getRole(user) === "admin";
+                return (
+                  <td key={user.id} style={{ ...tdCenter, background: tc.bgAlt }}>
                     {isAdmin ? (
                       <span style={{ fontSize: 11, color: tc.textLight }}>—</span>
                     ) : (
@@ -402,15 +344,10 @@ export default function AdminPermissions() {
                         onClick={() => saveUser(user)}
                         disabled={saving === user.id || !!tableError}
                         style={{
-                          padding: "4px 12px",
-                          borderRadius: 4,
-                          border: "none",
-                          background: tc.green,
-                          color: "#fff",
+                          padding: "4px 12px", borderRadius: 4, border: "none",
+                          background: tc.green, color: "#fff",
                           cursor: saving === user.id || tableError ? "not-allowed" : "pointer",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          fontFamily: "inherit",
+                          fontSize: 12, fontWeight: 600, fontFamily: "inherit",
                           opacity: (saving === user.id || tableError) ? 0.5 : 1,
                         }}
                       >
@@ -418,9 +355,9 @@ export default function AdminPermissions() {
                       </button>
                     )}
                   </td>
-                </tr>
-              );
-            })}
+                );
+              })}
+            </tr>
           </tbody>
         </table>
       </div>
