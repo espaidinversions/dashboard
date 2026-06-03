@@ -529,6 +529,7 @@ function Dashboard() {
               byVcpe={byVcpe}
               byEst={byEst}
               vcpeCfg={vcpeCfg}
+              estCfg={estCfg}
             />
           )}
 

@@ -10,6 +10,7 @@ export function ResumTab({
   byVcpe = [],
   byEst = [],
   vcpeCfg = {},
+  estCfg = {},
 }) {
   return (
     <>
@@ -45,8 +46,8 @@ export function ResumTab({
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 16, marginBottom: 18 }}>
         {[
-          { title: "Capital Cridat per Tipus", data: byVcpe, colorFn: n => vcpeCfg[n]?.color || tc.navy },
-          { title: "Capital Cridat per Estratègia", data: byEst, colorFn: n => vcpeCfg[n]?.color || tc.navy },
+          { title: "Capital Cridat per Tipus",      data: byVcpe, colorFn: n => vcpeCfg[n]?.color || tc.navy },
+          { title: "Capital Cridat per Estratègia", data: byEst,  colorFn: n => estCfg[n]?.color  || tc.navy },
         ].map((ch, i) => (
           <div key={i} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px 22px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
             <SectionHeader title={ch.title} tc={tc} />
