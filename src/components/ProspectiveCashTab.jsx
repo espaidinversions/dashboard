@@ -11,8 +11,8 @@ import {
   deriveProspectiveCashRows,
   editorDataToForecastRows,
   forecastRowsToEditorData,
+  preloadStaticCapitalCallData,
 } from "../data/prospectiveCashModel.js";
-
 import {
   modeValue, fmtK, pct, signed, aggregateByYear, aggregateByFund,
   buildTable, selectStyle, buttonStyle,
@@ -21,6 +21,9 @@ import { Kpi, ChartCard, Toolbar, ToolbarLabel, Segmented, PeriodPill } from "./
 import { MainChart, CumulativeChart, DeviationChart, FundDeviationChart } from "./prospective/ProspectiveCharts.jsx";
 import { CashTable } from "./prospective/CashTable.jsx";
 import { EditorPanel } from "./prospective/EditorPanel.jsx";
+
+// Kick off static data preload as soon as this module loads (behind React.lazy).
+preloadStaticCapitalCallData();
 
 const EXCLUDED_CASH_MODEL_TIPUS = new Set([
   "Transferència Participacions",
@@ -51,7 +54,7 @@ function colorFor(tc, color) {
   return tc.textLight;
 }
 
-export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
+export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
   const { tc, dark } = useTheme();
   const [editorData, setEditorData] = useState({ years: [], funds: {} });
   const [vehicleIds, setVehicleIds] = useState({});
@@ -60,7 +63,8 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   const [fetchError, setFetchError] = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [entityScope, setEntityScope] = usePersistedState("ui_cash_model_scope", "funds");
+  const [_entityScope, setEntityScope] = usePersistedState("ui_cash_model_scope", "funds");
+  const entityScope = forceScope ?? _entityScope;
   const [view, setView] = useState("dashboard");
   const [mode, setMode] = useState("net");
   const [tableType, setTableType] = useState("net");
@@ -77,6 +81,15 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   const [committedOverrides, setCommittedOverrides] = useState({});
 
   const entityText = useMemo(() => {
+    if (entityScope === "all") {
+      return {
+        singular: "vehicle",
+        plural: "vehicles",
+        selectLabel: "Vehicles",
+        allLabel: "Tots els vehicles",
+        searchPlaceholder: "Cercar vehicle...",
+      };
+    }
     if (entityScope === "companies") {
       return {
         singular: "companyia",
@@ -104,30 +117,46 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     };
   }, [entityScope]);
 
-  const kindByNameLower = useMemo(() => {
-    const map = {};
+  const ccMaps = useMemo(() => {
+    const kindByNameLower = {};
+    const entityMetaByName = {};
+    const fundRouteIds = {};
     const rows = Array.isArray(rawCapitalCalls) ? rawCapitalCalls : [];
     for (const row of rows) {
-      const rawFund = String(row?.fons ?? "").trim();
-      const canonical = FUND_NAME_MAP[rawFund] ?? rawFund;
+      if (!row?.fons) continue;
+      const raw = String(row.fons).trim();
+      const canonical = FUND_NAME_MAP[raw] ?? raw;
       const key = canonical.trim().toLowerCase();
-      if (!key) continue;
-      const vcpe = String(row?.vehicleTipus ?? "").trim();
-      const isCompany = vcpe === "PC" || vcpe === "SF";
-      const isRE = vcpe === "RE";
-      if (isCompany) map[key] = "companies";
-      else if (isRE) map[key] = "re";
-      else if (!map[key]) map[key] = "funds";
+      if (key) {
+        const vcpe = String(row?.vehicleTipus ?? "").trim();
+        const est = String(row?.est ?? "").trim();
+        const isCompany = vcpe === "PC" || vcpe === "SF" || est === "Participada (Altres)" || est.startsWith("Search Fund");
+        const isRE = vcpe === "RE" || est === "Fons Real Estate";
+        if (isCompany) kindByNameLower[key] = "companies";
+        else if (isRE) kindByNameLower[key] = "re";
+        else if (!kindByNameLower[key]) kindByNameLower[key] = "funds";
+      }
+      const vehicleTipus = row?.vehicleTipus ? String(row.vehicleTipus) : null;
+      const id = row?.id ? String(row.id) : null;
+      if (id && vehicleTipus) {
+        if (!entityMetaByName[raw]) entityMetaByName[raw] = { id, vehicleTipus };
+        if (!entityMetaByName[canonical]) entityMetaByName[canonical] = { id, vehicleTipus };
+      }
+      if (!fundRouteIds[raw]) fundRouteIds[raw] = makeFundRouteId(row);
+      if (!fundRouteIds[canonical]) fundRouteIds[canonical] = makeFundRouteId(row);
     }
-    return map;
+    return { kindByNameLower, entityMetaByName, fundRouteIds };
   }, [rawCapitalCalls]);
+  const { kindByNameLower, entityMetaByName, fundRouteIds } = ccMaps;
 
   const scopedActualRows = useMemo(() => {
     const rows = Array.isArray(rawCapitalCalls) ? rawCapitalCalls : [];
+    if (entityScope === "all") return rows;
     return rows.filter((row) => {
       const vcpe = String(row?.vehicleTipus ?? "").trim();
-      const isCompany = vcpe === "PC" || vcpe === "SF";
-      const isRE = vcpe === "RE";
+      const est = String(row?.est ?? "").trim();
+      const isCompany = vcpe === "PC" || vcpe === "SF" || est === "Participada (Altres)" || est.startsWith("Search Fund");
+      const isRE = vcpe === "RE" || est === "Fons Real Estate";
       if (entityScope === "companies") return isCompany;
       if (entityScope === "re") return isRE;
       return !isCompany && !isRE;
@@ -136,6 +165,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
 
   const scopedEditorData = useMemo(() => {
     const srcFunds = editorData?.funds && typeof editorData.funds === "object" ? editorData.funds : {};
+    if (entityScope === "all") return { ...editorData, funds: srcFunds };
     const funds = {};
     for (const [name, data] of Object.entries(srcFunds)) {
       const kind = kindByNameLower[String(name ?? "").trim().toLowerCase()] ?? "funds";
@@ -152,8 +182,12 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
   }, [editorData, entityScope, kindByNameLower]);
 
   const cashData = useMemo(
-    () => deriveProspectiveCashRows(scopedEditorData, scopedActualRows, { reScope: entityScope === "re" }),
-    [scopedActualRows, scopedEditorData, entityScope],
+    () => deriveProspectiveCashRows(scopedEditorData, scopedActualRows, {
+      reScope: entityScope === "re",
+      allScope: entityScope === "all",
+      isReFund,
+    }),
+    [scopedActualRows, scopedEditorData, entityScope, isReFund],
   );
 
   const mergedCommitted = useMemo(() => {
@@ -230,7 +264,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
       netReal: totalDist - totalCalls,
       totalCalls, totalDist,
       dpi: totalCalls > 0 ? totalDist / totalCalls : null,
-      fundCount: new Set(visibleRows.map((row) => row.fund)).size,
+      fundCount: (() => { const s = new Set(); for (const r of visibleRows) s.add(r.fund); return s.size; })(),
     };
   }, [mode, visibleRows, yearAgg]);
 
@@ -273,23 +307,6 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     return { committed, called, pending, utilPct };
   }, [kpis.totalCalls, mergedCommitted, visibleRows]);
 
-  const entityMetaByName = useMemo(() => {
-    const map = {};
-    if (Array.isArray(rawCapitalCalls)) {
-      rawCapitalCalls.forEach((row) => {
-        if (!row?.fons) return;
-        const raw = String(row.fons);
-        const canonical = FUND_NAME_MAP[raw] ?? raw;
-        const vehicleTipus = row?.vehicleTipus ? String(row.vehicleTipus) : null;
-        const id = row?.id ? String(row.id) : null;
-        if (id && vehicleTipus) {
-          if (!map[raw]) map[raw] = { id, vehicleTipus };
-          if (!map[canonical]) map[canonical] = { id, vehicleTipus };
-        }
-      });
-    }
-    return map;
-  }, [rawCapitalCalls]);
 
   const periodBanner = useMemo(() => {
     const totals = {
@@ -328,7 +345,11 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     for (const row of rawCapitalCalls) {
       const rawFund = String(row?.fons ?? "").trim();
       const fund = FUND_NAME_MAP[rawFund] ?? rawFund;
-      if (!fund || isReFund(rawFund) || isReFund(fund)) continue;
+      const vcpe = String(row?.vehicleTipus ?? "").trim();
+      const est = String(row?.est ?? "").trim();
+      const isCompanyRow = vcpe === "PC" || vcpe === "SF" || est === "Participada (Altres)" || est.startsWith("Search Fund");
+      if (!fund || isCompanyRow) continue;
+      if (entityScope !== "re" && (isReFund(rawFund) || isReFund(fund))) continue;
       if (!flowCats.has(String(row?.cat ?? "").trim())) continue;
       const concept = normalizeCapitalCallTipus(row?.tipus);
       if (EXCLUDED_CASH_MODEL_TIPUS.has(concept)) continue;
@@ -377,26 +398,13 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
     });
   }, [dirty, isReFund, loading, rawCapitalCalls]);
 
-  const fundRouteIds = useMemo(() => {
-    const map = {};
-    if (Array.isArray(rawCapitalCalls)) {
-      rawCapitalCalls.forEach((row) => {
-        if (!row?.fons) return;
-        const raw = String(row.fons);
-        const canonical = FUND_NAME_MAP[raw] ?? raw;
-        if (!map[raw]) map[raw] = makeFundRouteId(row);
-        if (!map[canonical]) map[canonical] = makeFundRouteId(row);
-      });
-    }
-    return map;
-  }, [rawCapitalCalls]);
 
   const editorFundNames = useMemo(
     () => Object.keys(scopedEditorData.funds)
-      .filter((name) => !isReFund(name))
+      .filter((name) => entityScope === "re" || !isReFund(name))
       .filter((name) => !editorSearch || name.toLowerCase().includes(editorSearch.toLowerCase()))
       .sort((a, b) => a.localeCompare(b)),
-    [editorSearch, isReFund, scopedEditorData.funds],
+    [editorSearch, entityScope, isReFund, scopedEditorData.funds],
   );
 
   const saveAndApply = useCallback(async () => {
@@ -486,8 +494,12 @@ export function ProspectiveCashTab({ rawCapitalCalls = [] }) {
       {view === "dashboard" ? (
         <>
           <Toolbar tc={tc}>
-            <ToolbarLabel tc={tc}>Entitats</ToolbarLabel>
-            <Segmented tc={tc} value={entityScope} onChange={setEntityScope} options={[{ id: "funds", label: "Fons" }, { id: "re", label: "Real Estate" }, { id: "companies", label: "Companyies" }]} />
+            {!forceScope && (
+              <>
+                <ToolbarLabel tc={tc}>Entitats</ToolbarLabel>
+                <Segmented tc={tc} value={entityScope} onChange={setEntityScope} options={[{ id: "all", label: "Tots" }, { id: "funds", label: "Fons" }, { id: "re", label: "Real Estate" }, { id: "companies", label: "Companyies" }]} />
+              </>
+            )}
             <ToolbarLabel tc={tc}>Vista</ToolbarLabel>
             <Segmented tc={tc} value={mode} onChange={setMode} options={MODES} />
             <ToolbarLabel tc={tc}>Periodes</ToolbarLabel>

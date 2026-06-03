@@ -1,5 +1,4 @@
 import { FUND_NAME_MAP } from "./fundNameMap.js";
-import { RAW_CC as STATIC_CC } from "./capital-calls.js";
 import { normalizeCapitalCallTipus } from "./capitalCallTipusModel.js";
 
 const EXCLUDED_CASH_MODEL_TIPUS = new Set([
@@ -24,36 +23,45 @@ const RE_FAMILY_PREFIXES = [
 
 // RE funds derived from static capital-calls.js (authoritative for vehicleTipus classification).
 // Used as fallback when rawCapitalCalls (DB data) lacks vehicleTipus metadata.
-const STATIC_RE_NAMES = (() => {
-  const s = new Set();
-  for (const row of STATIC_CC) {
-    if (String(row?.vehicleTipus ?? "").trim() !== "RE") continue;
-    const fund = String(row?.fons ?? "").trim();
-    if (fund) {
-      s.add(fund.toLowerCase());
-      s.add(stripLegalSuffix(fund).toLowerCase());
+let _staticRENames = null;   // Set<string> after init
+let _staticCommitted = null; // { [fund: string]: number } after init
+let _initPromise = null;
+
+function initStaticData(RAW_CC) {
+  const names = new Set();
+  const committed = {};
+  for (const row of RAW_CC) {
+    if (String(row?.vehicleTipus ?? "").trim() === "RE") {
+      const fund = String(row?.fons ?? "").trim();
+      if (fund) {
+        names.add(fund.toLowerCase());
+        names.add(stripLegalSuffix(fund).toLowerCase());
+      }
+    }
+    if (row?.cat === "Compromís" && !EXCLUDED_CASH_MODEL_TIPUS.has(normalizeCapitalCallTipus(row?.tipus))) {
+      const rawFund = String(row?.fons ?? "").trim();
+      if (!rawFund) continue;
+      const mappedFund = FUND_NAME_MAP[rawFund];
+      const amount = Math.abs(Number(row?.eur) || 0);
+      committed[rawFund] = (committed[rawFund] ?? 0) + amount;
+      if (mappedFund) committed[mappedFund] = (committed[mappedFund] ?? 0) + amount;
     }
   }
-  return s;
-})();
+  _staticRENames = names;
+  _staticCommitted = committed;
+}
+
+export function preloadStaticCapitalCallData() {
+  if (_staticRENames !== null) return;
+  if (_initPromise) return;
+  _initPromise = import("./capital-calls.js")
+    .then(({ RAW_CC }) => { initStaticData(RAW_CC); _initPromise = null; })
+    .catch(() => { _initPromise = null; _staticRENames = new Set(); _staticCommitted = {}; });
+}
 
 // Committed amounts from static capital-calls.js.
 // Keyed by BOTH the raw workbook name AND the mapped canonical name so the
 // lookup succeeds regardless of which name the forecast table uses.
-const STATIC_COMMITTED = (() => {
-  const m = {};
-  for (const row of STATIC_CC) {
-    if (row?.cat !== "Compromís") continue;
-    if (EXCLUDED_CASH_MODEL_TIPUS.has(normalizeCapitalCallTipus(row?.tipus))) continue;
-    const rawFund = String(row?.fons ?? "").trim();
-    if (!rawFund) continue;
-    const mappedFund = FUND_NAME_MAP[rawFund];
-    const amount = Math.abs(Number(row?.eur) || 0);
-    m[rawFund] = (m[rawFund] ?? 0) + amount;
-    if (mappedFund) m[mappedFund] = (m[mappedFund] ?? 0) + amount;
-  }
-  return m;
-})();
 
 export const PROSPECTIVE_CASH_USD_FUNDS = new Set([
   "Adams Street GSF7", "Alder III", "Alpine IX", "Altamar MidMarket", "Ara III",
@@ -76,7 +84,8 @@ export function forecastRowsToEditorData(rows) {
   let maxYear = -Infinity;
 
   for (const row of rows) {
-    const fund = String(row.fons);
+    const rawFons = String(row.fons);
+    const fund = FUND_NAME_MAP[rawFons] ?? rawFons;
     if (!funds[fund]) {
       funds[fund] = { model_calls: {}, model_dist: {} };
       vehicleIds[fund] = row.vehicle_id;
@@ -121,7 +130,7 @@ export function editorDataToForecastRows(editorData, vehicleIds) {
 export function buildReFundMatcher(actualCapitalCalls = []) {
   // Start from the authoritative static set so RE detection works even when
   // rawCapitalCalls (DB data) is empty or lacks vcpe metadata.
-  const reFundsNorm = new Set(STATIC_RE_NAMES);
+  const reFundsNorm = new Set(_staticRENames ?? []);
   if (Array.isArray(actualCapitalCalls)) {
     for (const row of actualCapitalCalls) {
       if (String(row?.est ?? "").trim() === "Fons Real Estate") {
@@ -141,10 +150,10 @@ export function buildReFundMatcher(actualCapitalCalls = []) {
   };
 }
 
-export function deriveProspectiveCashRows(editorData, actualCapitalCalls = [], { reScope = false } = {}) {
+export function deriveProspectiveCashRows(editorData, actualCapitalCalls = [], { reScope = false, allScope = false, isReFund: isReFundArg } = {}) {
   const normalized = editorData && typeof editorData === "object" ? editorData : { years: [], funds: {} };
 
-  const isReFund = buildReFundMatcher(actualCapitalCalls);
+  const isReFund = isReFundArg ?? buildReFundMatcher(actualCapitalCalls);
 
   const byFundYearType = new Map();
   const committed = deriveCommittedFromCapitalCalls(actualCapitalCalls);
@@ -155,7 +164,7 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = [], {
   const actuals = deriveActualsFromCapitalCalls(actualCapitalCalls);
 
   for (const [fund, fundData] of Object.entries(normalized.funds ?? {})) {
-    if (reScope ? !isReFund(fund) : isReFund(fund)) continue;
+    if (!allScope && (reScope ? !isReFund(fund) : isReFund(fund))) continue;
     if (!committed[fund]) committed[fund] = committedLower[fund.trim().toLowerCase()] ?? (Number(fundData.committed) || 0);
     const years = new Set();
     ["model_calls", "model_dist"].forEach((key) => {
@@ -170,7 +179,7 @@ export function deriveProspectiveCashRows(editorData, actualCapitalCalls = [], {
   }
 
   actuals.forEach((actual) => {
-    if (reScope ? !isReFund(actual.fund) : isReFund(actual.fund)) return;
+    if (!allScope && (reScope ? !isReFund(actual.fund) : isReFund(actual.fund))) return;
     const key = rowKey(actual);
     const existing = byFundYearType.get(key);
     // Include actuals even when the fund is not yet present in the forecast table.
@@ -244,5 +253,5 @@ function deriveCommittedFromCapitalCalls(rows) {
     });
   }
   // DB data wins per fund; static provides fallback for funds not yet in DB.
-  return { ...STATIC_COMMITTED, ...fromDb };
+  return { ...(_staticCommitted ?? {}), ...fromDb };
 }

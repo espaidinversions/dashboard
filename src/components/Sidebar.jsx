@@ -12,10 +12,10 @@ const PORTFOLI_SECTIONS = [
   {
     id:"alt", label:"Alternatius", icon:Briefcase,
     children:[
-      {id:"fons",      label:"Fons",                icon:Building2},
-      {id:"searchers", label:"Searchers",           icon:Search},
-      {id:"companies", label:"Participades",        icon:Building},
-      {id:"cash-model", label:"Model Caixa",        icon:LineChart},
+      {id:"fons",           label:"Fons",        icon:Building2},
+      {id:"searchers",      label:"Searchers",   icon:Search},
+      {id:"companies",      label:"Participades",icon:Building},
+      {id:"alt-cash-model", label:"Model",       icon:LineChart},
     ],
   },
   {
@@ -24,6 +24,7 @@ const PORTFOLI_SECTIONS = [
       {id:"re-directe",    label:"Directe"},
       {id:"re-altres",     label:"Vehicles Real Estate"},
       {id:"re-inversions", label:"Totes les Posicions"},
+      {id:"re-cash-model", label:"Model"},
     ],
   },
   {
@@ -222,6 +223,9 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
         {/* ── Portfoli group ── */}
         <GroupLabel label="Portfoli" />
         {PORTFOLI_SECTIONS.map(sec => <Section key={sec.id} sec={sec} />)}
+        {(canAccessSection?.("cash-model") ?? true) && (
+          <Leaf item={{ id: "cash-model", label: "Model Caixa", icon: LineChart }} />
+        )}
 
         {/* ── Transaccions group ── */}
         {TX_LEAVES.some(l => canAccessSection?.(l.id) ?? true) ? <GroupLabel label="Transaccions" /> : null}

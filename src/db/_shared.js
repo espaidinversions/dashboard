@@ -65,7 +65,7 @@ export async function loadPrivateEntityMap() {
   return new Map(data.map((row) => [row.id, row]));
 }
 
-export async function upsertFundMetaComputed(vehicleId, fallbackName = "") {
+export async function upsertFundMetaComputed(vehicleId, fallbackName = "", entityMap = null) {
   if (!supabase || !vehicleId) return { error: null };
   const [{ data: ccRows, error: ccError }, { data: metaRow, error: metaError }] = await Promise.all([
     supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").eq("vehicle_id", vehicleId).order("data"),
@@ -74,8 +74,8 @@ export async function upsertFundMetaComputed(vehicleId, fallbackName = "") {
   if (ccError) return { error: ccError };
   if (metaError) return { error: metaError };
 
-  const entityMap = await loadPrivateEntityMap();
-  const rawRows = (ccRows ?? []).map((row) => rowToCapitalCall(row, entityMap));
+  const resolvedEntityMap = entityMap ?? await loadPrivateEntityMap();
+  const rawRows = (ccRows ?? []).map((row) => rowToCapitalCall(row, resolvedEntityMap));
   const tvpi = metaRow?.tvpi ?? null;
   const irr = computeFundIrrFromRows(rawRows, tvpi);
   const name = metaRow?.fons ?? rawRows[0]?.fons ?? fallbackName;

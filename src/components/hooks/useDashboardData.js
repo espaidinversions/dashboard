@@ -152,7 +152,7 @@ export function useDashboardData() {
           resolveEstimatedFxRates(data.rawCC)
             .then((anyResolved) => {
               if (!anyResolved) return;
-              return loadCapitalCalls().then((fresh) => {
+              return loadCapitalCalls({ skipCompanions: true }).then((fresh) => {
                 if (!fresh) return;
                 setRawCC(fresh);
                 writeStoredJSON(LS_CC, fresh);
