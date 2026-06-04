@@ -164,11 +164,11 @@ export function normalizeCapitalCallSignedAmount(tipus, eur) {
     case "Aportació":
     case "Fee d'Intermediació":
     case "Préstec":
-    case "Management Fee":
     case "Transferència Participacions":
     case "Conversió Participacions":
     case "Venture Debt":
       return Math.abs(amount);
+    case "Management Fee":
     case "Prima d'Equalització":
       return amount;
     default:

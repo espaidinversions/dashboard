@@ -64,6 +64,21 @@ function normalizeNumericInput(raw) {
   return hasDecimal ? `${sign}${intPart || "0"}.${fracPart}` : `${sign}${intPart}`;
 }
 
+function formatDisplayValue(normalized) {
+  if (!normalized || normalized === "-") return normalized ?? "";
+  const hasTrailingDot = normalized.endsWith(".");
+  const base = hasTrailingDot ? normalized.slice(0, -1) : normalized;
+  const num = Number(base);
+  if (!isFinite(num)) return normalized;
+  const dotIdx = base.indexOf(".");
+  const fracDigits = dotIdx >= 0 ? base.length - dotIdx - 1 : 0;
+  const formatted = num.toLocaleString("ca-ES", {
+    minimumFractionDigits: fracDigits,
+    maximumFractionDigits: fracDigits,
+  });
+  return hasTrailingDot ? formatted + "," : formatted;
+}
+
 export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", submitLabel = "Afegir" }) {
   const { tc } = useTheme();
   const [values, setValues] = useState(() =>
@@ -202,7 +217,7 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                   className="modal-input"
                   type="text"
                   inputMode="decimal"
-                  value={String(values[f.key] ?? "")}
+                  value={formatDisplayValue(String(values[f.key] ?? ""))}
                   onChange={e => applyFieldChange(f, normalizeNumericInput(e.target.value))}
                   placeholder={f.placeholder ?? ""}
                   style={{ ...inputStyleFor(f), fontFamily: "'DM Mono',monospace" }}
