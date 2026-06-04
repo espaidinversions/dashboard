@@ -10,7 +10,7 @@ import {
 
 const VALID_SECTIONS = new Set([
   "alternatives", "mercats-publics", "real-estate",   // top-level sections
-  "fons", "searchers", "companies", "inversions", "txlog", // supra within alternatives
+  "fons", "searchers", "companies", "inversions", "cash-model", "txlog", // within alternatives
   "re-directe", "re-altres",
   "mp-resum", "mp-rv", "mp-rf", "mp-posicions", "mp-transaccions", "mp-traçabilitat",
   "tx-alt", "tx-re", "tx-mp",
