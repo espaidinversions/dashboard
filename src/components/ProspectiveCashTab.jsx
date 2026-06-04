@@ -6,7 +6,6 @@ import { makeFundRouteId } from "../data/fundDetailModel.js";
 import { FUND_NAME_MAP } from "../data/fundNameMap.js";
 import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
 import {
-  EXCLUDED_CASH_MODEL_TIPUS,
   PROSPECTIVE_CASH_USD_FUNDS,
   buildReFundMatcher,
   deriveProspectiveCashRows,
@@ -25,6 +24,11 @@ import { EditorPanel } from "./prospective/EditorPanel.jsx";
 
 // Kick off static data preload as soon as this module loads (behind React.lazy).
 preloadStaticCapitalCallData();
+
+const EXCLUDED_CASH_MODEL_TIPUS = new Set([
+  "Transferència Participacions",
+  "Conversió Participacions",
+]);
 
 const MODES = [
   { id: "calls", label: "Aportacions" },

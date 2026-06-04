@@ -1,7 +1,7 @@
 import { FUND_NAME_MAP } from "./fundNameMap.js";
 import { normalizeCapitalCallTipus } from "./capitalCallTipusModel.js";
 
-export const EXCLUDED_CASH_MODEL_TIPUS = new Set([
+const EXCLUDED_CASH_MODEL_TIPUS = new Set([
   "Transferència Participacions",
   "Conversió Participacions",
 ]);
