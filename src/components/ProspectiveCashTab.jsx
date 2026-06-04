@@ -181,6 +181,8 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
     return { ...editorData, funds };
   }, [editorData, entityScope, kindByNameLower]);
 
+  const isReFund = useMemo(() => buildReFundMatcher(rawCapitalCalls), [rawCapitalCalls]);
+
   const cashData = useMemo(
     () => deriveProspectiveCashRows(scopedEditorData, scopedActualRows, {
       reScope: entityScope === "re",
@@ -332,8 +334,6 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
     firstCall: cashData.firstCall,
     fund, tableType, visibleYears, yearFilters, vintageFilter, sort,
   }), [cashData.rows, cashData.firstCall, fund, mergedCommitted, sort, tableType, visibleYears, vintageFilter, yearFilters]);
-
-  const isReFund = useMemo(() => buildReFundMatcher(rawCapitalCalls), [rawCapitalCalls]);
 
   useEffect(() => {
     if (loading || dirty) return;
