@@ -5,8 +5,8 @@ import { fetchProspectiveCashForecasts, saveProspectiveCashForecasts, fetchCommi
 import { makeFundRouteId } from "../data/fundDetailModel.js";
 import { FUND_NAME_MAP } from "../data/fundNameMap.js";
 import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
+import { PROSPECTIVE_CASH_USD_FUNDS } from "../data/prospectiveCashUsdFunds.js";
 import {
-  PROSPECTIVE_CASH_USD_FUNDS,
   buildReFundMatcher,
   deriveProspectiveCashRows,
   editorDataToForecastRows,
