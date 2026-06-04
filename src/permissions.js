@@ -106,12 +106,6 @@ export function buildSectionAccessMap({ role, sectionRoles, deniedSections } = {
     access[sectionId] = ACCESS_NONE;
   }
 
-  // Re-enforce: even with an explicit grant, non-admin/non-superuser users
-  // need ACCESS_SUPERUSER to access cash-model.
-  if (!isAdminRole(role) && !isLegacySuperuserRole(role)) {
-    access["cash-model"] = access["cash-model"] === ACCESS_SUPERUSER ? ACCESS_SUPERUSER : ACCESS_NONE;
-  }
-
   if (access.alternatives === ACCESS_NONE) {
     [...ALTERNATIVES_SECTION_IDS, "tx-alt"].forEach((sectionId) => {
       access[sectionId] = ACCESS_NONE;
