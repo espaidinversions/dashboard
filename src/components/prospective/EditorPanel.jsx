@@ -9,6 +9,7 @@ export function EditorPanel({
   committedByFund,
   committedOverrides,
   paidInByFund,
+  actualsByFundYear = {},
   fundNames,
   editorType,
   setEditorType,
@@ -31,6 +32,16 @@ export function EditorPanel({
 }) {
   const key = `model_${editorType}`;
   const yearCols = editorData.years;
+  // Actuals are available through the end of the previous year; ≥ this year is editable prediction.
+  const ACTUALS_THROUGH_YEAR = 2025;
+
+  const actualsNorm = useMemo(() => {
+    const m = {};
+    for (const [k, v] of Object.entries(actualsByFundYear)) {
+      m[k.trim().toLowerCase()] = v;
+    }
+    return m;
+  }, [actualsByFundYear]);
 
   const committedNorm = useMemo(() => {
     const m = {};
@@ -125,6 +136,25 @@ export function EditorPanel({
                     )}
                   </td>
                   {yearCols.map((year) => {
+                    const isPast = year <= ACTUALS_THROUGH_YEAR;
+                    if (isPast) {
+                      const normKey = fundName.trim().toLowerCase();
+                      const fundActuals = actualsByFundYear[fundName] ?? actualsNorm[normKey] ?? {};
+                      const actual = (fundActuals[editorType]?.[year]) ?? 0;
+                      const pct = actual && base ? `${((actual / base) * 100).toFixed(1)}%` : null;
+                      return (
+                        <td key={year} style={{ ...tdStyle(tc), background: periodBg(tc, year) }}>
+                          {actual ? (
+                            <>
+                              <div style={{ fontSize: 11, color: tc.textMid, fontWeight: 600 }}>{fmtC(actual)}</div>
+                              {pct && <div style={{ fontSize: 9, color: tc.textLight }}>{pct}</div>}
+                            </>
+                          ) : (
+                            <div style={{ fontSize: 11, color: tc.textLight }}>—</div>
+                          )}
+                        </td>
+                      );
+                    }
                     const value = numberAtYear(values, year);
                     const displayValue = inPct ? (value ? ((value / base) * 100).toFixed(1) : "") : (value || "");
                     const hint = inPct

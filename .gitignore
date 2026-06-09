@@ -62,3 +62,5 @@ __pycache__/
 .pytest_cache/
 *.pyc
 prospective model cash.html
+
+.env*.local

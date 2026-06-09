@@ -299,6 +299,18 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
     return map;
   }, [cashData.rows]);
 
+  const actualsByFundYear = useMemo(() => {
+    const out = {};
+    for (const row of cashData.rows) {
+      if (!row.real) continue;
+      if (!out[row.fund]) out[row.fund] = { calls: {}, dist: {} };
+      const bucket = out[row.fund][row.type];
+      if (!bucket) continue;
+      bucket[row.year] = (bucket[row.year] ?? 0) + row.real;
+    }
+    return out;
+  }, [cashData.rows]);
+
   const capitalSummary = useMemo(() => {
     const fundsInView = new Set(visibleRows.map((row) => row.fund));
     let committed = 0;
@@ -607,6 +619,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
           committedByFund={mergedCommitted}
           committedOverrides={committedOverrides}
           paidInByFund={paidInByFund}
+          actualsByFundYear={actualsByFundYear}
           fundNames={editorFundNames}
           editorType={editorType}
           setEditorType={setEditorType}
