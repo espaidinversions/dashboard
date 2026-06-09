@@ -41,6 +41,7 @@ function FundDetailInner() {
   }, []);
 
   const detail = useMemo(() => buildFundDetailSnapshot(rawCC, fundMeta, id), [rawCC, fundMeta, id]);
+  const vehicleNames = useMemo(() => [...new Set(rawCC.map(r => r.fons).filter(Boolean))].sort(), [rawCC]);
   const txs = detail?.txs ?? [];
 
   // Destructure with ?? {} so these are safe before detail loads
@@ -243,6 +244,13 @@ function FundDetailInner() {
               title="Edita transacció"
               fields={[
                 {
+                  key: "fons",
+                  label: "Vehicle",
+                  type: "combo",
+                  options: vehicleNames,
+                  defaultValue: editingRow.fons ?? "",
+                },
+                {
                   key: "tipus",
                   label: "Tipus Moviment",
                   type: "select",
@@ -276,7 +284,7 @@ function FundDetailInner() {
                 if (!values.data)  { setError("La data és obligatòria."); return; }
                 if (!values.eur)   { setError("L'import és obligatori."); return; }
                 const cat = inferCapitalCallCategoryFromTipus(values.tipus, values.eur);
-                const fields = { tipus: values.tipus, data: values.data, eur: values.eur, comentaris: values.comentaris ?? "", cat };
+                const fields = { fons: values.fons, tipus: values.tipus, data: values.data, eur: values.eur, comentaris: values.comentaris ?? "", cat };
                 if (cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
                   fields.recallable = Number(values.recallable);
                   fields.non_recallable = Math.round((Number(values.eur) - Number(values.recallable)) * 100) / 100;
