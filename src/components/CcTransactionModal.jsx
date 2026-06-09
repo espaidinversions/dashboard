@@ -56,12 +56,10 @@ export function CcTransactionModal({
   };
 
   const fields = [
-    isEdit
-      ? { key: "fons", label: "Vehicle", type: "text", defaultValue: fons, disabled: true }
-      : {
-          key: "fons", label: "Vehicle", type: "combo", options: ccNameOptions, defaultValue: addFons,
-          onChange: (value, nextValues, { setValue }) => { setValue("divisa", defaultVehicleCurrency(value)); return nextValues; },
-        },
+    {
+      key: "fons", label: "Vehicle", type: "combo", options: ccNameOptions, defaultValue: isEdit ? fons : addFons,
+      onChange: (value, nextValues, { setValue }) => { setValue("divisa", defaultVehicleCurrency(value)); return nextValues; },
+    },
     {
       key: "tipus", label: "Tipus Moviment", type: "select", options: ccTipusOptions,
       defaultValue: (isEdit ? editRow.tipus : addDefaults?.tipus) || ccTipusOptions?.[0] || "",
