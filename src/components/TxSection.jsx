@@ -416,10 +416,8 @@ export function TxSection({
                       const dist = tipusOptions.filter(o => DISTRIBUCIONS_SET.has(o));
                       return <>
                         {flat.map(o => <option key={o} value={o}>{o}</option>)}
-                        {dist.length > 0 && <optgroup label="Distribucions">
-                          <option value="Distribucions">— Totes les Distribucions —</option>
-                          {dist.map(o => <option key={o} value={o}>{o}</option>)}
-                        </optgroup>}
+                        <option value="Distribucions">Distribucions (totes)</option>
+                        {dist.length > 0 && <optgroup label="——">{dist.map(o => <option key={o} value={o}>{o}</option>)}</optgroup>}
                       </>;
                     })()}
                   </select>
