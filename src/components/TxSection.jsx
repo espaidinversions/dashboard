@@ -5,7 +5,7 @@ import { ecTheme } from "../echartsTheme.js";
 import { fmtM, fmtSignedM, fmtSignedNative, usePersistedState } from "../utils.js";
 import { makeVehicleDetailPath } from "../data/privateRoutes.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS, estSection } from "../data/capitalCallStrategyModel.js";
-import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
+import { normalizeCapitalCallTipus, DISTRIBUCIONS_SET } from "../data/capitalCallTipusModel.js";
 import { Badge, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
 import { useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
 
@@ -141,7 +141,13 @@ export function TxSection({
       if (filters.year !== "Tots" && !String(row.data ?? "").startsWith(filters.year)) return false;
       if (filters.month !== "Tots" && String(row.data ?? "").slice(5, 7) !== filters.month) return false;
       if (filters.fons && !String(row.fons ?? "").toLowerCase().includes(filters.fons.toLowerCase())) return false;
-      if (filters.tipus !== "Tots" && row.tipus !== filters.tipus) return false;
+      if (filters.tipus !== "Tots") {
+        if (filters.tipus === "Distribucions") {
+          if (!DISTRIBUCIONS_SET.has(row.tipus)) return false;
+        } else if (row.tipus !== filters.tipus) {
+          return false;
+        }
+      }
       if (filters.eur && !String(row.eur ?? "").includes(filters.eur)) return false;
       if (filters.est !== "Tots" && row.est !== filters.est) return false;
       if (filters.comentaris && !String(row.comentaris ?? "").toLowerCase().includes(filters.comentaris.toLowerCase())) return false;
@@ -406,12 +412,14 @@ export function TxSection({
                 <th style={{ padding: "6px 10px" }}>
                   <select value={filters.tipus} onChange={(e) => setFilters((current) => ({ ...current, tipus: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }}>
                     {(() => {
-                      const DIST = new Set(["Distribució","Distribució Retinguda","Dividends","Retorn Capital","Interessos"]);
-                      const flat = tipusOptions.filter(o => o === "Tots" || !DIST.has(o));
-                      const dist = tipusOptions.filter(o => DIST.has(o));
+                      const flat = tipusOptions.filter(o => o === "Tots" || !DISTRIBUCIONS_SET.has(o));
+                      const dist = tipusOptions.filter(o => DISTRIBUCIONS_SET.has(o));
                       return <>
                         {flat.map(o => <option key={o} value={o}>{o}</option>)}
-                        {dist.length > 0 && <optgroup label="Distribucions">{dist.map(o => <option key={o} value={o}>{o}</option>)}</optgroup>}
+                        {dist.length > 0 && <optgroup label="Distribucions">
+                          <option value="Distribucions">— Totes les Distribucions —</option>
+                          {dist.map(o => <option key={o} value={o}>{o}</option>)}
+                        </optgroup>}
                       </>;
                     })()}
                   </select>

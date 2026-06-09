@@ -108,7 +108,7 @@ const tipusConceptMap = new Map(
 
 export const CAPITAL_CALL_TIPUS_OPTIONS = [...CAPITAL_CALL_TIPUS_CONCEPTS];
 
-const DISTRIBUCIONS_SET = new Set(["Distribució", "Distribució Retinguda", "Dividends", "Retorn Capital", "Interessos"]);
+export const DISTRIBUCIONS_SET = new Set(["Distribució", "Distribució Retinguda", "Dividends", "Retorn Capital", "Interessos"]);
 
 export const CAPITAL_CALL_TIPUS_GROUPED = [
   ...CAPITAL_CALL_TIPUS_CONCEPTS.filter(c => !DISTRIBUCIONS_SET.has(c)),

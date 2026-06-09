@@ -8,7 +8,7 @@ import { fmtM, fmtSignedM, fmtSignedNative, readStoredJSON, formatMultiple, mult
 import { Badge, Logo, KpiCard, AddRowModal, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCapitalCalls, loadFundMeta, updateCapitalCall } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
-import { CAPITAL_CALL_TIPUS_OPTIONS, CAPITAL_CALL_TIPUS_GROUPED, inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
+import { CAPITAL_CALL_TIPUS_OPTIONS, CAPITAL_CALL_TIPUS_GROUPED, DISTRIBUCIONS_SET, inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
 import { useAuth } from "../auth.jsx";
 
 function FundDetailInner() {
@@ -48,7 +48,13 @@ function FundDetailInner() {
 
   const filteredTxLog = useMemo(() => (txLog ?? []).filter((r) => {
     if (txFilters.data && !String(r.data ?? "").includes(txFilters.data)) return false;
-    if (txFilters.tipus !== "Tots" && r.tipus !== txFilters.tipus) return false;
+    if (txFilters.tipus !== "Tots") {
+      if (txFilters.tipus === "Distribucions") {
+        if (!DISTRIBUCIONS_SET.has(r.tipus)) return false;
+      } else if (r.tipus !== txFilters.tipus) {
+        return false;
+      }
+    }
     if (txFilters.import && !String(r.eur ?? "").includes(txFilters.import)) return false;
     return true;
   }), [txFilters, txLog]);
@@ -56,7 +62,7 @@ function FundDetailInner() {
     const extras = (txLog ?? [])
       .map((row) => row.tipus)
       .filter((value) => value && !CAPITAL_CALL_TIPUS_OPTIONS.includes(value));
-    return ["Tots", ...CAPITAL_CALL_TIPUS_OPTIONS, ...Array.from(new Set(extras)).sort()];
+    return ["Tots", "Distribucions", ...CAPITAL_CALL_TIPUS_OPTIONS, ...Array.from(new Set(extras)).sort()];
   }, [txLog]);
 
   // J-curve data: grouped by quarter or year; bars = period flows, line = cumulative net
