@@ -7,7 +7,6 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
@@ -18,8 +17,7 @@ import {
   normalizeCapitalCallSignedAmount,
 } from "../src/data/capitalCallTipusModel.js";
 
-const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 const __dir = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.join(__dir, "../.env.local");
@@ -50,12 +48,12 @@ function slugifyTipus(value) {
 }
 
 // ── Parse Equivalència Conceptes ──────────────────────────────────────────────
-export function buildTipusConceptMap(filePath, { warn = false } = {}) {
+export async function buildTipusConceptMap(filePath, { warn = false } = {}) {
   if (!fs.existsSync(filePath)) {
     if (warn) console.warn("⚠ Equivalència Conceptes not found at", filePath, "— using model fallback only");
     return new Map();
   }
-  const wb = XLSX.readFile(filePath);
+  const wb = await XLSX.readFile(filePath);
   const ws = wb.Sheets[wb.SheetNames[0]];
   const raw = XLSX.utils.sheet_to_json(ws, { defval: "", header: 1 });
   const map = new Map();
@@ -136,10 +134,10 @@ export function parseSheets(wb) {
   return { fundsRows, companiesRows };
 }
 
-function parseSheetsFromFile(filePath) {
+async function parseSheetsFromFile(filePath) {
   let wb;
   try {
-    wb = XLSX.readFile(filePath);
+    wb = await XLSX.readFile(filePath);
   } catch (err) {
     console.error("No s'ha pogut llegir l'Excel:", err.message);
     process.exit(1);
@@ -276,12 +274,12 @@ if (isMain) {
   if (dryRun) console.log("🔍 DRY RUN — no changes will be written\n");
 
   // 1. Parse Equivalència Conceptes
-  const tipusConceptMap = buildTipusConceptMap(absEqPath, { warn: true });
+  const tipusConceptMap = await buildTipusConceptMap(absEqPath, { warn: true });
   console.log(`✓ Loaded ${tipusConceptMap.size} type mappings from Equivalència Conceptes`);
 
   // 2. Parse Excel sheets
   console.log("\nReading sheets...");
-  const { fundsRows, companiesRows } = parseSheetsFromFile(absExcelPath);
+  const { fundsRows, companiesRows } = await parseSheetsFromFile(absExcelPath);
   console.log(`  funds:     ${String(fundsRows.length).padStart(4)} rows`);
   console.log(`  companies: ${String(companiesRows.length).padStart(4)} rows`);
   const allRaw = [...fundsRows, ...companiesRows];

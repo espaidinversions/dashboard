@@ -1,12 +1,10 @@
 // Script to generate an Excel with all investments and their ISIN/NIF status
 // Usage: node scripts/generate_isin_excel.mjs
 
-import { createRequire } from "module";
 import { fileURLToPath, pathToFileURL } from "url";
 import path from "path";
 
-const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 // ── Load data ──────────────────────────────────────────────────────────────
 const __dir = path.dirname(fileURLToPath(import.meta.url));
@@ -245,7 +243,7 @@ addSheet("Mercats Públics", pmRows);
 
 // ── Write file ────────────────────────────────────────────────────────────
 const outPath = path.join(root, "Inversions_ISIN_NIF.xlsx");
-XLSX.writeFile(wb, outPath);
+await XLSX.writeFile(wb, outPath);
 console.log(`✓ Written: ${outPath}`);
 console.log(`  Fons amb ISIN:            ${withIsin.length}`);
 console.log(`  Fons sense ISIN:          ${withNifOnly.length}`);

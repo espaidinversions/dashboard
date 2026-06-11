@@ -10,7 +10,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import pkg from "xlsx";
+import pkg from "./lib/xlsx_compat.mjs";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -47,9 +47,9 @@ function norm(s) {
 }
 
 // ── parse Matrius sheet → fund → vehicle type ─────────────────────────────────
-function parseFundVehicleTypes() {
+async function parseFundVehicleTypes() {
   const xlsxPath = path.join(__dirname, "../260120_Allocation_Fons.xlsx");
-  const wb = readFile(xlsxPath);
+  const wb = await readFile(xlsxPath);
   const ws = wb.Sheets["Matrius"];
   const rows = utils.sheet_to_json(ws, { header: 1 });
 
@@ -93,7 +93,7 @@ function parseFundVehicleTypes() {
   return result;
 }
 
-const vehicleMap = parseFundVehicleTypes();
+const vehicleMap = await parseFundVehicleTypes();
 console.log(`Parsed ${vehicleMap.size} fund vehicle types from Allocation Excel`);
 
 // ── load all capital_calls rows ───────────────────────────────────────────────

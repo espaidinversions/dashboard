@@ -7,7 +7,6 @@
  *   node scripts/compare_cash_model_inputs.mjs --excel "2022.06.16 Capital Calls.xlsx" --csv "raw-data/capital-calls.csv" --top 40
  */
 
-import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
@@ -26,8 +25,7 @@ import {
 
 import { FUND_NAME_MAP } from "../src/data/fundNameMap.js";
 
-const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 const __dir = path.dirname(fileURLToPath(import.meta.url));
 const __root = path.join(__dir, "..");
@@ -78,8 +76,8 @@ function normalizeToCurrentShape(raw, tipusConceptMap) {
   };
 }
 
-function readExcelRows(excelPath, tipusConceptMap) {
-  const wb = XLSX.readFile(excelPath);
+async function readExcelRows(excelPath, tipusConceptMap) {
+  const wb = await XLSX.readFile(excelPath);
   const { fundsRows, companiesRows } = parseSheets(wb);
   const rows = [...fundsRows, ...companiesRows].map((r) => normalizeToCurrentShape(r, tipusConceptMap));
   return rows.filter((r) => r.fons && r.data && Number.isFinite(r.eur) && r.eur !== 0);
@@ -288,8 +286,8 @@ async function main() {
   if (!fs.existsSync(args.excel)) throw new Error(`Excel not found: ${args.excel}`);
   if (!fs.existsSync(args.csv)) throw new Error(`CSV not found: ${args.csv}`);
 
-  const tipusConceptMap = buildTipusConceptMap(args.eq, { warn: false });
-  const excelRows = readExcelRows(args.excel, tipusConceptMap);
+  const tipusConceptMap = await buildTipusConceptMap(args.eq, { warn: false });
+  const excelRows = await readExcelRows(args.excel, tipusConceptMap);
   const csvRows = readCsvRows(args.csv);
 
   summarize("Excel", excelRows);

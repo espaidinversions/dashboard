@@ -15,7 +15,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import pkg from "xlsx";
+import pkg from "./lib/xlsx_compat.mjs";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -81,7 +81,7 @@ function makeKey(fons, data, eur) {
 
 // ── 1. Load equivalencies: Concepte Antic → Concepte Nou ─────────────────────
 const eqPath = path.join(__dirname, "../260424_Equivalència_Conceptes.xlsx");
-const eqWb = readFile(eqPath);
+const eqWb = await readFile(eqPath);
 const eqWs = eqWb.Sheets[eqWb.SheetNames[0]];
 const eqRows = utils.sheet_to_json(eqWs, { header: 1 });
 
@@ -118,7 +118,7 @@ function addToLookup(fons, rawTipus, data, eur) {
 
 // Source A: main Capital Calls log
 const ccLogPath = path.join(__dirname, "../2022.06.16 Capital Calls.xlsx");
-const ccLogWb = readFile(ccLogPath);
+const ccLogWb = await readFile(ccLogPath);
 const ccLogWs = ccLogWb.Sheets["Capital Calls log"];
 const ccLogRows = utils.sheet_to_json(ccLogWs, { header: 1 });
 let ccLogCount = 0;
@@ -156,7 +156,7 @@ console.log(`Startups log rows scanned: ${startupCount} → lookup entries so fa
 // Source C: transaccions_detall_tipus.xlsx (fills any gaps)
 // Header row 0: Vehicle=0, Tipus=1, Data=3, Import(€)=4
 const txPath = path.join(__dirname, "../transaccions_detall_tipus.xlsx");
-const txWb = readFile(txPath);
+const txWb = await readFile(txPath);
 const txWs = txWb.Sheets[txWb.SheetNames[0]];
 const txRows = utils.sheet_to_json(txWs, { header: 1 });
 let txCount = 0;

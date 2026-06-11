@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import xlsx from "xlsx";
+import xlsx from "./lib/xlsx_compat.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,7 +17,7 @@ function headerKey(value) {
   return asString(value).replace(/\r\n/g, "\n");
 }
 
-const workbook = xlsx.readFile(WORKBOOK_PATH, { cellDates: false });
+const workbook = await xlsx.readFile(WORKBOOK_PATH, { cellDates: false });
 const sheet = workbook.Sheets[workbook.SheetNames[0]];
 const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, defval: null });
 const header = rows[3]?.map((value) => headerKey(value)) ?? [];

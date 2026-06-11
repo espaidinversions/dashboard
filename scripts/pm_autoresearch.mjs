@@ -1,10 +1,8 @@
 import fs from "fs";
 import path from "path";
 import { fileURLToPath, pathToFileURL } from "url";
-import { createRequire } from "module";
 
-const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 import { mergeRawRows, normalizeIsin, rowDedupeKey } from "../src/data/pmIdentity.js";
 import { PM_POSITIONS_RAW as PM_POSITIONS_RAW_BASE } from "../src/data/publicMarketsRaw.js";
@@ -126,9 +124,9 @@ function findGestorCol(rows) {
   return -1;
 }
 
-function parseWorkbook() {
+async function parseWorkbook() {
   const workbookPath = findWorkbookPath();
-  const wb = XLSX.readFile(workbookPath);
+  const wb = await XLSX.readFile(workbookPath);
   const bankMovements = loadBankMovements();
   const earliestMovementByIsin = buildEarliestMovementByIsin(bankMovements);
 
@@ -365,8 +363,8 @@ function writeWorkbookModule(rows) {
   fs.writeFileSync(OUT_JS, out, "utf8");
 }
 
-function main() {
-  const parsed = parseWorkbook();
+async function main() {
+  const parsed = await parseWorkbook();
   const currentSource = synchronizeWorkbookRows(
     mergeRawRows(PM_POSITIONS_RAW_BASE, PM_POSITIONS_RAW_SUPPLEMENT),
     parsed.activeRows,
@@ -453,4 +451,4 @@ function main() {
   console.log(`Workbook active-row sum: ${fmtM(workbookValue)}`);
 }
 
-main();
+await main();

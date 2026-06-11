@@ -12,13 +12,11 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 
-const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 const __dir = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.join(__dir, "../.env.local");
@@ -103,8 +101,8 @@ function excelDateToISO(serial) {
   return `${d.y}-${String(d.m).padStart(2, "0")}-${String(d.d).padStart(2, "0")}`;
 }
 
-function parseFundMetaExcel(filePath) {
-  const wb = XLSX.readFile(filePath);
+async function parseFundMetaExcel(filePath) {
+  const wb = await XLSX.readFile(filePath);
   const ws = wb.Sheets["Valoracions"];
   if (!ws) throw new Error('Sheet "Valoracions" not found');
 
@@ -132,8 +130,8 @@ function parseFundMetaExcel(filePath) {
 }
 
 // ── Parse Excel ───────────────────────────────────────────────────────────────
-function parseExcel(filePath) {
-  const wb = XLSX.readFile(filePath);
+async function parseExcel(filePath) {
+  const wb = await XLSX.readFile(filePath);
   const ws = wb.Sheets["Capital Calls log"];
   if (!ws) throw new Error('Sheet "Capital Calls log" not found');
 
@@ -240,9 +238,9 @@ if (!fs.existsSync(absPath)) { console.error("Fitxer no trobat:", absPath); proc
 const dryRun = flag === "--dry-run";
 if (dryRun) console.log("🔍 DRY RUN — no changes will be written\n");
 
-const rows = parseExcel(absPath);
+const rows = await parseExcel(absPath);
 console.log(`✓ Parsed ${rows.length} rows from Excel`);
-const fundMetaRows = parseFundMetaExcel(absPath);
+const fundMetaRows = await parseFundMetaExcel(absPath);
 console.log(`✓ Parsed ${fundMetaRows.length} TVPI rows from Valoracions`);
 
 // Summary by fund

@@ -2,8 +2,8 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { buildTipusConceptMap, resolveConceptFromTipus, resolveEntityId, normalizeRow, buildDedupSet, buildDedupKey } from "./cc_import_append.mjs";
 
-test("buildTipusConceptMap returns empty map when file does not exist", () => {
-  const map = buildTipusConceptMap("/nonexistent/path.xlsx");
+test("buildTipusConceptMap returns empty map when file does not exist", async () => {
+  const map = await buildTipusConceptMap("/nonexistent/path.xlsx");
   assert.equal(map.size, 0);
 });
 
@@ -106,11 +106,7 @@ test("a normalized new row matches its existing counterpart", () => {
 });
 
 import { parseSheets } from "./cc_import_append.mjs";
-import { createRequire } from "module";
-import { fileURLToPath } from "url";
-
-const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 // Funds sheet row (FUNDS_COLS: fons=r[2], tipus=r[3], date=r[5], importLocal=r[6],
 //   divisa=r[7], vcpe=r[13], eur=r[15], est=r[16])

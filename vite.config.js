@@ -10,7 +10,7 @@ export default defineConfig({
         manualChunks(id) {
           if (id.includes("node_modules")) {
             if (id.includes("echarts")) return "vendor-echarts";
-            if (id.includes("xlsx")) return "vendor-xlsx";
+            if (id.includes("exceljs")) return "vendor-exceljs";
             if (id.includes("@supabase")) return "vendor-supabase";
             if (id.includes("react-router")) return "vendor-router";
             if (id.includes("react")) return "vendor-react";

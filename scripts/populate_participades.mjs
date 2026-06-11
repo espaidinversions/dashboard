@@ -15,13 +15,11 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 
-const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 const __dir = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.join(__dir, "../.env.local");
@@ -48,8 +46,8 @@ function excelDateToISO(serial) {
 }
 
 // ── Parse Summary_Q4 ──────────────────────────────────────────────────────────
-function parseSummaryQ4(filePath) {
-  const wb = XLSX.readFile(filePath);
+async function parseSummaryQ4(filePath) {
+  const wb = await XLSX.readFile(filePath);
   const ws = wb.Sheets["Summary_Q4"];
   if (!ws) throw new Error('Sheet "Summary_Q4" not found');
   const raw = XLSX.utils.sheet_to_json(ws, { defval: "", header: 1 });
@@ -105,7 +103,7 @@ if (!fs.existsSync(absPath)) { console.error("Fitxer no trobat:", absPath); proc
 const dryRun = flag === "--dry-run";
 if (dryRun) console.log("🔍 DRY RUN — no changes will be written\n");
 
-const summaryMap = parseSummaryQ4(absPath);
+const summaryMap = await parseSummaryQ4(absPath);
 console.log(`✓ Parsed ${Object.keys(summaryMap).length} companies from Summary_Q4`);
 
 // Load mock portfolio_companies

@@ -16,7 +16,7 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import pkg from "xlsx";
+import pkg from "./lib/xlsx_compat.mjs";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -54,9 +54,9 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 const dryRun = process.argv.includes("--dry-run");
 
 // ── parse Excel ───────────────────────────────────────────────────────────────
-function parseFundVehicleTypes() {
+async function parseFundVehicleTypes() {
   const xlsxPath = path.join(__dirname, "../260120_Allocation_Fons.xlsx");
-  const wb = readFile(xlsxPath);
+  const wb = await readFile(xlsxPath);
   const ws = wb.Sheets["Matrius"];
   const rows = utils.sheet_to_json(ws, { header: 1 });
 
@@ -119,7 +119,7 @@ function norm(s) {
 }
 
 // ── main ─────────────────────────────────────────────────────────────────────
-const excelMap = parseFundVehicleTypes();
+const excelMap = await parseFundVehicleTypes();
 console.log(`Parsed ${excelMap.size} fund vehicle types from Excel`);
 
 // Load existing fund_meta rows

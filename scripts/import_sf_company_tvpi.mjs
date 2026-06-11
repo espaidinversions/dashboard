@@ -15,13 +15,11 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 
-const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 const __dir = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.join(__dir, "../.env.local");
@@ -140,7 +138,7 @@ if (!fs.existsSync(absPath)) {
 const dryRun = flag === "--dry-run";
 if (dryRun) console.log("🔍 DRY RUN — no changes will be written\n");
 
-const wb = XLSX.readFile(absPath);
+const wb = await XLSX.readFile(absPath);
 const masterRows = parseMasterSheet(wb);
 const snapshotRows = parseSnapshotSheet(wb);
 

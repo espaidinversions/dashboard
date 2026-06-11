@@ -9,13 +9,11 @@
  */
 
 import { createClient }  from "@supabase/supabase-js";
-import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import path              from "path";
 import fs                from "fs";
 
-const require = createRequire(import.meta.url);
-const XLSX    = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 // ── Config ─────────────────────────────────────────────────────────────────
 const __dir  = path.dirname(fileURLToPath(import.meta.url));
@@ -132,7 +130,7 @@ async function exportGaps() {
   XLSX.utils.book_append_sheet(wb, wsCompanies, "Companies");
 
   const outFile = path.join(__dir, `../nif_gaps_${new Date().toISOString().slice(0,10)}.xlsx`);
-  XLSX.writeFile(wb, outFile);
+  await XLSX.writeFile(wb, outFile);
 
   console.log(`✓ Exportat: ${outFile}`);
   console.log(`  Searchers sense NIF: ${searcherRows.length}`);
@@ -148,7 +146,7 @@ async function importGaps(filePath) {
   const absPath = path.isAbsolute(filePath) ? filePath : path.join(process.cwd(), filePath);
   if (!fs.existsSync(absPath)) { console.error("Fitxer no trobat:", absPath); process.exit(1); }
 
-  const wb = XLSX.read(fs.readFileSync(absPath), { type: "buffer" });
+  const wb = await XLSX.read(fs.readFileSync(absPath), { type: "buffer" });
 
   let okS = 0, failS = 0, okE = 0, failE = 0;
 

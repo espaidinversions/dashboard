@@ -20,13 +20,11 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
-import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import path from "path";
 import fs from "fs";
 
-const require = createRequire(import.meta.url);
-const XLSX = require("xlsx");
+import XLSX from "./lib/xlsx_compat.mjs";
 
 const __dir = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.join(__dir, "../.env.local");
@@ -239,8 +237,8 @@ function normalizeName(value) {
 }
 
 // ── Parse Excel ───────────────────────────────────────────────────────────────
-function parseExcel(filePath) {
-  const wb = XLSX.readFile(filePath);
+async function parseExcel(filePath) {
+  const wb = await XLSX.readFile(filePath);
   const ws = wb.Sheets["Logs"];
   if (!ws) throw new Error('Sheet "Logs" not found');
 
@@ -285,8 +283,8 @@ function parseExcel(filePath) {
   return rows;
 }
 
-function parseMasterSheet(filePath) {
-  const wb = XLSX.readFile(filePath);
+async function parseMasterSheet(filePath) {
+  const wb = await XLSX.readFile(filePath);
   const ws = wb.Sheets["Master"];
   if (!ws) throw new Error('Sheet "Master" not found');
 
@@ -394,9 +392,9 @@ if (!fs.existsSync(absPath)) { console.error("Fitxer no trobat:", absPath); proc
 const dryRun = flag === "--dry-run";
 if (dryRun) console.log("🔍 DRY RUN — no changes will be written\n");
 
-const rows = parseExcel(absPath);
+const rows = await parseExcel(absPath);
 console.log(`✓ Parsed ${rows.length} rows from "Logs"`);
-const masterRows = parseMasterSheet(absPath);
+const masterRows = await parseMasterSheet(absPath);
 console.log(`✓ Parsed ${masterRows.length} rows from "Master"`);
 
 const masterSearcherNorms = new Set(masterRows.map(r => normalizeName(r.nom)).filter(Boolean));
