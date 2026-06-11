@@ -25,6 +25,7 @@
 │   └── index.css                ← global styles, animations, responsive grids
 ├── public/
 │   └── board.html               ← read-only Kanvas board viewer
+├── data/                        ← local Excel/PDF source documents for scripts/ (git-ignored)
 ├── server.js                    ← Express API + raw-data watcher + static serving
 ├── convert-data.py              ← CSV → JS converter (called automatically by server)
 ├── canvas-watcher.cjs           ← Obsidian canvas linter (run separately)

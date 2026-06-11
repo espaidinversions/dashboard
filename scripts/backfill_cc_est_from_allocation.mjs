@@ -48,7 +48,7 @@ function norm(s) {
 
 // ── parse Matrius sheet → fund → vehicle type ─────────────────────────────────
 async function parseFundVehicleTypes() {
-  const xlsxPath = path.join(__dirname, "../260120_Allocation_Fons.xlsx");
+  const xlsxPath = path.join(__dirname, "../data/260120_Allocation_Fons.xlsx");
   const wb = await readFile(xlsxPath);
   const ws = wb.Sheets["Matrius"];
   const rows = utils.sheet_to_json(ws, { header: 1 });

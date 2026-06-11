@@ -2,8 +2,8 @@
  * Capital Calls import — reads "Capital Calls log" sheet and syncs to Supabase.
  *
  * Usage:
- *   node scripts/cc_import.mjs "2022.06.16 Capital Calls.xlsx"
- *   node scripts/cc_import.mjs "2022.06.16 Capital Calls.xlsx" --dry-run
+ *   node scripts/cc_import.mjs "data/2022.06.16 Capital Calls.xlsx"
+ *   node scripts/cc_import.mjs "data/2022.06.16 Capital Calls.xlsx" --dry-run
  *
  * Strategy: DELETE all capital_calls for vehicles with fund_meta.vehicle_tipus IN ('PE','VC','RE'),
  * then INSERT the parsed rows. SF rows (added via UI) are left untouched.
@@ -228,7 +228,7 @@ function resolveVehicleId(fons, fundNifMap) {
 // ── Main ──────────────────────────────────────────────────────────────────────
 const [,, filePath, flag] = process.argv;
 if (!filePath) {
-  console.log('Ús: node scripts/cc_import.mjs "2022.06.16 Capital Calls.xlsx" [--dry-run]');
+  console.log('Ús: node scripts/cc_import.mjs "data/2022.06.16 Capital Calls.xlsx" [--dry-run]');
   process.exit(1);
 }
 

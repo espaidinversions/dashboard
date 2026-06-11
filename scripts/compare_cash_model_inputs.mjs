@@ -4,7 +4,7 @@
  *
  * Usage:
  *   node scripts/compare_cash_model_inputs.mjs
- *   node scripts/compare_cash_model_inputs.mjs --excel "2022.06.16 Capital Calls.xlsx" --csv "raw-data/capital-calls.csv" --top 40
+ *   node scripts/compare_cash_model_inputs.mjs --excel "data/2022.06.16 Capital Calls.xlsx" --csv "raw-data/capital-calls.csv" --top 40
  */
 
 import { fileURLToPath } from "url";
@@ -36,7 +36,7 @@ const EXCLUDED_CASH_MODEL_TIPUS = new Set([
 ]);
 
 function parseArgs(argv) {
-  const out = { excel: path.join(__root, "2022.06.16 Capital Calls.xlsx"), csv: path.join(__root, "raw-data/capital-calls.csv"), eq: path.join(__root, "260424_Equivalència_Conceptes.xlsx"), top: 30 };
+  const out = { excel: path.join(__root, "data/2022.06.16 Capital Calls.xlsx"), csv: path.join(__root, "raw-data/capital-calls.csv"), eq: path.join(__root, "data/260424_Equivalència_Conceptes.xlsx"), top: 30 };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--excel") out.excel = path.isAbsolute(argv[i + 1]) ? argv[++i] : path.join(process.cwd(), argv[++i]);

@@ -29,7 +29,7 @@ from scripts.pm_model_types import PMBankMovement, PMBankMovementsPayload
 
 
 ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_PDF = ROOT / "moviments Espai des de 2022.PDF.pdf"
+DEFAULT_PDF = ROOT / "data" / "moviments Espai des de 2022.PDF.pdf"
 OUT_JSON = ROOT / "raw-data" / "bank-movements-40510.json"
 ONBOARDING_TRANSFER_CUTOFF = date(2022, 5, 31)
 

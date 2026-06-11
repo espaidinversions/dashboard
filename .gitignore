@@ -21,7 +21,7 @@ HANDOFF.md
 *.pdf
 *.txt
 !scripts/requirements.txt
-files search/
+data/files search/
 
 .vercel
 .context/
@@ -61,6 +61,6 @@ scripts/__pycache__/
 __pycache__/
 .pytest_cache/
 *.pyc
-prospective model cash.html
+data/prospective model cash.html
 
 .env*.local

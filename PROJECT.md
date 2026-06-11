@@ -31,6 +31,7 @@
 | `server.js` | Express API + raw-data watcher + production static serving |
 | `public/board.html` | Standalone Kanvas board viewer |
 | `raw-data/` | Drop CSVs here — server auto-converts on save |
+| `data/` | Local Excel/PDF source documents for `scripts/` (git-ignored, see `data/README.md`) |
 | `Dashboard.canvas` | Kanvas task board (JSON) |
 | `kanvas/canvas-tool.py` | CLI for Kanvas board management |
 | `kanvas/canvas-watcher.cjs` | Obsidian canvas linter + blocked-state manager |

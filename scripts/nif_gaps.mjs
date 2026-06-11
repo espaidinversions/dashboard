@@ -2,7 +2,7 @@
  * NIF gaps tool — export and import mock NIFs for searchers, vehicles, and companies.
  *
  * Usage:
- *   node scripts/nif_gaps.mjs export          → writes nif_gaps_YYYY-MM-DD.xlsx
+ *   node scripts/nif_gaps.mjs export          → writes data/nif_gaps_YYYY-MM-DD.xlsx
  *   node scripts/nif_gaps.mjs import <file>   → reads filled Excel and updates DB
  *
  * Requires SUPABASE_SERVICE_ROLE_KEY in .env.local (service role bypasses RLS).
@@ -129,7 +129,7 @@ async function exportGaps() {
   wsCompanies["!cols"] = [{ wch:40 },{ wch:40 },{ wch:40 },{ wch:20 },{ wch:8 }];
   XLSX.utils.book_append_sheet(wb, wsCompanies, "Companies");
 
-  const outFile = path.join(__dir, `../nif_gaps_${new Date().toISOString().slice(0,10)}.xlsx`);
+  const outFile = path.join(__dir, `../data/nif_gaps_${new Date().toISOString().slice(0,10)}.xlsx`);
   await XLSX.writeFile(wb, outFile);
 
   console.log(`✓ Exportat: ${outFile}`);
@@ -138,7 +138,7 @@ async function exportGaps() {
   console.log(`  Companies mock:      ${companyRows.length}`);
   console.log();
   console.log("Omple la columna nif_nou i executa:");
-  console.log(`  node scripts/nif_gaps.mjs import ${path.basename(outFile)}`);
+  console.log(`  node scripts/nif_gaps.mjs import data/${path.basename(outFile)}`);
 }
 
 // ── IMPORT ─────────────────────────────────────────────────────────────────
@@ -303,6 +303,6 @@ if (mode === "export") {
 } else {
   console.log("Ús:");
   console.log("  node scripts/nif_gaps.mjs export");
-  console.log("  node scripts/nif_gaps.mjs import nif_gaps_YYYY-MM-DD.xlsx");
+  console.log("  node scripts/nif_gaps.mjs import data/nif_gaps_YYYY-MM-DD.xlsx");
   process.exit(1);
 }

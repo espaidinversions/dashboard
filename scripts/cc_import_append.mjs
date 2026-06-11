@@ -248,7 +248,7 @@ if (isMain) {
     process.exit(1);
   }
 
-  const defaultEqPath = path.join(__dir, "../260424_Equivalència_Conceptes.xlsx");
+  const defaultEqPath = path.join(__dir, "../data/260424_Equivalència_Conceptes.xlsx");
   const absEqPath = equivalenciaArg
     ? (path.isAbsolute(equivalenciaArg) ? equivalenciaArg : path.join(process.cwd(), equivalenciaArg))
     : defaultEqPath;

@@ -6,7 +6,7 @@ import xlsx from "./lib/xlsx_compat.mjs";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const WORKBOOK_PATH = path.resolve(__dirname, "../ID_Vehicles.xlsx");
+const WORKBOOK_PATH = path.resolve(__dirname, "../data/ID_Vehicles.xlsx");
 const OUTPUT_PATH = path.resolve(__dirname, "../src/generated/dashboard/privateEntitiesWorkbook.js");
 
 function asString(value) {
