@@ -121,9 +121,16 @@ export async function deleteFund(fund) {
   if (!supabase) return null;
   const name = typeof fund === "string" ? fund : fund?.fons ?? "";
   const resolved = resolvePrivateEntity("vehicle", name, typeof fund === "string" && fund.includes(":") ? fund : fund?.id ?? null);
-  const { error: e1 } = await supabase.from("capital_calls").delete().eq("vehicle_id", resolved.id);
-  if (e1) return e1;
-  const { error: e2 } = await supabase.from("fund_meta").delete().eq("vehicle_id", resolved.id);
-  if (!e2) logAudit("delete", "capital_calls", resolved.id, { fons: resolved.canonicalName });
-  return e2 ?? null;
+  // Single transactional RPC: capital_calls + fund_meta deletes can't diverge.
+  const { error } = await supabase.rpc("delete_fund", { p_vehicle_id: resolved.id });
+  if (error) {
+    const isMissing = error.code === "PGRST202" || error.message?.includes("delete_fund");
+    if (isMissing) {
+      console.error("[deleteFund] RPC not deployed; refusing non-atomic delete.");
+      return new Error("L'operació segura d'esborrat no està disponible al servidor. Aplica les migracions de Supabase pendents i torna-ho a provar.");
+    }
+    return error;
+  }
+  logAudit("delete", "capital_calls", resolved.id, { fons: resolved.canonicalName });
+  return null;
 }

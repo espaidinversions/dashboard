@@ -14,17 +14,17 @@ export async function fetchProspectiveCashForecasts() {
 export async function saveProspectiveCashForecasts(rows, vehicleIdValues) {
   if (!supabase) return { error: null };
   const ids = [...new Set(vehicleIdValues)].filter(Boolean);
-  if (ids.length) {
-    const { error: deleteError } = await supabase
-      .from("prospective_cash_forecasts")
-      .delete()
-      .in("vehicle_id", ids);
-    if (deleteError) return { error: deleteError };
+  // Single transactional RPC: delete + insert can never leave forecasts half-written.
+  const { error } = await supabase.rpc("replace_prospective_cash_forecasts", {
+    p_vehicle_ids: ids,
+    p_rows: rows.map(({ vehicle_id, fons, flow_type, year, amount }) => ({ vehicle_id, fons, flow_type, year, amount })),
+  });
+  if (!error) return { error: null };
+  const isMissing = error.code === "PGRST202" || error.message?.includes("replace_prospective_cash_forecasts");
+  if (isMissing) {
+    console.error("[saveProspectiveCashForecasts] RPC not deployed; refusing non-atomic save.");
+    return { error: new Error("L'operació segura de desat no està disponible al servidor. Aplica les migracions de Supabase pendents i torna-ho a provar.") };
   }
-  if (!rows.length) return { error: null };
-  const { error } = await supabase
-    .from("prospective_cash_forecasts")
-    .insert(rows.map((r) => ({ ...r, updated_at: new Date().toISOString() })));
   return { error };
 }
 

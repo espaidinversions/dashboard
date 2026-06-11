@@ -64,23 +64,10 @@ export async function atomicReplace(rpcName, table, rows) {
   if (!rpcError) return { error: null };
   const isMissing = rpcError.code === "PGRST202" || rpcError.message?.includes(rpcName);
   if (!isMissing) return { error: rpcError };
-  // RPC not deployed — snapshot-guarded delete+insert
-  const { data: snapshot } = await supabase.from(table).select("*");
-  const { error: delError } = await supabase.from(table).delete().neq("id", 0);
-  if (delError) return { error: delError };
-  if (!rows.length) return { error: null };
-  const { error: insertError } = await supabase.from(table).insert(rows);
-  if (insertError) {
-    if (snapshot?.length) {
-      const { error: restoreError } = await supabase.from(table).insert(snapshot).catch(e => ({ error: e }));
-      if (restoreError) {
-        console.error(`[atomicReplace:${table}] restore failed:`, restoreError);
-        return { error: new Error(`Insert failed AND restore failed — "${table}" may be empty. Insert: ${insertError.message}. Restore: ${restoreError.message}`) };
-      }
-    }
-    return { error: insertError };
-  }
-  return { error: null };
+  // RPC not deployed — refuse rather than risk a non-atomic delete+insert
+  // leaving the table half-written on live financial data.
+  console.error(`[atomicReplace:${table}] RPC ${rpcName} is not deployed; refusing non-atomic replace.`);
+  return { error: new Error(`L'operació segura "${rpcName}" no està disponible al servidor. Aplica les migracions de Supabase pendents i torna-ho a provar.`) };
 }
 
 export async function loadPrivateEntityMap() {
