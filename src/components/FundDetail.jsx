@@ -26,7 +26,9 @@ function FundDetailInner() {
 
   // 2. All useEffect / useMemo calls — hoisted unconditionally before any return
   useEffect(() => {
+    let cancelled = false;
     Promise.all([loadCapitalCalls(), loadFundMeta()]).then(([capitalCalls, meta]) => {
+      if (cancelled) return;
       if (Array.isArray(capitalCalls)) {
         setRawCC(capitalCalls);
         writeStoredJSON("tc_rawCC", capitalCalls);
@@ -38,6 +40,7 @@ function FundDetailInner() {
     }).catch((error) => {
       console.error("Fund detail refresh failed:", error);
     });
+    return () => { cancelled = true; };
   }, []);
 
   const detail = useMemo(() => buildFundDetailSnapshot(rawCC, fundMeta, id), [rawCC, fundMeta, id]);
@@ -293,7 +296,11 @@ function FundDetailInner() {
                   fields.from_recallable = Number(values.from_recallable);
                 }
                 const { error } = await updateCapitalCall(editingRow._rowId, fields);
-                if (error) { setError(error.message); return; }
+                if (error) {
+                  console.error("updateCapitalCall failed:", error);
+                  setError("No s'ha pogut desar el moviment. Torna-ho a provar.");
+                  return;
+                }
                 const fresh = await loadCapitalCalls();
                 if (Array.isArray(fresh)) { setRawCC(fresh); writeStoredJSON("tc_rawCC", fresh); }
                 setEditingRow(null);
@@ -324,7 +331,7 @@ function FundDetailInner() {
                 const sfPhaseLabel = r.est?.includes("Adquis") || r.est?.includes("Participada")
                   ? "Adquisició" : r.est?.includes("Cerca") ? "Cerca" : null;
                 return (
-                  <tr key={`${r.data}-${r.cat}-${r.eur}`} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
+                  <tr key={r._rowId ?? `${r.data}-${r.cat}-${r.eur}-${i}`} className="hoverable" style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 0 ? "transparent" : tc.bgAlt }}>
                     <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.data}</td>
                     <td style={{ padding: "10px 12px", fontSize: 12, color: tc.textMid }}>{r.tipus}</td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, fontWeight: 700, color: r.eur > 0 ? tc.navy : tc.green }}>

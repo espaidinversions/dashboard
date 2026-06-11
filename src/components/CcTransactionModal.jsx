@@ -25,6 +25,8 @@ export function CcTransactionModal({
   onClose,
 }) {
   const isEdit = editRow != null;
+  // Over-draw of the recallable pool needs an explicit second submit to confirm
+  const overdrawWarnedRef = React.useRef(null);
   const fons = isEdit ? editRow.fons : addFons;
   const rawPool = recallablePoolByFund[fons] ?? 0;
   // For edit, add back the row's current draw so the label shows "available if you change this"
@@ -133,9 +135,11 @@ export function CcTransactionModal({
     // Validate from_recallable
     if (cat === "Capital Call" && values.from_recallable !== "" && values.from_recallable != null) {
       if (Number(values.from_recallable) < 0) { setError("El valor 'des de pool recallable' no pot ser negatiu."); return; }
-      if (Number(values.from_recallable) > poolForLabel + 0.01) {
-        setError(`Advertiment: pool recallable disponible és ${fmtFull(poolForLabel)}. El moviment s'ha guardat igualment.`);
-        // soft warning — fall through
+      const fromRecallable = Number(values.from_recallable);
+      if (fromRecallable > poolForLabel + 0.01 && overdrawWarnedRef.current !== fromRecallable) {
+        overdrawWarnedRef.current = fromRecallable;
+        setError(`Advertiment: el pool recallable disponible és ${fmtFull(poolForLabel)}. Prem «${isEdit ? "Desa" : "Afegeix"}» de nou per confirmar l'excés.`);
+        return;
       }
     }
 

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { readStoredJSON, writeStoredJSON } from "../../utils.js";
 import { loadAll, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle } from "../../db.js";
 import { apiFetchJson } from "../../apiClient.js";
+import { useToast } from "../../toast.jsx";
 import { normalizePrivateWorkbookRows } from "../../data/alternativesModel.js";
 import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "../../data/capitalCallTipusModel.js";
 import { normalizeCapitalCallStrategy, estSection } from "../../data/capitalCallStrategyModel.js";
@@ -113,6 +114,7 @@ async function resolveEstimatedFxRates(rows) {
 }
 
 export function useDashboardData() {
+  const { toast } = useToast();
   const [rawCC,   setRawCC]   = useState(()=>readStoredJSON(LS_CC, []));
   const [funds0,  setFunds0]  = useState(()=>readStoredJSON(LS_PL, []));
   const [companiesData, setCompaniesData] = useState(()=>readStoredJSON("tc_portfolioCompanies", []));
@@ -138,22 +140,23 @@ export function useDashboardData() {
   useEffect(() => {
     apiFetchJson("/api/eur-usd")
       .then(({ rate }) => setEurUsd(rate))
-      .catch(() => {});
+      .catch((err) => console.warn("[eur-usd] rate fetch failed, using fallback:", err));
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     loadAll()
       .then(data => {
-        if (!data) return;
+        if (!data || cancelled) return;
         const now = new Date().toLocaleDateString("ca-ES");
         if (Array.isArray(data.rawCC)) {
           setRawCC(data.rawCC);
           writeStoredJSON(LS_CC, data.rawCC);
           resolveEstimatedFxRates(data.rawCC)
             .then((anyResolved) => {
-              if (!anyResolved) return;
+              if (!anyResolved || cancelled) return;
               return loadCapitalCalls({ skipCompanions: true }).then((fresh) => {
-                if (!fresh) return;
+                if (!fresh || cancelled) return;
                 setRawCC(fresh);
                 writeStoredJSON(LS_CC, fresh);
               });
@@ -179,7 +182,8 @@ export function useDashboardData() {
       .catch(err => {
         console.error("Initial dashboard load failed:", err);
       })
-      .finally(() => setIsLoading(false));
+      .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   const handleCCInsert = useCallback(async (values, setError) => {
@@ -192,7 +196,11 @@ export function useDashboardData() {
       return;
     }
     const { error, data: insertedRow } = await insertCapitalCall(payload);
-    if (error) { setError(error.message); return; }
+    if (error) {
+      console.error("insertCapitalCall failed:", error);
+      setError("No s'ha pogut afegir el moviment. Torna-ho a provar.");
+      return;
+    }
     const fresh = await loadCapitalCalls({ skipCompanions: true });
     if (fresh) {
       setRawCC(fresh);
@@ -214,7 +222,11 @@ export function useDashboardData() {
       return;
     }
     const { error } = await updateCapitalCall(rowId, payload);
-    if (error) { setError(error.message); return; }
+    if (error) {
+      console.error("updateCapitalCall failed:", error);
+      setError("No s'ha pogut desar el moviment. Torna-ho a provar.");
+      return;
+    }
     const fresh = await loadCapitalCalls({ skipCompanions: true });
     if (fresh) {
       setRawCC(fresh);
@@ -226,14 +238,18 @@ export function useDashboardData() {
 
   const handleCCDelete = useCallback(async (rowId) => {
     const { error } = await deleteCapitalCall(rowId);
-    if (error) { console.error(error); return; }
+    if (error) {
+      console.error("deleteCapitalCall failed:", error);
+      toast("No s'ha pogut eliminar el moviment.", "error");
+      return;
+    }
     const fresh = await loadCapitalCalls({ skipCompanions: true });
     if (fresh) {
       setRawCC(fresh);
       writeStoredJSON(LS_CC, fresh);
       window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
     }
-  }, []);
+  }, [toast]);
 
   const handleLoad = useCallback(async (key, rows, clearExcluded) => {
     const now = new Date().toLocaleDateString("ca-ES");

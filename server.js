@@ -534,22 +534,6 @@ app.patch("/api/admin/users", withGuard({ auth: "admin-only", rateLimit: "admin"
   return res.json({ user: data?.user ?? null });
 }));
 
-// ── PATCH /api/admin/users/:id ────────────────────────────
-app.patch("/api/admin/users/:id", withGuard({ auth: "admin-only", rateLimit: "admin" }, async (req, res, { supabase }) => {
-  const id = sanitizeText(req.params.id, { maxLength: 128 });
-  const role = req.body?.role !== undefined ? sanitizeText(req.body.role, { maxLength: 20 }) : undefined;
-  const emailConfirm = req.body?.email_confirm !== undefined ? normalizeBoolean(req.body.email_confirm, false) : false;
-  const updates = {};
-  if (role !== undefined) {
-    if (!isAllowedRole(role)) return sendJson(res, 400, { error: "Invalid role" });
-    updates.app_metadata = { role };
-  }
-  if (emailConfirm) updates.email_confirm = true;
-  const { data, error } = await supabase.auth.admin.updateUserById(id, updates);
-  if (error) throw error;
-  return res.json({ user: data?.user ?? null });
-}));
-
 async function guardLastAdminDelete(supabase, id) {
   const { data: targetData } = await supabase.auth.admin.getUserById(id);
   if (getUserRole(targetData?.user) !== "admin") return null;

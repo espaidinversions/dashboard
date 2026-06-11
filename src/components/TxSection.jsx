@@ -247,7 +247,7 @@ export function TxSection({
   };
   useEffect(() => {
     setPage(0);
-  }, [query, sort]);
+  }, [query, sort, filters]);
   useEffect(() => {
     if (page > pageCount - 1) setPage(Math.max(0, pageCount - 1));
   }, [page, pageCount]);
@@ -442,7 +442,7 @@ export function TxSection({
               {pagedRows.map((row, index) => {
                 const isIn = row.eur > 0;
                 return (
-                  <tr key={row._rowId ?? `${row.fons}-${row.data}-${currentPage}-${index}`} style={{ borderBottom: `1px solid ${tc.bgAlt}`, background: index % 2 === 0 ? tc.card : tc.bgAlt }}>
+                  <tr key={row._rowId ?? `${row.fons}-${row.data}-${index}`} style={{ borderBottom: `1px solid ${tc.bgAlt}`, background: index % 2 === 0 ? tc.card : tc.bgAlt }}>
                     <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.data}</td>
                     <td style={{ padding: "8px 10px", fontWeight: 600, color: tc.text, fontSize: 12, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.fons}>
                       <Link to={makeVehicleDetailPath(row)} style={{ color: tc.navy, textDecoration: "none" }} onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"} onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>{row.fons}</Link>

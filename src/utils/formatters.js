@@ -66,9 +66,20 @@ export function fmtMonthKey(v) {
   return fmtMonth(v.length === 7 ? v + "-01" : v);
 }
 
+/** Parse "YYYY-MM-DD" as a LOCAL date. `new Date("YYYY-MM-DD")` is UTC midnight,
+ * which renders as the previous day in negative-offset timezones. */
+function parseLocalDate(iso) {
+  const [y, m, d] = String(iso).slice(0, 10).split("-").map(Number);
+  if (!y || !m || !d) return null;
+  return new Date(y, m - 1, d);
+}
+
 export function formatIsoDate(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("ca-ES", {
+  const s = String(iso);
+  const date = s.length > 10 ? new Date(s) : parseLocalDate(s);
+  if (!date || Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("ca-ES", {
     day: "2-digit", month: "short", year: "numeric",
   });
 }
@@ -95,7 +106,11 @@ export function formatDateRange(start, end) {
 
 export function formatIsoDateTime(iso) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("ca-ES", {
+  const s = String(iso);
+  // Full timestamps carry timezone info and parse correctly; date-only strings must be local
+  const date = s.length > 10 ? new Date(s) : parseLocalDate(s);
+  if (!date || Number.isNaN(date.getTime())) return "—";
+  return date.toLocaleString("ca-ES", {
     day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit",
   });
 }
@@ -108,7 +123,8 @@ export function formatIsoDateDMY(iso) {
 }
 
 export function formatMultiple(v) {
-  return v != null ? `${v.toFixed(2)}×` : "—";
+  const n = Number(v);
+  return v != null && Number.isFinite(n) ? `${n.toFixed(2)}×` : "—";
 }
 
 export function multipleColor(v, tc) {
@@ -142,7 +158,8 @@ export function tvpiBg(t) {
 export function calcMesos(iso) {
   if (!iso) return 0;
   const today = new Date();
-  const d = new Date(iso);
+  const d = parseLocalDate(iso);
+  if (!d) return 0;
   return Math.max(0, (today.getFullYear() - d.getFullYear()) * 12 + (today.getMonth() - d.getMonth()));
 }
 

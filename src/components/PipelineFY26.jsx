@@ -55,6 +55,11 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
         onDealsChange?.(normalized);
       }
       setLoading(false);
+    }).catch(error => {
+      if (cancelled) return;
+      console.error("loadPipelineDeals failed:", error);
+      toast("No s'han pogut carregar els fons del pipeline.", "error");
+      setLoading(false);
     });
     return () => { cancelled = true; };
   }, []);
@@ -91,11 +96,11 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
     src.forEach(f=>{const k=fn(f);m[k]=(m[k]||0)+toEUR(amt(f),f.currency);});
     return Object.entries(m).map(([name,value])=>({name,value:+value.toFixed(2)}));
   };
-  const byGeo  = useMemo(()=>agg(f=>f.geography,              funds.filter(f=>f.active)),[funds]);
-  const byStr  = useMemo(()=>agg(f=>f.strategy,               funds.filter(f=>f.active)),[funds]);
-  const bySec  = useMemo(()=>agg(f=>f.sector.split(" / ")[0], funds.filter(f=>f.active)),[funds]);
-  const byStat = useMemo(()=>agg(f=>f.status,                 funds.filter(f=>f.active)),[funds]);
-  const byCanal= useMemo(()=>agg(f=>f.canal,                  funds.filter(f=>f.active)),[funds]);
+  const byGeo  = useMemo(()=>agg(f=>f.geography,              funds.filter(f=>f.active)),[funds, toEUR]);
+  const byStr  = useMemo(()=>agg(f=>f.strategy,               funds.filter(f=>f.active)),[funds, toEUR]);
+  const bySec  = useMemo(()=>agg(f=>(f.sector ?? "").split(" / ")[0], funds.filter(f=>f.active)),[funds, toEUR]);
+  const byStat = useMemo(()=>agg(f=>f.status,                 funds.filter(f=>f.active)),[funds, toEUR]);
+  const byCanal= useMemo(()=>agg(f=>f.canal,                  funds.filter(f=>f.active)),[funds, toEUR]);
 
   const gOpts = ["Tots",...new Set(funds.map(f=>f.geography))];
   const sOpts = ["Tots",...new Set(funds.map(f=>f.strategy))];
@@ -124,7 +129,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
     if(chartF){
       if(chartF.type==="geo")    l=l.filter(f=>f.geography===chartF.value);
       if(chartF.type==="str")    l=l.filter(f=>f.strategy===chartF.value);
-      if(chartF.type==="sec")    l=l.filter(f=>f.sector.split(" / ")[0]===chartF.value);
+      if(chartF.type==="sec")    l=l.filter(f=>(f.sector ?? "").split(" / ")[0]===chartF.value);
       if(chartF.type==="status") l=l.filter(f=>f.status===chartF.value);
       if(chartF.type==="canal")  l=l.filter(f=>f.canal===chartF.value);
     }
@@ -195,6 +200,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   ];
 
   const greenBadgeBg = dark ? "#0A2010" : "#E8F8E8";
+  const t = ecTheme(TC);
   const CPie = ({data,colors,type,title}) => (
     <div style={{background:TC.card,border:`1.5px solid ${chartF?.type===type?TC.green:TC.border}`,borderRadius:10,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.08)",transition:"border-color 0.2s"}}>
       <div style={{fontSize:10,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -246,8 +252,6 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
       />
     </div>
   );
-
-  const t = ecTheme(TC);
 
   const exportExcel = async () => {
     await downloadSingleSheetXlsx({
