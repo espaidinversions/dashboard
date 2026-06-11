@@ -12,7 +12,7 @@ raw-data/
 
 # Local working documents / exports
 Mercats Públics/
-data/
+/data/
 *.xlsx
 *.pptx
 *.pdf

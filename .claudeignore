@@ -34,7 +34,7 @@ tmp*/
 *.csv
 Mercats Públics/
 raw-data/
-data/
+/data/
 
 # Local tooling and editors
 .obsidian/
