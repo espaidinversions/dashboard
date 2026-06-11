@@ -84,17 +84,18 @@ test("transaction shortcut leaves can escalate independently from display subsec
   assert.equal(getSectionAccessLevel(access, "mp-transaccions"), ACCESS_NONE);
 });
 
-test("cash-model is superuser-only by default and cannot be granted as user-level", () => {
+test("cash-model is denied by default but can be granted explicitly via sectionRoles", () => {
   const baseUser = buildSectionAccessMap({ role: "user" });
   assert.equal(getSectionAccessLevel(baseUser, "cash-model"), ACCESS_NONE);
   assert.equal(hasSectionAccess(baseUser, "cash-model"), false);
 
+  // Since 55fbc48, regular users CAN be granted cash-model explicitly (see permissions.js).
   const userGrantedUser = buildSectionAccessMap({
     role: "user",
     sectionRoles: { "cash-model": ACCESS_USER },
   });
-  assert.equal(getSectionAccessLevel(userGrantedUser, "cash-model"), ACCESS_NONE);
-  assert.equal(hasSectionAccess(userGrantedUser, "cash-model"), false);
+  assert.equal(getSectionAccessLevel(userGrantedUser, "cash-model"), ACCESS_USER);
+  assert.equal(hasSectionAccess(userGrantedUser, "cash-model"), true);
 
   const userGrantedSuperuser = buildSectionAccessMap({
     role: "user",

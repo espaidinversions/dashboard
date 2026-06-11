@@ -53,3 +53,10 @@ test("secondary strategy variants normalize to the canonical label", () => {
   assert.equal(normalizeCapitalCallStrategy("Fons de Secundaris", "PE", null), "Fons Secundari");
   assert.equal(normalizeCapitalCallStrategy("Fons secundaris",    "PE", null), "Fons Secundari");
 });
+
+// Last test in this file: reset the module-global stub so it cannot leak into
+// other test files when running with --test-isolation=none.
+test("(cleanup) snapshot inferrer stub is reset", () => {
+  setSnapshotInferrer(null);
+  assert.equal(normalizeCapitalCallStrategy("Fons Primari", "PE", null), "Fons Primari");
+});

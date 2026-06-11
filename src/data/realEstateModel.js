@@ -1,8 +1,17 @@
+import { estSection, normalizeCapitalCallStrategy } from "./capitalCallStrategyModel.js";
+
+// Route by normalized est so raw values ("SOCIMI", "Directe") and legacy rows
+// carrying only vehicleTipus="RE" land in the RE section like everywhere else.
+function isRealEstateRow(row) {
+  const est = normalizeCapitalCallStrategy(row?.est, row?.vehicleTipus ?? null, row?.fons ?? null);
+  return estSection(est) === "RE";
+}
+
 export function splitRealEstateRows(rawCC) {
   const rows = Array.isArray(rawCC) ? rawCC : [];
   return {
-    tx: rows.filter((row) => row.est === "Fons Real Estate" && row.cat !== "Compromís"),
-    compr: rows.filter((row) => row.est === "Fons Real Estate" && row.cat === "Compromís"),
+    tx: rows.filter((row) => isRealEstateRow(row) && row.cat !== "Compromís"),
+    compr: rows.filter((row) => isRealEstateRow(row) && row.cat === "Compromís"),
   };
 }
 

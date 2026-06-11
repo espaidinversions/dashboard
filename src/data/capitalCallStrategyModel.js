@@ -65,6 +65,9 @@ export function normalizeCapitalCallStrategy(value, vehicleTipus = null, context
   // This preserves per-transaction est values set by the import script (e.g. SF Cerca vs Adquisició).
   if (key && STRATEGY_MAP.has(key)) return STRATEGY_MAP.get(key);
 
+  // RE vehicles are real estate by definition — never subject to searcher/snapshot inference.
+  if (vehicleTipus === "RE") return "Fons Real Estate";
+
   // For legacy/unset values, fall back to live snapshot inference (set by db.js after loadAll)
   const snapshotStrategy = _snapshotInferrer?.({
     fons: typeof context === "string" ? context : context?.fons,
@@ -72,7 +75,6 @@ export function normalizeCapitalCallStrategy(value, vehicleTipus = null, context
   }) ?? null;
   if (snapshotStrategy) return snapshotStrategy;
 
-  if (vehicleTipus === "RE") return "Fons Real Estate";
   if (vehicleTipus === "PC") return STRATEGY_PARTICIPADA_ALTRES;
   if (vehicleTipus === "SF") {
     if (key.includes("adquis") || key.includes("particip")) return SF_STRATEGY_ADQUISICIO;
