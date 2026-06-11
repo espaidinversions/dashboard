@@ -27,15 +27,21 @@ const TOGGLES = [
   { id: "andbank",    label: "Andbank" },
 ];
 
-const YEAR_FIELDS = [
-  { field: "rend2023", label: "2023" },
-  { field: "rend2024", label: "2024" },
-  { field: "rend2025", label: "2025" },
-  { field: "rend2026", label: "2026" },
-];
+// Year columns from 2023 through the current year, capped at fields present on the data.
+const PM_FIRST_REND_YEAR = 2023;
+const PM_CURRENT_YEAR = new Date().getFullYear();
+const YEAR_FIELDS = Array.from(
+  { length: Math.max(PM_CURRENT_YEAR - PM_FIRST_REND_YEAR + 1, 1) },
+  (_, i) => PM_FIRST_REND_YEAR + i
+)
+  .map(y => ({ field: `rend${y}`, label: String(y) }))
+  .filter(({ field }) => PM_POSITIONS.some(p => p[field] !== undefined));
 
-const ABEL_RV_SPLIT = 0.7516;
-const ABEL_RF_SPLIT = 1 - ABEL_RV_SPLIT;
+const INITIAL_FILTERS = {
+  nom: "", custodian: "",
+  ...Object.fromEntries(YEAR_FIELDS.map(({ label }) => [`y${label}`, ""])),
+  inici: "", cagr: "", valorMercat: "", estat: "Tots",
+};
 
 
 function getTer(p) {
@@ -72,7 +78,7 @@ export function PMTipusTab({ tipus }) {
   const { tc, dark } = useTheme();
   const [toggle, setToggle] = usePersistedState(`pm_toggle_${tipus}`, "all");
   const [retMode, setRetMode] = useState("brut");
-  const [filters, setFilters] = useState({ nom:"", custodian:"", y2023:"", y2024:"", y2025:"", y2026:"", inici:"", cagr:"", valorMercat:"", estat:"Tots" });
+  const [filters, setFilters] = useState(INITIAL_FILTERS);
 
   const secLabel     = { fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card         = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -136,10 +142,10 @@ export function PMTipusTab({ tipus }) {
     const mwr = cagr(rendInici, yearsHeld(p.dataCompra, closeDate ?? undefined));
     if (filters.nom && !String(p.nom ?? "").toLowerCase().includes(filters.nom.toLowerCase())) return false;
     if (filters.custodian && !String(p.custodian ?? "").toLowerCase().includes(filters.custodian.toLowerCase())) return false;
-    if (filters.y2023 && !String(retMode === "net" ? netRend(p, "rend2023") : p.rend2023).includes(filters.y2023)) return false;
-    if (filters.y2024 && !String(retMode === "net" ? netRend(p, "rend2024") : p.rend2024).includes(filters.y2024)) return false;
-    if (filters.y2025 && !String(retMode === "net" ? netRend(p, "rend2025") : p.rend2025).includes(filters.y2025)) return false;
-    if (filters.y2026 && !String(retMode === "net" ? netRend(p, "rend2026") : p.rend2026).includes(filters.y2026)) return false;
+    for (const { field, label } of YEAR_FIELDS) {
+      const yearFilter = filters[`y${label}`];
+      if (yearFilter && !String(retMode === "net" ? netRend(p, field) : p[field]).includes(yearFilter)) return false;
+    }
     if (filters.inici && !String(rendInici ?? "").includes(filters.inici)) return false;
     if (filters.cagr && !String(mwr ?? "").includes(filters.cagr)) return false;
     if (filters.valorMercat && !String(p.valorMercat ?? "").includes(filters.valorMercat)) return false;
@@ -314,10 +320,9 @@ export function PMTipusTab({ tipus }) {
               <th style={{ padding: "6px 10px" }} />
               <th style={{ padding: "6px 10px" }}><input value={filters.nom} onChange={e => setFilters(v => ({ ...v, nom: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
               <th style={{ padding: "6px 10px" }}><input value={filters.custodian} onChange={e => setFilters(v => ({ ...v, custodian: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-              <th style={{ padding: "6px 10px" }}><input value={filters.y2023} onChange={e => setFilters(v => ({ ...v, y2023: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-              <th style={{ padding: "6px 10px" }}><input value={filters.y2024} onChange={e => setFilters(v => ({ ...v, y2024: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-              <th style={{ padding: "6px 10px" }}><input value={filters.y2025} onChange={e => setFilters(v => ({ ...v, y2025: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
-              <th style={{ padding: "6px 10px" }}><input value={filters.y2026} onChange={e => setFilters(v => ({ ...v, y2026: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              {YEAR_FIELDS.map(({ label }) => (
+                <th key={label} style={{ padding: "6px 10px" }}><input value={filters[`y${label}`]} onChange={e => setFilters(v => ({ ...v, [`y${label}`]: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
+              ))}
               <th style={{ padding: "6px 10px" }}><input value={filters.inici} onChange={e => setFilters(v => ({ ...v, inici: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
               <th style={{ padding: "6px 10px" }}><input value={filters.cagr} onChange={e => setFilters(v => ({ ...v, cagr: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
               <th style={{ padding: "6px 10px" }}><input value={filters.valorMercat} onChange={e => setFilters(v => ({ ...v, valorMercat: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>

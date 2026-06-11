@@ -115,6 +115,60 @@ export async function loadPMPositionOverrides() {
   }]));
 }
 
+export async function loadPMMonthlySeries() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("pm_monthly_series").select("*").order("month");
+  if (error) return [];
+  return data;
+}
+
+export async function upsertPMMonthlyRow(row) {
+  if (!supabase) return { error: null };
+  const payload = {
+    month:      row.month,
+    caixa_rv:   row.caixaRV ?? null,
+    caixa_rf:   row.caixaRF ?? null,
+    ubs_rv:     row.ubsRV ?? null,
+    ubs_rf:     row.ubsRF ?? null,
+    abel_bk:    row.abelBK ?? null,
+    andbank:    row.andbank ?? null,
+    updated_at: new Date().toISOString(),
+  };
+  const { error } = await supabase.from("pm_monthly_series")
+    .upsert(payload, { onConflict: "month" });
+  if (!error) logAudit("update", "pm_monthly_series", row.month, payload);
+  return { error };
+}
+
+export async function deletePMMonthlyRow(month) {
+  if (!supabase) return { error: null };
+  const { error } = await supabase.from("pm_monthly_series").delete().eq("month", month);
+  if (!error) logAudit("delete", "pm_monthly_series", month, {});
+  return { error };
+}
+
+export async function loadPMManagerOverrides() {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from("pm_manager_overrides").select("*").order("manager_id");
+  if (error) return [];
+  return data;
+}
+
+export async function upsertPMManagerOverride(managerId, fields) {
+  if (!supabase) return { error: null };
+  const row = { manager_id: managerId, updated_at: new Date().toISOString() };
+  if (fields.valorActual !== undefined) row.valor_actual = fields.valorActual;
+  if (fields.rendPct     !== undefined) row.rend_pct     = fields.rendPct;
+  if (fields.ytd         !== undefined) row.ytd          = fields.ytd;
+  if (fields.r2025       !== undefined) row.r2025        = fields.r2025;
+  if (fields.r2024       !== undefined) row.r2024        = fields.r2024;
+  if (fields.notes       !== undefined) row.notes        = fields.notes;
+  const { error } = await supabase.from("pm_manager_overrides")
+    .upsert(row, { onConflict: "manager_id" });
+  if (!error) logAudit("update", "pm_manager_overrides", managerId, fields);
+  return { error };
+}
+
 export async function upsertPMPositionOverride(isin, fields) {
   if (!supabase) return { error: null };
   const row = { isin, updated_at: new Date().toISOString() };

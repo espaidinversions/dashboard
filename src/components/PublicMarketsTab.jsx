@@ -6,10 +6,10 @@ import { buildGroupedMonthlySeriesFromNestedValues, buildMonthlySeriesFromNested
 import { PERIODS, weightedReturn } from "./publicMarkets/PublicMarketsShared.jsx";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
 import { loadPMOverrides } from "../db.js";
+import { usePmMonthly, applyManagerOverrides } from "./hooks/usePmMonthly.js";
 import { PublicMarketsSummarySection } from "./publicMarkets/PublicMarketsSummarySection.jsx";
 import { PublicMarketsTablesSection } from "./publicMarkets/PublicMarketsTablesSection.jsx";
 
-const PM_MONTHLY = PM_MODEL.series.monthly;
 const PM_VALUES = PM_MODEL.series.values;
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
@@ -44,6 +44,11 @@ export function PublicMarketsTab() {
   const [expanded, setExpanded] = useState(new Set());
   const [flowGroupBy, setFlowGroupBy] = useState("total");
   const [manualTxs, setManualTxs] = useState([]);
+  const { monthly: pmMonthly, managerOverrides } = usePmMonthly();
+  const effectiveManagers = useMemo(
+    () => applyManagerOverrides(PM_MANAGERS, managerOverrides),
+    [managerOverrides]
+  );
 
   useEffect(() => {
     loadPMOverrides().then(data => {
@@ -99,7 +104,7 @@ export function PublicMarketsTab() {
     };
     const allocateGroup = (ids, totalValue) => {
       const managers = ids
-        .map((id) => PM_MANAGERS.find((manager) => manager.id === id))
+        .map((id) => effectiveManagers.find((manager) => manager.id === id))
         .filter(Boolean);
       const baseTotal = managers.reduce((sum, manager) => sum + (Number(manager.valorActual) || 0), 0);
       managers.forEach((manager) => {
@@ -110,7 +115,7 @@ export function PublicMarketsTab() {
     allocateGroup(["caixa-rv", "caixa-rf"], currentManagerValues.caixa);
     allocateGroup(["ubs-rv", "ubs-rf"], currentManagerValues.ubs);
     return result;
-  }, [currentManagerValues]);
+  }, [currentManagerValues, effectiveManagers]);
 
   const monthlyPortfolioValueSeries = useMemo(() => (
     buildMonthlySeriesFromNestedValues(PM_VALUES, PM_POSITIONS, { startMonth: "2023-12" })
@@ -137,42 +142,46 @@ export function PublicMarketsTab() {
       ...monthlyPortfolioValueSeries.map((row) => row.date),
       ...monthlyCustodianValueSeries.map((row) => row.date),
       ...monthlyTypeValueSeries.map((row) => row.date),
-      ...PM_MONTHLY.map((month) => month.date),
+      ...pmMonthly.map((month) => month.date),
     ]);
     return [...months].sort();
-  }, [monthlyCustodianValueSeries, monthlyPortfolioValueSeries, monthlyTypeValueSeries]);
+  }, [monthlyCustodianValueSeries, monthlyPortfolioValueSeries, monthlyTypeValueSeries, pmMonthly]);
 
   const reportStartMonth = chartMonths[0] ?? "2023-12";
 
-  const ytdWeighted = useMemo(() => weightedReturn("ytd", managerValueByIdForReturns), [managerValueByIdForReturns]);
+  const ytdWeighted = useMemo(
+    () => weightedReturn("ytd", managerValueByIdForReturns, null, effectiveManagers),
+    [managerValueByIdForReturns, effectiveManagers]
+  );
 
   const portfolioTWR = useMemo(() => {
     let cumulative = 1;
-    for (let i = 1; i < PM_MONTHLY.length; i += 1) {
-      const prev = PM_MONTHLY[i - 1];
-      const curr = PM_MONTHLY[i];
-      const prevValue = prev.caixaRV + prev.caixaRF + prev.ubsRV + prev.ubsRF + (prev.abelBK ?? 0);
+    for (let i = 1; i < pmMonthly.length; i += 1) {
+      const prev = pmMonthly[i - 1];
+      const curr = pmMonthly[i];
+      const prevValue = (prev.caixaRV ?? 0) + (prev.caixaRF ?? 0) + (prev.ubsRV ?? 0) + (prev.ubsRF ?? 0) + (prev.abelBK ?? 0);
       const cashflow = prev.abelBK == null && curr.abelBK != null ? curr.abelBK : 0;
-      const currValue = curr.caixaRV + curr.caixaRF + curr.ubsRV + curr.ubsRF + (curr.abelBK ?? 0);
+      const currValue = (curr.caixaRV ?? 0) + (curr.caixaRF ?? 0) + (curr.ubsRV ?? 0) + (curr.ubsRF ?? 0) + (curr.abelBK ?? 0);
       cumulative *= 1 + (currValue - prevValue - cashflow) / (prevValue + cashflow);
     }
     return (cumulative - 1) * 100;
-  }, []);
+  }, [pmMonthly]);
 
   const portfolioMWR = useMemo(() => {
-    const first = PM_MONTHLY[0];
-    const last = PM_MONTHLY[PM_MONTHLY.length - 1];
-    const startValue = first.caixaRV + first.caixaRF + first.ubsRV + first.ubsRF;
-    const endValue = last.caixaRV + last.caixaRF + last.ubsRV + last.ubsRF + (last.abelBK ?? 0);
-    const totalMonths = PM_MONTHLY.length - 1;
-    const abelIdx = PM_MONTHLY.findIndex((point) => point.abelBK != null);
-    if (abelIdx === -1) return null;
-    const cashflow = PM_MONTHLY[abelIdx].abelBK;
+    const first = pmMonthly[0];
+    const last = pmMonthly[pmMonthly.length - 1];
+    if (!first || !last) return null;
+    const startValue = (first.caixaRV ?? 0) + (first.caixaRF ?? 0) + (first.ubsRV ?? 0) + (first.ubsRF ?? 0);
+    const endValue = (last.caixaRV ?? 0) + (last.caixaRF ?? 0) + (last.ubsRV ?? 0) + (last.ubsRF ?? 0) + (last.abelBK ?? 0);
+    const totalMonths = pmMonthly.length - 1;
+    const abelIdx = pmMonthly.findIndex((point) => point.abelBK != null);
+    if (abelIdx === -1 || totalMonths <= 0) return null;
+    const cashflow = pmMonthly[abelIdx].abelBK;
     const weight = (totalMonths - abelIdx) / totalMonths;
     const totalReturn = (endValue - startValue - cashflow) / (startValue + cashflow * weight);
     const years = totalMonths / 12;
     return (Math.pow(1 + totalReturn, 1 / years) - 1) * 100;
-  }, []);
+  }, [pmMonthly]);
 
   const residualValue = total - (
     currentManagerValues.caixa +
@@ -187,7 +196,7 @@ export function PublicMarketsTab() {
   const displayManagers = useMemo(() => {
     const weightedManagerMetric = (ids, field) => {
       const managers = ids
-        .map((id) => PM_MANAGERS.find((manager) => manager.id === id))
+        .map((id) => effectiveManagers.find((manager) => manager.id === id))
         .filter((manager) => manager && manager[field] != null);
       if (managers.length === 0) return null;
       const weightedSum = managers.reduce((sum, manager) => sum + manager[field] * manager.valorActual, 0);
@@ -208,12 +217,12 @@ export function PublicMarketsTab() {
       combine("caixa", "CaixaBank", currentManagerValues.caixa, ["caixa-rv", "caixa-rf"]),
       combine("ubs", "UBS", currentManagerValues.ubs, ["ubs-rv", "ubs-rf"]),
       { id: "creditSuisse", nom: "Credit Suisse", gestor: "Credit Suisse", tipus: "RV+RF", valorActual: currentManagerValues.creditSuisse, rendPct: null, ytd: null, r2025: null, r2024: null },
-      { ...PM_MANAGERS.find((manager) => manager.id === "abel"), id: "abel", nom: "Bankinter", valorActual: currentManagerValues.abel },
-      { ...PM_MANAGERS.find((manager) => manager.id === "andbank"), id: "andbank", nom: "WAM–Andbank", valorActual: currentManagerValues.andbank },
+      { ...effectiveManagers.find((manager) => manager.id === "abel"), id: "abel", nom: "Bankinter", valorActual: currentManagerValues.abel },
+      { ...effectiveManagers.find((manager) => manager.id === "andbank"), id: "andbank", nom: "WAM–Andbank", valorActual: currentManagerValues.andbank },
       { id: "jpmorgan", nom: "JPMorgan", gestor: "JPMorgan", tipus: "RV", valorActual: currentManagerValues.jpmorgan, rendPct: null, ytd: null, r2025: null, r2024: null },
       { id: "altres", nom: "Altres / no assignat", gestor: null, tipus: "RV+RF", valorActual: currentManagerValues.altres + residualValue, rendPct: null, ytd: null, r2025: null, r2024: null },
     ];
-  }, [currentManagerValues, residualValue]);
+  }, [currentManagerValues, residualValue, effectiveManagers]);
 
   const providerData = useMemo(() => (
     PERIODS.map(({ field, label }) => {
@@ -228,11 +237,11 @@ export function PublicMarketsTab() {
   const strategyData = useMemo(() => (
     PERIODS.map(({ field, label }) => ({
       year: label,
-      rv: weightedReturn(field, managerValueByIdForReturns, "RV"),
-      rf: weightedReturn(field, managerValueByIdForReturns, "RF"),
-      total: weightedReturn(field, managerValueByIdForReturns),
+      rv: weightedReturn(field, managerValueByIdForReturns, "RV", effectiveManagers),
+      rf: weightedReturn(field, managerValueByIdForReturns, "RF", effectiveManagers),
+      total: weightedReturn(field, managerValueByIdForReturns, null, effectiveManagers),
     }))
-  ), [managerValueByIdForReturns]);
+  ), [managerValueByIdForReturns, effectiveManagers]);
 
   const totalValueSeries = monthlyPortfolioValueSeries;
   const custodianValueByMonth = useMemo(() => new Map(monthlyCustodianValueSeries.map((row) => [row.date, row])), [monthlyCustodianValueSeries]);
@@ -305,6 +314,7 @@ export function PublicMarketsTab() {
         dark={dark}
         secLabel={secLabel}
         displayManagers={displayManagers}
+        monthly={pmMonthly}
         expanded={expanded}
         toggleExpand={toggleExpand}
       />

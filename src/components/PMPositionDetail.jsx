@@ -6,7 +6,7 @@ import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM, fmtMonth, yearsHeld, cagr } from "../utils.js";
 import { PM_TER } from "../generated/publicMarkets/pmTer.js";
-import { loadPMOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
+import { loadPMOverrides, loadPMPositionOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
 import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
 import { PriceHistoryChart } from "./PriceHistoryChart.jsx";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
@@ -49,16 +49,22 @@ function PMPositionDetail() {
   // Supabase overrides for this position
   const [metaOverride, setMetaOverride] = useState({});
   const [terOverride, setTerOverride] = useState(null);
+  const [posOverride, setPosOverride] = useState(null); // {valorMercat, rendInici, rendiment:{}, costAnual}
   const isin = p ? cleanIsin(p.isin) : null;
   const positionKey = p ? makeIsinCustodianKey(isin, p.custodian) : null;
 
   useEffect(() => {
     if (!isin) return;
-    loadPMOverrides().then(data => {
-      if (!data) return;
-      if (data.positionMeta[isin]) setMetaOverride(data.positionMeta[isin]);
-      if (data.terOverrides[isin] != null) setTerOverride(data.terOverrides[isin]);
+    let cancelled = false;
+    Promise.all([loadPMOverrides(), loadPMPositionOverrides()]).then(([data, posMap]) => {
+      if (cancelled) return;
+      if (data) {
+        if (data.positionMeta[isin]) setMetaOverride(data.positionMeta[isin]);
+        if (data.terOverrides[isin] != null) setTerOverride(data.terOverrides[isin]);
+      }
+      if (posMap?.has(isin)) setPosOverride(posMap.get(isin));
     });
+    return () => { cancelled = true; };
   }, [isin]);
 
   if (!p) {
@@ -72,6 +78,16 @@ function PMPositionDetail() {
         </button>
       </div>
     );
+  }
+
+  // Apply financial overrides (pm_position_overrides) on top of static data — mirrors HoldingsTable merge
+  if (posOverride) {
+    const merged = { ...p };
+    if (posOverride.valorMercat != null) merged.valorMercat = posOverride.valorMercat;
+    if (posOverride.rendInici   != null) merged.rendInici   = posOverride.rendInici;
+    if (posOverride.rendiment)           { for (const [yr, val] of Object.entries(posOverride.rendiment)) { if (val != null) merged[`rend${yr}`] = val; } }
+    if (posOverride.costAnual   != null) merged.costAnual   = posOverride.costAnual;
+    p = merged;
   }
 
   // Apply overrides on top of static data

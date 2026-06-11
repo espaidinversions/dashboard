@@ -4,12 +4,42 @@ import { fmtM, cagr, yearsHeld } from "../../utils.js";
 import { Badge } from "../SharedComponents.jsx";
 import { getMgrPositions, PctChip, TIPUS_CFG } from "./PublicMarketsShared.jsx";
 import { makePmPositionRouteId } from "../../data/pmPositionRouting.js";
+import { PM_MODEL } from "../../data/publicMarketsModel.js";
+
+const PM_MONTHLY_STATIC = PM_MODEL.series.monthly;
+
+// Monthly series columns per manager — a manager's series starts the first month its columns are non-null.
+const MGR_MONTHLY_COLS = {
+  caixa:   ["caixaRV", "caixaRF"],
+  ubs:     ["ubsRV", "ubsRF"],
+  abel:    ["abelBK"],
+  andbank: ["andbank"],
+};
+
+function monthsBetween(start, end) {
+  const [sy, sm] = start.split("-").map(Number);
+  const [ey, em] = end.split("-").map(Number);
+  return (ey - sy) * 12 + (em - sm);
+}
+
+function inceptionMonthsFor(mgrId, monthly) {
+  if (!monthly?.length) return null;
+  const lastDate = monthly[monthly.length - 1]?.date;
+  if (!lastDate) return null;
+  const cols = MGR_MONTHLY_COLS[mgrId];
+  const firstRow = cols
+    ? monthly.find(m => cols.some(c => m[c] != null))
+    : monthly[0];
+  const startDate = firstRow?.date ?? monthly[0].date;
+  return monthsBetween(startDate, lastDate);
+}
 
 export function PublicMarketsTablesSection({
   tc,
   dark,
   secLabel,
   displayManagers,
+  monthly = PM_MONTHLY_STATIC,
   expanded,
   toggleExpand,
 }) {
@@ -39,9 +69,9 @@ export function PublicMarketsTablesSection({
             {displayManagers.map((manager, index) => {
               const isExpanded = expanded.has(manager.id);
               const zebra = index % 2 === 1;
-              const inceptionMonths = manager.id === "abel" ? 11 : 27;
-              const years = inceptionMonths / 12;
-              const managerCagr = manager.rendPct != null ? cagr(manager.rendPct, years) : null;
+              const inceptionMonths = inceptionMonthsFor(manager.id, monthly);
+              const years = inceptionMonths != null ? inceptionMonths / 12 : null;
+              const managerCagr = manager.rendPct != null && years != null ? cagr(manager.rendPct, years) : null;
               const subPositions = getMgrPositions(manager.id);
               const isExpandable = subPositions !== null;
 

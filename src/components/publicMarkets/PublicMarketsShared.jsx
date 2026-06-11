@@ -9,8 +9,8 @@ const PM_MANAGERS = PM_MODEL.metadata.managers;
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
 
-const ABEL_RV_SPLIT = 0.7516;
-const ABEL_RF_SPLIT = 1 - ABEL_RV_SPLIT;
+export const ABEL_RV_SPLIT = 0.7516;
+export const ABEL_RF_SPLIT = 1 - ABEL_RV_SPLIT;
 
 export const TIPUS_CFG = {
   RV: { color: "#2B5070", bg: "#E6EDF3" },
@@ -40,8 +40,8 @@ const DEFAULT_EXPAND_TIPUS = {
   andbank: null,
 };
 
-export function weightedReturn(field, managerValueById, tipus = null) {
-  const entries = PM_MANAGERS.flatMap((manager) => {
+export function weightedReturn(field, managerValueById, tipus = null, managers = PM_MANAGERS) {
+  const entries = managers.flatMap((manager) => {
     if (manager[field] == null) return [];
     const managerValue = managerValueById?.[manager.id] ?? manager.valorActual;
     if (tipus === null) return [{ val: managerValue, r: manager[field] }];
