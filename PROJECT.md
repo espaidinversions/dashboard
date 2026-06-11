@@ -6,8 +6,8 @@
 
 ## Tech Stack
 
-- **Frontend:** React 18.3 + Vite 6 + Recharts 2.13 + html2canvas 1.4
-- **Backend:** Express 4.18 (Node.js, ESM, port 3001)
+- **Frontend:** React 19.2 + Vite 6 + ECharts 6 (tree-shaken via `src/echarts.js`) + @nivo/sankey + html2canvas 1.4 + exceljs (lazy-loaded)
+- **Backend:** Express 5.2 (Node.js, ESM, port 3001) + Supabase (auth, RLS, data)
 - **Styling:** Inline JSX styles via `useTheme()` + `src/index.css` for globals/animations/responsive grids
 - **Language:** Catalan (ca-ES) UI, English variable names
 - **Build:** `npm run dev` (Vite on 5173 + Express on 3001) · `docker compose up --build` for prod
