@@ -99,14 +99,16 @@ export function formatDisplayValue(normalized) {
   const str = String(normalized);
   const hasTrailingDot = str.endsWith(".");
   const base = hasTrailingDot ? str.slice(0, -1) : str;
-  const num = Number(base);
-  if (!isFinite(num)) return str;
+  if (!isFinite(Number(base))) return str;
   const dotIdx = base.indexOf(".");
-  const fracDigits = dotIdx >= 0 ? base.length - dotIdx - 1 : 0;
-  const formatted = num.toLocaleString("ca-ES", {
-    minimumFractionDigits: fracDigits,
-    maximumFractionDigits: fracDigits,
-  });
+  const intStr = dotIdx >= 0 ? base.slice(0, dotIdx) : base;
+  const fracStr = dotIdx >= 0 ? base.slice(dotIdx + 1) : "";
+  // Manual formatting: always "." grouping, "," decimal — browser-locale-independent
+  const isNegative = intStr.startsWith("-");
+  const absInt = isNegative ? intStr.slice(1) : intStr;
+  const grouped = absInt.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const formattedInt = isNegative ? `-${grouped}` : grouped;
+  const formatted = fracStr ? `${formattedInt},${fracStr}` : formattedInt;
   return hasTrailingDot ? formatted + "," : formatted;
 }
 

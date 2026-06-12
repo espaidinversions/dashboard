@@ -2,7 +2,13 @@ const _CAT_MONTHS = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","O
 
 export function fmtFull(n) {
   if (n == null || !Number.isFinite(Number(n))) return "—";
-  return Number(n).toLocaleString("ca-ES", { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + "€";
+  const num = Number(n);
+  const abs = Math.abs(num);
+  const sign = num < 0 ? "-" : "";
+  const [intRaw, fracRaw = ""] = abs.toFixed(2).split(".");
+  const grouped = intRaw.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  const frac = fracRaw.replace(/0+$/, "");
+  return `${sign}${grouped}${frac ? `,${frac}` : ""}€`;
 }
 
 export function fmtM(n) {
