@@ -1,83 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useTheme } from "../../theme.js";
-
-/**
- * Normalizes a user-typed number into a JS-parseable string:
- * - supports optional leading "-" (or parentheses for negatives)
- * - supports "." or "," as decimal separator (last separator wins)
- * - strips grouping separators (".", ",", spaces, apostrophes)
- *
- * Returned value is:
- * - "" (empty) for empty/invalid input
- * - "-" while user is mid-typing a negative number
- * - otherwise a string like "-1234.56" or "1234"
- */
-function normalizeNumericInput(raw) {
-  const input = String(raw ?? "");
-  const trimmed = input.trim();
-  if (!trimmed) return "";
-
-  const parenNegative = trimmed.startsWith("(") && trimmed.endsWith(")");
-  const sign = (parenNegative || trimmed.startsWith("-")) ? "-" : "";
-
-  // Keep digits and separators only
-  const cleaned = trimmed
-    .replace(/[()]/g, "")
-    .replace(/\s+/g, "")
-    .replace(/[^0-9.,']/g, "")
-    .replace(/'/g, "");
-
-  // Allow mid-typing a negative sign without digits yet
-  if (sign === "-" && cleaned === "") return "-";
-
-  const dotCount = (cleaned.match(/\./g) ?? []).length;
-  const lastDot = cleaned.lastIndexOf(".");
-  const lastComma = cleaned.lastIndexOf(",");
-
-  let intPart, fracPart, hasDecimal;
-
-  if (lastComma !== -1) {
-    // Comma present → comma is decimal separator, all dots are thousand separators
-    intPart = cleaned.slice(0, lastComma).replace(/\./g, "");
-    fracPart = cleaned.slice(lastComma + 1).replace(/[^\d]/g, "");
-    hasDecimal = true;
-  } else if (dotCount > 1) {
-    // Multiple dots, no comma → all dots are thousand separators (European style)
-    // A trailing dot means the user is about to type a decimal part
-    intPart = cleaned.replace(/\./g, "");
-    fracPart = "";
-    hasDecimal = cleaned.endsWith(".");
-  } else if (lastDot !== -1) {
-    // Single dot, no comma → dot is the decimal separator
-    intPart = cleaned.slice(0, lastDot);
-    fracPart = cleaned.slice(lastDot + 1).replace(/[^\d]/g, "");
-    hasDecimal = true;
-  } else {
-    intPart = cleaned;
-    fracPart = "";
-    hasDecimal = false;
-  }
-
-  intPart = intPart.replace(/[^\d]/g, "");
-  if (!intPart && !fracPart) return sign ? "-" : "";
-
-  return hasDecimal ? `${sign}${intPart || "0"}.${fracPart}` : `${sign}${intPart}`;
-}
-
-function formatDisplayValue(normalized) {
-  if (!normalized || normalized === "-") return normalized ?? "";
-  const hasTrailingDot = normalized.endsWith(".");
-  const base = hasTrailingDot ? normalized.slice(0, -1) : normalized;
-  const num = Number(base);
-  if (!isFinite(num)) return normalized;
-  const dotIdx = base.indexOf(".");
-  const fracDigits = dotIdx >= 0 ? base.length - dotIdx - 1 : 0;
-  const formatted = num.toLocaleString("ca-ES", {
-    minimumFractionDigits: fracDigits,
-    maximumFractionDigits: fracDigits,
-  });
-  return hasTrailingDot ? formatted + "," : formatted;
-}
+import { formatDisplayValue, formatLive } from "./numericInput.js";
 
 export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", submitLabel = "Afegir" }) {
   const { tc } = useTheme();
@@ -90,6 +13,13 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [closing, setClosing] = useState(false);
+  // Formatted display value per active number field. Updated live on every
+  // keystroke by formatLive(); cleared on blur so the canonical
+  // formatDisplayValue(stored) takes over.
+  const [numberDrafts, setNumberDrafts] = useState({});
+  // DOM refs keyed by field.key, used to restore caret after React re-renders
+  // the formatted string.
+  const numberInputRefs = React.useRef({});
   const handleClose = () => { setClosing(true); setTimeout(onClose, 175); };
 
   useEffect(() => {
@@ -214,11 +144,31 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
                 />
               ) : f.type === "number" ? (
                 <input
+                  ref={el => { numberInputRefs.current[f.key] = el; }}
                   className="modal-input"
                   type="text"
                   inputMode="decimal"
-                  value={formatDisplayValue(String(values[f.key] ?? ""))}
-                  onChange={e => applyFieldChange(f, normalizeNumericInput(e.target.value))}
+                  value={Object.prototype.hasOwnProperty.call(numberDrafts, f.key)
+                    ? numberDrafts[f.key]
+                    : formatDisplayValue(String(values[f.key] ?? ""))}
+                  onFocus={() => setNumberDrafts(d => ({
+                    ...d,
+                    [f.key]: formatDisplayValue(String(values[f.key] ?? "")),
+                  }))}
+                  onBlur={() => setNumberDrafts(({ [f.key]: _removed, ...rest }) => rest)}
+                  onChange={e => {
+                    const { formatted, newCaret, stored } = formatLive(
+                      e.target.value,
+                      e.target.selectionStart ?? e.target.value.length,
+                      e.nativeEvent?.data ?? null,
+                      e.nativeEvent?.inputType ?? null,
+                    );
+                    applyFieldChange(f, stored);
+                    setNumberDrafts(d => ({ ...d, [f.key]: formatted }));
+                    requestAnimationFrame(() => {
+                      numberInputRefs.current[f.key]?.setSelectionRange(newCaret, newCaret);
+                    });
+                  }}
                   placeholder={f.placeholder ?? ""}
                   style={{ ...inputStyleFor(f), fontFamily: "'DM Mono',monospace" }}
                   disabled={f.disabled}

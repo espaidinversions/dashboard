@@ -130,6 +130,10 @@ export function CcTransactionModal({
 
   const handleSave = async (values, setError) => {
     if (!values.tipus) { setError("El tipus de moviment és obligatori."); return; }
+    if (values.eur !== "" && values.eur != null && !isFinite(Number(values.eur))) {
+      setError("L'import no és un número vàlid.");
+      return;
+    }
     const cat = inferCapitalCallCategoryFromTipus(values.tipus, values.eur);
 
     // Validate from_recallable
