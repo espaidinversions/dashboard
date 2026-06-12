@@ -11,13 +11,15 @@ export function fmtFull(n) {
   return `${sign}${grouped}${frac ? `,${frac}` : ""}€`;
 }
 
+function _groupDots(abs) {
+  return Math.round(abs).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 export function fmtM(n) {
   if (n == null || !Number.isFinite(Number(n))) return "—";
-  n = Number(n);
-  const a=Math.abs(n);
-  if(a>=1e6) return (n/1e6).toFixed(2)+"M€";
-  if(a>=1e3) return (n/1e3).toFixed(0)+"K€";
-  return n.toFixed(0)+"€";
+  const num = Number(n);
+  const sign = num < 0 ? "-" : "";
+  return `${sign}${_groupDots(Math.abs(num))}€`;
 }
 
 export function fmtSignedM(n) {
@@ -28,15 +30,8 @@ export function fmtSignedM(n) {
 }
 
 function _fmtNativeAbs(n, divisa) {
-  const a = Math.abs(n);
-  if (divisa === "USD") {
-    if (a >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
-    if (a >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
-    return `$${n.toFixed(0)}`;
-  }
-  if (a >= 1e6) return `${(n / 1e6).toFixed(2)}M ${divisa}`;
-  if (a >= 1e3) return `${(n / 1e3).toFixed(0)}K ${divisa}`;
-  return `${n.toFixed(0)} ${divisa}`;
+  const grouped = _groupDots(n);
+  return divisa === "USD" ? `${grouped}$` : `${grouped} ${divisa}`;
 }
 
 export function fmtSignedNative(n, divisa) {
@@ -49,12 +44,7 @@ export function fmtSignedNative(n, divisa) {
 }
 
 export function fmtS(n) {
-  if (n == null || !Number.isFinite(Number(n))) return "—";
-  n = Number(n);
-  const a=Math.abs(n);
-  if(a>=1e6) return (n/1e6).toFixed(1)+"M€";
-  if(a>=1e3) return (n/1e3).toFixed(0)+"K€";
-  return n.toFixed(0)+"€";
+  return fmtM(n);
 }
 
 /** Accepts "YYYY-MM" or "YYYY-MM-DD". */
