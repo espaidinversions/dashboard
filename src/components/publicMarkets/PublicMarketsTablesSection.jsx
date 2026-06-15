@@ -183,7 +183,7 @@ export function PublicMarketsTablesSection({
           </tbody>
         </table>
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 10, fontStyle: "italic" }}>
-          Des d'inici: TWR reportat pels gestors (WAM/Andbank des de creació; UBS YTD; Abel BK des d'abr. 2025). CAGR: retorn anualitzat equivalent.
+          Des d'inici: TWR des del primer snapshot mensual (UBS/Caixa des des. 2023; Abel des d'abr. 2025 — model, pot diferir dels estats del gestor; WAM/Andbank des de creació). CAGR: retorn anualitzat equivalent.
         </div>
     </div>
   );
