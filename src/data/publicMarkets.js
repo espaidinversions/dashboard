@@ -83,7 +83,7 @@ export const PM_MONTHLY = [
   // ── 2026 ────────────────────────────────────────────────
   { date:"2026-01", label:"Gen '26", caixaRV:8_244_136, caixaRF:4_049_948, ubsRV:10_995_276, ubsRF:2_244_148, abelBK:13_577_708, andbank:6_064_452 },
   { date:"2026-02", label:"Feb '26", caixaRV:8_192_127, caixaRF:3_990_758, ubsRV:11_031_708, ubsRF:2_220_845, abelBK:13_544_782, andbank:6_076_557 },
-  { date:"2026-03", label:"Mar '26", caixaRV:8_037_347, caixaRF:3_990_758, ubsRV:10_704_128, ubsRF:2_220_845, abelBK:20_933_017, andbank:6_088_661 },
+  { date:"2026-03", label:"Mar '26", caixaRV:8_037_347, caixaRF:3_990_758, ubsRV:10_704_128, ubsRF:2_220_845, abelBK:20_933_017, andbank:6_088_661, cashflows:{ abelBK:7_388_235 } },
 ];
 
 const PM_MONTHLY_BY_DATE = Object.fromEntries(PM_MONTHLY.map(m => [m.date, m]));
