@@ -120,7 +120,8 @@ const pmLast = PM_MONTHLY[PM_MONTHLY.length - 1];
 const pmLastDate = pmLast?.date ?? "2026-03";
 
 // Current manager snapshots — workbook-backed section totals.
-// rendPct: since-inception for WAM/Andbank and UBS (from PM_MONTHLY start), custodian-reported for Caixa, null for Abel.
+// rendPct: since-inception TWR from PM_MONTHLY for UBS/Andbank/Abel; custodian-reported for Caixa (manager statement, not reconstructed).
+// Abel ytd/r2025/r2024 are custodian-reported; rendPct is model-computed TWR from first PM_MONTHLY snapshot (Apr 2025).
 // valorActual for UBS/Caixa/Andbank derived from PM_MONTHLY last row so they stay current when new months are added.
 const PM_MANAGER_TEMPLATE = [
   { id:"caixa-rv", nom:"Caixa RV",     gestor:"CaixaBank", tipus:"RV",    valorActual:pmLast?.caixaRV ?? 8_037_347,  rendPct:7.44,  ytd:pctChange("2025-12", pmLastDate, caixaRVValue), r2025:9.51,  r2024:17.02 },
