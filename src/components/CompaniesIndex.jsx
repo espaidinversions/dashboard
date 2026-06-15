@@ -165,7 +165,7 @@ export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "
                 {sorted.map((r, i) => (
                   <tr key={r.id} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                      <Link to={`/company/${encodeURIComponent(r.id)}`} style={{ color: tc.navy, textDecoration: "none" }}
+                      <Link to={`/investments/companies/${encodeURIComponent(r.id)}`} style={{ color: tc.navy, textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
                         onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>
                         {r.nom}

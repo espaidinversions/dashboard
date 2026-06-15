@@ -352,7 +352,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                   return (
                   <tr key={r.routeId ?? r.id ?? r.fons} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
-                      <Link to={`/fund/${encodeURIComponent(r.routeId ?? r.id ?? r.fons)}`} style={{ color: tc.navy, textDecoration: "none" }}
+                      <Link to={`/investments/funds/${encodeURIComponent(r.routeId ?? r.id ?? r.fons)}`} style={{ color: tc.navy, textDecoration: "none" }}
                         onMouseEnter={e => e.currentTarget.style.textDecoration = "underline"}
                         onMouseLeave={e => e.currentTarget.style.textDecoration = "none"}>
                         <EditableCell value={r.fons} type="text"

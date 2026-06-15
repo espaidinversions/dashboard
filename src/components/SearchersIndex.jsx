@@ -390,7 +390,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
             <tbody>
               {sorted.map((row, index) => (
                 <tr key={row.id ?? row.nom} className="hoverable"
-                  onClick={() => row.id && navigate(`/searcher/${encodeURIComponent(row.id)}`)}
+                  onClick={() => row.id && navigate(`/investments/searchers/${encodeURIComponent(row.id)}`)}
                   style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, cursor: row.id ? "pointer" : "default" }}>
                   <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>
                     {row.nom}

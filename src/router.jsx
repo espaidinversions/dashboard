@@ -70,9 +70,9 @@ export default function AppRoutes() {
           <Route path="/investments/funds" element={<RequireAnySection sections={["alternatives", "real-estate"]}><FundsIndex /></RequireAnySection>} />
           <Route path="/investments/companies" element={<RequireSection section="companies"><CompaniesIndex /></RequireSection>} />
           <Route path="/investments/searchers" element={<RequireSection section="alternatives"><SearchersIndex /></RequireSection>} />
-          <Route path="/searcher/:id" element={<RequireSection section="alternatives"><SearcherDetail /></RequireSection>} />
-          <Route path="/fund/:id" element={<RequireAnySection sections={["alternatives", "real-estate"]}><FundDetail /></RequireAnySection>} />
-          <Route path="/company/:id" element={<RequireSection section="companies"><CompanyDetail /></RequireSection>} />
+          <Route path="/investments/searchers/:id" element={<RequireSection section="alternatives"><SearcherDetail /></RequireSection>} />
+          <Route path="/investments/funds/:id" element={<RequireAnySection sections={["alternatives", "real-estate"]}><FundDetail /></RequireAnySection>} />
+          <Route path="/investments/companies/:id" element={<RequireSection section="companies"><CompanyDetail /></RequireSection>} />
           <Route path="/mercats-publics/:id" element={<RequireSection section="mercats-publics"><PMPositionDetail /></RequireSection>} />
           <Route path="/admin" element={<RequireAdmin><AdminPanel /></RequireAdmin>} />
           <Route path="/guia" element={<RequireAuth><UserGuide /></RequireAuth>} />

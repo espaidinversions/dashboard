@@ -42,10 +42,10 @@ export function CashTable({
   const rowLink = (name) => {
     const meta = entityMetaByName?.[name] ?? null;
     if (entityScope === "companies" && meta?.id) {
-      if (meta.vehicleTipus === "PC") return `/company/${encodeURIComponent(meta.id)}`;
-      if (meta.vehicleTipus === "SF") return `/searcher/${encodeURIComponent(meta.id)}`;
+      if (meta.vehicleTipus === "PC") return `/investments/companies/${encodeURIComponent(meta.id)}`;
+      if (meta.vehicleTipus === "SF") return `/investments/searchers/${encodeURIComponent(meta.id)}`;
     }
-    if (fundRouteIds?.[name]) return `/fund/${encodeURIComponent(fundRouteIds[name])}`;
+    if (fundRouteIds?.[name]) return `/investments/funds/${encodeURIComponent(fundRouteIds[name])}`;
     return null;
   };
 

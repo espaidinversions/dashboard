@@ -4,7 +4,7 @@ import { estSection } from "./capitalCallStrategyModel.js";
 
 export function makeVehicleDetailPath(row) {
   if (estSection(row?.est) === "PC") {
-    return `/company/${encodeURIComponent(row?.id ?? slugify(row?.fons ?? ""))}`;
+    return `/investments/companies/${encodeURIComponent(row?.id ?? slugify(row?.fons ?? ""))}`;
   }
-  return `/fund/${encodeURIComponent(makeFundRouteId(row))}`;
+  return `/investments/funds/${encodeURIComponent(makeFundRouteId(row))}`;
 }

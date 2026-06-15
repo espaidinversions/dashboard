@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { usePersistedState } from "../../utils.js";
 
 function normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublicsTab, activeNavItem }) {
@@ -23,7 +24,16 @@ function normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublic
 }
 
 export function useTabRouter() {
-  const [tab, setTab] = usePersistedState("ui_tab", "resum");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get("tab") ?? "resum";
+  const setTab = useCallback((newTab) => {
+    setSearchParams(params => {
+      const next = new URLSearchParams(params);
+      next.set("tab", newTab);
+      return next;
+    }, { replace: true });
+  }, [setSearchParams]);
+
   const [inversionsSubTab, setInversionsSubTab] = useState("fons");
   const [realEstateTab, setRealEstateTab] = useState("directe");
   const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
