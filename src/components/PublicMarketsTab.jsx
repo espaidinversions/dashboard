@@ -160,8 +160,10 @@ export function PublicMarketsTab() {
       const prev = pmMonthly[i - 1];
       const curr = pmMonthly[i];
       const prevValue = (prev.caixaRV ?? 0) + (prev.caixaRF ?? 0) + (prev.ubsRV ?? 0) + (prev.ubsRF ?? 0) + (prev.abelBK ?? 0);
-      const cashflow = (prev.abelBK == null && curr.abelBK != null ? curr.abelBK : 0) + (curr.cashflows?.abelBK ?? 0);
-      const denominator = prevValue + cashflow;
+      const inceptionCF = prev.abelBK == null && curr.abelBK != null ? curr.abelBK : 0;
+      const midPeriodCF = curr.cashflows?.abelBK ?? 0;
+      const cashflow = inceptionCF + midPeriodCF;
+      const denominator = prevValue + inceptionCF + 0.5 * midPeriodCF;
       if (denominator <= 0) continue;
       const currValue = (curr.caixaRV ?? 0) + (curr.caixaRF ?? 0) + (curr.ubsRV ?? 0) + (curr.ubsRF ?? 0) + (curr.abelBK ?? 0);
       cumulative *= 1 + (currValue - prevValue - cashflow) / denominator;
@@ -178,9 +180,13 @@ export function PublicMarketsTab() {
     const totalMonths = pmMonthly.length - 1;
     const abelIdx = pmMonthly.findIndex((point) => point.abelBK != null);
     if (abelIdx === -1 || totalMonths <= 0) return null;
-    const cashflow = pmMonthly[abelIdx].abelBK;
-    const weight = (totalMonths - abelIdx) / totalMonths;
-    const totalReturn = (endValue - startValue - cashflow) / (startValue + cashflow * weight);
+    const cashflowEntries = [{ amount: pmMonthly[abelIdx].abelBK, idx: abelIdx }];
+    pmMonthly.forEach((m, idx) => {
+      if (m.cashflows?.abelBK) cashflowEntries.push({ amount: m.cashflows.abelBK, idx });
+    });
+    const totalCF = cashflowEntries.reduce((s, cf) => s + cf.amount, 0);
+    const weightedCF = cashflowEntries.reduce((s, cf) => s + cf.amount * (totalMonths - cf.idx) / totalMonths, 0);
+    const totalReturn = (endValue - startValue - totalCF) / (startValue + weightedCF);
     const years = totalMonths / 12;
     return (Math.pow(1 + totalReturn, 1 / years) - 1) * 100;
   }, [pmMonthly]);
@@ -219,11 +225,11 @@ export function PublicMarketsTab() {
     return [
       combine("caixa", "CaixaBank", currentManagerValues.caixa, ["caixa-rv", "caixa-rf"]),
       combine("ubs", "UBS", currentManagerValues.ubs, ["ubs-rv", "ubs-rf"]),
-      { id: "creditSuisse", nom: "Credit Suisse", gestor: "Credit Suisse", tipus: "RV+RF", valorActual: currentManagerValues.creditSuisse, rendPct: null, ytd: null, r2025: null, r2024: null },
+      { id: "creditSuisse", nom: "Credit Suisse", gestor: "Credit Suisse", tipus: "RV+RF", valorActual: currentManagerValues.creditSuisse, rendPct: null, ytd: null, [`r${_cy - 1}`]: null, [`r${_cy - 2}`]: null },
       { ...effectiveManagers.find((manager) => manager.id === "abel"), id: "abel", nom: "Bankinter", valorActual: currentManagerValues.abel },
       { ...effectiveManagers.find((manager) => manager.id === "andbank"), id: "andbank", nom: "WAM–Andbank", valorActual: currentManagerValues.andbank },
-      { id: "jpmorgan", nom: "JPMorgan", gestor: "JPMorgan", tipus: "RV", valorActual: currentManagerValues.jpmorgan, rendPct: null, ytd: null, r2025: null, r2024: null },
-      { id: "altres", nom: "Altres / no assignat", gestor: null, tipus: "RV+RF", valorActual: currentManagerValues.altres + residualValue, rendPct: null, ytd: null, r2025: null, r2024: null },
+      { id: "jpmorgan", nom: "JPMorgan", gestor: "JPMorgan", tipus: "RV", valorActual: currentManagerValues.jpmorgan, rendPct: null, ytd: null, [`r${_cy - 1}`]: null, [`r${_cy - 2}`]: null },
+      { id: "altres", nom: "Altres / no assignat", gestor: null, tipus: "RV+RF", valorActual: currentManagerValues.altres + residualValue, rendPct: null, ytd: null, [`r${_cy - 1}`]: null, [`r${_cy - 2}`]: null },
     ];
   }, [currentManagerValues, residualValue, effectiveManagers]);
 
