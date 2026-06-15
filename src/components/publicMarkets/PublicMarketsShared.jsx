@@ -14,6 +14,7 @@ const _abelPos = PM_POSITIONS.filter(p => _abelCustodians.has(p.custodian));
 const _abelRV = _abelPos.filter(p => p.tipus === "RV").reduce((s, p) => s + (p.valorMercat ?? 0), 0);
 const _abelRF = _abelPos.filter(p => p.tipus === "RF").reduce((s, p) => s + (p.valorMercat ?? 0), 0);
 const _abelPosTotal = _abelRV + _abelRF;
+// Fallback 0.7516 = RV share as of Mar 2026 snapshot (used only when positions list is empty).
 export const ABEL_RV_SPLIT = _abelPosTotal > 0 ? _abelRV / _abelPosTotal : 0.7516;
 export const ABEL_RF_SPLIT = 1 - ABEL_RV_SPLIT;
 

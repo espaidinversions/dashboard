@@ -128,6 +128,7 @@ const PM_MANAGER_TEMPLATE = [
   { id:"caixa-rf", nom:"Caixa RF",     gestor:"CaixaBank", tipus:"RF",    valorActual:pmLast?.caixaRF ?? 3_990_758,  rendPct:-0.04, ytd:pctChange("2025-12", pmLastDate, caixaRFValue), r2025:4.96,  r2024:4.96  },
   { id:"ubs-rv",   nom:"UBS RV",       gestor:"UBS",       tipus:"RV",    valorActual:pmLast?.ubsRV   ?? 10_704_128, rendPct:pctChange("2023-12", pmLastDate, ubsRVValue),  ytd:pctChange("2025-12", pmLastDate, ubsRVValue),  r2025:pctChange("2024-12", "2025-12", ubsRVValue), r2024:pctChange("2023-12", "2024-12", ubsRVValue) },
   { id:"ubs-rf",   nom:"UBS RF",       gestor:"UBS",       tipus:"RF",    valorActual:pmLast?.ubsRF   ?? 2_220_845,  rendPct:pctChange("2023-12", pmLastDate, ubsRFValue),  ytd:pctChange("2025-12", pmLastDate, ubsRFValue),  r2025:pctChange("2024-12", "2025-12", ubsRFValue), r2024:pctChange("2023-12", "2024-12", ubsRFValue) },
+  // ytd/r2025/r2024: custodian-reported from Bankinter statements (not reconstructed from PM_MONTHLY — diverge due to pre-Apr 2025 history).
   { id:"abel",     nom:"Abel (BK+IB)", gestor:"Abel Font", tipus:"RV+RF", valorActual:pmLast?.abelBK  ?? 20_933_017, rendPct:_abelRendPct, ytd:-2.68,  r2025:-8.05, r2024:11.44 },
   { id:"andbank",  nom:"WAM–Andbank (Goyo)", gestor:"WAM", tipus:"RF",    valorActual:pmLast?.andbank ?? 6_088_661,  rendPct:17.76, ytd:pctChange("2025-12", pmLastDate, andbankValue), r2025:pctChange("2024-12", "2025-12", andbankValue), r2024:pctChange("2023-12", "2024-12", andbankValue) },
 ];
