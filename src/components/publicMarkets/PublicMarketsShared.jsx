@@ -9,7 +9,12 @@ const PM_MANAGERS = PM_MODEL.metadata.managers;
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
 
-export const ABEL_RV_SPLIT = 0.7516;
+const _abelCustodians = new Set(["Bankinter", "Interactive Brokers"]);
+const _abelPos = PM_POSITIONS.filter(p => _abelCustodians.has(p.custodian));
+const _abelRV = _abelPos.filter(p => p.tipus === "RV").reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+const _abelRF = _abelPos.filter(p => p.tipus === "RF").reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+const _abelPosTotal = _abelRV + _abelRF;
+export const ABEL_RV_SPLIT = _abelPosTotal > 0 ? _abelRV / _abelPosTotal : 0.7516;
 export const ABEL_RF_SPLIT = 1 - ABEL_RV_SPLIT;
 
 export const TIPUS_CFG = {
@@ -27,11 +32,11 @@ export const AREA_COLORS = {
   ...MGR_COLORS,
 };
 
-const _ytdYear = new Date().getFullYear();
+const _cy = new Date().getFullYear();
 export const PERIODS = [
-  { field: "r2024", label: "2024" },
-  { field: "r2025", label: "2025" },
-  { field: "ytd", label: `YTD '${String(_ytdYear).slice(2)}` },
+  { field: `r${_cy - 2}`, label: String(_cy - 2) },
+  { field: `r${_cy - 1}`, label: String(_cy - 1) },
+  { field: "ytd", label: `YTD '${String(_cy).slice(2)}` },
 ];
 
 const DEFAULT_EXPAND_TIPUS = {

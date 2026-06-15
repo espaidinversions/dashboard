@@ -205,14 +205,15 @@ export function PublicMarketsTab() {
       const totalValue = managers.reduce((sum, manager) => sum + manager.valorActual, 0);
       return weightedSum / totalValue;
     };
+    const _cy = new Date().getFullYear();
     const combine = (id, nom, value, ids) => ({
       id,
       nom,
       tipus: "RV+RF",
       valorActual: value,
       ytd: weightedManagerMetric(ids, "ytd"),
-      r2025: weightedManagerMetric(ids, "r2025"),
-      r2024: weightedManagerMetric(ids, "r2024"),
+      [`r${_cy - 1}`]: weightedManagerMetric(ids, `r${_cy - 1}`),
+      [`r${_cy - 2}`]: weightedManagerMetric(ids, `r${_cy - 2}`),
       rendPct: weightedManagerMetric(ids, "rendPct"),
     });
     return [
