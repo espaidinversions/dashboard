@@ -59,8 +59,8 @@ export function PublicMarketsTablesSection({
                 { label: "Tipus", align: "left" },
                 { label: "AUM", align: "right" },
                 { label: "YTD", align: "right" },
-                { label: "2025", align: "right" },
-                { label: "2024", align: "right" },
+                { label: String(_cy - 1), align: "right" },
+                { label: String(_cy - 2), align: "right" },
                 { label: "Des d'inici (TWR)", align: "right" },
                 { label: "CAGR inici", align: "right" },
               ].map(({ label, align }) => (
@@ -99,8 +99,8 @@ export function PublicMarketsTablesSection({
                       {fmtM(manager.valorActual)}
                     </td>
                     <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={manager.ytd} tc={tc} /></td>
-                    <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={manager.r2025} tc={tc} /></td>
-                    <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={manager.r2024} tc={tc} /></td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={manager[`r${_cy - 1}`]} tc={tc} /></td>
+                    <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={manager[`r${_cy - 2}`]} tc={tc} /></td>
                     <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={manager.rendPct} tc={tc} /></td>
                     <td style={{ padding: "8px 12px", textAlign: "right" }}><PctChip v={managerCagr} tc={tc} /></td>
                   </tr>
