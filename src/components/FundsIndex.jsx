@@ -37,6 +37,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     irr: "",
     dpi: "",
     rvpi: "",
+    recallablePool: "",
   });
 
   const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
@@ -169,7 +170,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     const vcpeSet = vcpeTypes ?? null;
     for (const r of rawCC.filter((row) => (!vcpeSet || vcpeSet.includes(row?.vehicleTipus)) && !(excludeIds?.has(row?.id)))) {
       const key = makeFundRouteId(r);
-      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vehicleTipus: r.vehicleTipus, est: r.est, compromis: 0, calls: 0, dist: 0, year: null, isMock: !!r.isMock });
+      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vehicleTipus: r.vehicleTipus, est: r.est, compromis: 0, calls: 0, dist: 0, recallablePool: 0, year: null, isMock: !!r.isMock });
       const f = map.get(key);
       if (r.cat === "Compromís") {
         f.compromis += r.eur;
@@ -178,6 +179,8 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       }
       if (r.cat === "Capital Call") f.calls += r.eur;
       if (r.cat === "Distribució" || r.cat === "Retorn Capital") f.dist += Math.abs(r.eur);
+      if (r.cat === "Distribució" && r.recallable) f.recallablePool += Number(r.recallable);
+      if (r.cat === "Capital Call" && r.from_recallable) f.recallablePool -= Number(r.from_recallable);
     }
     return Array.from(map.values()).map(f => {
       const meta = fundMeta.find(m => (m.id ?? m.fons) === (f.id ?? f.fons));
@@ -195,6 +198,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
         dpi,
         rvpi,
         fiEnd: meta?.fiEnd ?? null,
+        recallablePool: Math.max(0, Math.round(f.recallablePool * 100) / 100),
       };
     });
   }, [rawCC, fundMeta, vcpeTypes]);
@@ -226,6 +230,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       if (filters.irr && !String(row.irr ?? "").includes(filters.irr)) return false;
       if (filters.dpi && !String(row.dpi ?? "").includes(filters.dpi)) return false;
       if (filters.rvpi && !String(row.rvpi ?? "").includes(filters.rvpi)) return false;
+      if (filters.recallablePool && !String(row.recallablePool ?? "").includes(filters.recallablePool)) return false;
       return true;
     });
   }, [rows, search, canAccessAlternatives, canAccessRealEstate, vcpeTypes, filters]);
@@ -245,6 +250,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       else if (sortKey === "year") { av = a.year ?? 9999; bv = b.year ?? 9999; }
       else if (sortKey === "vcpe") { av = a.vehicleTipus ?? ""; bv = b.vehicleTipus ?? ""; }
       else if (sortKey === "fiEnd") { av = a.fiEnd ?? "9999"; bv = b.fiEnd ?? "9999"; }
+      else if (sortKey === "recallablePool") { av = a.recallablePool ?? 0; bv = b.recallablePool ?? 0; }
       else { av = a.fons.toLowerCase(); bv = b.fons.toLowerCase(); }
       if (av < bv) return sortDir === "asc" ? -1 : 1;
       if (av > bv) return sortDir === "asc" ? 1 : -1;
@@ -276,7 +282,8 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     { k: "vcpe",      label: "Fons",     align: "left" },
     { k: "year",      label: "Any",      align: "right" },
     { k: "compromis", label: "Compromís",align: "right" },
-    { k: "cridat",    label: "Cridat",   align: "right" },
+    { k: "cridat",        label: "Cridat",    align: "right" },
+    { k: "recallablePool", label: "Pool Rec.", align: "right", title: "Pool recallable disponible" },
     { k: "utilizat",  label: "Utilizat", align: "right" },
     { k: "tvpi",      label: "TVPI",     align: "right", title: "Total Value to Paid-In" },
     { k: "irr",       label: "IRR",      align: "right", title: "Money-weighted return based on dated flows and current residual value" },
@@ -320,7 +327,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                       {["Tots", ...Array.from(new Set(rows.map((row) => row.vehicleTipus).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                   </th>
-                  {["year","compromis","cridat","utilizat","tvpi","irr","dpi","rvpi"].map((key) => (
+                  {["year","compromis","cridat","recallablePool","utilizat","tvpi","irr","dpi","rvpi"].map((key) => (
                     <th key={key} style={{ padding: "6px 12px" }}>
                       <input value={filters[key]} onChange={(e) => setFilters((current) => ({ ...current, [key]: e.target.value }))}
                         style={indexPageStyles.filterControl(tc)} />
@@ -329,7 +336,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                   {canEditAny && (
                     <th style={{ padding: "6px 12px" }}>
                       {Object.values(filters).some((value) => value !== "" && value !== "Tots") ? (
-                        <button onClick={() => setFilters({ nom: "", id: "", tipus: "Tots", year: "", compromis: "", cridat: "", utilizat: "", tvpi: "", irr: "", dpi: "", rvpi: "" })}
+                        <button onClick={() => setFilters({ nom: "", id: "", tipus: "Tots", year: "", compromis: "", cridat: "", recallablePool: "", utilizat: "", tvpi: "", irr: "", dpi: "", rvpi: "" })}
                           style={indexPageStyles.clearButton(tc)}>
                           netejar
                         </button>
@@ -394,6 +401,9 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: tc.navyLight }}>
                       {r.calls ? fmtM(r.calls) : "—"}
+                    </td>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: r.recallablePool > 0 ? tc.green : tc.textLight }}>
+                      {r.recallablePool > 0 ? fmtM(r.recallablePool) : "0"}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, fontWeight: 700, color: utilizatColor(r.utilizat) }}>
                       {r.utilizat != null ? `${r.utilizat.toFixed(1)}%` : "—"}

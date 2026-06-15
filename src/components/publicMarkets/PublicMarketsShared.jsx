@@ -27,10 +27,11 @@ export const AREA_COLORS = {
   ...MGR_COLORS,
 };
 
+const _ytdYear = new Date().getFullYear();
 export const PERIODS = [
   { field: "r2024", label: "2024" },
   { field: "r2025", label: "2025" },
-  { field: "ytd", label: "YTD '26" },
+  { field: "ytd", label: `YTD '${String(_ytdYear).slice(2)}` },
 ];
 
 const DEFAULT_EXPAND_TIPUS = {

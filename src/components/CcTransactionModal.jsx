@@ -150,9 +150,15 @@ export function CcTransactionModal({
     // Validate recallable split
     if (cat === "Distribució" && values.recallable !== "" && values.recallable != null) {
       const rec = Number(values.recallable);
-      if (rec < 0) { setError("El recallable no pot ser negatiu."); return; }
       const eur = Number(values.eur) || 0;
-      if (rec > eur + 0.01) { setError(`El recallable (${fmtFull(rec)}) no pot superar l'import total (${fmtFull(eur)}).`); return; }
+      // For positive distributions: 0 <= rec <= eur
+      // For negative distributions (clawbacks): eur <= rec <= 0
+      const minRec = Math.min(0, eur);
+      const maxRec = Math.max(0, eur);
+      if (rec < minRec - 0.01 || rec > maxRec + 0.01) {
+        setError(`El recallable (${fmtFull(rec)}) ha d'estar entre ${fmtFull(minRec)} i ${fmtFull(maxRec)}.`);
+        return;
+      }
       const nonRec = values.non_recallable !== "" && values.non_recallable != null ? Number(values.non_recallable) : eur - rec;
       if (Math.abs(rec + nonRec - eur) > 0.01) {
         setError(`Recallable (${fmtFull(rec)}) + No recallable (${fmtFull(nonRec)}) = ${fmtFull(rec + nonRec)}, però l'import total és ${fmtFull(eur)}`);

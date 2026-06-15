@@ -110,12 +110,11 @@ function PMPositionDetail() {
   const gainPct = Math.max(100 - costPct, 0);
 
   const returnData = useMemo(() => {
-    const YEARS = [
-      { label: "2023", field: "rend2023" },
-      { label: "2024", field: "rend2024" },
-      { label: "2025", field: "rend2025" },
-      { label: "2026", field: "rend2026" },
-    ];
+    const endYear = new Date().getFullYear();
+    const YEARS = Array.from({ length: endYear - 2019 + 1 }, (_, i) => ({
+      label: String(2019 + i),
+      field: `rend${2019 + i}`,
+    }));
     return YEARS
       .filter(y => p[y.field] != null)
       .map(y => ({

@@ -3,6 +3,11 @@ import { Link } from "react-router-dom";
 import { fmtM, cagr, yearsHeld } from "../../utils.js";
 import { Badge } from "../SharedComponents.jsx";
 import { getMgrPositions, PctChip, TIPUS_CFG } from "./PublicMarketsShared.jsx";
+
+const _cy = new Date().getFullYear();
+const _rendYTD   = `rend${_cy}`;
+const _rendPrev  = `rend${_cy - 1}`;
+const _rendPrev2 = `rend${_cy - 2}`;
 import { makePmPositionRouteId } from "../../data/pmPositionRouting.js";
 import { PM_MODEL } from "../../data/publicMarketsModel.js";
 
@@ -119,8 +124,8 @@ export function PublicMarketsTablesSection({
                                     { label: "Custodi", align: "left" },
                                     { label: "Tipus", align: "left" },
                                     { label: "YTD", align: "right" },
-                                    { label: "2025", align: "right" },
-                                    { label: "2024", align: "right" },
+                                    { label: String(_cy - 1), align: "right" },
+                                    { label: String(_cy - 2), align: "right" },
                                     { label: "Des d'inici", align: "right" },
                                     { label: "CAGR", align: "right" },
                                     { label: "Valor mercat", align: "right" },
@@ -154,9 +159,9 @@ export function PublicMarketsTablesSection({
                                       <td style={{ padding: "5px 8px" }}>
                                         <Badge label={position.tipus} cfg={TIPUS_CFG[position.tipus] || {}} />
                                       </td>
-                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position.rend2026} tc={tc} /></td>
-                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position.rend2025} tc={tc} /></td>
-                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position.rend2024} tc={tc} /></td>
+                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position[_rendYTD]}   tc={tc} /></td>
+                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position[_rendPrev]}  tc={tc} /></td>
+                                      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position[_rendPrev2]} tc={tc} /></td>
                                       <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position.rendInici} tc={tc} /></td>
                                       <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={positionCagr} tc={tc} /></td>
                                       <td style={{ padding: "5px 8px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>

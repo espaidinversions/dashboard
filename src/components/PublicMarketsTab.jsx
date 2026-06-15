@@ -161,8 +161,10 @@ export function PublicMarketsTab() {
       const curr = pmMonthly[i];
       const prevValue = (prev.caixaRV ?? 0) + (prev.caixaRF ?? 0) + (prev.ubsRV ?? 0) + (prev.ubsRF ?? 0) + (prev.abelBK ?? 0);
       const cashflow = prev.abelBK == null && curr.abelBK != null ? curr.abelBK : 0;
+      const denominator = prevValue + cashflow;
+      if (denominator <= 0) continue;
       const currValue = (curr.caixaRV ?? 0) + (curr.caixaRF ?? 0) + (curr.ubsRV ?? 0) + (curr.ubsRF ?? 0) + (curr.abelBK ?? 0);
-      cumulative *= 1 + (currValue - prevValue - cashflow) / (prevValue + cashflow);
+      cumulative *= 1 + (currValue - prevValue - cashflow) / denominator;
     }
     return (cumulative - 1) * 100;
   }, [pmMonthly]);
