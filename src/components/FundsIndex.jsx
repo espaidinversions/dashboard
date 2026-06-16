@@ -299,17 +299,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
           : (
           <>
             <SectionHeader title="Vehicles" count={filtered.length} tc={tc} />
-            {(() => {
-              const totalRecallable = sorted.reduce((s, r) => s + (r.recallablePool || 0), 0);
-              return (
-                <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: tc.bg, border: `1.5px solid ${totalRecallable > 0 ? tc.green : tc.border}`, borderRadius: 10, padding: "10px 18px", marginBottom: 14 }}>
-                  <div style={{ fontSize: 10, fontWeight: 700, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em" }}>Pool Recallable</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, fontFamily: "'DM Mono',monospace", color: totalRecallable > 0 ? tc.green : tc.textLight }}>
-                    {totalRecallable > 0 ? fmtM(totalRecallable) : "—"}
-                  </div>
-                </div>
-              );
-            })()}
             <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
