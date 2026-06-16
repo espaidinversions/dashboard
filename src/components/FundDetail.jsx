@@ -32,6 +32,7 @@ function FundDetailInner() {
       if (Array.isArray(capitalCalls)) {
         setRawCC(capitalCalls);
         writeStoredJSON("tc_rawCC", capitalCalls);
+        window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
       }
       if (Array.isArray(meta)) {
         setFundMeta(meta);
@@ -302,7 +303,7 @@ function FundDetailInner() {
                   return;
                 }
                 const fresh = await loadCapitalCalls();
-                if (Array.isArray(fresh)) { setRawCC(fresh); writeStoredJSON("tc_rawCC", fresh); }
+                if (Array.isArray(fresh)) { setRawCC(fresh); writeStoredJSON("tc_rawCC", fresh); window.dispatchEvent(new CustomEvent("tc-rawcc-updated")); }
                 setEditingRow(null);
               }}
               onClose={() => setEditingRow(null)}
