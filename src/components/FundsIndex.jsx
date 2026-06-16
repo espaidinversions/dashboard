@@ -283,7 +283,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     { k: "year",      label: "Any",      align: "right" },
     { k: "compromis", label: "Compromís",align: "right" },
     { k: "cridat",        label: "Cridat",    align: "right" },
-    { k: "recallablePool", label: "Recallable", align: "right", title: "Pool recallable disponible" },
     { k: "utilizat",  label: "Utilizat", align: "right" },
     { k: "tvpi",      label: "TVPI",     align: "right", title: "Total Value to Paid-In" },
     { k: "irr",       label: "IRR",      align: "right", title: "Money-weighted return based on dated flows and current residual value" },
@@ -300,6 +299,17 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
           : (
           <>
             <SectionHeader title="Vehicles" count={filtered.length} tc={tc} />
+            {(() => {
+              const totalRecallable = sorted.reduce((s, r) => s + (r.recallablePool || 0), 0);
+              return (
+                <div style={{ display: "inline-flex", alignItems: "center", gap: 10, background: tc.bg, border: `1.5px solid ${totalRecallable > 0 ? tc.green : tc.border}`, borderRadius: 10, padding: "10px 18px", marginBottom: 14 }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em" }}>Pool Recallable</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, fontFamily: "'DM Mono',monospace", color: totalRecallable > 0 ? tc.green : tc.textLight }}>
+                    {totalRecallable > 0 ? fmtM(totalRecallable) : "—"}
+                  </div>
+                </div>
+              );
+            })()}
             <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
@@ -327,7 +337,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                       {["Tots", ...Array.from(new Set(rows.map((row) => row.vehicleTipus).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                   </th>
-                  {["year","compromis","cridat","recallablePool","utilizat","tvpi","irr","dpi","rvpi"].map((key) => (
+                  {["year","compromis","cridat","utilizat","tvpi","irr","dpi","rvpi"].map((key) => (
                     <th key={key} style={{ padding: "6px 12px" }}>
                       <input value={filters[key]} onChange={(e) => setFilters((current) => ({ ...current, [key]: e.target.value }))}
                         style={indexPageStyles.filterControl(tc)} />
@@ -336,7 +346,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                   {canEditAny && (
                     <th style={{ padding: "6px 12px" }}>
                       {Object.values(filters).some((value) => value !== "" && value !== "Tots") ? (
-                        <button onClick={() => setFilters({ nom: "", id: "", tipus: "Tots", year: "", compromis: "", cridat: "", recallablePool: "", utilizat: "", tvpi: "", irr: "", dpi: "", rvpi: "" })}
+                        <button onClick={() => setFilters({ nom: "", id: "", tipus: "Tots", year: "", compromis: "", cridat: "", utilizat: "", tvpi: "", irr: "", dpi: "", rvpi: "" })}
                           style={indexPageStyles.clearButton(tc)}>
                           netejar
                         </button>
@@ -401,9 +411,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: tc.navyLight }}>
                       {r.calls ? fmtM(r.calls) : "—"}
-                    </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: r.recallablePool > 0 ? tc.green : tc.textMid }}>
-                      {r.recallablePool > 0 ? fmtM(r.recallablePool) : "—"}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, fontWeight: 700, color: utilizatColor(r.utilizat) }}>
                       {r.utilizat != null ? `${r.utilizat.toFixed(1)}%` : "—"}
