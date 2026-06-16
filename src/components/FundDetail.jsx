@@ -341,9 +341,9 @@ function FundDetailInner() {
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight }}>
                       {r.cat === "Distribució" && r.recallable != null
-                        ? `${fmtM(r.recallable)} rec / ${r.non_recallable != null ? fmtM(r.non_recallable) : "—"} no rec`
+                        ? fmtM(Math.abs(r.recallable))
                         : r.cat === "Capital Call" && r.from_recallable
-                        ? `${fmtM(r.from_recallable)} del pool`
+                        ? fmtM(Math.abs(r.from_recallable))
                         : "—"}
                     </td>
                     {vehicleTipus === "SF" ? (
