@@ -147,9 +147,7 @@ function FundDetailInner() {
           <KpiCard label="IRR"  value={irrFund != null ? `${irrFund.toFixed(1)}%` : "—"} valueColor={multipleColor(tvpiFund, tc)} tc={tc} />
           <KpiCard label="DPI"  value={formatMultiple(dpiFund)}  valueColor={multipleColor(dpiFund, tc)}  tc={tc} />
           <KpiCard label="RVPI" value={formatMultiple(rvpiFund)} valueColor={multipleColor(rvpiFund, tc)} tc={tc} />
-          {recallablePool > 0 && (
-            <KpiCard label="Pool Recallable" value={fmtM(recallablePool)} valueColor={tc.green} tc={tc} />
-          )}
+          <KpiCard label="Pool Recallable" value={recallablePool > 0 ? fmtM(recallablePool) : "—"} valueColor={recallablePool > 0 ? tc.green : undefined} tc={tc} />
         </div>
 
         {/* J-curve */}
