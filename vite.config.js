@@ -7,6 +7,7 @@ export default defineConfig({
     chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
+        chunkFileNames: `assets/[name]-[hash]-${Date.now()}.js`,
         manualChunks(id) {
           if (id.includes("node_modules")) {
             if (id.includes("echarts")) return "vendor-echarts";
