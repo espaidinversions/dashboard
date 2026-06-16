@@ -283,7 +283,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     { k: "year",      label: "Any",      align: "right" },
     { k: "compromis", label: "Compromís",align: "right" },
     { k: "cridat",        label: "Cridat",    align: "right" },
-    { k: "recallablePool", label: "Pool Rec.", align: "right", title: "Pool recallable disponible" },
+    { k: "recallablePool", label: "Recallable", align: "right", title: "Pool recallable disponible" },
     { k: "utilizat",  label: "Utilizat", align: "right" },
     { k: "tvpi",      label: "TVPI",     align: "right", title: "Total Value to Paid-In" },
     { k: "irr",       label: "IRR",      align: "right", title: "Money-weighted return based on dated flows and current residual value" },
@@ -402,7 +402,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                     <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: tc.navyLight }}>
                       {r.calls ? fmtM(r.calls) : "—"}
                     </td>
-                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: r.recallablePool > 0 ? tc.green : tc.textLight }}>
+                    <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 12, color: r.recallablePool > 0 ? tc.green : tc.textMid }}>
                       {r.recallablePool > 0 ? fmtM(r.recallablePool) : "—"}
                     </td>
                     <td style={{ padding: "10px 12px", textAlign: "right", fontSize: 12, fontWeight: 700, color: utilizatColor(r.utilizat) }}>
