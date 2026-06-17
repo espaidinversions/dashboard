@@ -179,8 +179,8 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       }
       if (r.cat === "Capital Call") f.calls += r.eur;
       if (r.cat === "Distribució" || r.cat === "Retorn Capital") f.dist += Math.abs(r.eur);
-      if (r.cat === "Distribució" && r.recallable) f.recallablePool += Number(r.recallable);
-      if (r.cat === "Capital Call" && r.from_recallable) f.recallablePool -= Number(r.from_recallable);
+      if (r.cat === "Distribució" && r.recallable) f.recallablePool += Math.abs(Number(r.recallable));
+      if (r.cat === "Capital Call" && r.from_recallable) f.recallablePool -= Math.abs(Number(r.from_recallable));
     }
     return Array.from(map.values()).map(f => {
       const meta = fundMeta.find(m => (m.id ?? m.fons) === (f.id ?? f.fons));
