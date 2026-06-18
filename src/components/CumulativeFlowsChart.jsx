@@ -153,7 +153,7 @@ export function CumulativeFlowsChart({
       if (!monthMap[toMonthKey(t.date)]) monthMap[toMonthKey(t.date)] = {};
       const month = toMonthKey(t.date);
       const key = resolveKey(t);
-      monthMap[month][key] = (monthMap[month][key] ?? 0) + (t.action === "sell" ? -t.valueEur : t.valueEur);
+      monthMap[month][key] = (monthMap[month][key] ?? 0) + (t.action === "sell" ? -t._flowValue : t._flowValue);
     });
 
     // Build cumulative running totals across full range
