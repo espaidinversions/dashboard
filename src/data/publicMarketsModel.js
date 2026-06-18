@@ -1,4 +1,5 @@
 import { PM_MODEL_GENERATED } from "../generated/publicMarkets/publicMarketsModel.generated.js";
+import { PM_POSITIONS_RAW_SUPPLEMENT } from "./publicMarketsRawSupplement.js";
 
 /**
  * @template T
@@ -34,7 +35,22 @@ function indexOne(rows, keyFn) {
   return map;
 }
 
-const PM_POSITIONS_RAW = PM_MODEL_GENERATED.holdings.active;
+const _suppByExact = new Map(
+  PM_POSITIONS_RAW_SUPPLEMENT.map(s => [`${s.isin}||${String(s.custodian ?? "").trim()}`, s])
+);
+const _suppByIsin = new Map(
+  PM_POSITIONS_RAW_SUPPLEMENT.map(s => [s.isin, s])
+);
+function _applySupp(pos) {
+  const supp = _suppByExact.get(`${pos.isin}||${String(pos.custodian ?? "").trim()}`) ?? _suppByIsin.get(pos.isin);
+  if (!supp) return pos;
+  const out = { ...pos };
+  if (supp.tipus     !== undefined) out.tipus     = supp.tipus;
+  if (supp.nom       !== undefined) out.nom       = supp.nom;
+  if (supp.gestor    !== undefined) out.gestor    = supp.gestor;
+  return out;
+}
+const PM_POSITIONS_RAW = PM_MODEL_GENERATED.holdings.active.map(_applySupp);
 const PM_CLOSED = PM_MODEL_GENERATED.holdings.closed;
 const PM_TRANSACTIONS = PM_MODEL_GENERATED.activity.transactions;
 
