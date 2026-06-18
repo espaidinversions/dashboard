@@ -51,9 +51,11 @@ export function PublicMarketsTab() {
   );
 
   useEffect(() => {
-    loadPMOverrides().then(data => {
-      if (data?.transactions?.length) setManualTxs(data.transactions);
-    });
+    loadPMOverrides()
+      .then(data => {
+        if (data?.transactions?.length) setManualTxs(data.transactions);
+      })
+      .catch(console.error);
   }, []);
 
   const allTransactions = useMemo(() => {

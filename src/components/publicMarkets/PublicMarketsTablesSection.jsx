@@ -21,10 +21,15 @@ const MGR_MONTHLY_COLS = {
   andbank: ["andbank"],
 };
 
+const _abelInceptionLabel = (() => {
+  const first = PM_MONTHLY_STATIC.find(m => m.abelBK != null);
+  return first?.label?.toLowerCase() ?? "abr '25";
+})();
+
 function monthsBetween(start, end) {
   const [sy, sm] = start.split("-").map(Number);
   const [ey, em] = end.split("-").map(Number);
-  return (ey - sy) * 12 + (em - sm);
+  return Math.max(0, (ey - sy) * 12 + (em - sm));
 }
 
 function inceptionMonthsFor(mgrId, monthly) {
@@ -183,7 +188,7 @@ export function PublicMarketsTablesSection({
           </tbody>
         </table>
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 10, fontStyle: "italic" }}>
-          Des d'inici: TWR des del primer snapshot mensual (UBS/Caixa des des. 2023; Abel des d'abr. 2025 — model, pot diferir dels estats del gestor; WAM/Andbank des de creació). CAGR: retorn anualitzat equivalent.
+          {`Des d'inici: TWR des del primer snapshot mensual (UBS/Caixa/Andbank des des. 2023; Abel des de ${_abelInceptionLabel} — model, pot diferir dels estats del gestor). CAGR: retorn anualitzat equivalent.`}
         </div>
     </div>
   );

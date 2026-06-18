@@ -42,7 +42,8 @@ function synchronizeWorkbookRows(sourceRows, workbookRows) {
   return dedupeRows(workbookRows).map(row => {
     const exact = exactMap.get(rowDedupeKey(row)) ?? {};
     const broad = mergeGroupMetadata(broadGroups.get(broadRowKey(row)) ?? []);
-    return mergeDefinedRow(mergeDefinedRow(broad, exact), row);
+    // supplement (exact) takes precedence over workbook (row); broad is the fallback base
+    return mergeDefinedRow(mergeDefinedRow(broad, row), exact);
   });
 }
 
@@ -120,17 +121,20 @@ const pmLast = PM_MONTHLY[PM_MONTHLY.length - 1];
 const pmLastDate = pmLast?.date ?? "2026-03";
 
 // Current manager snapshots — workbook-backed section totals.
-// rendPct: since-inception TWR from PM_MONTHLY for UBS/Andbank/Abel; custodian-reported for Caixa (manager statement, not reconstructed).
-// Abel ytd/r2025/r2024 are custodian-reported; rendPct is model-computed TWR from first PM_MONTHLY snapshot (Apr 2025).
-// valorActual for UBS/Caixa/Andbank derived from PM_MONTHLY last row so they stay current when new months are added.
+// rendPct: live TWR from Dec 2023 baseline (PM_MONTHLY first snapshot) for all managers except Abel.
+// caixaRF r2025/r2024: custodian-reported from PDF statements — the 2025 monthly values are flat (stale
+//   workbook data), so pctChange would produce ~0% which is wrong.
+// Abel ytd/r2025/r2024: custodian-reported from Bankinter statements — abelBK is null in Dec 2023/2024,
+//   so full-year figures are not reconstructable from PM_MONTHLY.
+// valorActual: derived from PM_MONTHLY last row for all managers (auto-updates when new months are added).
 const PM_MANAGER_TEMPLATE = [
-  { id:"caixa-rv", nom:"Caixa RV",     gestor:"CaixaBank", tipus:"RV",    valorActual:pmLast?.caixaRV ?? 8_037_347,  rendPct:7.44,  ytd:pctChange("2025-12", pmLastDate, caixaRVValue), r2025:9.51,  r2024:17.02 },
-  { id:"caixa-rf", nom:"Caixa RF",     gestor:"CaixaBank", tipus:"RF",    valorActual:pmLast?.caixaRF ?? 3_990_758,  rendPct:-0.04, ytd:pctChange("2025-12", pmLastDate, caixaRFValue), r2025:4.96,  r2024:4.96  },
-  { id:"ubs-rv",   nom:"UBS RV",       gestor:"UBS",       tipus:"RV",    valorActual:pmLast?.ubsRV   ?? 10_704_128, rendPct:pctChange("2023-12", pmLastDate, ubsRVValue),  ytd:pctChange("2025-12", pmLastDate, ubsRVValue),  r2025:pctChange("2024-12", "2025-12", ubsRVValue), r2024:pctChange("2023-12", "2024-12", ubsRVValue) },
-  { id:"ubs-rf",   nom:"UBS RF",       gestor:"UBS",       tipus:"RF",    valorActual:pmLast?.ubsRF   ?? 2_220_845,  rendPct:pctChange("2023-12", pmLastDate, ubsRFValue),  ytd:pctChange("2025-12", pmLastDate, ubsRFValue),  r2025:pctChange("2024-12", "2025-12", ubsRFValue), r2024:pctChange("2023-12", "2024-12", ubsRFValue) },
-  // ytd/r2025/r2024: custodian-reported from Bankinter statements (not reconstructed from PM_MONTHLY — diverge due to pre-Apr 2025 history).
-  { id:"abel",     nom:"Abel (BK+IB)", gestor:"Abel Font", tipus:"RV+RF", valorActual:pmLast?.abelBK  ?? 20_933_017, rendPct:_abelRendPct, ytd:-2.68,  r2025:-8.05, r2024:11.44 },
-  { id:"andbank",  nom:"WAM–Andbank (Goyo)", gestor:"WAM", tipus:"RF",    valorActual:pmLast?.andbank ?? 6_088_661,  rendPct:17.76, ytd:pctChange("2025-12", pmLastDate, andbankValue), r2025:pctChange("2024-12", "2025-12", andbankValue), r2024:pctChange("2023-12", "2024-12", andbankValue) },
+  { id:"caixa-rv", nom:"Caixa RV",     gestor:"CaixaBank", tipus:"RV",    valorActual:pmLast?.caixaRV ?? 8_037_347,  rendPct:pctChange("2023-12", pmLastDate, caixaRVValue), ytd:pctChange("2025-12", pmLastDate, caixaRVValue), r2025:pctChange("2024-12", "2025-12", caixaRVValue), r2024:pctChange("2023-12", "2024-12", caixaRVValue) },
+  { id:"caixa-rf", nom:"Caixa RF",     gestor:"CaixaBank", tipus:"RF",    valorActual:pmLast?.caixaRF ?? 3_990_758,  rendPct:pctChange("2023-12", pmLastDate, caixaRFValue), ytd:pctChange("2025-12", pmLastDate, caixaRFValue), r2025:4.96,  r2024:4.96  },
+  { id:"ubs-rv",   nom:"UBS RV",       gestor:"UBS",       tipus:"RV",    valorActual:pmLast?.ubsRV   ?? 10_704_128, rendPct:pctChange("2023-12", pmLastDate, ubsRVValue),   ytd:pctChange("2025-12", pmLastDate, ubsRVValue),  r2025:pctChange("2024-12", "2025-12", ubsRVValue),  r2024:pctChange("2023-12", "2024-12", ubsRVValue) },
+  { id:"ubs-rf",   nom:"UBS RF",       gestor:"UBS",       tipus:"RF",    valorActual:pmLast?.ubsRF   ?? 2_220_845,  rendPct:pctChange("2023-12", pmLastDate, ubsRFValue),   ytd:pctChange("2025-12", pmLastDate, ubsRFValue),  r2025:pctChange("2024-12", "2025-12", ubsRFValue),  r2024:pctChange("2023-12", "2024-12", ubsRFValue) },
+  // ytd/r2025/r2024: custodian-reported from Bankinter statements (abelBK null in Dec 2023/2024, full-year figures not reconstructable).
+  { id:"abel",     nom:"Abel (BK+IB)", gestor:"Abel Font", tipus:"RV+RF", valorActual:pmLast?.abelBK  ?? 20_933_017, rendPct:_abelRendPct,                                   ytd:-2.68,  r2025:-8.05, r2024:11.44 },
+  { id:"andbank",  nom:"WAM–Andbank (Goyo)", gestor:"WAM", tipus:"RF",    valorActual:pmLast?.andbank ?? 6_088_661,  rendPct:pctChange("2023-12", pmLastDate, andbankValue),  ytd:pctChange("2025-12", pmLastDate, andbankValue), r2025:pctChange("2024-12", "2025-12", andbankValue), r2024:pctChange("2023-12", "2024-12", andbankValue) },
 ];
 
 function slugifyPart(value) {

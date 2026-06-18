@@ -34,9 +34,24 @@ function indexOne(rows, keyFn) {
   return map;
 }
 
-const PM_POSITIONS = PM_MODEL_GENERATED.holdings.active;
+const PM_POSITIONS_RAW = PM_MODEL_GENERATED.holdings.active;
 const PM_CLOSED = PM_MODEL_GENERATED.holdings.closed;
 const PM_TRANSACTIONS = PM_MODEL_GENERATED.activity.transactions;
+
+// Derive dataCompra from the earliest buy transaction for positions missing a purchase date.
+const _earliestBuyByIsin = (() => {
+  const map = new Map();
+  for (const tx of PM_TRANSACTIONS ?? []) {
+    if (tx?.action !== "buy" || !tx?.isin || !tx?.date) continue;
+    const current = map.get(tx.isin);
+    if (!current || tx.date < current) map.set(tx.isin, tx.date);
+  }
+  return map;
+})();
+
+const PM_POSITIONS = PM_POSITIONS_RAW.map(p =>
+  p.dataCompra ? p : { ...p, dataCompra: _earliestBuyByIsin.get(p.isin) ?? null }
+);
 
 const activeById = indexOne(PM_POSITIONS, row => row?.id);
 const activeByIsin = indexMany(PM_POSITIONS, row => row?.isin);
@@ -52,6 +67,10 @@ const transactionsByCustodian = indexMany(PM_TRANSACTIONS, row => row?.custodian
 
 export const PM_MODEL = {
   ...PM_MODEL_GENERATED,
+  holdings: {
+    ...PM_MODEL_GENERATED.holdings,
+    active: PM_POSITIONS,
+  },
   indexes: {
     activeById,
     activeByIsin,

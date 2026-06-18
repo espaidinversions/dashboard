@@ -2,6 +2,8 @@
 /** @typedef {import("./publicMarketsTypes.js").PMValuesByIsin} PMValuesByIsin */
 /** @typedef {import("./publicMarketsTypes.js").PMValuePoint} PMValuePoint */
 
+const VALID_TIPUS = new Set(["RV", "RF"]);
+
 /**
  * @param {PMValuePoint[]} series
  * @returns {number | null}
@@ -80,9 +82,18 @@ export function summarizeLatestPmValues(
       else unmappedTotal += latest;
 
       const tipus = String(meta?.tipus ?? "").trim();
-      if (tipus) byType[tipus] = (byType[tipus] ?? 0) + latest;
+      if (VALID_TIPUS.has(tipus)) byType[tipus] = (byType[tipus] ?? 0) + latest;
+      else if (tipus) unmappedTotal += latest;
     });
   });
+
+  if (import.meta.env.DEV) {
+    const classified = (byType.RV ?? 0) + (byType.RF ?? 0);
+    const gap = total - classified - unmappedTotal;
+    if (Math.abs(gap) > 1) {
+      console.warn(`[PM] byType gap: ${gap.toFixed(0)}€ unaccounted (total=${total.toFixed(0)}, RV=${(byType.RV ?? 0).toFixed(0)}, RF=${(byType.RF ?? 0).toFixed(0)}, unmapped=${unmappedTotal.toFixed(0)})`);
+    }
+  }
 
   return {
     total,

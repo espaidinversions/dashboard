@@ -1,5 +1,7 @@
 import { logAudit, supabase } from "./_shared.js";
 
+const VALID_TIPUS = new Set(["RV", "RF"]);
+
 export async function loadPMOverrides() {
   if (!supabase) return null;
   const [tx, ter, meta] = await Promise.all([
@@ -7,7 +9,10 @@ export async function loadPMOverrides() {
     supabase.from("pm_ter_overrides").select("*"),
     supabase.from("pm_position_meta").select("*"),
   ]);
-  if (tx.error || ter.error || meta.error) return null;
+  if (tx.error || ter.error || meta.error) {
+    console.error("[loadPMOverrides]", tx.error ?? ter.error ?? meta.error);
+    return null;
+  }
   return {
     transactions: tx.data.map(r => ({
       id:        r.id,
@@ -41,6 +46,7 @@ export async function loadPMTransactions() {
 export async function deletePMTransaction(id) {
   if (!supabase) return { error: null };
   const { error } = await supabase.from("pm_transactions").delete().eq("id", id);
+  if (!error) logAudit("delete", "pm_transactions", id, {});
   return { error };
 }
 
@@ -67,6 +73,11 @@ export async function loadPMPositionOverridesTable() {
 
 export async function upsertTransaction(tx) {
   if (!supabase) return { error: null };
+  const VALID_ACTIONS = new Set(["buy", "sell"]);
+  if (!VALID_ACTIONS.has(tx.action)) return { error: new Error(`Invalid action: ${tx.action}`) };
+  if (!tx.isin || typeof tx.isin !== "string") return { error: new Error("Missing or invalid isin") };
+  if (!tx.date || typeof tx.date !== "string") return { error: new Error("Missing or invalid date") };
+  if (tx.tipus != null && !VALID_TIPUS.has(tx.tipus)) return { error: new Error(`Invalid tipus: ${tx.tipus}`) };
   const row = {
     action:    tx.action,
     date:      tx.date,
@@ -98,8 +109,12 @@ export async function upsertTerOverride(isin, ter, notes) {
 
 export async function upsertPositionMeta(isin, fields) {
   if (!supabase) return { error: null };
+  const row = { isin, updated_at: new Date().toISOString() };
+  if (fields.nom       !== undefined) row.nom       = fields.nom;
+  if (fields.gestor    !== undefined) row.gestor    = fields.gestor;
+  if (fields.custodian !== undefined) row.custodian = fields.custodian;
   const { error } = await supabase.from("pm_position_meta")
-    .upsert({ isin, ...fields, updated_at: new Date().toISOString() }, { onConflict: "isin" });
+    .upsert(row, { onConflict: "isin" });
   return { error };
 }
 
@@ -172,11 +187,11 @@ export async function upsertPMManagerOverride(managerId, fields) {
 export async function upsertPMPositionOverride(isin, fields) {
   if (!supabase) return { error: null };
   const row = { isin, updated_at: new Date().toISOString() };
-  if (fields.valorMercat != null) row.valor_mercat = fields.valorMercat;
-  if (fields.rendInici   != null) row.rend_inici   = fields.rendInici;
-  if (fields.rendiment   != null) row.rendiment    = fields.rendiment;
-  if (fields.costAnual   != null) row.cost_anual   = fields.costAnual;
-  if (fields.notes       != null) row.notes        = fields.notes;
+  if (fields.valorMercat !== undefined) row.valor_mercat = fields.valorMercat;
+  if (fields.rendInici   !== undefined) row.rend_inici   = fields.rendInici;
+  if (fields.rendiment   !== undefined) row.rendiment    = fields.rendiment;
+  if (fields.costAnual   !== undefined) row.cost_anual   = fields.costAnual;
+  if (fields.notes       !== undefined) row.notes        = fields.notes;
   const { error } = await supabase.from("pm_position_overrides")
     .upsert(row, { onConflict: "isin" });
   if (!error) logAudit("update", "pm_position_overrides", isin, fields);
