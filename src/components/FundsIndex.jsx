@@ -56,6 +56,17 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
   const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
 
   useEffect(() => {
+    loadCapitalCalls({ skipCompanions: true }).then((fresh) => {
+      if (Array.isArray(fresh)) {
+        setRawCC(fresh);
+        writeStoredJSON("tc_rawCC", fresh);
+      }
+    }).catch((error) => {
+      console.error("FundsIndex rawCC refresh failed:", error);
+    });
+  }, []);
+
+  useEffect(() => {
     loadFundMeta().then((meta) => {
       if (Array.isArray(meta)) {
         setFundMeta(meta);
