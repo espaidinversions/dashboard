@@ -84,6 +84,10 @@ export function normalizeCapitalCallStrategy(value, vehicleTipus = null, context
     return raw ? STRATEGY_MAP.get(key) ?? raw : null;
   }
 
+  // vehicleTipus labels stored historically in the est column are not valid strategies.
+  // Treat them as unset so the snapshot inferrer and default can kick in.
+  if (raw === "PE" || raw === "VC" || raw === "RE" || raw === "SF" || raw === "PC") return null;
+
   return raw || null;
 }
 
