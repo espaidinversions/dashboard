@@ -176,12 +176,14 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     toast({ message: `Fons "${newFund.fons.trim()}" afegit.` });
   };
 
+  const STALE_VCPE_CODES = new Set(["PE", "VC", "RE", "SF", "PC"]);
   const rows = useMemo(() => {
     const map = new Map();
     const vcpeSet = vcpeTypes ?? null;
     for (const r of rawCC.filter((row) => (!vcpeSet || vcpeSet.includes(row?.vehicleTipus)) && !(excludeIds?.has(row?.id)))) {
       const key = makeFundRouteId(r);
-      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vehicleTipus: r.vehicleTipus, est: r.est, compromis: 0, calls: 0, dist: 0, recallablePool: 0, year: null, isMock: !!r.isMock });
+      const fundEst = (r.est && !STALE_VCPE_CODES.has(r.est)) ? r.est : defaultCapitalCallStrategyForVehicleTipus(r.vehicleTipus);
+      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vehicleTipus: r.vehicleTipus, est: fundEst, compromis: 0, calls: 0, dist: 0, recallablePool: 0, year: null, isMock: !!r.isMock });
       const f = map.get(key);
       if (r.cat === "Compromís") {
         f.compromis += r.eur;
