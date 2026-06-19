@@ -16,6 +16,7 @@ const CAPITAL_CALL_TIPUS_CONCEPTS = [
   "Retorn Capital",
   "Distribució Retinguda",
   "Préstec",
+  "Devolució de Préstec",
   "Dividends",
   "Interessos",
   "Management Fee",
@@ -108,11 +109,11 @@ const tipusConceptMap = new Map(
 
 export const CAPITAL_CALL_TIPUS_OPTIONS = [...CAPITAL_CALL_TIPUS_CONCEPTS];
 
-export const DISTRIBUCIONS_SET = new Set(["Distribució", "Distribució Retinguda", "Dividends", "Retorn Capital", "Interessos"]);
+export const DISTRIBUCIONS_SET = new Set(["Distribució", "Distribució Retinguda", "Dividends", "Retorn Capital", "Interessos", "Devolució de Préstec"]);
 
 export const CAPITAL_CALL_TIPUS_GROUPED = [
   ...CAPITAL_CALL_TIPUS_CONCEPTS.filter(c => !DISTRIBUCIONS_SET.has(c)),
-  { group: "Distribucions", items: ["Distribució", "Distribució Retinguda", "Dividends", "Retorn Capital", "Interessos"] },
+  { group: "Distribucions", items: ["Distribució", "Distribució Retinguda", "Dividends", "Retorn Capital", "Interessos", "Devolució de Préstec"] },
 ];
 
 const VCPE_CODES = new Set(["PE", "VC", "RE", "SF", "PC"]);
@@ -136,6 +137,7 @@ export function inferCapitalCallCategoryFromTipus(tipus, eur) {
     case "Interessos":
       return "Distribució";
     case "Retorn Capital":
+    case "Devolució de Préstec":
       return "Retorn Capital";
     default:
       break;
@@ -159,6 +161,7 @@ export function normalizeCapitalCallSignedAmount(tipus, eur) {
     case "Retorn Capital":
     case "Dividends":
     case "Interessos":
+    case "Devolució de Préstec":
       return -Math.abs(amount);
     case "Compromís":
     case "Aportació":
