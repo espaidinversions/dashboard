@@ -221,7 +221,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       if (q && !row.fons.toLowerCase().includes(q)) return false;
       if (filters.nom && !row.fons.toLowerCase().includes(filters.nom.toLowerCase())) return false;
       if (filters.id && !String(row.id ?? "").toLowerCase().includes(filters.id.toLowerCase())) return false;
-      if (filters.tipus !== "Tots" && row.vehicleTipus !== filters.tipus) return false;
+      if (filters.tipus !== "Tots" && row.est !== filters.tipus) return false;
       if (filters.year && !String(row.year ?? "").includes(filters.year)) return false;
       if (filters.compromis && !String(row.compromis ?? "").includes(filters.compromis)) return false;
       if (filters.cridat && !String(row.calls ?? "").includes(filters.cridat)) return false;
@@ -248,7 +248,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       else if (sortKey === "dpi") { av = a.dpi ?? -1; bv = b.dpi ?? -1; }
       else if (sortKey === "rvpi") { av = a.rvpi ?? -1; bv = b.rvpi ?? -1; }
       else if (sortKey === "year") { av = a.year ?? 9999; bv = b.year ?? 9999; }
-      else if (sortKey === "vcpe") { av = a.vehicleTipus ?? ""; bv = b.vehicleTipus ?? ""; }
+      else if (sortKey === "vcpe") { av = a.est ?? ""; bv = b.est ?? ""; }
       else if (sortKey === "fiEnd") { av = a.fiEnd ?? "9999"; bv = b.fiEnd ?? "9999"; }
       else if (sortKey === "recallablePool") { av = a.recallablePool ?? 0; bv = b.recallablePool ?? 0; }
       else { av = a.fons.toLowerCase(); bv = b.fons.toLowerCase(); }
@@ -279,7 +279,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
   const COLS = [
     { k: "nom",       label: "Nom",      align: "left" },
     { k: "id",        label: "NIF",      align: "left" },
-    { k: "vcpe",      label: "Fons",     align: "left" },
+    { k: "vcpe",      label: "Estratègia", align: "left" },
     { k: "year",      label: "Any",      align: "right" },
     { k: "compromis", label: "Compromís",align: "right" },
     { k: "cridat",        label: "Cridat",    align: "right" },
@@ -323,7 +323,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                   <th style={{ padding: "6px 12px" }}>
                     <select value={filters.tipus} onChange={(e) => setFilters((current) => ({ ...current, tipus: e.target.value }))}
                       style={indexPageStyles.filterControl(tc)}>
-                      {["Tots", ...Array.from(new Set(rows.map((row) => row.vehicleTipus).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
+                      {["Tots", ...Array.from(new Set(rows.map((row) => row.est).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
                     </select>
                   </th>
                   {["year","compromis","cridat","utilizat","tvpi","irr","dpi","rvpi"].map((key) => (
@@ -377,17 +377,8 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                       {r.id ?? "—"}
                     </td>
                     <td style={{ padding: "10px 12px" }}>
-                      {rowCanEdit && r.id ? (
-                        <select
-                          value={r.vehicleTipus ?? ""}
-                          onChange={e => saveVehicleTipus(r, e.target.value)}
-                          style={{ padding: "2px 6px", borderRadius: 4, border: `1px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 11, fontFamily: "inherit", cursor: "pointer" }}
-                        >
-                          <option value="">—</option>
-                          {["PE", "VC", "RE", "SF", "PC"].map(t => <option key={t} value={t}>{t}</option>)}
-                        </select>
-                      ) : r.vehicleTipus ? (
-                        <Badge label={r.vehicleTipus} cfg={VEHICLE_TIPUS_CFG[r.vehicleTipus] || {}} />
+                      {r.est ? (
+                        <Badge label={r.est} cfg={EST_CFG[r.est] || {}} />
                       ) : (
                         <span style={{ color: "#aaa", fontSize: 11 }}>—</span>
                       )}

@@ -66,3 +66,25 @@ test("convertAmountToEurOnDate: USD future date uses estimated tag", async () =>
   // Estimated fxSource must NOT contain the future transaction date
   assert.ok(!result.fxSource.includes(futureDate), "fxSource should use rate date, not future tx date");
 });
+
+// SEK mock rate: D.SEK.EUR.SP00.A returns SEK per EUR (e.g., ~11.5 means 1 EUR = 11.5 SEK)
+const MOCK_SEK_RATE = 11.5;
+const mockSekFetcher = async (_url) => ({ rate: MOCK_SEK_RATE, observedAt: MOCK_OBSERVED_AT, source: "ecb" });
+
+test("convertAmountToEurOnDate: SEK past date uses T-1 ECB rate", async () => {
+  let capturedUrl = null;
+  const capturingFetcher = async (url) => { capturedUrl = url; return { rate: MOCK_SEK_RATE, observedAt: MOCK_OBSERVED_AT, source: "ecb" }; };
+  const result = await convertAmountToEurOnDate({ amount: 115000, currency: "SEK", date: "2025-03-10" }, capturingFetcher);
+  assert.equal(result.eur, Math.round(115000 / MOCK_SEK_RATE * 100) / 100);
+  assert.equal(result.amountNative, 115000);
+  assert.equal(result.fxRate, MOCK_SEK_RATE);
+  assert.equal(result.fxSource, `ecb:${MOCK_OBSERVED_AT}`);
+  assert.ok(capturedUrl.includes("SEK"), `Expected SEK in URL, got: ${capturedUrl}`);
+  assert.ok(capturedUrl.includes("2025-03-09"), `Expected T-1 date in URL, got: ${capturedUrl}`);
+});
+
+test("convertAmountToEurOnDate: SEK future date uses estimated tag", async () => {
+  const result = await convertAmountToEurOnDate({ amount: 115000, currency: "SEK", date: "2099-12-31" }, mockSekFetcher);
+  assert.equal(result.amountNative, 115000);
+  assert.match(result.fxSource, /^ecb:estimated:/);
+});

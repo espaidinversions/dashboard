@@ -68,7 +68,7 @@ export function CcTransactionModal({
     },
     { key: "data", label: "Data", type: "date", defaultValue: isEdit ? editRow.data : new Date().toISOString().slice(0, 10) },
     {
-      key: "divisa", label: "Divisa", type: "select", options: ["EUR", "USD"],
+      key: "divisa", label: "Divisa", type: "select", options: ["EUR", "USD", "SEK"],
       defaultValue: isEdit ? editRow.divisa : (addDefaults?.divisa ?? defaultVehicleCurrency(addFons)),
     },
     {
@@ -77,12 +77,13 @@ export function CcTransactionModal({
       inputStyle: amountInputStyle,
       hint: (values) => {
         const divisa = values.divisa || "EUR";
+        const nonEur = divisa !== "EUR";
         if (!isEdit) {
-          return divisa === "USD"
+          return nonEur
             ? `Es convertirà automàticament a EUR amb el tipus BCE de la data.`
             : null;
         }
-        if (divisa !== "USD") return null;
+        if (!nonEur) return null;
         if (editRow.fxRate) {
           return `Tipus BCE guardat: ${Number(editRow.fxRate).toFixed(6)} · EUR guardats: ${fmtFull(editRow.eur)}`;
         }

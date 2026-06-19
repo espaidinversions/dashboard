@@ -50,29 +50,22 @@ export async function convertAmountToEurOnDate({ amount, currency, date }, fetch
       fxSource: "identity",
     };
   }
-  if (divisa === "USD") {
-    // All dates in UTC to avoid timezone shift at midnight.
-    const todayUtc = new Date().toISOString().slice(0, 10);
-    const isFuture = date > todayUtc;
+  // All dates in UTC to avoid timezone shift at midnight.
+  const todayUtc = new Date().toISOString().slice(0, 10);
+  const isFuture = date > todayUtc;
 
-    // T-1 semantics: use the ECB rate from the business day BEFORE the transaction date.
-    // For future dates, use yesterday's rate (latest available).
-    // ECB's lastNObservations=1 skips weekends/holidays automatically.
-    const rateDate = subtractOneCalendarDay(isFuture ? todayUtc : date);
-    const { rate: fxRate, observedAt } = await getEcbRateWithObservedAt(rateDate, "USD", "EUR", fetcher);
+  // T-1 semantics: use the ECB rate from the business day BEFORE the transaction date.
+  // For future dates, use yesterday's rate (latest available).
+  // ECB's lastNObservations=1 skips weekends/holidays automatically.
+  // Works for any ECB-tracked currency (USD, SEK, GBP, etc.).
+  const rateDate = subtractOneCalendarDay(isFuture ? todayUtc : date);
+  const { rate: fxRate, observedAt } = await getEcbRateWithObservedAt(rateDate, divisa, "EUR", fetcher);
 
-    return {
-      eur: roundCurrency(nativeAmount / fxRate),
-      amountNative: roundCurrency(nativeAmount),
-      fxRate,
-      // fxSource encodes the ECB observation date (not the transaction date).
-      fxSource: isFuture ? `ecb:estimated:${observedAt}` : `ecb:${observedAt}`,
-    };
-  }
   return {
-    eur: roundCurrency(nativeAmount),
-    amountNative: null,
-    fxRate: null,
-    fxSource: null,
+    eur: roundCurrency(nativeAmount / fxRate),
+    amountNative: roundCurrency(nativeAmount),
+    fxRate,
+    // fxSource encodes the ECB observation date (not the transaction date).
+    fxSource: isFuture ? `ecb:estimated:${observedAt}` : `ecb:${observedAt}`,
   };
 }
