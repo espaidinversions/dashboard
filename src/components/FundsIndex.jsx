@@ -10,7 +10,7 @@ import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
 import { computeFundIrrFromRows, makeFundRouteId } from "../data/fundDetailModel.js";
 import { convertAmountToEurOnDate } from "../fx.js";
-import { CAPITAL_CALL_STRATEGY_OPTIONS, defaultCapitalCallStrategyForVehicleTipus } from "../data/capitalCallStrategyModel.js";
+import { CAPITAL_CALL_STRATEGY_OPTIONS, defaultCapitalCallStrategyForVehicleTipus, estSection } from "../data/capitalCallStrategyModel.js";
 
 export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, excludeIds }) {
   const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
@@ -222,7 +222,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       if (Array.isArray(vcpeTypes) && vcpeTypes.length > 0) {
         const sectionId = getVehiclePermissionSection(row);
         if (vcpeTypes.includes("RE")) return sectionId === "real-estate" && canAccessRealEstate;
-        return sectionId === "alternatives" && canAccessAlternatives;
+        return sectionId === "alternatives" && canAccessAlternatives && estSection(row.est) !== "SF";
       }
       const sectionId = getVehiclePermissionSection(row);
       if (canAccessAlternatives) return sectionId === "alternatives";
