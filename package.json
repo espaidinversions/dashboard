@@ -23,7 +23,7 @@
     "pm:autoresearch": "node scripts/pm_autoresearch.mjs",
     "pm:model-export": "node scripts/pm_model_export_js.mjs",
     "pm:coverage-report": "node scripts/pm_coverage_report.mjs",
-    "deploy": "vercel --prod",
+    "deploy": "git push origin master && vercel --prod",
     "deploy:preview": "vercel"
   },
   "dependencies": {
