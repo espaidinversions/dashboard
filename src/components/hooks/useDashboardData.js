@@ -152,6 +152,7 @@ export function useDashboardData() {
         if (Array.isArray(data.rawCC)) {
           setRawCC(data.rawCC);
           writeStoredJSON(LS_CC, data.rawCC);
+          window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
           resolveEstimatedFxRates(data.rawCC)
             .then((anyResolved) => {
               if (!anyResolved || cancelled) return;
@@ -159,6 +160,7 @@ export function useDashboardData() {
                 if (!fresh || cancelled) return;
                 setRawCC(fresh);
                 writeStoredJSON(LS_CC, fresh);
+                window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
               });
             })
             .catch((err) => console.warn("[resolveEstimatedFxRates] unexpected error:", err));
@@ -295,6 +297,7 @@ export function useDashboardData() {
         if (bundle.rawCC != null) {
           setRawCC(bundle.rawCC);
           writeStoredJSON(LS_CC, bundle.rawCC);
+          window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
           await syncSearchersFromCapitalCalls(bundle.rawCC);
         }
         if (bundle.funds0 != null) {
@@ -315,6 +318,7 @@ export function useDashboardData() {
         setRawCC(rows);
         clearExcluded?.();
         writeStoredJSON(LS_CC, rows);
+        window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
         await syncSearchersFromCapitalCalls(rows);
       } else if (key === "pl") {
         const { error } = await savePipeline(rows);
