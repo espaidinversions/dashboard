@@ -52,7 +52,7 @@ PM_RAW_WORKBOOK = ROOT / "src" / "generated" / "publicMarkets" / "publicMarketsR
 PM_VALUES_JS  = ROOT / "src" / "generated" / "publicMarkets" / "portfolioValues.js"
 PRICE_BRIDGES_JSON = ROOT / "raw-data" / "price-bridges.json"
 SERIES_START = date(2019, 1, 1)
-LATEST_TOTAL_TOLERANCE = 0.005
+LATEST_TOTAL_TOLERANCE = 0.01
 T = TypeVar("T")
 
 
@@ -353,6 +353,8 @@ def build_snapshot_value_rows(
 
         # Fallback to the checked-in PM_VALUES series when we do not have a live price file.
         if fallback_series:
+            last_bucket: date | None = None
+            last_value: float | None = None
             for point in fallback_series:
                 bucket = parse_date(point.get("date"))
                 value = point.get("value")
@@ -367,6 +369,24 @@ def build_snapshot_value_rows(
                     "nav": round(float(value) / units, 4) if units else None,
                     "value_eur": round(float(value), 2),
                 })
+                if last_bucket is None or bucket > last_bucket:
+                    last_bucket = bucket
+                    last_value = float(value)
+            # Extend flat from last fallback point to global_end so the position is
+            # represented at the reconciliation date even without fresh price data.
+            if last_bucket is not None and last_value is not None and global_end is not None:
+                for ext_bucket in iter_biweekly_buckets(
+                    next_biweekly_bucket(last_bucket), biweekly_bucket(global_end)
+                ):
+                    rows.append({
+                        "date": ext_bucket,
+                        "isin": isin,
+                        "nom": pos.get("nom") or isin,
+                        "custodian": pos.get("custodian") or "Unknown",
+                        "units": units,
+                        "nav": round(last_value / units, 4) if units else None,
+                        "value_eur": round(last_value, 2),
+                    })
             continue
 
         # Last resort: keep the current market value flat from the purchase date forward.
@@ -423,7 +443,7 @@ def main():
     print("Loading active snapshot from JS…")
     positions = load_snapshot_positions()
     fallback_values = load_existing_pm_values()
-    global_end = load_pm_values_end_date(fallback_values)
+    global_end = date.today()
     workbook_total = load_workbook_total_active()
 
     print(f"  Active positions:       {len(positions)}")

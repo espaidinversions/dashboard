@@ -30,20 +30,38 @@ Requirements:
 
 import argparse
 import io
+import json
+import os
 import sys
 import time
 from datetime import date, timedelta
 from pathlib import Path
 
-import pandas as pd
-
 # UTF-8 output on Windows
 if sys.stdout.encoding and sys.stdout.encoding.lower() != "utf-8":
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
+# Fix SSL cert path broken on Windows Store Python when username has non-ASCII chars.
+try:
+    import certifi, shutil
+    _cert_src = certifi.where()
+    if not all(ord(c) < 128 for c in _cert_src):
+        _cert_dst = Path(os.environ.get("TEMP", "C:/tmp")) / "cacert_ascii.pem"
+        _cert_dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy(_cert_src, _cert_dst)
+        _cert_src = str(_cert_dst)
+    os.environ["SSL_CERT_FILE"]      = _cert_src
+    os.environ["REQUESTS_CA_BUNDLE"] = _cert_src
+    os.environ["CURL_CA_BUNDLE"]     = _cert_src
+except ImportError:
+    pass
+
+import pandas as pd
+
 FUND_DIR     = Path(__file__).parent.parent / "Mercats Públics" / "fund_prices"
 COMBINED_CSV = Path(__file__).parent.parent / "Mercats Públics" / "fund_prices_combined.csv"
 WIDE_CSV     = Path(__file__).parent.parent / "Mercats Públics" / "fund_prices_wide.csv"
+MAP_PATH     = Path(__file__).parent.parent / "Mercats Públics" / "isin_ticker_map.json"
 
 # Currently held fund ISINs (UBS + CaixaBank portfolios, excluding ETFs already in
 # etf_fetch_prices.py). Source: Resum Financer Excel, Master sheet, 2025 values > 0.
@@ -163,7 +181,7 @@ def fetch_mstarpy(isin: str, start: date | None, end: date | None) -> pd.DataFra
     """
     try:
         import mstarpy
-        f = mstarpy.Funds(isin, language="en-gb", pageSize=1)
+        f = mstarpy.Funds(isin, language="es", pageSize=1)
         name = f.name
 
         nav_data = f.nav(
@@ -185,14 +203,69 @@ def fetch_mstarpy(isin: str, start: date | None, end: date | None) -> pd.DataFra
         return None
 
 
-def fetch_fund_series(isin: str, start_dt: date | None, end_dt: date | None) -> tuple[pd.DataFrame | None, str | None]:
-    """Fetch a fund series, trying the exact ISIN first and known share-class fallbacks."""
+def load_ticker_map() -> dict:
+    if not MAP_PATH.exists():
+        return {}
+    return json.loads(MAP_PATH.read_text(encoding="utf-8")).get("map", {})
+
+
+def fetch_yfinance(isin: str, ticker: str, start_dt: date | None, end_dt: date | None) -> pd.DataFrame | None:
+    """Fetch exchange price history from Yahoo Finance for a single ticker."""
+    try:
+        import yfinance as yf
+        t = yf.Ticker(ticker)
+        kw: dict = dict(auto_adjust=True)
+        if start_dt:
+            kw["start"] = start_dt.isoformat()
+        else:
+            kw["period"] = "max"
+        if end_dt:
+            kw["end"] = end_dt.isoformat()
+        hist = t.history(**kw)
+        if hist.empty:
+            return None
+        df = hist[["Close"]].rename(columns={"Close": "close"})
+        df.index.name = "date"
+        df = df.reset_index()
+        df["date"] = pd.to_datetime(df["date"]).dt.tz_localize(None)
+        df["source"] = "yfinance"
+        df["name"] = ticker
+        return df
+    except Exception as e:
+        print(f"  yfinance fail {isin} ({ticker}): {e}")
+        return None
+
+
+def fetch_fund_series(
+    isin: str,
+    start_dt: date | None,
+    end_dt: date | None,
+    ticker_map: dict,
+) -> tuple[pd.DataFrame | None, str | None, str]:
+    """
+    Fetch a fund series with a three-step cascade:
+      1. mstarpy with exact ISIN (es-es locale)
+      2. mstarpy with known share-class fallback ISINs
+      3. yfinance via isin_ticker_map.json
+    Returns (df, resolved_isin, source_label).
+    """
     candidates = [isin] + FALLBACK_ISINS.get(isin, [])
     for candidate in candidates:
         df = fetch_mstarpy(candidate, start_dt, end_dt)
         if df is not None and len(df) > 0:
-            return df, candidate
-    return None, None
+            return df, candidate, "mstarpy"
+
+    # yfinance fallback
+    info = ticker_map.get(isin, {})
+    ticker = info.get("yf_ticker") if info else None
+    if ticker:
+        df = fetch_yfinance(isin, ticker, start_dt, end_dt)
+        if df is not None and len(df) > 0:
+            if info.get("name"):
+                df["name"] = info["name"]
+            return df, isin, "yfinance"
+
+    return None, None, ""
 
 
 def main():
@@ -221,17 +294,18 @@ def main():
 
     FUND_DIR.mkdir(parents=True, exist_ok=True)
 
+    ticker_map = load_ticker_map()
     results = []
-    ok, failed = [], []
+    mstar_ok, yf_ok, failed = [], [], []
 
     for isin in isins:
         print(f"  {isin} ...", end=" ", flush=True)
 
-        df, resolved_isin = fetch_fund_series(isin, start_dt, end_dt)
+        df, resolved_isin, source = fetch_fund_series(isin, start_dt, end_dt, ticker_map)
         if df is not None and len(df) > 0:
-            ok.append(isin)
-            suffix = f" via {resolved_isin}" if resolved_isin and resolved_isin != isin else ""
-            print(f"OK{suffix}  {len(df):5d} rows  {df['date'].min().date()} -> {df['date'].max().date()}"
+            (mstar_ok if source == "mstarpy" else yf_ok).append(isin)
+            alias = f" via {resolved_isin}" if resolved_isin and resolved_isin != isin else ""
+            print(f"{source}{alias}  {len(df):5d} rows  {df['date'].min().date()} -> {df['date'].max().date()}"
                   f"  {df['name'].iloc[0][:40]}")
         else:
             failed.append(isin)
@@ -258,9 +332,10 @@ def main():
         wide.to_csv(WIDE_CSV)
 
         print(f"\n{'─'*60}")
-        print(f"OK:     {len(ok):3d} ISINs")
+        print(f"mstarpy: {len(mstar_ok):3d} ISINs")
+        print(f"yfinance:{len(yf_ok):3d} ISINs")
         if failed:
-            print(f"Failed: {len(failed):3d} ISINs: {failed}")
+            print(f"Failed:  {len(failed):3d} ISINs: {failed}")
         print(f"Total rows:  {len(combined):,}")
         print(f"Date range:  {combined['date'].min().date()} -> {combined['date'].max().date()}")
         print(f"Output:      {FUND_DIR}/")
