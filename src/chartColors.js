@@ -44,6 +44,7 @@ export const MGR_COLORS = {
   creditSuisse:       "#C46B5A",
   bankinter:          TC_LIGHT.green,
   interactiveBrokers: TC_LIGHT.greenLight,
+  ib:                 TC_LIGHT.greenLight,
   andbank:            TC_LIGHT.purple,
   jpmorgan:           TC_LIGHT.yellow,
   abel:               TC_LIGHT.green,

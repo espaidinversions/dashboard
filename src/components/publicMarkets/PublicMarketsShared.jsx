@@ -3,8 +3,6 @@ import { MGR_COLORS as _MGR_COLORS } from "../../chartColors.js";
 import { TC_LIGHT } from "../../theme.js";
 import { KpiCard as _KpiCard } from "../SharedComponents.jsx";
 import { PM_MODEL } from "../../data/publicMarketsModel.js";
-import { WAM_POSITIONS } from "../../data/wamPositions.js";
-
 const PM_MANAGERS = PM_MODEL.metadata.managers;
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
@@ -71,23 +69,77 @@ function custodianMatch(custodians) {
 }
 
 export function getMgrPositions(mgrId) {
-  let custodians, extraActive = [];
-  if (mgrId === "abel")         custodians = ["Bankinter", "Interactive Brokers"];
-  else if (mgrId === "caixa")   custodians = ["CaixaBank"];
-  else if (mgrId === "ubs")     custodians = ["UBS"];
-  else if (mgrId === "creditSuisse") custodians = ["Credit Suisse"];
-  else if (mgrId === "andbank") { custodians = ["Andbank"]; extraActive = WAM_POSITIONS; }
-  else if (mgrId === "jpmorgan") custodians = ["JPMorgan"];
-  else return null;
+  let custodians;
+  if (mgrId === "caixa")       custodians = ["CaixaBank"];
+  else if (mgrId === "ubs")    custodians = ["UBS", "Credit Suisse"];
+  else if (mgrId === "bankinter") custodians = ["Bankinter"];
+  else if (mgrId === "jpmorgan")  custodians = ["JPMorgan"];
+  else return null; // ib and andbank: aggregated only, no drill-down
 
   const match = custodianMatch(custodians);
-  const active = [...PM_POSITIONS.filter(match), ...extraActive]
+  const active = PM_POSITIONS.filter(match)
     .sort((a, b) => (b.valorMercat ?? 0) - (a.valorMercat ?? 0));
   const discontinued = PM_CLOSED.filter(match)
     .sort((a, b) => (b.valorMercat ?? 0) - (a.valorMercat ?? 0))
     .map((p) => ({ ...p, _discontinued: true }));
 
   return [...active, ...discontinued];
+}
+
+export function isEtfPosition(pos) {
+  return pos?.nom?.toUpperCase().includes("ETF") ?? false;
+}
+
+export function computeWeightedTer(positions) {
+  const withTer = (positions ?? []).filter(p => p.costAnual != null);
+  if (withTer.length === 0) return null;
+  const totalVal = withTer.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+  if (totalVal === 0) return null;
+  return withTer.reduce((s, p) => s + (p.costAnual ?? 0) * (p.valorMercat ?? 0), 0) / totalVal;
+}
+
+export function computePositionWeightedYtd(positions) {
+  const _cy = new Date().getFullYear();
+  const field = `rend${_cy}`;
+  const withYtd = (positions ?? []).filter(p => p[field] != null);
+  if (withYtd.length === 0) return null;
+  const totalVal = withYtd.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+  if (totalVal === 0) return null;
+  return withYtd.reduce((s, p) => s + (p[field] ?? 0) * (p.valorMercat ?? 0), 0) / totalVal;
+}
+
+export function computeLastPriceDateForPositions(positions, pmValues) {
+  let last = null;
+  for (const pos of (positions ?? [])) {
+    if (!pos.isin) continue;
+    const byCustodian = pmValues?.[pos.isin];
+    if (!byCustodian || typeof byCustodian !== "object") continue;
+    for (const series of Object.values(byCustodian)) {
+      if (!Array.isArray(series)) continue;
+      for (let i = series.length - 1; i >= 0; i--) {
+        const entry = series[i];
+        const date = entry?.date;
+        if (date && Number.isFinite(Number(entry?.value))) {
+          if (!last || date > last) last = date;
+          break;
+        }
+      }
+    }
+  }
+  return last;
+}
+
+const _MONTH_ABBR_CA = ["gen", "feb", "mar", "abr", "mai", "jun", "jul", "ago", "set", "oct", "nov", "des"];
+
+export function mtmStaleness(lastYYYYMM) {
+  if (!lastYYYYMM) return { label: "N/D", color: "#8A9BAC", days: null };
+  const [y, m] = lastYYYYMM.split("-").map(Number);
+  const endOfMonth = new Date(y, m, 0);
+  const today = new Date();
+  const days = Math.floor((today - endOfMonth) / 86400000);
+  const label = `${_MONTH_ABBR_CA[m - 1]}. '${String(y).slice(2)}`;
+  const color = days <= 15 ? "#28A029" : days <= 30 ? "#E8A020" : "#B52020";
+  return { label, color, days };
 }
 
 export function KpiCard({ label, value, sub, tc = TC_LIGHT, valueColor, hero = false }) {

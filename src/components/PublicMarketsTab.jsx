@@ -3,7 +3,14 @@ import { useTheme } from "../theme.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { summarizeLatestPmValues } from "../data/pmValueUtils.js";
 import { buildGroupedMonthlySeriesFromNestedValues, buildMonthlySeriesFromNestedValues } from "../chartSeries.js";
-import { PERIODS, weightedReturn } from "./publicMarkets/PublicMarketsShared.jsx";
+import {
+  PERIODS,
+  weightedReturn,
+  computeWeightedTer,
+  computePositionWeightedYtd,
+  computeLastPriceDateForPositions,
+  mtmStaleness,
+} from "./publicMarkets/PublicMarketsShared.jsx";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
 import { loadPMOverrides } from "../db.js";
 import { usePmMonthly, applyManagerOverrides } from "./hooks/usePmMonthly.js";
@@ -14,18 +21,28 @@ const PM_VALUES = PM_MODEL.series.values;
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 const PM_MANAGERS = PM_MODEL.metadata.managers;
-const PM_TOTAL_ACTIVE = PM_MODEL.metadata.totals.active;
 
-const CUSTODIAN_GROUPS = ["caixa", "ubs", "creditSuisse", "bankinter", "interactiveBrokers", "jpmorgan", "andbank", "altres"];
+// Credit Suisse is merged into UBS; Interactive Brokers renamed to "ib".
+const CUSTODIAN_GROUPS = ["caixa", "ubs", "bankinter", "ib", "jpmorgan", "andbank", "altres"];
 const TYPE_GROUPS = ["rv", "rf", "altres"];
+
+// Pre-filter positions by custodian for reuse across memos (module-level, stable reference).
+const _custodianPositions = {
+  caixa:     PM_POSITIONS.filter(p => p.custodian === "CaixaBank"),
+  ubs:       PM_POSITIONS.filter(p => p.custodian === "UBS" || p.custodian === "Credit Suisse"),
+  bankinter: PM_POSITIONS.filter(p => p.custodian === "Bankinter"),
+  ib:        PM_POSITIONS.filter(p => p.custodian === "Interactive Brokers"),
+  jpmorgan:  PM_POSITIONS.filter(p => p.custodian === "JPMorgan"),
+  andbank:   WAM_POSITIONS,
+  altres:    [],
+};
 
 function groupPmCustodian(position = null) {
   const custodian = String(position?.custodian ?? "").trim();
   if (custodian === "CaixaBank") return "caixa";
-  if (custodian === "UBS") return "ubs";
-  if (custodian === "Credit Suisse") return "creditSuisse";
+  if (custodian === "UBS" || custodian === "Credit Suisse") return "ubs";
   if (custodian === "Bankinter") return "bankinter";
-  if (custodian === "Interactive Brokers") return "interactiveBrokers";
+  if (custodian === "Interactive Brokers") return "ib";
   if (custodian === "JPMorgan") return "jpmorgan";
   if (custodian === "Andbank" || custodian === "WAM") return "andbank";
   return "altres";
@@ -66,7 +83,7 @@ export function PublicMarketsTab() {
 
   const latestPmSummary = useMemo(() => {
     const summary = summarizeLatestPmValues(PM_VALUES, PM_POSITIONS);
-    // WAM positions have no PM_VALUES entries — add their static valorMercat directly
+    // WAM positions have no PM_VALUES entries — add their static valorMercat directly.
     for (const pos of WAM_POSITIONS) {
       const v = pos.valorMercat ?? 0;
       if (!v) continue;
@@ -77,15 +94,23 @@ export function PublicMarketsTab() {
     }
     return summary;
   }, []);
-  const currentManagerValues = useMemo(() => ({
-    caixa: latestPmSummary.byManager.caixa ?? 0,
-    ubs: latestPmSummary.byManager.ubs ?? 0,
-    creditSuisse: latestPmSummary.byManager.creditSuisse ?? 0,
-    abel: latestPmSummary.byManager.abel ?? 0,
-    andbank: latestPmSummary.byManager.andbank ?? 0,
-    jpmorgan: latestPmSummary.byManager.jpmorgan ?? 0,
-    altres: latestPmSummary.byManager.altres ?? 0,
-  }), [latestPmSummary]);
+
+  const currentManagerValues = useMemo(() => {
+    const bankinterVal = _custodianPositions.bankinter
+      .reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+    const ibVal = _custodianPositions.ib
+      .reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+    return {
+      caixa:     latestPmSummary.byManager.caixa ?? 0,
+      ubs:       (latestPmSummary.byManager.ubs ?? 0) + (latestPmSummary.byManager.creditSuisse ?? 0),
+      abel:      latestPmSummary.byManager.abel ?? 0, // kept for TWR/returns analytics (Bankinter+IB combined series)
+      bankinter: bankinterVal,
+      ib:        ibVal,
+      andbank:   latestPmSummary.byManager.andbank ?? 0,
+      jpmorgan:  latestPmSummary.byManager.jpmorgan ?? 0,
+      altres:    latestPmSummary.byManager.altres ?? 0,
+    };
+  }, [latestPmSummary]);
 
   const toggleExpand = (id) => {
     setExpanded((prev) => {
@@ -101,17 +126,17 @@ export function PublicMarketsTab() {
 
   const managerValueByIdForReturns = useMemo(() => {
     const result = {
-      abel: currentManagerValues.abel,
+      abel:    currentManagerValues.abel,
       andbank: currentManagerValues.andbank,
     };
     const allocateGroup = (ids, totalValue) => {
       const managers = ids
-        .map((id) => effectiveManagers.find((manager) => manager.id === id))
+        .map((id) => effectiveManagers.find((m) => m.id === id))
         .filter(Boolean);
-      const baseTotal = managers.reduce((sum, manager) => sum + (Number(manager.valorActual) || 0), 0);
-      managers.forEach((manager) => {
-        const weight = baseTotal > 0 ? (Number(manager.valorActual) || 0) / baseTotal : 0;
-        result[manager.id] = totalValue * weight;
+      const baseTotal = managers.reduce((sum, m) => sum + (Number(m.valorActual) || 0), 0);
+      managers.forEach((m) => {
+        const weight = baseTotal > 0 ? (Number(m.valorActual) || 0) / baseTotal : 0;
+        result[m.id] = totalValue * weight;
       });
     };
     allocateGroup(["caixa-rv", "caixa-rf"], currentManagerValues.caixa);
@@ -196,24 +221,24 @@ export function PublicMarketsTab() {
   const residualValue = total - (
     currentManagerValues.caixa +
     currentManagerValues.ubs +
-    currentManagerValues.creditSuisse +
-    currentManagerValues.abel +
+    currentManagerValues.bankinter +
+    currentManagerValues.ib +
     currentManagerValues.andbank +
     currentManagerValues.jpmorgan +
     currentManagerValues.altres
   );
 
   const displayManagers = useMemo(() => {
+    const _cy = new Date().getFullYear();
     const weightedManagerMetric = (ids, field) => {
       const managers = ids
-        .map((id) => effectiveManagers.find((manager) => manager.id === id))
-        .filter((manager) => manager && manager[field] != null);
+        .map((id) => effectiveManagers.find((m) => m.id === id))
+        .filter((m) => m && m[field] != null);
       if (managers.length === 0) return null;
-      const weightedSum = managers.reduce((sum, manager) => sum + manager[field] * manager.valorActual, 0);
-      const totalValue = managers.reduce((sum, manager) => sum + manager.valorActual, 0);
+      const weightedSum = managers.reduce((sum, m) => sum + m[field] * m.valorActual, 0);
+      const totalValue = managers.reduce((sum, m) => sum + m.valorActual, 0);
       return weightedSum / totalValue;
     };
-    const _cy = new Date().getFullYear();
     const combine = (id, nom, value, ids) => ({
       id,
       nom,
@@ -224,14 +249,60 @@ export function PublicMarketsTab() {
       [`r${_cy - 2}`]: weightedManagerMetric(ids, `r${_cy - 2}`),
       rendPct: weightedManagerMetric(ids, "rendPct"),
     });
+    // Attach TER + MTM staleness to every custodian row for the table.
+    const withMeta = (obj, positions) => ({
+      ...obj,
+      ter: computeWeightedTer(positions),
+      mtm: mtmStaleness(computeLastPriceDateForPositions(positions, PM_VALUES)),
+    });
+    const abelMgr = effectiveManagers.find((m) => m.id === "abel") ?? {};
+    const andbankMgr = effectiveManagers.find((m) => m.id === "andbank") ?? {};
     return [
-      combine("caixa", "CaixaBank", currentManagerValues.caixa, ["caixa-rv", "caixa-rf"]),
-      combine("ubs", "UBS", currentManagerValues.ubs, ["ubs-rv", "ubs-rf"]),
-      { id: "creditSuisse", nom: "Credit Suisse", gestor: "Credit Suisse", tipus: "RV+RF", valorActual: currentManagerValues.creditSuisse, rendPct: null, ytd: null, [`r${_cy - 1}`]: null, [`r${_cy - 2}`]: null },
-      { ...effectiveManagers.find((manager) => manager.id === "abel"), id: "abel", nom: "Bankinter", valorActual: currentManagerValues.abel },
-      { ...effectiveManagers.find((manager) => manager.id === "andbank"), id: "andbank", nom: "WAM–Andbank", valorActual: currentManagerValues.andbank },
-      { id: "jpmorgan", nom: "JPMorgan", gestor: "JPMorgan", tipus: "RV", valorActual: currentManagerValues.jpmorgan, rendPct: null, ytd: null, [`r${_cy - 1}`]: null, [`r${_cy - 2}`]: null },
-      { id: "altres", nom: "Altres / no assignat", gestor: null, tipus: "RV+RF", valorActual: currentManagerValues.altres + residualValue, rendPct: null, ytd: null, [`r${_cy - 1}`]: null, [`r${_cy - 2}`]: null },
+      withMeta(combine("caixa", "CaixaBank", currentManagerValues.caixa, ["caixa-rv", "caixa-rf"]), _custodianPositions.caixa),
+      withMeta(combine("ubs", "UBS", currentManagerValues.ubs, ["ubs-rv", "ubs-rf"]), _custodianPositions.ubs),
+      withMeta({
+        ...abelMgr,
+        id: "bankinter",
+        nom: "Bankinter",
+        tipus: abelMgr.tipus ?? "RV+RF",
+        valorActual: currentManagerValues.bankinter,
+      }, _custodianPositions.bankinter),
+      withMeta({
+        id: "ib",
+        nom: "Interactive Brokers",
+        tipus: "RV",
+        valorActual: currentManagerValues.ib,
+        ytd: computePositionWeightedYtd(_custodianPositions.ib),
+        [`r${_cy - 1}`]: null,
+        [`r${_cy - 2}`]: null,
+        rendPct: null,
+      }, _custodianPositions.ib),
+      withMeta({
+        ...andbankMgr,
+        id: "andbank",
+        nom: "WAM–Andbank",
+        valorActual: currentManagerValues.andbank,
+      }, _custodianPositions.andbank),
+      withMeta({
+        id: "jpmorgan",
+        nom: "JPMorgan",
+        tipus: "RV",
+        valorActual: currentManagerValues.jpmorgan,
+        rendPct: null,
+        ytd: null,
+        [`r${_cy - 1}`]: null,
+        [`r${_cy - 2}`]: null,
+      }, _custodianPositions.jpmorgan),
+      withMeta({
+        id: "altres",
+        nom: "Altres / no assignat",
+        tipus: "RV+RF",
+        valorActual: currentManagerValues.altres + residualValue,
+        rendPct: null,
+        ytd: null,
+        [`r${_cy - 1}`]: null,
+        [`r${_cy - 2}`]: null,
+      }, _custodianPositions.altres),
     ];
   }, [currentManagerValues, residualValue, effectiveManagers]);
 
@@ -275,19 +346,19 @@ export function PublicMarketsTab() {
       });
     }
 
+    // Custodian view: CS merged into UBS via groupPmCustodian; IB keyed as "ib".
     const totalByMonth = new Map(totalValueSeries.map((row) => [row.date, row.value]));
     return chartMonths.map((month) => {
       const custodian = custodianValueByMonth.get(month) ?? {};
-      const caixa = custodian.caixa ?? 0;
-      const ubs = custodian.ubs ?? 0;
-      const creditSuisse = custodian.creditSuisse ?? 0;
+      const caixa     = custodian.caixa ?? 0;
+      const ubs       = custodian.ubs ?? 0;
       const bankinter = custodian.bankinter ?? 0;
-      const interactiveBrokers = custodian.interactiveBrokers ?? 0;
-      const andbank = custodian.andbank ?? 0;
-      const jpmorgan = custodian.jpmorgan ?? 0;
+      const ib        = custodian.ib ?? 0;
+      const andbank   = custodian.andbank ?? 0;
+      const jpmorgan  = custodian.jpmorgan ?? 0;
       const totalValue = totalByMonth.get(month) ?? null;
-      const altres = totalValue == null ? null : Math.max(totalValue - caixa - ubs - creditSuisse - bankinter - interactiveBrokers - andbank - jpmorgan, 0);
-      return { month, caixa, ubs, creditSuisse, bankinter, interactiveBrokers, andbank, jpmorgan, altres };
+      const altres = totalValue == null ? null : Math.max(totalValue - caixa - ubs - bankinter - ib - andbank - jpmorgan, 0);
+      return { month, caixa, ubs, bankinter, ib, andbank, jpmorgan, altres };
     });
   }, [chartMonths, chartView, custodianValueByMonth, totalValueSeries, typeValueByMonth]);
 
