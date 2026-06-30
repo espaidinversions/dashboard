@@ -87,7 +87,7 @@ export function summarizeLatestPmValues(
     });
   });
 
-  if (import.meta.env.DEV) {
+  if (typeof import.meta.env !== "undefined" && import.meta.env.DEV) {
     const classified = (byType.RV ?? 0) + (byType.RF ?? 0);
     const gap = total - classified - unmappedTotal;
     if (Math.abs(gap) > 1) {

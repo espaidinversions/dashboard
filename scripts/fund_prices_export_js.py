@@ -12,6 +12,7 @@ import csv
 import datetime
 import io
 import json
+import re
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -28,6 +29,39 @@ PRICE_DIRS = [
 JS_OUT = ROOT / "src" / "generated" / "prices" / "fundPrices.js"
 
 MIN_DATE = "2019-01-01"
+
+
+def seed_from_existing_js(js_path: Path, series: dict[str, dict[str, tuple[str, float]]]) -> int:
+    """Pre-seed series from the existing fundPrices.js so CSV runs are additive."""
+    if not js_path.exists():
+        return 0
+    text = js_path.read_text(encoding="utf-8")
+    # Each ISIN is on its own line: "ISIN": [[...], ...],
+    isin_re = re.compile(r'"([A-Z]{2}[A-Z0-9]{10})"\s*:\s*(\[.+\]),?\s*$')
+    count = 0
+    for line in text.splitlines():
+        m = isin_re.search(line)
+        if not m:
+            continue
+        isin = m.group(1)
+        try:
+            entries = json.loads(m.group(2))
+        except json.JSONDecodeError:
+            continue
+        for entry in entries or []:
+            if not isinstance(entry, list) or len(entry) != 2:
+                continue
+            month, price = entry
+            if not isinstance(month, str) or len(month) != 7:
+                continue
+            try:
+                price = round(float(price), 4)
+            except (TypeError, ValueError):
+                continue
+            if month not in series[isin]:
+                series[isin][month] = (f"{month}-01", price)
+                count += 1
+    return count
 
 
 def ingest_csv(csv_path: Path, series: dict[str, dict[str, tuple[str, float]]]) -> None:
@@ -56,8 +90,14 @@ def ingest_csv(csv_path: Path, series: dict[str, dict[str, tuple[str, float]]]) 
                 series[isin][month] = (date, price)
 
 
-def collect_monthly_prices(price_dirs: list[Path]) -> dict[str, list[list[float | str]]]:
+def collect_monthly_prices(
+    price_dirs: list[Path],
+    baseline_js: Path | None = None,
+) -> dict[str, list[list[float | str]]]:
     series = defaultdict(dict)
+    if baseline_js is not None:
+        seeded = seed_from_existing_js(baseline_js, series)
+        print(f"  Seeded {seeded:,} historical data points from existing JS baseline")
     for base in price_dirs:
         if not base.exists():
             continue
@@ -76,7 +116,7 @@ def main():
         print("ERROR: price directories not found.")
         raise SystemExit(1)
 
-    prices = collect_monthly_prices(PRICE_DIRS)
+    prices = collect_monthly_prices(PRICE_DIRS, baseline_js=JS_OUT)
 
     today = datetime.date.today().isoformat()
     lines = [
