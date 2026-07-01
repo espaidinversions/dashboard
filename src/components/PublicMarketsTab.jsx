@@ -387,6 +387,41 @@ export function PublicMarketsTab() {
     };
   }, [currentManagerValues]);
 
+  // ── Bucket weighted annual returns ────────────────────────────────────────
+  const bucketReturns = useMemo(() => {
+    const YEARS = [2023, 2024, 2025, 2026];
+    const wamIds = new Set(WAM_POSITIONS.map(p => p.id ?? p.isin));
+
+    function wavg(positions, field) {
+      let sum = 0, w = 0;
+      for (const p of positions) {
+        const v = p[field];
+        if (v == null) continue;
+        const pct = wamIds.has(p.id ?? p.isin) ? v : v * 100;
+        sum += pct * (p.valorMercat ?? 0);
+        w   += (p.valorMercat ?? 0);
+      }
+      return w > 0 ? sum / w : null;
+    }
+
+    const caixaPos = _custodianPositions.caixa;
+    const bkPos    = _custodianPositions.bankinter;
+
+    const buckets = [
+      { id: "etfs",          label: "ETFs",                   positions: [...caixaPos.filter(isEtfPosition), ...bkPos.filter(isEtfPosition)] },
+      { id: "fgp-caixa",     label: "Fons Gestió Pròpia CB",  positions: caixaPos.filter(p => !isEtfPosition(p)) },
+      { id: "fgp-bankinter", label: "Fons Gestió Pròpia BK",  positions: bkPos.filter(p => !isEtfPosition(p)) },
+      { id: "rf-wam",        label: "Renda Fixa – WAM",       positions: WAM_POSITIONS },
+      { id: "accions-ib",    label: "Accions – IB",           positions: _custodianPositions.ib },
+    ];
+
+    return buckets.map(b => ({
+      ...b,
+      years: Object.fromEntries(YEARS.map(y => [y, wavg(b.positions, `rend${y}`)])),
+      inici: wavg(b.positions, "rendInici"),
+    }));
+  }, []);
+
   // ── Monthly cumulative YTD returns for current year ────────────────────────
   const currentYearMonthlyReturns = useMemo(() => {
     const cy = new Date().getFullYear();
@@ -414,6 +449,7 @@ export function PublicMarketsTab() {
         secLabel={secLabel}
         total={total}
         bucketValues={bucketValues}
+        bucketReturns={bucketReturns}
         ytdWeighted={ytdWeighted}
         portfolioTWR={portfolioTWR}
         portfolioMWR={portfolioMWR}

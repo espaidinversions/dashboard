@@ -9,6 +9,22 @@ import { SectionHeader } from "../SharedComponents.jsx";
 
 const _cy = new Date().getFullYear();
 
+const PERF_YEARS = [2023, 2024, 2025, 2026];
+
+function PerfCell({ v, tc }) {
+  if (v == null) return <td style={{ padding: "8px 12px", textAlign: "right", color: tc.textLight, fontFamily: "'DM Mono',monospace", fontSize: 12 }}>—</td>;
+  const pos = v > 0.05, neg = v < -0.05;
+  const color = pos ? tc.green : neg ? "#B52020" : tc.text;
+  const bg    = pos ? (tc.green + "18") : neg ? "#FDECEA" : "transparent";
+  return (
+    <td style={{ padding: "8px 12px", textAlign: "right" }}>
+      <span style={{ fontSize: 12, fontWeight: 700, color, background: bg, borderRadius: 4, padding: "2px 7px", fontFamily: "'DM Mono',monospace" }}>
+        {pos ? "+" : ""}{v.toFixed(2)}%
+      </span>
+    </td>
+  );
+}
+
 export function PublicMarketsSummarySection({
   tc,
   dark,
@@ -16,6 +32,7 @@ export function PublicMarketsSummarySection({
   secLabel,
   total,
   bucketValues = {},
+  bucketReturns = [],
   ytdWeighted,
   portfolioTWR,
   portfolioMWR,
@@ -51,6 +68,36 @@ export function PublicMarketsSummarySection({
         <KpiCard label="Renda Fixa – WAM" value={fmtM(bucketValues.rfWam ?? 0)} sub={`${pctSub(bucketValues.rfWam ?? 0)} · Andbank`} tc={tc} />
         <KpiCard label="Accions – IB" value={fmtM(bucketValues.accionsIB ?? 0)} sub={`${pctSub(bucketValues.accionsIB ?? 0)} · Interactive Brokers`} tc={tc} />
       </div>
+
+      {/* ── Bucket performance table ──────────────────────────────────────────── */}
+      {bucketReturns.length > 0 && (
+        <div style={{ ...card, overflowX: "auto" }}>
+          <div style={{ ...secLabel, marginBottom: 14 }}>Rendiment per Categoria</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: `2px solid ${tc.border}` }}>
+                <th style={{ padding: "6px 12px", textAlign: "left", fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }}>Categoria</th>
+                {PERF_YEARS.map(y => (
+                  <th key={y} style={{ padding: "6px 12px", textAlign: "right", fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }}>{y}</th>
+                ))}
+                <th style={{ padding: "6px 12px", textAlign: "right", fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 }}>Des d&apos;inici</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bucketReturns.map((b, i) => (
+                <tr key={b.id} style={{ borderBottom: `1px solid ${tc.border}`, background: i % 2 === 1 ? (dark ? tc.bgAlt : "#f8f9fb") : "transparent" }}>
+                  <td style={{ padding: "8px 12px", fontWeight: 500, color: tc.text, whiteSpace: "nowrap" }}>{b.label}</td>
+                  {PERF_YEARS.map(y => <PerfCell key={y} v={b.years[y]} tc={tc} />)}
+                  <PerfCell v={b.inici} tc={tc} />
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+            Retorn anual ponderat per valor de mercat. WAM: retorn acumulat 2026. Des d&apos;inici: retorn total acumulat.
+          </div>
+        </div>
+      )}
 
       {/* ── Monthly cumulative YTD returns ───────────────────────────────── */}
       {currentYearMonthlyReturns.length > 0 && (() => {
