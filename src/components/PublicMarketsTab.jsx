@@ -10,6 +10,7 @@ import {
   computePositionWeightedYtd,
   computeLastPriceDateForPositions,
   mtmStaleness,
+  isEtfPosition,
 } from "./publicMarkets/PublicMarketsShared.jsx";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
 import { loadPMOverrides } from "../db.js";
@@ -362,6 +363,45 @@ export function PublicMarketsTab() {
     });
   }, [chartMonths, chartView, custodianValueByMonth, totalValueSeries, typeValueByMonth]);
 
+  // ── Bucket KPI values ──────────────────────────────────────────────────────
+  const bucketValues = useMemo(() => {
+    const caixaPos = _custodianPositions.caixa;
+    const bkPos    = _custodianPositions.bankinter;
+
+    const caixaEtfMV  = caixaPos.filter(isEtfPosition).reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+    const caixaFgpMV  = caixaPos.filter(p => !isEtfPosition(p)).reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+    const caixaTotMV  = caixaEtfMV + caixaFgpMV;
+    const caixaEtfR   = caixaTotMV > 0 ? caixaEtfMV / caixaTotMV : 0;
+
+    const bkEtfMV     = bkPos.filter(isEtfPosition).reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+    const bkFgpMV     = bkPos.filter(p => !isEtfPosition(p)).reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+    const bkTotMV     = bkEtfMV + bkFgpMV;
+    const bkEtfR      = bkTotMV > 0 ? bkEtfMV / bkTotMV : 1;
+
+    return {
+      etfs:        currentManagerValues.caixa * caixaEtfR + currentManagerValues.bankinter * bkEtfR,
+      fgpCaixa:    currentManagerValues.caixa * (1 - caixaEtfR),
+      fgpBankinter: currentManagerValues.bankinter * (1 - bkEtfR),
+      rfWam:       currentManagerValues.andbank,
+      accionsIB:   currentManagerValues.ib,
+    };
+  }, [currentManagerValues]);
+
+  // ── Monthly cumulative YTD returns for current year ────────────────────────
+  const currentYearMonthlyReturns = useMemo(() => {
+    const cy = new Date().getFullYear();
+    const baseRow = pmMonthly.find(m => m.date === `${cy - 1}-12`);
+    const baseVal = baseRow
+      ? (baseRow.caixaRV ?? 0) + (baseRow.caixaRF ?? 0) + (baseRow.ubsRV ?? 0) + (baseRow.ubsRF ?? 0) + (baseRow.abelBK ?? 0)
+      : 0;
+    return pmMonthly
+      .filter(m => m.date?.startsWith(String(cy)))
+      .map(m => {
+        const val = (m.caixaRV ?? 0) + (m.caixaRF ?? 0) + (m.ubsRV ?? 0) + (m.ubsRF ?? 0) + (m.abelBK ?? 0);
+        return { date: m.date, ret: baseVal > 0 ? (val - baseVal) / baseVal * 100 : null };
+      });
+  }, [pmMonthly]);
+
   const card = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
   const secLabel = { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 };
 
@@ -373,8 +413,7 @@ export function PublicMarketsTab() {
         card={card}
         secLabel={secLabel}
         total={total}
-        totalRV={totalRV}
-        totalRF={totalRF}
+        bucketValues={bucketValues}
         ytdWeighted={ytdWeighted}
         portfolioTWR={portfolioTWR}
         portfolioMWR={portfolioMWR}
@@ -389,6 +428,7 @@ export function PublicMarketsTab() {
         totalValueSeries={totalValueSeries}
         reportStartMonth={reportStartMonth}
         transactions={allTransactions}
+        currentYearMonthlyReturns={currentYearMonthlyReturns}
       />
 
       <PublicMarketsTablesSection

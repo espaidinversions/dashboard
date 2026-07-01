@@ -7,14 +7,15 @@ import { FilterPills } from "./PublicMarketsFilters.jsx";
 import { AREA_COLORS, KpiCard, MGR_COLORS, pctFmt } from "./PublicMarketsShared.jsx";
 import { SectionHeader } from "../SharedComponents.jsx";
 
+const _cy = new Date().getFullYear();
+
 export function PublicMarketsSummarySection({
   tc,
   dark,
   card,
   secLabel,
   total,
-  totalRV,
-  totalRF,
+  bucketValues = {},
   ytdWeighted,
   portfolioTWR,
   portfolioMWR,
@@ -29,22 +30,93 @@ export function PublicMarketsSummarySection({
   totalValueSeries,
   reportStartMonth,
   transactions,
+  currentYearMonthlyReturns = [],
 }) {
+  const pctSub = (v) => total > 0 && v > 0 ? `${(v / total * 100).toFixed(1)}% del total` : "—";
   return (
     <>
       <SectionHeader title="Resum" tc={tc} />
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
         <KpiCard label="Total Patrimoni" value={fmtM(total)} sub="Mercats Públics" tc={tc} hero />
-        <KpiCard label="Renda Variable" value={fmtM(totalRV)} sub={total > 0 ? `${(totalRV / total * 100).toFixed(1)}% del total` : "—"} tc={tc} />
-        <KpiCard label="Renda Fixa" value={fmtM(totalRF)} sub={total > 0 ? `${(totalRF / total * 100).toFixed(1)}% del total` : "—"} tc={tc} />
         <KpiCard label="YTD Global" value={pctFmt(ytdWeighted)} sub="Ponderat per AUM" tc={tc} valueColor={ytdWeighted >= 0 ? tc.green : tc.red} />
         <KpiCard label={`TWR Cartera (${fmtMonthKey(reportStartMonth)})`} value={pctFmt(portfolioTWR)} sub="Retorn acumulat, sense fluxos (excl. Andbank, JPMorgan)" tc={tc} valueColor={portfolioTWR != null ? (portfolioTWR >= 0 ? tc.green : tc.red) : tc.textLight} />
         <KpiCard label={`MWR Cartera (${fmtMonthKey(reportStartMonth)})`} value={pctFmt(portfolioMWR)} sub="Anualitzat, Modified Dietz (excl. Andbank, JPMorgan)" tc={tc} valueColor={portfolioMWR != null ? (portfolioMWR >= 0 ? tc.green : tc.red) : tc.textLight} />
       </div>
 
+      {/* ── Bucket breakdown ─────────────────────────────────────────────── */}
+      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+        <KpiCard label="ETFs" value={fmtM(bucketValues.etfs ?? 0)} sub={`${pctSub(bucketValues.etfs ?? 0)} · CaixaBank + Bankinter`} tc={tc} />
+        <KpiCard label="Fons Gestió Pròpia CaixaBank" value={fmtM(bucketValues.fgpCaixa ?? 0)} sub={pctSub(bucketValues.fgpCaixa ?? 0)} tc={tc} />
+        <KpiCard label="Fons Gestió Pròpia Bankinter" value={fmtM(bucketValues.fgpBankinter ?? 0)} sub={pctSub(bucketValues.fgpBankinter ?? 0)} tc={tc} />
+        <KpiCard label="Renda Fixa – WAM" value={fmtM(bucketValues.rfWam ?? 0)} sub={`${pctSub(bucketValues.rfWam ?? 0)} · Andbank`} tc={tc} />
+        <KpiCard label="Accions – IB" value={fmtM(bucketValues.accionsIB ?? 0)} sub={`${pctSub(bucketValues.accionsIB ?? 0)} · Interactive Brokers`} tc={tc} />
+      </div>
+
+      {/* ── Monthly cumulative YTD returns ───────────────────────────────── */}
+      {currentYearMonthlyReturns.length > 0 && (() => {
+        const theme = ecTheme(tc);
+        const lastRet = currentYearMonthlyReturns[currentYearMonthlyReturns.length - 1]?.ret;
+        const retColor = lastRet == null ? tc.textLight : lastRet >= 0 ? tc.green : "#B52020";
+        const option = {
+          grid: { top: 8, right: 16, bottom: 32, left: 0, containLabel: true },
+          tooltip: {
+            ...theme.tooltip,
+            trigger: "axis",
+            formatter: (params) => {
+              const p = params[0];
+              if (!p || p.value == null) return "";
+              const sign = p.value >= 0 ? "+" : "";
+              return `<div style="font-weight:600">${fmtMonthKey(p.axisValue)}</div><div>${p.marker}Cartera: ${sign}${p.value.toFixed(2)}%</div>`;
+            },
+          },
+          xAxis: {
+            type: "category",
+            data: currentYearMonthlyReturns.map(d => d.date),
+            axisLabel: { fontSize: 10, color: tc.textLight, formatter: fmtMonthKey },
+            axisLine: { show: false },
+            axisTick: { show: false },
+          },
+          yAxis: {
+            type: "value",
+            axisLabel: { fontSize: 10, color: tc.textLight, formatter: v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%` },
+            splitLine: { lineStyle: { color: tc.border } },
+            axisLine: { show: false },
+            axisTick: { show: false },
+          },
+          series: [{
+            name: "Retorn acumulat",
+            type: "line",
+            data: currentYearMonthlyReturns.map(d => d.ret),
+            lineStyle: { color: retColor, width: 2.5 },
+            itemStyle: { color: retColor },
+            areaStyle: {
+              color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1,
+                colorStops: [{ offset: 0, color: `${retColor}30` }, { offset: 1, color: `${retColor}05` }] },
+            },
+            symbol: "circle",
+            symbolSize: 7,
+            markLine: {
+              data: [{ yAxis: 0 }],
+              lineStyle: { color: tc.border, type: "dashed", width: 1 },
+              symbol: "none",
+              label: { show: false },
+            },
+          }],
+        };
+        return (
+          <div style={card}>
+            <div style={{ ...secLabel, marginBottom: 16 }}>Retorn acumulat {_cy} — per mes</div>
+            <ReactECharts option={option} style={{ width: "100%", height: 200 }} opts={{ renderer: "canvas" }} />
+            <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+              Retorn acumulat des del desembre {_cy - 1}. Inclou CaixaBank, UBS i Bankinter+IB (abelBK). Excl. Andbank i JPMorgan.
+            </div>
+          </div>
+        );
+      })()}
+
       <div style={{ display: "flex", gap: 16 }}>
         <div style={{ ...card, flex: "1 1 58%" }}>
-          <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment TWR per Proveïdor</div>
+          <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment MWR per Any i Proveïdor</div>
           {(() => {
             const theme = ecTheme(tc);
             const option = {

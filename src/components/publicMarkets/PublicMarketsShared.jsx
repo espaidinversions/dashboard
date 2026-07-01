@@ -70,11 +70,12 @@ function custodianMatch(custodians) {
 
 export function getMgrPositions(mgrId) {
   let custodians;
-  if (mgrId === "caixa")       custodians = ["CaixaBank"];
-  else if (mgrId === "ubs")    custodians = ["UBS", "Credit Suisse"];
+  if (mgrId === "caixa")          custodians = ["CaixaBank"];
+  else if (mgrId === "ubs")       custodians = ["UBS", "Credit Suisse"];
   else if (mgrId === "bankinter") custodians = ["Bankinter"];
+  else if (mgrId === "ib")        custodians = ["Interactive Brokers"];
   else if (mgrId === "jpmorgan")  custodians = ["JPMorgan"];
-  else return null; // ib and andbank: aggregated only, no drill-down
+  else return null; // andbank: aggregated only, no drill-down
 
   const match = custodianMatch(custodians);
   const active = PM_POSITIONS.filter(match)
@@ -87,7 +88,8 @@ export function getMgrPositions(mgrId) {
 }
 
 export function isEtfPosition(pos) {
-  return pos?.nom?.toUpperCase().includes("ETF") ?? false;
+  const nom = (pos?.nom ?? "").toUpperCase();
+  return nom.includes("ETF") || nom.includes("ISHARES") || nom.includes("XETRA");
 }
 
 export function computeWeightedTer(positions) {
