@@ -73,9 +73,8 @@ export function getMgrPositions(mgrId) {
   if (mgrId === "caixa")          custodians = ["CaixaBank"];
   else if (mgrId === "ubs")       custodians = ["UBS", "Credit Suisse"];
   else if (mgrId === "bankinter") custodians = ["Bankinter"];
-  else if (mgrId === "ib")        custodians = ["Interactive Brokers"];
   else if (mgrId === "jpmorgan")  custodians = ["JPMorgan"];
-  else return null; // andbank: aggregated only, no drill-down
+  else return null; // andbank, ib: aggregated only, no drill-down
 
   const match = custodianMatch(custodians);
   const active = PM_POSITIONS.filter(match)

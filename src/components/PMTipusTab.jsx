@@ -65,9 +65,9 @@ function getBucketPositions(bucketId) {
     case "fgp-bankinter":
       return PM_POSITIONS.filter(p => p.custodian === "Bankinter" && !isEtfPosition(p));
     case "rf-wam":
-      return WAM_POSITIONS;
+      return [];
     case "accions-ib":
-      return PM_POSITIONS.filter(p => p.custodian === "Interactive Brokers");
+      return [];
     default:
       return [...PM_POSITIONS, ...WAM_POSITIONS];
   }
