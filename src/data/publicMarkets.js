@@ -85,6 +85,10 @@ export const PM_MONTHLY = [
   { date:"2026-01", label:"Gen '26", caixaRV:8_244_136, caixaRF:4_049_948, ubsRV:10_995_276, ubsRF:2_244_148, abelBK:13_577_708, andbank:6_064_452 },
   { date:"2026-02", label:"Feb '26", caixaRV:8_192_127, caixaRF:3_990_758, ubsRV:11_031_708, ubsRF:2_220_845, abelBK:13_544_782, andbank:6_076_557 },
   { date:"2026-03", label:"Mar '26", caixaRV:8_037_347, caixaRF:3_990_758, ubsRV:10_704_128, ubsRF:2_220_845, abelBK:20_933_017, andbank:6_088_661, cashflows:{ abelBK:7_388_235 } },
+  { date:"2026-04", label:"Abr '26", caixaRV:7_386_176, caixaRF:3_617_793, ubsRV:25_981_483, ubsRF:2_711_658, abelBK:23_123_697, andbank:6_088_661 },
+  { date:"2026-05", label:"Mai '26", caixaRV:7_719_423, caixaRF:3_652_971, ubsRV:27_446_614, ubsRF:2_731_147, abelBK:23_701_753, andbank:6_088_661 },
+  { date:"2026-06", label:"Jun '26", caixaRV:7_748_490, caixaRF:3_667_746, ubsRV:27_501_307, ubsRF:2_743_760, abelBK:23_649_431, andbank:6_088_661 },
+  { date:"2026-07", label:"Jul '26", caixaRV:7_748_490, caixaRF:3_667_746, ubsRV:27_501_307, ubsRF:2_743_760, abelBK:23_649_431, andbank:6_088_661 },
 ];
 
 const PM_MONTHLY_BY_DATE = Object.fromEntries(PM_MONTHLY.map(m => [m.date, m]));

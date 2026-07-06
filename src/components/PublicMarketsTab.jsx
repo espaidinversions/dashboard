@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useTheme } from "../theme.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
+import { ALL_PRICE_SERIES } from "../data/allPrices.js";
 import { summarizeLatestPmValues } from "../data/pmValueUtils.js";
 import { buildGroupedMonthlySeriesFromNestedValues, buildMonthlySeriesFromNestedValues } from "../chartSeries.js";
 import {
@@ -60,7 +61,7 @@ export function PublicMarketsTab() {
   const { tc, dark } = useTheme();
   const [chartView, setChartView] = useState("total");
   const [expanded, setExpanded] = useState(new Set());
-  const [flowGroupBy, setFlowGroupBy] = useState("total");
+  const [flowGroupBy, setFlowGroupBy] = useState("position");
   const [manualTxs, setManualTxs] = useState([]);
   const { monthly: pmMonthly, managerOverrides } = usePmMonthly();
   const effectiveManagers = useMemo(
@@ -397,7 +398,14 @@ export function PublicMarketsTab() {
       for (const p of positions) {
         const v = p[field];
         if (v == null) continue;
-        const pct = wamIds.has(p.id ?? p.isin) ? v : v * 100;
+        let pct;
+        if (wamIds.has(p.id ?? p.isin) || field === "rendInici") {
+          pct = v; // WAM always %, rendInici always % for all PM positions
+        } else if (Math.abs(v) > 150) {
+          continue; // drop data errors (e.g. 544%)
+        } else {
+          pct = Math.abs(v) > 0.5 ? v : v * 100;
+        }
         sum += pct * (p.valorMercat ?? 0);
         w   += (p.valorMercat ?? 0);
       }
@@ -422,19 +430,81 @@ export function PublicMarketsTab() {
     }));
   }, []);
 
-  // ── Monthly cumulative YTD returns for current year ────────────────────────
+  // ── Monthly cumulative YTD returns per bucket ─────────────────────────────
   const currentYearMonthlyReturns = useMemo(() => {
     const cy = new Date().getFullYear();
-    const baseRow = pmMonthly.find(m => m.date === `${cy - 1}-12`);
-    const baseVal = baseRow
-      ? (baseRow.caixaRV ?? 0) + (baseRow.caixaRF ?? 0) + (baseRow.ubsRV ?? 0) + (baseRow.ubsRF ?? 0) + (baseRow.abelBK ?? 0)
-      : 0;
-    return pmMonthly
-      .filter(m => m.date?.startsWith(String(cy)))
-      .map(m => {
-        const val = (m.caixaRV ?? 0) + (m.caixaRF ?? 0) + (m.ubsRV ?? 0) + (m.ubsRF ?? 0) + (m.abelBK ?? 0);
-        return { date: m.date, ret: baseVal > 0 ? (val - baseVal) / baseVal * 100 : null };
-      });
+    const baseMonthKey = `${cy - 1}-12`;
+
+    const etfPos   = [
+      ..._custodianPositions.caixa.filter(p => isEtfPosition(p) && p.isin && p.unitats),
+      ..._custodianPositions.bankinter.filter(p => isEtfPosition(p) && p.isin && p.unitats),
+    ];
+    const cbPos    = _custodianPositions.caixa.filter(p => !isEtfPosition(p) && p.isin && p.unitats);
+    const bkFgpPos = _custodianPositions.bankinter.filter(p => !isEtfPosition(p) && p.isin && p.unitats);
+    const bkAllPos = _custodianPositions.bankinter.filter(p => p.isin && p.unitats);
+
+    function valueAt(positions, monthKey) {
+      return positions.reduce((sum, pos) => {
+        const series = ALL_PRICE_SERIES[pos.isin];
+        const entry  = series?.find(([m]) => m === monthKey);
+        return sum + (entry != null ? entry[1] * pos.unitats : (pos.valorMercat ?? 0));
+      }, 0);
+    }
+
+    const pmByDate  = Object.fromEntries(pmMonthly.map(m => [m.date, m]));
+    const etfBase   = valueAt(etfPos,    baseMonthKey);
+    const cbBase    = valueAt(cbPos,     baseMonthKey);
+    const bkBase    = valueAt(bkFgpPos,  baseMonthKey);
+    const wamBase   = pmByDate[baseMonthKey]?.andbank ?? 0;
+    const abelBase  = pmByDate[baseMonthKey]?.abelBK  ?? 0;
+    const bkAllBase = valueAt(bkAllPos,  baseMonthKey);
+    const ibBase    = Math.max(abelBase - bkAllBase, 0);
+    const totalBase = etfBase + cbBase + bkBase + wamBase + ibBase;
+
+    if (totalBase <= 0) return [];
+
+    const now      = new Date();
+    const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const months   = ["01","02","03","04","05","06","07","08","09","10","11","12"]
+      .map(mm => `${cy}-${mm}`)
+      .filter(m => m <= curMonth);
+
+    // TWR for IB: derived as abelBK − all-Bankinter-ISIN, adjusted for abelBK cashflows
+    let ibCum     = 1;
+    let prevIbRaw = ibBase;
+    const ibTwrMap = {};
+    for (const monthKey of months) {
+      const pm = pmByDate[monthKey];
+      if (!pm?.abelBK) { ibTwrMap[monthKey] = null; continue; }
+      const currBkAll = valueAt(bkAllPos, monthKey);
+      const currIbRaw = pm.abelBK - currBkAll;
+      const cf        = pm.cashflows?.abelBK ?? 0;
+      const denom     = prevIbRaw + cf;
+      if (denom > 0) ibCum *= (1 + (currIbRaw - prevIbRaw - cf) / denom);
+      ibTwrMap[monthKey] = ibBase > 0 ? (ibCum - 1) * 100 : null;
+      prevIbRaw = currIbRaw;
+    }
+
+    return months.map(monthKey => {
+      const etfVal = valueAt(etfPos,    monthKey);
+      const cbVal  = valueAt(cbPos,     monthKey);
+      const bkVal  = valueAt(bkFgpPos,  monthKey);
+      const pm     = pmByDate[monthKey];
+      const wamVal = pm?.andbank ?? null;
+      const ibRet  = ibTwrMap[monthKey];
+      const ibEstV = ibBase > 0 && ibRet != null ? ibBase * (1 + ibRet / 100) : ibBase;
+      const totVal = etfVal + cbVal + bkVal + (wamVal ?? wamBase) + ibEstV;
+
+      return {
+        date:  monthKey,
+        etfs:  etfBase  > 0 ? (etfVal - etfBase) / etfBase * 100 : null,
+        cb:    cbBase   > 0 ? (cbVal  - cbBase)  / cbBase  * 100 : null,
+        bk:    bkBase   > 0 ? (bkVal  - bkBase)  / bkBase  * 100 : null,
+        wam:   wamBase  > 0 && wamVal != null ? (wamVal - wamBase) / wamBase * 100 : null,
+        ib:    ibTwrMap[monthKey],
+        total: (totVal  - totalBase) / totalBase * 100,
+      };
+    });
   }, [pmMonthly]);
 
   const card = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
@@ -453,9 +523,6 @@ export function PublicMarketsTab() {
         ytdWeighted={ytdWeighted}
         portfolioTWR={portfolioTWR}
         portfolioMWR={portfolioMWR}
-        providerData={providerData}
-        strategyData={strategyData}
-        displayManagers={displayManagers}
         chartView={chartView}
         setChartView={setChartView}
         chartData={chartData}

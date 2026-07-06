@@ -36,9 +36,6 @@ export function PublicMarketsSummarySection({
   ytdWeighted,
   portfolioTWR,
   portfolioMWR,
-  providerData,
-  strategyData,
-  displayManagers,
   chartView,
   setChartView,
   chartData,
@@ -99,23 +96,62 @@ export function PublicMarketsSummarySection({
         </div>
       )}
 
-      {/* ── Monthly cumulative YTD returns ───────────────────────────────── */}
+      {/* ── Monthly cumulative YTD returns per bucket ────────────────────── */}
       {currentYearMonthlyReturns.length > 0 && (() => {
         const theme = ecTheme(tc);
-        const lastRet = currentYearMonthlyReturns[currentYearMonthlyReturns.length - 1]?.ret;
-        const retColor = lastRet == null ? tc.textLight : lastRet >= 0 ? tc.green : "#B52020";
+        const BUCKETS = [
+          { key: "etfs", name: "ETFs",    color: "#2B5070" },
+          { key: "cb",   name: "Fons CB", color: "#4A90D9" },
+          { key: "bk",   name: "Fons BK", color: "#7FB3E0" },
+          { key: "wam",  name: "WAM",     color: "#E8A020" },
+          { key: "ib",   name: "IB",      color: "#28A029" },
+        ];
+        const series = [
+          ...BUCKETS.map(b => ({
+            name: b.name,
+            type: "line",
+            data: currentYearMonthlyReturns.map(d => d[b.key] ?? null),
+            lineStyle: { color: b.color, width: 1.8 },
+            itemStyle: { color: b.color },
+            symbol: "circle",
+            symbolSize: 5,
+            connectNulls: false,
+          })),
+          {
+            name: "Total",
+            type: "line",
+            data: currentYearMonthlyReturns.map(d => d.total ?? null),
+            lineStyle: { color: tc.textLight, width: 2.5, type: "dashed" },
+            itemStyle: { color: tc.textLight },
+            symbol: "circle",
+            symbolSize: 6,
+            connectNulls: false,
+            markLine: {
+              data: [{ yAxis: 0 }],
+              lineStyle: { color: tc.border, type: "solid", width: 1 },
+              symbol: "none",
+              label: { show: false },
+            },
+          },
+        ];
         const option = {
-          grid: { top: 8, right: 16, bottom: 32, left: 0, containLabel: true },
+          grid: { top: 8, right: 16, bottom: 56, left: 0, containLabel: true },
           tooltip: {
             ...theme.tooltip,
             trigger: "axis",
             formatter: (params) => {
-              const p = params[0];
-              if (!p || p.value == null) return "";
-              const sign = p.value >= 0 ? "+" : "";
-              return `<div style="font-weight:600">${fmtMonthKey(p.axisValue)}</div><div>${p.marker}Cartera: ${sign}${p.value.toFixed(2)}%</div>`;
+              const p0 = params[0];
+              if (!p0) return "";
+              let html = `<div style="font-weight:600;margin-bottom:4px">${fmtMonthKey(p0.axisValue)}</div>`;
+              params.forEach(p => {
+                if (p.value == null) return;
+                const sign = p.value >= 0 ? "+" : "";
+                html += `<div>${p.marker}${p.seriesName}: ${sign}${p.value.toFixed(2)}%</div>`;
+              });
+              return html;
             },
           },
+          legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
           xAxis: {
             type: "category",
             data: currentYearMonthlyReturns.map(d => d.date),
@@ -130,169 +166,91 @@ export function PublicMarketsSummarySection({
             axisLine: { show: false },
             axisTick: { show: false },
           },
-          series: [{
-            name: "Retorn acumulat",
-            type: "line",
-            data: currentYearMonthlyReturns.map(d => d.ret),
-            lineStyle: { color: retColor, width: 2.5 },
-            itemStyle: { color: retColor },
-            areaStyle: {
-              color: { type: "linear", x: 0, y: 0, x2: 0, y2: 1,
-                colorStops: [{ offset: 0, color: `${retColor}30` }, { offset: 1, color: `${retColor}05` }] },
-            },
-            symbol: "circle",
-            symbolSize: 7,
-            markLine: {
-              data: [{ yAxis: 0 }],
-              lineStyle: { color: tc.border, type: "dashed", width: 1 },
-              symbol: "none",
-              label: { show: false },
-            },
-          }],
+          series,
         };
         return (
           <div style={card}>
             <div style={{ ...secLabel, marginBottom: 16 }}>Retorn acumulat {_cy} — per mes</div>
-            <ReactECharts option={option} style={{ width: "100%", height: 200 }} opts={{ renderer: "canvas" }} />
+            <ReactECharts option={option} style={{ width: "100%", height: 260 }} opts={{ renderer: "canvas" }} />
             <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-              Retorn acumulat des del desembre {_cy - 1}. Inclou CaixaBank, UBS i Bankinter+IB (abelBK). Excl. Andbank i JPMorgan.
+              Retorn acumulat des del desembre {_cy - 1}. ETFs/Fons CB/BK: sèries de preus × participacions. WAM i IB: valor agregat mensual (IB ajustat TWR per fluxos).
             </div>
           </div>
         );
       })()}
 
-      <div style={{ display: "flex", gap: 16 }}>
-        <div style={{ ...card, flex: "1 1 58%" }}>
-          <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment MWR per Any i Proveïdor</div>
-          {(() => {
-            const theme = ecTheme(tc);
-            const option = {
-              grid: { top: 8, right: 16, bottom: 40, left: 0, containLabel: true },
-              tooltip: {
-                ...theme.tooltip,
-                trigger: "axis",
-                formatter: (params) => {
-                  const label = params[0]?.axisValue ?? "";
-                  let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
-                  params.forEach((param) => {
-                    if (param.value == null) return;
-                    html += `<div>${param.marker}${param.seriesName}: ${pctFmt(param.value)}</div>`;
-                  });
-                  return html;
-                },
-              },
-              legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
-              xAxis: {
-                type: "category",
-                data: providerData.map((point) => point.year),
-                axisLabel: { fontSize: 11, color: tc.textLight },
-                axisLine: { show: false },
-                axisTick: { show: false },
-              },
-              yAxis: {
-                type: "value",
-                axisLabel: { fontSize: 10, color: tc.textLight, formatter: (value) => `${value.toFixed(1)}%` },
-                splitLine: { lineStyle: { color: tc.border } },
-                axisLine: { show: false },
-                axisTick: { show: false },
-              },
-              series: displayManagers.map((manager, index) => ({
-                name: manager.nom,
-                type: "bar",
-                data: providerData.map((point) => point[manager.id] ?? null),
-                itemStyle: { color: MGR_COLORS[manager.id], borderRadius: [3, 3, 0, 0] },
-                barMaxWidth: 28,
-                markLine: index === 0
-                  ? {
-                      data: [{ yAxis: 0 }],
-                      lineStyle: { color: tc.border, type: "dashed", width: 1 },
-                      symbol: "none",
-                      label: { show: false },
-                    }
-                  : undefined,
-              })),
-            };
-            return <ReactECharts option={option} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />;
-          })()}
-          <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-            TWR reportat per cada gestor a partir dels snapshots mensuals del model. Les barres absents indiquen que el gestor no ha reportat rendiment per al període.
-          </div>
-        </div>
+      {bucketReturns.length > 0 && (() => {
+        const BUCKET_COLORS = {
+          "etfs":          "#2B5070",
+          "fgp-caixa":     "#4A90D9",
+          "fgp-bankinter": "#7FB3E0",
+          "rf-wam":        "#E8A020",
+          "accions-ib":    "#28A029",
+        };
+        const STRATEGY_COLORS = { rf: "#E8A020", etfs: "#2B5070", accions: "#28A029" };
+        const years = PERF_YEARS.map(String);
 
-        <div style={{ ...card, flex: "1 1 38%" }}>
-          <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment ponderat per Estratègia</div>
-          {(() => {
-            const theme = ecTheme(tc);
-            const option = {
-              grid: { top: 8, right: 16, bottom: 40, left: 0, containLabel: true },
-              tooltip: {
-                ...theme.tooltip,
-                trigger: "axis",
-                formatter: (params) => {
-                  const label = params[0]?.axisValue ?? "";
-                  let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
-                  params.forEach((param) => {
-                    if (param.value == null) return;
-                    html += `<div>${param.marker}${param.seriesName}: ${pctFmt(param.value)}</div>`;
-                  });
-                  return html;
-                },
-              },
-              legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
-              xAxis: {
-                type: "category",
-                data: strategyData.map((point) => point.year),
-                axisLabel: { fontSize: 11, color: tc.textLight },
-                axisLine: { show: false },
-                axisTick: { show: false },
-              },
-              yAxis: {
-                type: "value",
-                axisLabel: { fontSize: 10, color: tc.textLight, formatter: (value) => `${value.toFixed(1)}%` },
-                splitLine: { lineStyle: { color: tc.border } },
-                axisLine: { show: false },
-                axisTick: { show: false },
-              },
-              series: [
-                {
-                  name: "Renda Variable",
-                  type: "line",
-                  data: strategyData.map((point) => point.rv),
-                  lineStyle: { color: tc.navy, width: 2 },
-                  itemStyle: { color: tc.navy },
-                  symbol: "circle",
-                  symbolSize: 8,
-                  connectNulls: true,
-                },
-                {
-                  name: "Renda Fixa",
-                  type: "line",
-                  data: strategyData.map((point) => point.rf),
-                  lineStyle: { color: "#E8A020", width: 2 },
-                  itemStyle: { color: "#E8A020" },
-                  symbol: "circle",
-                  symbolSize: 8,
-                  connectNulls: true,
-                },
-                {
-                  name: "Total",
-                  type: "line",
-                  data: strategyData.map((point) => point.total),
-                  lineStyle: { color: tc.green, width: 2, type: "dashed" },
-                  itemStyle: { color: tc.green },
-                  symbol: "circle",
-                  symbolSize: 8,
-                  connectNulls: true,
-                },
-              ],
-            };
-            return <ReactECharts option={option} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />;
-          })()}
-          <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-            Ponderat per AUM de cada gestor. Gestors sense dades del any exclosos del còmput.
+        const mkBarOpt = (theme, series) => ({
+          grid: { top: 8, right: 16, bottom: 40, left: 0, containLabel: true },
+          tooltip: {
+            ...theme.tooltip, trigger: "axis",
+            formatter: (params) => {
+              const html = [`<div style="font-weight:600;margin-bottom:4px">${params[0]?.axisValue}</div>`];
+              params.forEach(p => { if (p.value != null) html.push(`<div>${p.marker}${p.seriesName}: ${p.value >= 0 ? "+" : ""}${p.value.toFixed(2)}%</div>`); });
+              return html.join("");
+            },
+          },
+          legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
+          xAxis: { type: "category", data: years, axisLabel: { fontSize: 11, color: tc.textLight }, axisLine: { show: false }, axisTick: { show: false } },
+          yAxis: { type: "value", axisLabel: { fontSize: 10, color: tc.textLight, formatter: v => `${v >= 0 ? "+" : ""}${v.toFixed(0)}%` }, splitLine: { lineStyle: { color: tc.border } }, axisLine: { show: false }, axisTick: { show: false } },
+          series,
+        });
+
+        const catSeries = bucketReturns.map(b => ({
+          name: b.label,
+          type: "bar",
+          data: PERF_YEARS.map(y => b.years[y] ?? null),
+          itemStyle: { color: BUCKET_COLORS[b.id], borderRadius: [3, 3, 0, 0] },
+          barMaxWidth: 20,
+          markLine: b.id === "etfs" ? { data: [{ yAxis: 0 }], lineStyle: { color: tc.border, type: "dashed", width: 1 }, symbol: "none", label: { show: false } } : undefined,
+        }));
+
+        const rfB      = bucketReturns.find(b => b.id === "rf-wam");
+        const etfB     = bucketReturns.find(b => b.id === "etfs");
+        const accionsB = bucketReturns.find(b => b.id === "accions-ib");
+        const stratSeries = [
+          { id: "etfs", name: "ETFs", src: etfB },
+          { id: "rf",   name: "Renda Fixa", src: rfB },
+          { id: "accions", name: "Accions", src: accionsB },
+        ].filter(s => s.src).map(s => ({
+          name: s.name,
+          type: "bar",
+          data: PERF_YEARS.map(y => s.src.years[y] ?? null),
+          itemStyle: { color: STRATEGY_COLORS[s.id], borderRadius: [3, 3, 0, 0] },
+          barMaxWidth: 28,
+          markLine: s.id === "etfs" ? { data: [{ yAxis: 0 }], lineStyle: { color: tc.border, type: "dashed", width: 1 }, symbol: "none", label: { show: false } } : undefined,
+        }));
+
+        const theme = ecTheme(tc);
+        return (
+          <div style={{ display: "flex", gap: 16 }}>
+            <div style={{ ...card, flex: "1 1 58%" }}>
+              <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment per Categoria · anual</div>
+              <ReactECharts option={mkBarOpt(theme, catSeries)} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />
+              <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+                Ponderat per valor de mercat. ETFs inclou CaixaBank i Bankinter. WAM: retorn acumulat 2026.
+              </div>
+            </div>
+            <div style={{ ...card, flex: "1 1 38%" }}>
+              <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment per Estratègia · anual</div>
+              <ReactECharts option={mkBarOpt(theme, stratSeries)} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />
+              <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
+                Renda Fixa = WAM · ETFs = CaixaBank + Bankinter · Accions = Interactive Brokers.
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       <div style={card}>
         <div style={{ display: "flex", alignItems: "center", marginBottom: 16, gap: 8, flexWrap: "wrap" }}>
@@ -460,9 +418,10 @@ export function PublicMarketsSummarySection({
           </div>
           <FilterPills
             options={[
-              { id: "total", label: "Total" },
-              { id: "assetType", label: "Per Actiu" },
+              { id: "position", label: "Per Posició" },
               { id: "custodian", label: "Per Custodi" },
+              { id: "assetType", label: "Per Actiu" },
+              { id: "total", label: "Total" },
             ]}
             value={flowGroupBy}
             onChange={setFlowGroupBy}
@@ -477,7 +436,8 @@ export function PublicMarketsSummarySection({
           valuesSeries={totalValueSeries}
           startMonth={reportStartMonth}
           groupBy={flowGroupBy}
-          height={240}
+          topN={20}
+          height={260}
         />
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
           Capital acumulat brut des de la primera mostra mensual: barres d'entrades i sortides de capital, amb línia de patrimoni mensual i línia agregada de capital. UBS i WAM–Andbank mostren les posicions dels PDFs, però no els moviments individuals.

@@ -43,12 +43,15 @@ const BUCKET_LABELS = {
 // Sections shown when toggle === "all"
 const ALL_SECTIONS = ["etfs", "fgp-caixa", "rf-wam", "accions-ib", "fgp-bankinter"];
 
-// PM_POSITIONS rend fields are decimal fractions (0.199 = 19.9%).
-// WAM rend fields are already in % form (4.44 = 4.44%).
+// rendInici: always % form for all positions (script: (valorMercat-costEur)/costEur*100).
+// rend${year}: mixed conventions — ETf's Espai sheet stores direct % (34.24 = 34.24%),
+// Master/IB stores decimal fractions (0.199 = 19.9%). Heuristic: |v| > 0.5 → % form.
 function rendPct(pos, field) {
   const v = pos[field];
   if (v == null) return null;
-  return pos.custodian === "Andbank" ? v : v * 100;
+  if (field === "rendInici" || pos.custodian === "Andbank") return v;
+  if (Math.abs(v) > 150) return null;
+  return Math.abs(v) > 0.5 ? v : v * 100;
 }
 
 function getBucketPositions(bucketId) {
