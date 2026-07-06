@@ -332,37 +332,53 @@ export function PublicMarketsTab() {
   const typeValueByMonth = useMemo(() => new Map(monthlyTypeValueSeries.map((row) => [row.date, row])), [monthlyTypeValueSeries]);
 
   const chartData = useMemo(() => {
+    const pmByDate = Object.fromEntries(pmMonthly.map(m => [m.date, m]));
+
     if (chartView === "total") {
       const totalByMonth = new Map(totalValueSeries.map((row) => [row.date, row.value]));
       return chartMonths.map((month) => ({ month, total: totalByMonth.get(month) ?? null }));
     }
-    if (chartView === "actiu") {
-      const totalByMonth = new Map(totalValueSeries.map((row) => [row.date, row.value]));
+
+    if (chartView === "estrategia") {
+      const caixaPos  = _custodianPositions.caixa;
+      const bkPos     = _custodianPositions.bankinter;
+      const caixaTot  = caixaPos.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+      const caixaEtfR = caixaTot > 0 ? caixaPos.filter(isEtfPosition).reduce((s, p) => s + (p.valorMercat ?? 0), 0) / caixaTot : 0;
+      const bkTot     = bkPos.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+      const bkEtfR    = bkTot > 0 ? bkPos.filter(isEtfPosition).reduce((s, p) => s + (p.valorMercat ?? 0), 0) / bkTot : 1;
+
       return chartMonths.map((month) => {
-        const tipus = typeValueByMonth.get(month) ?? {};
-        const rv = tipus.rv ?? 0;
-        const rf = tipus.rf ?? 0;
-        const totalValue = totalByMonth.get(month) ?? null;
-        const altres = totalValue == null ? null : Math.max(totalValue - rv - rf, 0);
-        return { month, rv, rf, altres };
+        const custodian = custodianValueByMonth.get(month) ?? {};
+        const caixa     = custodian.caixa ?? 0;
+        const bk        = custodian.bankinter ?? 0;
+        const ubs       = custodian.ubs ?? 0;
+        const etfs      = caixa * caixaEtfR + bk * bkEtfR;
+        const fgp       = caixa * (1 - caixaEtfR) + bk * (1 - bkEtfR) + ubs;
+        const pm        = pmByDate[month];
+        const wam       = pm?.andbank ?? 0;
+        const abelBK    = pm?.abelBK ?? null;
+        const ib        = abelBK != null ? Math.max(abelBK - bk, 0) : 0;
+        return { month, etfs, fgp, wam, ib };
       });
     }
 
-    // Custodian view: CS merged into UBS via groupPmCustodian; IB keyed as "ib".
+    // Custodian view: CS merged into UBS; WAM from PM_MONTHLY; IB derived from abelBK - bankinter.
     const totalByMonth = new Map(totalValueSeries.map((row) => [row.date, row.value]));
     return chartMonths.map((month) => {
       const custodian = custodianValueByMonth.get(month) ?? {};
       const caixa     = custodian.caixa ?? 0;
       const ubs       = custodian.ubs ?? 0;
       const bankinter = custodian.bankinter ?? 0;
-      const ib        = custodian.ib ?? 0;
-      const andbank   = custodian.andbank ?? 0;
       const jpmorgan  = custodian.jpmorgan ?? 0;
+      const pm        = pmByDate[month];
+      const andbank   = pm?.andbank ?? (custodian.andbank ?? 0);
+      const abelBK    = pm?.abelBK ?? null;
+      const interactiveBrokers = abelBK != null ? Math.max(abelBK - bankinter, 0) : (custodian.ib ?? 0);
       const totalValue = totalByMonth.get(month) ?? null;
-      const altres = totalValue == null ? null : Math.max(totalValue - caixa - ubs - bankinter - ib - andbank - jpmorgan, 0);
-      return { month, caixa, ubs, bankinter, ib, andbank, jpmorgan, altres };
+      const altres = totalValue == null ? null : Math.max(totalValue - caixa - ubs - bankinter - interactiveBrokers - andbank - jpmorgan, 0);
+      return { month, caixa, ubs, bankinter, interactiveBrokers, andbank, jpmorgan, altres };
     });
-  }, [chartMonths, chartView, custodianValueByMonth, totalValueSeries, typeValueByMonth]);
+  }, [chartMonths, chartView, custodianValueByMonth, totalValueSeries, typeValueByMonth, pmMonthly]);
 
   // ── Bucket KPI values ──────────────────────────────────────────────────────
   const bucketValues = useMemo(() => {

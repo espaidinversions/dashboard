@@ -187,7 +187,7 @@ export function PublicMarketsSummarySection({
           "rf-wam":        "#E8A020",
           "accions-ib":    "#28A029",
         };
-        const STRATEGY_COLORS = { rf: "#E8A020", etfs: "#2B5070", accions: "#28A029" };
+        const STRATEGY_COLORS = { rf: "#E8A020", etfs: "#2B5070", accions: "#28A029", fgp: "#4A90D9" };
         const years = PERF_YEARS.map(String);
 
         const mkBarOpt = (theme, series) => ({
@@ -218,11 +218,26 @@ export function PublicMarketsSummarySection({
         const rfB      = bucketReturns.find(b => b.id === "rf-wam");
         const etfB     = bucketReturns.find(b => b.id === "etfs");
         const accionsB = bucketReturns.find(b => b.id === "accions-ib");
+        const cbFgpB   = bucketReturns.find(b => b.id === "fgp-caixa");
+        const bkFgpB   = bucketReturns.find(b => b.id === "fgp-bankinter");
+        const cbW      = bucketValues.fgpCaixa ?? 0;
+        const bkW      = bucketValues.fgpBankinter ?? 0;
+        const fgpCombB = (cbFgpB || bkFgpB) ? {
+          id: "fgp",
+          years: Object.fromEntries(PERF_YEARS.map(y => {
+            const cbV = cbFgpB?.years[y], bkV = bkFgpB?.years[y];
+            if (cbV == null && bkV == null) return [y, null];
+            const ew = (cbV != null ? cbW : 0) + (bkV != null ? bkW : 0);
+            if (ew === 0) return [y, null];
+            return [y, ((cbV ?? 0) * (cbV != null ? cbW : 0) + (bkV ?? 0) * (bkV != null ? bkW : 0)) / ew];
+          })),
+        } : null;
         const stratSeries = [
-          { id: "etfs", name: "ETFs", src: etfB },
-          { id: "rf",   name: "Renda Fixa", src: rfB },
-          { id: "accions", name: "Accions", src: accionsB },
-        ].filter(s => s.src).map(s => ({
+          { id: "etfs",    name: "ETFs",               src: etfB },
+          { id: "fgp",     name: "Fons Gestió Pròpia", src: fgpCombB },
+          { id: "rf",      name: "Renda Fixa (WAM)",   src: rfB },
+          { id: "accions", name: "Accions (IB)",        src: accionsB },
+        ].filter(s => s.src?.years && Object.values(s.src.years).some(v => v != null)).map(s => ({
           name: s.name,
           type: "bar",
           data: PERF_YEARS.map(y => s.src.years[y] ?? null),
@@ -245,7 +260,7 @@ export function PublicMarketsSummarySection({
               <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment per Estratègia · anual</div>
               <ReactECharts option={mkBarOpt(theme, stratSeries)} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />
               <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-                Renda Fixa = WAM · ETFs = CaixaBank + Bankinter · Accions = Interactive Brokers.
+                ETFs = CaixaBank + Bankinter · FGP = fons gestió pròpia CB+BK (ponderat MV) · RF = WAM · Accions = IB.
               </div>
             </div>
           </div>
@@ -258,7 +273,7 @@ export function PublicMarketsSummarySection({
           <FilterPills
             options={[
               { id: "total", label: "Total" },
-              { id: "actiu", label: "Per Actiu" },
+              { id: "estrategia", label: "Per Estratègia" },
               { id: "gestor", label: "Per Custodi" },
             ]}
             value={chartView}
@@ -299,66 +314,47 @@ export function PublicMarketsSummarySection({
               symbol: "none",
               connectNulls: true,
             }];
-          } else if (chartView === "actiu") {
-            series = [
-              {
-                name: "Renda Variable",
-                type: "line",
-                smooth: false,
-                stack: "a",
-                data: chartData.map((row) => row.rv ?? null),
-                lineStyle: { color: AREA_COLORS.rv, width: 1.5 },
-                itemStyle: { color: AREA_COLORS.rv },
-                areaStyle: gradArea(AREA_COLORS.rv),
-                symbol: "none",
-                connectNulls: true,
-              },
-              {
-                name: "Renda Fixa",
-                type: "line",
-                smooth: false,
-                stack: "a",
-                data: chartData.map((row) => row.rf ?? null),
-                lineStyle: { color: AREA_COLORS.rf, width: 1.5 },
-                itemStyle: { color: AREA_COLORS.rf },
-                areaStyle: gradArea(AREA_COLORS.rf),
-                symbol: "none",
-                connectNulls: true,
-              },
-              {
-                name: "Altres / no assignat",
-                type: "line",
-                smooth: false,
-                stack: "a",
-                data: chartData.map((row) => row.altres ?? null),
-                lineStyle: { color: AREA_COLORS.altres, width: 1.5 },
-                itemStyle: { color: AREA_COLORS.altres },
-                areaStyle: gradArea(AREA_COLORS.altres),
-                symbol: "none",
-                connectNulls: true,
-              },
+          } else if (chartView === "estrategia") {
+            const ESTRAT = [
+              { key: "etfs", name: "ETFs",               color: "#2B5070" },
+              { key: "fgp",  name: "Fons Gestió Pròpia", color: "#4A90D9" },
+              { key: "wam",  name: "WAM",                color: "#E8A020" },
+              { key: "ib",   name: "IB",                 color: "#28A029" },
             ];
+            series = ESTRAT
+              .filter(({ key }) => chartData.some(row => (row[key] ?? 0) > 0))
+              .map(({ key, name, color }) => ({
+                name,
+                type: "line",
+                smooth: false,
+                stack: "e",
+                data: chartData.map((row) => row[key] ?? null),
+                lineStyle: { color, width: 1.5 },
+                itemStyle: { color },
+                areaStyle: gradArea(color),
+                symbol: "none",
+                connectNulls: true,
+              }));
           } else {
             series = [
-              { key: "andbank", name: "WAM–Andbank" },
-              { key: "interactiveBrokers", name: "Interactive Brokers" },
-              { key: "bankinter", name: "Bankinter" },
-              { key: "ubs", name: "UBS" },
-              { key: "creditSuisse", name: "Credit Suisse" },
-              { key: "caixa", name: "CaixaBank" },
-              { key: "jpmorgan", name: "JPMorgan" },
-              { key: "altres", name: "Altres / no assignat" },
+              { key: "andbank",            name: "WAM–Andbank",         color: AREA_COLORS.andbank },
+              { key: "interactiveBrokers", name: "Interactive Brokers",  color: AREA_COLORS.interactiveBrokers },
+              { key: "bankinter",          name: "Bankinter",            color: AREA_COLORS.bankinter },
+              { key: "ubs",                name: "UBS",                  color: AREA_COLORS.ubs },
+              { key: "caixa",              name: "CaixaBank",            color: AREA_COLORS.caixa },
+              { key: "jpmorgan",           name: "JPMorgan",             color: AREA_COLORS.jpmorgan },
+              { key: "altres",             name: "Altres / no assignat", color: AREA_COLORS.altres ?? "#B0B8C4" },
             ]
               .filter(({ key }) => chartData.some((row) => row[key] != null && row[key] > 0))
-              .map(({ key, name }) => ({
+              .map(({ key, name, color }) => ({
               name,
               type: "line",
               smooth: false,
               stack: "g",
               data: chartData.map((row) => row[key] ?? null),
-              lineStyle: { color: AREA_COLORS[key], width: 1.5 },
-              itemStyle: { color: AREA_COLORS[key] },
-              areaStyle: gradArea(AREA_COLORS[key]),
+              lineStyle: { color, width: 1.5 },
+              itemStyle: { color },
+              areaStyle: gradArea(color),
               symbol: "none",
               connectNulls: true,
             }));
@@ -404,10 +400,12 @@ export function PublicMarketsSummarySection({
 
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
           {chartView === "gestor"
-            ? "CaixaBank, UBS, Bankinter, Interactive Brokers, JPMorgan i WAM–Andbank per separat. Les sèries es reconstrueixen des de participacions i preus històrics."
+            ? "CaixaBank, UBS, Bankinter, Interactive Brokers (derivat d'abelBK), JPMorgan i WAM–Andbank (PM Monthly) per separat."
             : chartView === "total"
               ? "Sèrie històrica reconstruïda a partir de participacions i NAV històrics, amb fallback a valors importats quan falta preu."
-              : "Sèries mensuals reconstruïdes des de participacions i NAV històrics, amb residual per a posicions no assignades."}
+              : chartView === "estrategia"
+                ? "ETFs i FGP derivats del pes per MV actual × valor custodi mensual. WAM i IB des de PM Monthly (IB = abelBK − Bankinter)."
+                : "Sèries mensuals reconstruïdes des de participacions i NAV històrics, amb residual per a posicions no assignades."}
         </div>
       </div>
 
