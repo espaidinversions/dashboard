@@ -99,14 +99,14 @@ async function resolveEstimatedFxRates(rows) {
         { ...row, eur: row.amountNative },
         null,
       );
-      const { error } = await updateCapitalCall(row.id, payload);
+      const { error } = await updateCapitalCall(row._rowId, payload);
       if (error) throw error;
     }),
   );
 
   results.forEach((r, i) => {
     if (r.status === "rejected") {
-      console.warn(`[resolveEstimatedFxRates] row ${batch[i].id} failed:`, r.reason);
+      console.warn(`[resolveEstimatedFxRates] row ${batch[i]._rowId} failed:`, r.reason);
     }
   });
 
