@@ -36,6 +36,11 @@ const steps = [
     command: "node",
     args: ["scripts/pm_vehicle_value_report.mjs"],
   },
+  {
+    label: "Export turtle fons model JS",
+    command: "node",
+    args: ["scripts/turtle_fons_export_js.mjs"],
+  },
 ];
 
 for (const step of steps) {

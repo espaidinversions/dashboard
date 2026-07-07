@@ -13,6 +13,7 @@ import {
   forecastRowsToEditorData,
   preloadStaticCapitalCallData,
 } from "../data/prospectiveCashModel.js";
+import { TURTLE_FONS_MODEL } from "../data/turtleFonsModel.js";
 import {
   modeValue, fmtK, pct, signed, aggregateByYear, aggregateByFund,
   buildTable, selectStyle, buttonStyle,
@@ -209,8 +210,10 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
         if (cancelled) return;
         if (error) { setFetchError(error.message); setLoading(false); return; }
         const { editorData: derived, vehicleIds: ids } = forecastRowsToEditorData(data);
-        fetchedRef.current = derived;
-        setEditorData(derived);
+        // When Supabase has no saved rows, use the static turtle model as the starting point.
+        const resolved = Object.keys(derived.funds ?? {}).length > 0 ? derived : TURTLE_FONS_MODEL;
+        fetchedRef.current = resolved;
+        setEditorData(resolved);
         setVehicleIds(ids);
         if (!overridesError) setCommittedOverrides(overrides ?? {});
         setLoading(false);
