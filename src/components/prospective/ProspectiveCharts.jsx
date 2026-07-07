@@ -100,17 +100,17 @@ function fundDeviationChartOption({ rows, mode, tc, metric = "eur" }) {
 }
 
 export function MainChart({ rows, mode, tc, dark }) {
-  return <ReactECharts option={mainChartOption({ rows, mode, tc, dark })} style={{ height: 300 }} opts={{ renderer: "canvas" }} />;
+  return <ReactECharts key={mode} option={mainChartOption({ rows, mode, tc, dark })} style={{ height: 300 }} opts={{ renderer: "canvas" }} notMerge />;
 }
 
 export function CumulativeChart({ rows, mode, tc, dark }) {
-  return <ReactECharts option={cumulativeChartOption({ rows, mode, tc, dark })} style={{ height: 240 }} opts={{ renderer: "canvas" }} />;
+  return <ReactECharts key={mode} option={cumulativeChartOption({ rows, mode, tc, dark })} style={{ height: 240 }} opts={{ renderer: "canvas" }} notMerge />;
 }
 
 export function DeviationChart({ rows, mode, tc, dark }) {
-  return <ReactECharts option={deviationChartOption({ rows, mode, tc, dark })} style={{ height: 240 }} opts={{ renderer: "canvas" }} />;
+  return <ReactECharts key={mode} option={deviationChartOption({ rows, mode, tc, dark })} style={{ height: 240 }} opts={{ renderer: "canvas" }} notMerge />;
 }
 
 export function FundDeviationChart({ rows, mode, tc, dark, metric }) {
-  return <ReactECharts option={fundDeviationChartOption({ rows, mode, tc, dark, metric })} style={{ height: 320 }} opts={{ renderer: "canvas" }} />;
+  return <ReactECharts key={`${mode}-${metric}`} option={fundDeviationChartOption({ rows, mode, tc, dark, metric })} style={{ height: 320 }} opts={{ renderer: "canvas" }} notMerge />;
 }
