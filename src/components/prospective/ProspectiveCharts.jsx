@@ -1,5 +1,4 @@
-import React from "react";
-import ReactECharts from "../../ReactECharts.jsx";
+import React, { useEffect, useRef } from "react";
 import { ecTheme } from "../../echartsTheme.js";
 import { modeValue, fmtK, periodOf } from "./prospectiveUtils.js";
 
@@ -99,18 +98,53 @@ function fundDeviationChartOption({ rows, mode, tc, metric = "eur" }) {
   };
 }
 
+// Direct ECharts hook — bypasses echarts-for-react to guarantee updates on every render.
+function useEChart(style) {
+  const divRef = useRef(null);
+  const chartRef = useRef(null);
+  const optionRef = useRef(null);
+
+  useEffect(() => {
+    let chart;
+    import("../../echarts.js").then(({ echarts }) => {
+      if (!divRef.current) return;
+      chart = echarts.init(divRef.current);
+      chartRef.current = chart;
+      if (optionRef.current) chart.setOption(optionRef.current, true);
+    });
+    return () => {
+      chart?.dispose();
+      chartRef.current = null;
+    };
+  }, []);
+
+  function setOption(option) {
+    optionRef.current = option;
+    if (chartRef.current) chartRef.current.setOption(option, true);
+  }
+
+  return { divRef, setOption };
+}
+
+function EChart({ option, style }) {
+  const { divRef, setOption } = useEChart(style);
+  // Run after every render so the chart always reflects the latest option.
+  useEffect(() => { setOption(option); });
+  return <div ref={divRef} style={style} />;
+}
+
 export function MainChart({ rows, mode, tc, dark }) {
-  return <ReactECharts key={mode} option={mainChartOption({ rows, mode, tc, dark })} style={{ height: 300 }} opts={{ renderer: "canvas" }} notMerge />;
+  return <EChart option={mainChartOption({ rows, mode, tc, dark })} style={{ height: 300 }} />;
 }
 
 export function CumulativeChart({ rows, mode, tc, dark }) {
-  return <ReactECharts key={mode} option={cumulativeChartOption({ rows, mode, tc, dark })} style={{ height: 240 }} opts={{ renderer: "canvas" }} notMerge />;
+  return <EChart option={cumulativeChartOption({ rows, mode, tc, dark })} style={{ height: 240 }} />;
 }
 
 export function DeviationChart({ rows, mode, tc, dark }) {
-  return <ReactECharts key={mode} option={deviationChartOption({ rows, mode, tc, dark })} style={{ height: 240 }} opts={{ renderer: "canvas" }} notMerge />;
+  return <EChart option={deviationChartOption({ rows, mode, tc, dark })} style={{ height: 240 }} />;
 }
 
 export function FundDeviationChart({ rows, mode, tc, dark, metric }) {
-  return <ReactECharts key={`${mode}-${metric}`} option={fundDeviationChartOption({ rows, mode, tc, dark, metric })} style={{ height: 320 }} opts={{ renderer: "canvas" }} notMerge />;
+  return <EChart option={fundDeviationChartOption({ rows, mode, tc, dark, metric })} style={{ height: 320 }} />;
 }
