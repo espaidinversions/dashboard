@@ -133,11 +133,16 @@ export function aggregateByFund(rows) {
 }
 
 export function buildTable({ rows, committed, firstCall, metricsByFund = {}, fund, tableType, visibleYears, yearFilters, vintageFilter, sort }) {
+  // Paid-in (real calls) and distributed (real distributions) both come straight
+  // from the cap-calls-derived rows, keyed by the same mapped fund name used
+  // everywhere else — so DPI resolves for every fund with calls (fixes funds that
+  // had distributions but a blank DPI due to raw-vs-mapped name mismatch).
   const paidIn = {};
+  const distributed = {};
   rows.forEach((row) => {
-    if (row.type !== "calls") return;
     if (fund !== "all" && row.fund !== fund) return;
-    paidIn[row.fund] = (paidIn[row.fund] ?? 0) + row.real;
+    if (row.type === "calls") paidIn[row.fund] = (paidIn[row.fund] ?? 0) + row.real;
+    else if (row.type === "dist") distributed[row.fund] = (distributed[row.fund] ?? 0) + row.real;
   });
 
   const byFund = new Map();
@@ -175,7 +180,7 @@ export function buildTable({ rows, committed, firstCall, metricsByFund = {}, fun
       vintage: firstCall[fundName] ?? null,
       deltaReal,
       deltaDev: deltaReal - deltaModel,
-      dpi: metricsByFund[fundName]?.dpi ?? null,
+      dpi: paidIn[fundName] ? (distributed[fundName] ?? 0) / paidIn[fundName] : null,
       tvpi: metricsByFund[fundName]?.tvpi ?? null,
     };
   });
