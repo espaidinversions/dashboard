@@ -516,7 +516,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
               </>
             )}
             <ToolbarLabel tc={tc}>Vista</ToolbarLabel>
-            <Segmented tc={tc} value={mode} onChange={setMode} options={MODES} />
+            <Segmented tc={tc} value={mode} onChange={(v) => { setMode(v); setTableType(v); }} options={MODES} />
             <ToolbarLabel tc={tc}>Periodes</ToolbarLabel>
             {PERIODS.map((period) => (
               <PeriodPill
