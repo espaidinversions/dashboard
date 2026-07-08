@@ -394,6 +394,11 @@ async function handleCompanies(req, res) {
   const { error: pcErr } = await supabase.from("portfolio_companies").delete().eq("entity_id", id);
   if (pcErr) throw pcErr;
 
+  // Delete fund_meta too — its vehicle_id is a PK so SET NULL would fail.
+  // Search-fund entities are reclassified as companies but keep a fund_meta row.
+  const { error: fmErr } = await supabase.from("fund_meta").delete().eq("vehicle_id", id);
+  if (fmErr) throw fmErr;
+
   const { error } = await supabase
     .from("private_entities")
     .delete()
