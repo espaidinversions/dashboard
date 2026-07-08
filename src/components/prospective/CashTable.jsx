@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { PROSPECTIVE_CASH_USD_FUNDS } from "../../data/prospectiveCashUsdFunds.js";
 import { fmtC, signed, periodColor, periodBg, tdStyle, vintageStyle, buttonStyle } from "./prospectiveUtils.js";
+import { formatMultiple, multipleColor } from "../../utils/formatters.js";
 import { Segmented, MiniTag, Th, YearCell } from "./ProspectivePrimitives.jsx";
 
 export function CashTable({
@@ -96,6 +97,8 @@ export function CashTable({
               <Th tc={tc} onClick={() => setSortKey("paidInPct")} active={sort.key === "paidInPct"} dir={sort.dir}>%Comp</Th>
               <Th tc={tc} onClick={() => setSortKey("totalModel")} active={sort.key === "totalModel"} dir={sort.dir}>Σ Model</Th>
               <Th tc={tc} onClick={() => setSortKey("dev")} active={sort.key === "dev"} dir={sort.dir}>Desv.</Th>
+              <Th tc={tc} onClick={() => setSortKey("dpi")} active={sort.key === "dpi"} dir={sort.dir}>DPI</Th>
+              <Th tc={tc} onClick={() => setSortKey("tvpi")} active={sort.key === "tvpi"} dir={sort.dir}>TVPI</Th>
             </tr>
           </thead>
           <tbody>
@@ -128,6 +131,8 @@ export function CashTable({
                 <td style={tdStyle(tc)}>{row.paidInPct ? `${row.paidInPct.toFixed(1)}%` : ""}</td>
                 <td style={tdStyle(tc)}>{fmtC(row.totalModel)}</td>
                 <td style={tdStyle(tc)}><span style={{ color: row.dev >= 0 ? tc.green : tc.red, fontWeight: 750 }}>{signed(row.dev)}</span></td>
+                <td style={tdStyle(tc)}><span style={{ color: multipleColor(row.dpi, tc), fontWeight: 700 }}>{formatMultiple(row.dpi)}</span></td>
+                <td style={tdStyle(tc)}><span style={{ color: multipleColor(row.tvpi, tc), fontWeight: 700 }}>{formatMultiple(row.tvpi)}</span></td>
               </tr>
             ))}
             <tr style={{ background: tc.bgAlt, fontWeight: 750 }}>
@@ -148,6 +153,8 @@ export function CashTable({
               <td style={tdStyle(tc)}>{table.totals.paidInPct ? `${table.totals.paidInPct.toFixed(1)}%` : ""}</td>
               <td style={tdStyle(tc)}>{fmtC(table.totals.totalModel)}</td>
               <td style={tdStyle(tc)}><span style={{ color: table.totals.dev >= 0 ? tc.green : tc.red }}>{signed(table.totals.dev)}</span></td>
+              <td style={tdStyle(tc)}>—</td>
+              <td style={tdStyle(tc)}>—</td>
             </tr>
           </tbody>
         </table>

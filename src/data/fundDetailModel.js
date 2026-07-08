@@ -59,6 +59,32 @@ export function computeFundIrrFromRows(txs, tvpi, asOfDate = new Date().toISOStr
   return xirr(irrCashFlows);
 }
 
+// Per-fund lifetime DPI/TVPI keyed by fund name, using the SAME calls/dist logic
+// and fund_meta matching as buildFundDetailSnapshot so table values match the fund page.
+export function computeFundMetricsByName(rawCC, fundMeta) {
+  const source = Array.isArray(rawCC) ? rawCC : [];
+  const byFund = new Map();
+  for (const raw of source) {
+    const name = raw?.fons;
+    if (!name) continue;
+    const row = normalizeFundDetailRow(raw);
+    if (!byFund.has(name)) byFund.set(name, { calls: 0, dist: 0, id: raw?.id ?? null });
+    const m = byFund.get(name);
+    if (row.cat === "Capital Call") m.calls += Number(row.eur) || 0;
+    else if (row.cat === "Distribució" || row.cat === "Retorn Capital") m.dist += Math.abs(Number(row.eur) || 0);
+  }
+  const metaList = Array.isArray(fundMeta) ? fundMeta : [];
+  const result = {};
+  for (const [name, m] of byFund) {
+    const meta = metaList.find((r) => (m.id && r.id === m.id) || r.fons === name);
+    result[name] = {
+      dpi: m.calls > 0 ? m.dist / m.calls : null,
+      tvpi: meta?.tvpi ?? null,
+    };
+  }
+  return result;
+}
+
 export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
   const txs = findFundRowsByRouteId(rawCC, routeId).map(normalizeFundDetailRow);
   if (txs.length === 0) return null;

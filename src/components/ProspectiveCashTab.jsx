@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTheme } from "../theme.js";
 import { usePersistedState } from "../utils.js";
 import { fetchProspectiveCashForecasts, saveProspectiveCashForecasts, fetchCommittedOverrides, saveCommittedOverrides } from "../db.js";
-import { makeFundRouteId } from "../data/fundDetailModel.js";
+import { makeFundRouteId, computeFundMetricsByName } from "../data/fundDetailModel.js";
+import { readStoredJSON } from "../utils/storage.js";
 import { FUND_NAME_MAP } from "../data/fundNameMap.js";
 import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
 import { PROSPECTIVE_CASH_USD_FUNDS } from "../data/prospectiveCashUsdFunds.js";
@@ -343,12 +344,19 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
     });
   }, [cashData.rows, fund, mode]);
 
+  // Lifetime DPI/TVPI per fund, sourced the same way as the fund page (fund_meta + capital calls).
+  const metricsByFund = useMemo(
+    () => computeFundMetricsByName(rawCapitalCalls, readStoredJSON("tc_fundMeta", [])),
+    [rawCapitalCalls],
+  );
+
   const table = useMemo(() => buildTable({
     rows: cashData.rows,
     committed: mergedCommitted,
     firstCall: cashData.firstCall,
+    metricsByFund,
     fund, tableType, visibleYears, yearFilters, vintageFilter, sort,
-  }), [cashData.rows, cashData.firstCall, fund, mergedCommitted, sort, tableType, visibleYears, vintageFilter, yearFilters]);
+  }), [cashData.rows, cashData.firstCall, metricsByFund, fund, mergedCommitted, sort, tableType, visibleYears, vintageFilter, yearFilters]);
 
   useEffect(() => {
     if (loading || dirty) return;

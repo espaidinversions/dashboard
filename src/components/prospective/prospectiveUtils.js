@@ -132,7 +132,7 @@ export function aggregateByFund(rows) {
   return [...map.values()];
 }
 
-export function buildTable({ rows, committed, firstCall, fund, tableType, visibleYears, yearFilters, vintageFilter, sort }) {
+export function buildTable({ rows, committed, firstCall, metricsByFund = {}, fund, tableType, visibleYears, yearFilters, vintageFilter, sort }) {
   const paidIn = {};
   rows.forEach((row) => {
     if (row.type !== "calls") return;
@@ -175,6 +175,8 @@ export function buildTable({ rows, committed, firstCall, fund, tableType, visibl
       vintage: firstCall[fundName] ?? null,
       deltaReal,
       deltaDev: deltaReal - deltaModel,
+      dpi: metricsByFund[fundName]?.dpi ?? null,
+      tvpi: metricsByFund[fundName]?.tvpi ?? null,
     };
   });
 
