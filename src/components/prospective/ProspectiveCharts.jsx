@@ -1,4 +1,5 @@
-import React, { useEffect, useRef } from "react";
+import React, { useLayoutEffect, useRef } from "react";
+import { echarts } from "../../echarts.js";
 import { ecTheme } from "../../echartsTheme.js";
 import { modeValue, fmtK, periodOf } from "./prospectiveUtils.js";
 
@@ -98,38 +99,27 @@ function fundDeviationChartOption({ rows, mode, tc, metric = "eur" }) {
   };
 }
 
-// Direct ECharts hook — bypasses echarts-for-react to guarantee updates on every render.
-function useEChart(style) {
+function useEChart() {
   const divRef = useRef(null);
   const chartRef = useRef(null);
-  const optionRef = useRef(null);
 
-  useEffect(() => {
-    let chart;
-    import("../../echarts.js").then(({ echarts }) => {
-      if (!divRef.current) return;
-      chart = echarts.init(divRef.current);
-      chartRef.current = chart;
-      if (optionRef.current) chart.setOption(optionRef.current, true);
-    });
+  useLayoutEffect(() => {
+    const chart = echarts.init(divRef.current);
+    chartRef.current = chart;
     return () => {
-      chart?.dispose();
+      chart.dispose();
       chartRef.current = null;
     };
   }, []);
 
-  function setOption(option) {
-    optionRef.current = option;
-    if (chartRef.current) chartRef.current.setOption(option, true);
-  }
-
-  return { divRef, setOption };
+  return { divRef, chartRef };
 }
 
 function EChart({ option, style }) {
-  const { divRef, setOption } = useEChart(style);
-  // Run after every render so the chart always reflects the latest option.
-  useEffect(() => { setOption(option); });
+  const { divRef, chartRef } = useEChart();
+  useLayoutEffect(() => {
+    chartRef.current?.setOption(option, true);
+  });
   return <div ref={divRef} style={style} />;
 }
 
