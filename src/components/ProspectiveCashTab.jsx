@@ -584,7 +584,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
               tc={tc}
               table={table}
               tableType={tableType}
-              setTableType={setTableType}
+              setTableType={(v) => { setTableType(v); setMode(v); }}
               allYears={allYears}
               visibleYears={visibleYears}
               yearFilters={yearFilters}
