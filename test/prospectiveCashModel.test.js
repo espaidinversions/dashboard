@@ -101,22 +101,21 @@ describe("deriveProspectiveCashRows", () => {
     assert.equal(firstCall["Unmodeled Fund"], 2026);
   });
 
-  it("excludes transfer/conversion tipus from calls and committed; dist is cat-only", () => {
+  it("calls and dist are cat-only, capturing every concept to match the fund one-pager", () => {
     const editorData = { years: [], funds: {} };
     const actualCapitalCalls = [
-      { fons: "Legacy Vehicle", cat: "Compromís", eur: 1000, any: 2026, vehicleTipus: "PE", tipus: "Saldo apertura 2019" }, // transfer
-      { fons: "Legacy Vehicle", cat: "Capital Call", eur: 1000, any: 2026, vehicleTipus: "PE", tipus: "Saldo apertura 2019" }, // transfer
+      { fons: "Legacy Vehicle", cat: "Compromís", eur: 1000, any: 2026, vehicleTipus: "PE", tipus: "Saldo apertura 2019" }, // committed still excludes transfers
+      { fons: "Legacy Vehicle", cat: "Capital Call", eur: 1000, any: 2026, vehicleTipus: "PE", tipus: "Saldo apertura 2019" }, // now counted (matches one-pager)
       { fons: "Legacy Vehicle", cat: "Capital Call", eur: 500, any: 2026, vehicleTipus: "PE", tipus: "Aportació" }, // real cash
       { fons: "Legacy Vehicle", cat: "Distribució", eur: -200, any: 2027, vehicleTipus: "PE", tipus: "Conversió Participacions" }, // included since 3801421
       { fons: "Legacy Vehicle", cat: "Distribució", eur: -300, any: 2027, vehicleTipus: "PE", tipus: "Distribució" }, // real cash
     ];
 
     const { rows, committed } = deriveProspectiveCashRows(editorData, actualCapitalCalls);
-    // Transfers are ignored: committed should not include the 1000
+    // Committed still excludes transfer/conversion concepts (unchanged)
     assert.equal(committed["Legacy Vehicle"] ?? 0, 0);
-    // Calls should include only the 500
-    assert(rows.some((r) => r.fund === "Legacy Vehicle" && r.year === 2026 && r.type === "calls" && r.real === 500));
-    assert(!rows.some((r) => r.fund === "Legacy Vehicle" && r.year === 2026 && r.type === "calls" && r.real === 1500));
+    // Calls now include ALL Capital Call concepts (cat-only), matching the fund one-pager: 1000 + 500
+    assert(rows.some((r) => r.fund === "Legacy Vehicle" && r.year === 2026 && r.type === "calls" && r.real === 1500));
     // Dist includes ALL distribution concepts (cat-only filter, matching TxSection — commit 3801421)
     assert(rows.some((r) => r.fund === "Legacy Vehicle" && r.year === 2027 && r.type === "dist" && r.real === 500));
     assert(!rows.some((r) => r.fund === "Legacy Vehicle" && r.year === 2027 && r.type === "dist" && r.real === 300));
