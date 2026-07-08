@@ -217,13 +217,12 @@ function deriveActualsFromCapitalCalls(rows) {
     const year = Number(row?.any ?? row?.year ?? String(row?.data ?? "").slice(0, 4));
     if (!fund || !year) return;
 
-    const concept = normalizeCapitalCallTipus(row?.tipus);
     const category = String(row?.cat ?? "").trim();
     const amount = Number(row?.eur) || 0;
     if (category === "Capital Call") {
-      // Aportació-only; non-cash transfers/conversions also excluded.
-      if (EXCLUDED_CASH_MODEL_TIPUS.has(concept)) return;
-      if (concept != null && concept !== "Aportació") return;
+      // Match fund one-pager / transactions sheet: every Capital Call concept counts as a
+      // real call (aportació, préstec, venture debt, fees, equalització, conversions,
+      // transfers) so actuals tie out to the one-pager and DPI denominator.
       result.push({ fund, year, type: "calls", model: 0, real: Math.abs(amount) });
     } else if (category === "Distribució" || category === "Retorn Capital") {
       // All distribution concepts included — matches TxSection (cat-only filter).
