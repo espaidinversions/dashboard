@@ -27,6 +27,7 @@ export function EditorPanel({
   fundRouteIds = {},
   entityScope = "funds",
   setEntityScope = () => {},
+  showScope = true,
   entityText = { plural: "fons", searchPlaceholder: "Cercar..." },
   entityMetaByName = {},
 }) {
@@ -55,7 +56,7 @@ export function EditorPanel({
     return m;
   }, [paidInByFund]);
 
-  const entityColLabel = entityScope === "companies" ? "Companyia" : entityScope === "re" ? "Fons RE" : "Fons";
+  const entityColLabel = entityScope === "companies" ? "Companyia" : entityScope === "re" ? "Fons RE" : entityScope === "funds" ? "Vehicle" : "Fons";
 
   const rowLink = (name) => {
     const meta = entityMetaByName?.[name] ?? null;
@@ -71,16 +72,17 @@ export function EditorPanel({
     <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 8, overflow: "hidden", boxShadow: tc.shadows?.card }}>
       <div style={{ display: "flex", gap: 10, alignItems: "center", padding: 12, borderBottom: `1px solid ${tc.border}`, flexWrap: "wrap" }}>
         <span style={{ fontSize: 11, color: tc.textLight, fontWeight: 750, textTransform: "uppercase", letterSpacing: "0.07em" }}>Prediccio</span>
-        <Segmented
-          tc={tc}
-          value={entityScope}
-          onChange={setEntityScope}
-          options={[
-            { id: "funds", label: "Fons" },
-            { id: "re", label: "Real Estate" },
-            { id: "companies", label: "Companyies" },
-          ]}
-        />
+        {showScope && (
+          <Segmented
+            tc={tc}
+            value={entityScope}
+            onChange={setEntityScope}
+            options={[
+              { id: "funds", label: "Vehicles" },
+              { id: "companies", label: "Companyies" },
+            ]}
+          />
+        )}
         <Segmented tc={tc} value={editorType} onChange={setEditorType} options={[{ id: "calls", label: "Capital Calls" }, { id: "dist", label: "Distribucions" }]} />
         <Segmented tc={tc} value={editorInputMode} onChange={setEditorInputMode} options={[{ id: "eur", label: "€" }, { id: "pct", label: "%" }]} />
         <input value={editorSearch} onChange={(event) => setEditorSearch(event.target.value)} placeholder={entityText.searchPlaceholder} style={{ ...inputStyle(tc), width: 220 }} />

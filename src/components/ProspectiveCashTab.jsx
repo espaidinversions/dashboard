@@ -66,7 +66,9 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
   const [saveError, setSaveError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [_entityScope, setEntityScope] = usePersistedState("ui_cash_model_scope", "funds");
-  const entityScope = forceScope ?? _entityScope;
+  // Real Estate lives in its own dedicated section (forceScope="re"); the main
+  // model caixa only offers Tots/Vehicles/Companyies, so coerce any stale "re".
+  const entityScope = forceScope ?? (_entityScope === "re" ? "funds" : _entityScope);
   const [view, setView] = useState("dashboard");
   const [mode, setMode] = useState("net");
   const [tableType, setTableType] = useState("net");
@@ -108,6 +110,15 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
         selectLabel: "Real Estate",
         allLabel: "Tots els fons RE",
         searchPlaceholder: "Cercar fons RE...",
+      };
+    }
+    if (entityScope === "funds") {
+      return {
+        singular: "vehicle",
+        plural: "vehicles",
+        selectLabel: "Vehicles",
+        allLabel: "Tots els vehicles",
+        searchPlaceholder: "Cercar vehicle...",
       };
     }
     return {
@@ -520,7 +531,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
             {!forceScope && (
               <>
                 <ToolbarLabel tc={tc}>Entitats</ToolbarLabel>
-                <Segmented tc={tc} value={entityScope} onChange={setEntityScope} options={[{ id: "all", label: "Tots" }, { id: "funds", label: "Fons" }, { id: "re", label: "Real Estate" }, { id: "companies", label: "Companyies" }]} />
+                <Segmented tc={tc} value={entityScope} onChange={setEntityScope} options={[{ id: "all", label: "Tots" }, { id: "funds", label: "Vehicles" }, { id: "companies", label: "Companyies" }]} />
               </>
             )}
             <ToolbarLabel tc={tc}>Vista</ToolbarLabel>
@@ -648,6 +659,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
           fundRouteIds={fundRouteIds}
           entityScope={entityScope}
           setEntityScope={setEntityScope}
+          showScope={!forceScope}
           entityText={entityText}
           entityMetaByName={entityMetaByName}
         />
