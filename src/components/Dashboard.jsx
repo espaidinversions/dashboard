@@ -10,6 +10,7 @@ import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
 import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
+import { buildAltCohortMatrix } from "../data/altCohortModel.js";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
 import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
@@ -525,6 +526,7 @@ function Dashboard() {
               byFy={byFy}
               byEst={byEst}
               estCfg={estCfg}
+              matrix={buildAltCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []))}
             />
           )}
 

@@ -11,8 +11,6 @@ import { getVehiclePermissionSection } from "../permissions.js";
 import { computeFundIrrFromRows, makeFundRouteId } from "../data/fundDetailModel.js";
 import { convertAmountToEurOnDate } from "../fx.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS, estSection } from "../data/capitalCallStrategyModel.js";
-import { buildAltCohortMatrix } from "../data/altCohortModel.js";
-import AltCohortMatrix from "./funds/AltCohortMatrix.jsx";
 
 export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, excludeIds }) {
   const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
@@ -257,13 +255,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     });
   }, [filtered, sortKey, sortDir]);
 
-  // Alternatives-only: MOIC/IRR cohort matrix shown below the funds table.
-  const isAlternatives = Array.isArray(vcpeTypes) && (vcpeTypes.includes("PE") || vcpeTypes.includes("VC"));
-  const cohortMatrix = useMemo(
-    () => (isAlternatives ? buildAltCohortMatrix(rawCC, fundMeta) : null),
-    [isAlternatives, rawCC, fundMeta],
-  );
-
   const toggleSort = key => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
     else { setSortKey(key); setSortDir("desc"); }
@@ -433,11 +424,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
           </>
           )
         }
-      {isAlternatives && cohortMatrix && (
-        <div style={{ marginTop: 20 }}>
-          <AltCohortMatrix matrix={cohortMatrix} tc={tc} />
-        </div>
-      )}
       {canEditAny && (
         <div style={{ marginTop: 16 }}>
           {!addingFund ? (

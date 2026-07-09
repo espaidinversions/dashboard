@@ -3,12 +3,14 @@ import ReactECharts from "../../ReactECharts.jsx";
 import { ecTheme } from "../../echartsTheme.js";
 import { TC_LIGHT } from "../../theme.js";
 import { SectionHeader } from "../SharedComponents.jsx";
+import AltCohortMatrix from "../funds/AltCohortMatrix.jsx";
 
 export function ResumTab({
   tc = TC_LIGHT,
   byFy = [],
   byEst = [],
   estCfg = {},
+  matrix = null,
 }) {
   return (
     <>
@@ -42,6 +44,11 @@ export function ResumTab({
           return <ReactECharts option={option} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;
         })()}
       </div>
+      {matrix && matrix.vintages && matrix.vintages.length > 0 && (
+        <div style={{ marginBottom: 18 }}>
+          <AltCohortMatrix matrix={matrix} tc={tc} />
+        </div>
+      )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, marginBottom: 18 }}>
         {[
           { title: "Capital Cridat per Tipus de Vehicle", data: byEst, colorFn: n => estCfg[n]?.color || tc.navy },
