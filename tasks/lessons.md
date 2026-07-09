@@ -22,6 +22,16 @@ _No lessons yet. This file grows as corrections are made._
 
 ---
 
+## [Shipped an undefined-reference crash — build/tests were green]
+
+**Rule:** Before deploying (especially after a wide refactor), actually load each affected route/page in the running app — don't treat "build + tests green" as sufficient. When adding a new call to an imported helper, verify the import landed in the same file.
+
+**Why:** During the vehicleTipus→est refactor, an `estSection(...)` call was added to `ProspectiveCashTab.jsx` but its import edit was blocked by a hook and never retried, so the usage shipped without the import. Vite/rolldown does no undefined-reference analysis and no test renders that lazy-loaded component, so CI was green and the Model/prospective page crashed at runtime in production ("estSection is not defined"). It was extra costly because the DB migration had already been applied, so the bad deploy left prod broken.
+
+**How to apply:** (1) After multi-file edits where individual edits can be independently blocked/retried (e.g. gated hooks), re-grep to confirm every new symbol usage has a matching import. (2) For frontend changes, smoke-load the actual routes (or at least the ones you touched) before/after deploy. (3) Sequence irreversible steps last: deploy + verify the new frontend BEFORE applying destructive DB migrations, not after.
+
+---
+
 ## [Duplicated KpiCard component]
 
 **Rule:** Always extract duplicated components to SharedComponents.jsx before starting new work.
