@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS fund_meta (
   fons          TEXT,
   tvpi          NUMERIC,
   irr           NUMERIC,
-  vehicle_tipus TEXT,
   fi_end        TEXT
 );
 
@@ -354,10 +353,10 @@ BEGIN
     AS x(id TEXT, kind TEXT, canonical_name TEXT, source_name TEXT, workbook_name TEXT, match_type TEXT);
   END IF;
   IF p_fund_meta_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_fund_meta_rows), 0) > 0 THEN
-    INSERT INTO fund_meta (vehicle_id, fons, tvpi, irr, vehicle_tipus)
-    SELECT vehicle_id, fons, tvpi, irr, vehicle_tipus
+    INSERT INTO fund_meta (vehicle_id, fons, tvpi, irr)
+    SELECT vehicle_id, fons, tvpi, irr
     FROM jsonb_to_recordset(COALESCE(p_fund_meta_rows, '[]'::jsonb))
-    AS x(vehicle_id TEXT, fons TEXT, tvpi NUMERIC, irr NUMERIC, vehicle_tipus TEXT);
+    AS x(vehicle_id TEXT, fons TEXT, tvpi NUMERIC, irr NUMERIC);
   END IF;
 END;
 $$;
