@@ -11,6 +11,8 @@ import { getVehiclePermissionSection } from "../permissions.js";
 import { computeFundIrrFromRows, makeFundRouteId } from "../data/fundDetailModel.js";
 import { convertAmountToEurOnDate } from "../fx.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS, estSection } from "../data/capitalCallStrategyModel.js";
+import { buildAltCohortMatrix } from "../data/altCohortModel.js";
+import AltCohortMatrix from "./funds/AltCohortMatrix.jsx";
 
 export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, excludeIds }) {
   const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
@@ -184,7 +186,9 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       const dpi = f.calls > 0 ? f.dist / f.calls : 0;
       const rvpi = tvpi != null ? tvpi - dpi : null;
       const fundRows = rawCC.filter((row) => makeFundRouteId(row) === f.routeId);
-      const irr = meta?.irr ?? computeFundIrrFromRows(fundRows, tvpi);
+      // Prefer the live compute so the IRR always reflects the current TVPI
+      // (and its residual value); stored fund_meta.irr is only a fallback.
+      const irr = computeFundIrrFromRows(fundRows, tvpi) ?? meta?.irr ?? null;
       return {
         ...f,
         utilizat: f.compromis > 0 ? (f.calls / f.compromis) * 100 : null,
@@ -252,6 +256,13 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       return 0;
     });
   }, [filtered, sortKey, sortDir]);
+
+  // Alternatives-only: MOIC/IRR cohort matrix shown below the funds table.
+  const isAlternatives = Array.isArray(vcpeTypes) && (vcpeTypes.includes("PE") || vcpeTypes.includes("VC"));
+  const cohortMatrix = useMemo(
+    () => (isAlternatives ? buildAltCohortMatrix(rawCC, fundMeta) : null),
+    [isAlternatives, rawCC, fundMeta],
+  );
 
   const toggleSort = key => {
     if (sortKey === key) setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -422,6 +433,11 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
           </>
           )
         }
+      {isAlternatives && cohortMatrix && (
+        <div style={{ marginTop: 20 }}>
+          <AltCohortMatrix matrix={cohortMatrix} tc={tc} />
+        </div>
+      )}
       {canEditAny && (
         <div style={{ marginTop: 16 }}>
           {!addingFund ? (
