@@ -24,7 +24,7 @@ export async function loadAll() {
   if (!supabase) return null;
   const [cc, fm, pl, co, sr, pe] = await Promise.all([
     fetchAllCapitalCallRows(),
-    supabase.from("fund_meta").select("vehicle_id,fons,tvpi,irr,vehicle_tipus,fi_end"),
+    supabase.from("fund_meta").select("vehicle_id,fons,tvpi,irr,fi_end"),
     supabase.from("pipeline").select("id,name,amount,currency,geography,strategy,sector,status,canal,active,estimated_closing,manager").order("id"),
     supabase.from("portfolio_companies").select("entity_id,nom,tipus,segment,entrepreneurs,origen,geo,ticket,tvpi,rvpi_eur,dpi_eur,rev,ebitda,dfn,gross_ev,mult_entry,data_compr,mesos_operant,is_mock,quarters").order("nom"),
     supabase.from("searchers").select("id,nom,tipus,modalitat,geo,status_screening_code,status_screening,form_entrada,status_cerca_code,status_cerca,status_adquisicio_code,status_adquisicio,intro_per,searcher1,searcher2,companyia_adquirida,escola1,escola2,web,comentaris,ticket,tvpi,data_inici,database_intro_date,data_compr,mesos_cercant,equity_stake,is_mock,is_legacy,nif,label,irr,dpi").order("nom"),

@@ -91,13 +91,6 @@ export function normalizeCapitalCallStrategy(value, vehicleTipus = null, context
   return raw || null;
 }
 
-export function defaultCapitalCallStrategyForVehicleTipus(vehicleTipus) {
-  if (vehicleTipus === "RE") return "Fons Real Estate";
-  if (vehicleTipus === "SF") return SF_STRATEGY_CERCA;
-  if (vehicleTipus === "PC") return STRATEGY_PARTICIPADA_ALTRES;
-  return "Fons Primari";
-}
-
 /** Maps est strategy label → section key used for filtering. */
 export function estSection(est) {
   const e = String(est ?? "").trim();
@@ -106,4 +99,20 @@ export function estSection(est) {
   if (e === "Participada (Altres)") return "PC";
   if (e === "Fons Primari" || e === "Fons Secundari" || e === "Fons de Fons" || e === "Fons de Coinversió") return "ALT";
   return null;
+}
+
+/**
+ * True when a resolved est strategy represents a company (search fund or
+ * participada) rather than a fund/vehicle. Classification follows the
+ * "Tipus de Vehicle" (est), so "fons" are vehicles and participades / search
+ * funds are companies, regardless of the legacy PE/VC vehicle_tipus.
+ */
+export function isCompanyEst(est) {
+  const section = estSection(est);
+  return section === "SF" || section === "PC";
+}
+
+/** True when a resolved est strategy represents a Real Estate vehicle. */
+export function isReEst(est) {
+  return estSection(est) === "RE";
 }

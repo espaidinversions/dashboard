@@ -22,7 +22,7 @@ import {
 import { mergeSearchersWithCapitalCalls } from "../data/searcherModel.js";
 import { buildFallbackCompaniesFromCapitalCalls } from "../data/privateCompanyModel.js";
 import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
-import { defaultCapitalCallStrategyForVehicleTipus, normalizeCapitalCallStrategy, setSnapshotInferrer } from "../data/capitalCallStrategyModel.js";
+import { normalizeCapitalCallStrategy, setSnapshotInferrer } from "../data/capitalCallStrategyModel.js";
 import { buildSearchFundInferrer } from "../data/searchFundSnapshotModel.js";
 import { computeFundIrrFromRows } from "../data/fundDetailModel.js";
 
@@ -49,7 +49,6 @@ export {
   inferCapitalCallCategoryFromTipus,
   normalizeCapitalCallSignedAmount,
   normalizeCapitalCallTipus,
-  defaultCapitalCallStrategyForVehicleTipus,
   normalizeCapitalCallStrategy,
   setSnapshotInferrer,
   buildSearchFundInferrer,
@@ -80,7 +79,7 @@ export async function loadPrivateEntityMap() {
 export async function upsertFundMetaComputed(vehicleId, fallbackName = "", entityMap = null) {
   if (!supabase || !vehicleId) return { error: null };
   const [{ data: ccRows, error: ccError }, { data: metaRow, error: metaError }] = await Promise.all([
-    supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").eq("vehicle_id", vehicleId).order("data"),
+    supabase.from("capital_calls").select("*").eq("vehicle_id", vehicleId).order("data"),
     supabase.from("fund_meta").select("*").eq("vehicle_id", vehicleId).maybeSingle(),
   ]);
   if (ccError) return { error: ccError };
@@ -106,7 +105,7 @@ export async function fetchAllCapitalCallRows() {
   // Fetch first page
   const { data: first, error: firstError } = await supabase
     .from("capital_calls")
-    .select("*, fund_meta(vehicle_tipus)")
+    .select("*")
     .order("data")
     .range(0, CAPITAL_CALLS_PAGE_SIZE - 1);
   if (firstError) { console.error("[fetchAllCapitalCallRows] SELECT error:", firstError); return { data: null, error: firstError }; }
@@ -121,7 +120,7 @@ export async function fetchAllCapitalCallRows() {
     // Fallback: sequential
     const rows = [...first];
     for (let from = CAPITAL_CALLS_PAGE_SIZE; ; from += CAPITAL_CALLS_PAGE_SIZE) {
-      const { data, error } = await supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").order("data").range(from, from + CAPITAL_CALLS_PAGE_SIZE - 1);
+      const { data, error } = await supabase.from("capital_calls").select("*").order("data").range(from, from + CAPITAL_CALLS_PAGE_SIZE - 1);
       if (error) { console.error("[fetchAllCapitalCallRows] SELECT error:", error); return { data: null, error }; }
       rows.push(...(data ?? []));
       if (!data || data.length < CAPITAL_CALLS_PAGE_SIZE) break;
@@ -133,7 +132,7 @@ export async function fetchAllCapitalCallRows() {
   const rest = await Promise.all(
     Array.from({ length: extraPages }, (_, i) => {
       const from = (i + 1) * CAPITAL_CALLS_PAGE_SIZE;
-      return supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").order("data").range(from, from + CAPITAL_CALLS_PAGE_SIZE - 1);
+      return supabase.from("capital_calls").select("*").order("data").range(from, from + CAPITAL_CALLS_PAGE_SIZE - 1);
     })
   );
 

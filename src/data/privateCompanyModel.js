@@ -1,4 +1,5 @@
 import { getPrivateEntityName } from "./privateEntities.js";
+import { estSection, isCompanyEst } from "./capitalCallStrategyModel.js";
 
 export function isSearchFundShell(company) {
   if (company?.tipus !== "SF") return false;
@@ -45,7 +46,7 @@ export function buildFallbackCompaniesFromCapitalCalls(capitalCallRows, entityMa
   const grouped = new Map();
 
   rows.forEach((row) => {
-    if (!["PC", "SF"].includes(row?.vehicleTipus)) return;
+    if (!isCompanyEst(row?.est)) return;
     const entityId = row?.vehicle_id ?? null;
     const companyName = getPrivateEntityName(entityMap, entityId, row?.fons);
     if (!entityId || !companyName) return;
@@ -54,7 +55,7 @@ export function buildFallbackCompaniesFromCapitalCalls(capitalCallRows, entityMa
     const current = grouped.get(entityId) ?? {
       id: entityId,
       nom: companyName,
-      tipus: row.vehicleTipus,
+      tipus: estSection(row.est),
       segment: null,
       entrepreneurs: null,
       origen: null,

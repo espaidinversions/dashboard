@@ -61,8 +61,8 @@ export function EditorPanel({
   const rowLink = (name) => {
     const meta = entityMetaByName?.[name] ?? null;
     if (entityScope === "companies" && meta?.id) {
-      if (meta.vehicleTipus === "PC") return `/investments/companies/${encodeURIComponent(meta.id)}`;
-      if (meta.vehicleTipus === "SF") return `/investments/searchers/${encodeURIComponent(meta.id)}`;
+      if (meta.section === "PC") return `/investments/companies/${encodeURIComponent(meta.id)}`;
+      if (meta.section === "SF") return `/investments/searchers/${encodeURIComponent(meta.id)}`;
     }
     if (fundRouteIds?.[name]) return `/investments/funds/${encodeURIComponent(fundRouteIds[name])}`;
     return null;

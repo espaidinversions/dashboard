@@ -6,17 +6,17 @@ import { buildRealEstateFundsMap, splitRealEstateRows } from "../src/data/realEs
 
 test("real-estate rows are split from the shared capital-calls source", () => {
   const rows = [
-    { fons: "RE Fund A", vehicleTipus: "RE", cat: "Capital Call", eur: 100000, data: "2024-01-15" },
-    { fons: "RE Fund A", vehicleTipus: "RE", cat: "Compromís", eur: 500000, data: "2023-06-01" },
-    { fons: "PE Fund B", vehicleTipus: "PE", cat: "Capital Call", eur: 200000, data: "2024-02-10" },
-    { fons: "RE Fund C", vehicleTipus: "RE", cat: "Distribució", eur: -50000, data: "2024-03-20" },
+    { fons: "RE Fund A", est: "Fons Real Estate", cat: "Capital Call", eur: 100000, data: "2024-01-15" },
+    { fons: "RE Fund A", est: "Fons Real Estate", cat: "Compromís", eur: 500000, data: "2023-06-01" },
+    { fons: "PE Fund B", est: "Fons Primari", cat: "Capital Call", eur: 200000, data: "2024-02-10" },
+    { fons: "RE Fund C", est: "Fons Real Estate", cat: "Distribució", eur: -50000, data: "2024-03-20" },
   ];
   const { tx, compr } = splitRealEstateRows(rows);
 
   assert.equal(tx.length, 2);
   assert.equal(compr.length, 1);
-  assert.ok(tx.every((row) => row.vehicleTipus === "RE" && row.cat !== "Compromís"));
-  assert.ok(compr.every((row) => row.vehicleTipus === "RE" && row.cat === "Compromís"));
+  assert.ok(tx.every((row) => row.est === "Fons Real Estate" && row.cat !== "Compromís"));
+  assert.ok(compr.every((row) => row.est === "Fons Real Estate" && row.cat === "Compromís"));
 });
 
 test("real-estate vehicle detail updates when transactions are added or removed", () => {

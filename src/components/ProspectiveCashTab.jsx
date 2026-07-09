@@ -6,6 +6,7 @@ import { makeFundRouteId, computeFundMetricsByName } from "../data/fundDetailMod
 import { readStoredJSON } from "../utils/storage.js";
 import { FUND_NAME_MAP } from "../data/fundNameMap.js";
 import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
+import { isCompanyEst, isReEst } from "../data/capitalCallStrategyModel.js";
 import { PROSPECTIVE_CASH_USD_FUNDS } from "../data/prospectiveCashUsdFunds.js";
 import {
   buildReFundMatcher,
@@ -141,19 +142,17 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
       const canonical = FUND_NAME_MAP[raw] ?? raw;
       const key = canonical.trim().toLowerCase();
       if (key) {
-        const vcpe = String(row?.vehicleTipus ?? "").trim();
-        const est = String(row?.est ?? "").trim();
-        const isCompany = vcpe === "PC" || vcpe === "SF" || est === "Participada (Altres)" || est.startsWith("Search Fund");
-        const isRE = vcpe === "RE" || est === "Fons Real Estate";
+        const isCompany = isCompanyEst(row?.est);
+        const isRE = isReEst(row?.est);
         if (isCompany) kindByNameLower[key] = "companies";
         else if (isRE) kindByNameLower[key] = "re";
         else if (!kindByNameLower[key]) kindByNameLower[key] = "funds";
       }
-      const vehicleTipus = row?.vehicleTipus ? String(row.vehicleTipus) : null;
+      const section = estSection(row?.est);
       const id = row?.id ? String(row.id) : null;
-      if (id && vehicleTipus) {
-        if (!entityMetaByName[raw]) entityMetaByName[raw] = { id, vehicleTipus };
-        if (!entityMetaByName[canonical]) entityMetaByName[canonical] = { id, vehicleTipus };
+      if (id && section) {
+        if (!entityMetaByName[raw]) entityMetaByName[raw] = { id, section };
+        if (!entityMetaByName[canonical]) entityMetaByName[canonical] = { id, section };
       }
       if (!fundRouteIds[raw]) fundRouteIds[raw] = makeFundRouteId(row);
       if (!fundRouteIds[canonical]) fundRouteIds[canonical] = makeFundRouteId(row);
@@ -166,10 +165,8 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
     const rows = Array.isArray(rawCapitalCalls) ? rawCapitalCalls : [];
     if (entityScope === "all") return rows;
     return rows.filter((row) => {
-      const vcpe = String(row?.vehicleTipus ?? "").trim();
-      const est = String(row?.est ?? "").trim();
-      const isCompany = vcpe === "PC" || vcpe === "SF" || est === "Participada (Altres)" || est.startsWith("Search Fund");
-      const isRE = vcpe === "RE" || est === "Fons Real Estate";
+      const isCompany = isCompanyEst(row?.est);
+      const isRE = isReEst(row?.est);
       if (entityScope === "companies") return isCompany;
       if (entityScope === "re") return isRE;
       return !isCompany && !isRE;
@@ -379,9 +376,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
     for (const row of rawCapitalCalls) {
       const rawFund = String(row?.fons ?? "").trim();
       const fund = FUND_NAME_MAP[rawFund] ?? rawFund;
-      const vcpe = String(row?.vehicleTipus ?? "").trim();
-      const est = String(row?.est ?? "").trim();
-      const isCompanyRow = vcpe === "PC" || vcpe === "SF" || est === "Participada (Altres)" || est.startsWith("Search Fund");
+      const isCompanyRow = isCompanyEst(row?.est);
       if (!fund || isCompanyRow) continue;
       if (entityScope !== "re" && (isReFund(rawFund) || isReFund(fund))) continue;
       if (!flowCats.has(String(row?.cat ?? "").trim())) continue;

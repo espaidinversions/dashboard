@@ -228,7 +228,7 @@ function Dashboard() {
         rows: cc.map(r => ({
           "Fons": r.fons, "Tipus": r.tipus, "Categoria": r.cat,
           "Data": r.data, "Mes": r.mes, "Any": r.any, "FY": r.fy,
-          "VCPE": r.vehicleTipus, "Estructura": r.est, "Import (€)": r.eur, "Divisa": r.divisa,
+          "Estructura": r.est, "Import (€)": r.eur, "Divisa": r.divisa,
           "Import Divisa": r.amountNative ?? "",
           "FX BCE": r.fxRate ?? "",
           "Font FX": r.fxSource ?? "",
@@ -301,7 +301,6 @@ function Dashboard() {
   }, []);
 
   const [fFy,     setFFy]     = usePersistedState("ui_fFy",  "Tots");
-  const [fVcpe,   setFVcpe]   = usePersistedState("ui_fVcpe", new Set(), { isSet: true });
   const [fEst,    setFEst]    = usePersistedState("ui_fEst",  "Tots");
   const [fTipus,  setFTipus]  = usePersistedState("ui_fTipus",  "Tots");
   const [txSearch,setTxSearch]= usePersistedState("ui_txSearch", "");
@@ -331,7 +330,6 @@ function Dashboard() {
     fDist,
     byFy,
     byMes,
-    byVcpe,
     byEst,
     FONS_MAP2,
     fonsFiltered,
@@ -344,7 +342,6 @@ function Dashboard() {
     searcherCompr: d.searcherCompr,
     excluded,
     fFy,
-    fVcpe,
     fEst,
     fTipus,
     txSearch,
@@ -389,16 +386,9 @@ function Dashboard() {
 
   const RE_FONS_MAP = useMemo(() => buildRealEstateFundsMap(d.reCompr, d.reTx), [d.reCompr, d.reTx]);
 
-  const clearFilters = ()=>{setFFy("Tots");setFVcpe(new Set());setFEst("Tots");setFTipus("Tots");setTxSearch("");};
-  const anyFilter = fFy!=="Tots"||fVcpe.size>0||fEst!=="Tots"||fTipus!=="Tots"||txSearch.trim()!="";
+  const clearFilters = ()=>{setFFy("Tots");setFEst("Tots");setFTipus("Tots");setTxSearch("");};
+  const anyFilter = fFy!=="Tots"||fEst!=="Tots"||fTipus!=="Tots"||txSearch.trim()!="";
 
-  const vcpeCfg = {
-    "PE": { color:tc.navy,               bg: dark ? "#112030" : "#E6EDF3" },
-    "VC": { color:tc.green,              bg: dark ? "#0A2010" : "#E8F8E8" },
-    "RE": { color:tc.purple||"#9B7CC8",  bg: dark ? "#20163A" : "#F3EEF8" },
-    "SF": { color:"#2563A8",             bg: dark ? "#0A1828" : "#DDEAF8" },
-    "PC": { color:"#7A5A00",             bg: dark ? "#1A1200" : "#FFF5D6" },
-  };
   const estCfg = {
     "Fons Primari": { color:tc.navy, bg: dark ? "#112030" : "#E6EDF3" },
     "Fons Secundari": { color:tc.navyLight, bg: dark ? "#15263A" : "#EAF0F6" },
@@ -533,9 +523,7 @@ function Dashboard() {
             <ResumTab
               tc={tc}
               byFy={byFy}
-              byVcpe={byVcpe}
               byEst={byEst}
-              vcpeCfg={vcpeCfg}
               estCfg={estCfg}
             />
           )}
@@ -566,7 +554,7 @@ function Dashboard() {
               </div>
               <Suspense fallback={null}>
                 {companiesSubTab === "transaccions" ? (
-                  <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ est: "Participada (Altres)" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Participades (PC)" />
+                  <TxSection tx={d.pcTx} compr={d.pcCompr} search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ est: "Participada (Altres)" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Transaccions Participades (PC)" />
                 ) : (
                   <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     <div style={{ display: "flex", gap: 6 }}>
@@ -593,7 +581,7 @@ function Dashboard() {
                   ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["PE", "VC"]} excludeIds={d.actualCompanyIds} />
                   : inversionsSubTab === "pipeline"
                     ? <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
-                    : <TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_all_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
+                    : <TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_all_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
               </Suspense>
             </div>
           )}
@@ -647,8 +635,8 @@ function Dashboard() {
             </Suspense>
           )}
 
-          {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" /></Suspense>}
-          {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} vcpeCfg={vcpeCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ est: "Fons Real Estate" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
+          {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" /></Suspense>}
+          {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ est: "Fons Real Estate" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
           {tab === "tx-mp" && <Suspense fallback={null}><PMTransaccionsTab search={globalSearch} /></Suspense>}
         </main>
       </div>

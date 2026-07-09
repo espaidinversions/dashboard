@@ -7,49 +7,47 @@ import {
   buildFundDetailSnapshot,
 } from "../src/data/fundDetailModel.js";
 
-test("makeFundRouteId namespaces routes by vehicleTipus", () => {
-  assert.equal(makeFundRouteId({ id: "ITA1770581100", vehicleTipus: "SF", fons: "Aeqor SRL" }), "SF:ITA1770581100");
-  assert.equal(makeFundRouteId({ id: "ITA1770581100", vehicleTipus: "PC", fons: "Aeqor Partners" }), "PC:ITA1770581100");
+test("makeFundRouteId returns the entity id (id-only routes)", () => {
+  assert.equal(makeFundRouteId({ id: "ITA1770581100", est: "Search Fund - Cerca", fons: "Aeqor SRL" }), "ITA1770581100");
+  const slugRoute = makeFundRouteId({ est: "Fons Primari", fons: "Global Fund" });
+  assert.ok(slugRoute && !slugRoute.includes(":")); // id-only, no legacy TIPUS: prefix
 });
 
-test("findFundRowsByRouteId keeps SF rows isolated from PC rows sharing the same id", () => {
+test("findFundRowsByRouteId resolves legacy TIPUS:id bookmarks by id", () => {
   const rows = [
-    { id: "ITA1770581100", vehicleTipus: "SF", fons: "Aeqor SRL", cat: "Capital Call", eur: 25000, data: "2024-07-31" },
-    { id: "ITA1770581100", vehicleTipus: "PC", fons: "Aeqor Partners", cat: "Capital Call", eur: 50000, data: "2024-07-31" },
+    { id: "ITA1770581100", est: "Search Fund - Cerca", fons: "Aeqor SRL", cat: "Capital Call", eur: 25000, data: "2024-07-31" },
   ];
 
-  const matches = findFundRowsByRouteId(rows, "SF:ITA1770581100");
-
-  assert.equal(matches.length, 1);
-  assert.equal(matches[0].vehicleTipus, "SF");
-  assert.equal(matches[0].fons, "Aeqor SRL");
+  // Both the legacy prefixed form and the modern id-only form resolve the entity.
+  assert.equal(findFundRowsByRouteId(rows, "SF:ITA1770581100").length, 1);
+  assert.equal(findFundRowsByRouteId(rows, "ITA1770581100").length, 1);
+  assert.equal(findFundRowsByRouteId(rows, "SF:ITA1770581100")[0].fons, "Aeqor SRL");
 });
 
-test("legacy bare id routes prefer non-PC rows when ids collide", () => {
+test("bare id/slug routes prefer non-company (non-PC) rows when names collide", () => {
   const rows = [
-    { id: "ITA1770581100", vehicleTipus: "PC", fons: "Aeqor Partners", cat: "Capital Call", eur: 50000, data: "2024-07-31" },
-    { id: "ITA1770581100", vehicleTipus: "SF", fons: "Aeqor SRL", cat: "Capital Call", eur: 25000, data: "2024-07-31" },
+    { id: "shared", est: "Participada (Altres)", fons: "Shared Name", cat: "Capital Call", eur: 50000, data: "2024-07-31" },
+    { id: "shared", est: "Fons Primari", fons: "Shared Name", cat: "Capital Call", eur: 25000, data: "2024-07-31" },
   ];
 
-  const matches = findFundRowsByRouteId(rows, "ITA1770581100");
+  const matches = findFundRowsByRouteId(rows, "shared");
 
   assert.equal(matches.length, 1);
-  assert.equal(matches[0].vehicleTipus, "SF");
+  assert.equal(matches[0].est, "Fons Primari");
 });
 
-test("buildFundDetailSnapshot ignores shared-id PC rows on fund routes", () => {
+test("buildFundDetailSnapshot builds a fund snapshot for an id route", () => {
   const rawCC = [
-    { id: "ITA1770581100", vehicleTipus: "SF", fons: "Aeqor SRL", tipus: "Aportació capital", cat: "Capital Call", eur: 25000, data: "2024-07-31", est: "SF" },
-    { id: "ITA1770581100", vehicleTipus: "PC", fons: "Aeqor Partners", tipus: "SF", cat: "Compromís", eur: 50000, data: "2024-07-31", est: "PC" },
-    { id: "ITA1770581100", vehicleTipus: "PC", fons: "Aeqor Partners", tipus: "SF", cat: "Capital Call", eur: 50000, data: "2024-07-31", est: "PC" },
+    { id: "F1", est: "Fons Primari", fons: "Global Fund", tipus: "Aportació capital", cat: "Capital Call", eur: 25000, data: "2024-07-31" },
+    { id: "F1", est: "Fons Primari", fons: "Global Fund", tipus: "Aportació capital", cat: "Compromís", eur: 100000, data: "2024-01-31" },
   ];
 
-  const detail = buildFundDetailSnapshot(rawCC, [], "SF:ITA1770581100");
+  const detail = buildFundDetailSnapshot(rawCC, [], "F1");
 
-  assert.equal(detail.fundName, "Aeqor SRL");
+  assert.equal(detail.fundName, "Global Fund");
   assert.equal(detail.calls, 25000);
-  assert.equal(detail.compromis, 0);
-  assert.equal(detail.txLog.length, 1);
+  assert.equal(detail.compromis, 100000);
+  assert.equal(detail.section, "ALT");
 });
 
 test("buildFundDetailSnapshot normalizes transaction concepts for fund pages", () => {

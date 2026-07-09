@@ -4,28 +4,29 @@ import {
   normalizeCapitalCallSignedAmount,
   normalizeCapitalCallTipus,
 } from "./capitalCallTipusModel.js";
-import { normalizeCapitalCallStrategy } from "./capitalCallStrategyModel.js";
+import { normalizeCapitalCallStrategy, estSection } from "./capitalCallStrategyModel.js";
 
 export function makeFundRouteId(row) {
-  if (row?.id && row?.vehicleTipus) return `${row.vehicleTipus}:${row.id}`;
   return row?.id ?? slugify(row?.fons ?? "");
 }
 
 export function findFundRowsByRouteId(rows, routeId) {
   const decodedId = decodeURIComponent(routeId ?? "");
-  const match = /^([A-Z]{2,3}):(.*)$/u.exec(decodedId);
+  // Accept the legacy TIPUS:<id> form (e.g. "PE:123") so existing bookmarks
+  // still resolve; new URLs are id-only.
+  const legacyMatch = /^[A-Za-z]+:(.+)$/u.exec(decodedId);
+  const entityId = legacyMatch ? legacyMatch[1] : decodedId;
   const source = Array.isArray(rows) ? rows : [];
-  if (match) {
-    const [, vehicleTipus, entityId] = match;
-    return source.filter((row) => row?.id === entityId && row?.vehicleTipus === vehicleTipus);
+  if (legacyMatch) {
+    return source.filter((row) => row?.id === entityId);
   }
 
   const hits = source.filter(
-    (row) => (row?.id && row.id === decodedId) || slugify(row?.fons) === decodedId,
+    (row) => (row?.id && row.id === entityId) || slugify(row?.fons) === entityId,
   );
   if (hits.length === 0) return [];
 
-  const nonCompanyHits = hits.filter((row) => row?.vehicleTipus !== "PC");
+  const nonCompanyHits = hits.filter((row) => estSection(row?.est) !== "PC");
   return nonCompanyHits.length > 0 ? nonCompanyHits : hits;
 }
 
@@ -37,7 +38,7 @@ function normalizeFundDetailRow(row) {
     tipus,
     eur,
     cat: row?.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
-    est: normalizeCapitalCallStrategy(row?.est, row?.vehicleTipus, row),
+    est: normalizeCapitalCallStrategy(row?.est, null, row),
   };
 }
 
@@ -91,8 +92,8 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
 
   const fundName = txs[0].fons;
   const fundId = txs[0].id ?? null;
-  const vehicleTipus = txs[0].vehicleTipus;
   const est = txs[0].est;
+  const section = estSection(est);
 
   const compromis = txs.filter((row) => row.cat === "Compromís").reduce((sum, row) => sum + row.eur, 0);
   const calls = txs.filter((row) => row.cat === "Capital Call").reduce((sum, row) => sum + row.eur, 0);
@@ -125,7 +126,7 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
     txLog,
     fundName,
     fundId,
-    vehicleTipus,
+    section,
     est,
     compromis,
     calls,

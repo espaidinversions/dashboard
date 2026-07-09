@@ -40,7 +40,7 @@ export function parseCapitalCallsCSV(text) {
   return parseCSVRows(text).map(r => ({
     fons: r.fons, tipus: r.tipus, cat: r.cat, data: r.data,
     mes: parseInt(r.mes, 10), any: parseInt(r.any, 10), fy: r.fy,
-    vehicleTipus: r.vehicleTipus ?? r.vcpe, est: r.est, eur: parseFloat(r.eur), divisa: r.divisa,
+    est: r.est, eur: parseFloat(r.eur), divisa: r.divisa,
   }));
 }
 
@@ -96,7 +96,7 @@ export function mapCapitalCallsRows(rows) {
       mes: Number.isFinite(mes) && mes > 0 ? mes : monthFromDate,
       any: Number.isFinite(any) && any > 0 ? any : yearFromDate,
       fy: fy || (Number.isFinite(yearFromDate) ? `FY ${yearFromDate}` : ""),
-      vehicleTipus: String(r["VCPE"] ?? ""), est: String(r["Estructura"] ?? ""), eur,
+      est: String(r["Estructura"] ?? ""), eur,
       divisa: String(r["Divisa"] ?? ""),
     };
   });
@@ -114,7 +114,6 @@ export function mapLegacySearchFundRows(rows) {
       fons: String(row["Startup"] ?? "").trim(), tipus,
       cat: inferCapitalCallCategoryFromTipus(tipus, eur),
       data, mes, any: year, fy: `FY ${year}`,
-      vehicleTipus: String(row["VC/PE"] ?? "").trim() || null,
       est: null, eur,
       divisa: String(row["Divisa"] ?? "").trim() || "EUR",
     };
@@ -125,9 +124,9 @@ export function mergeCapitalCallRows(baseRows, extraRows) {
   const merged = [], seen = new Set(), coarseSeen = new Set();
   const add = (row) => {
     if (!row) return;
-    const coarseKey = [row.fons ?? "", row.data ?? "", Number(row.eur ?? 0), row.vehicleTipus ?? ""].join("|");
+    const coarseKey = [row.fons ?? "", row.data ?? "", Number(row.eur ?? 0), row.est ?? ""].join("|");
     if (coarseSeen.has(coarseKey)) return;
-    const key = [row.fons ?? "", row.tipus ?? "", row.cat ?? "", row.data ?? "", Number(row.eur ?? 0), row.vehicleTipus ?? ""].join("|");
+    const key = [row.fons ?? "", row.tipus ?? "", row.cat ?? "", row.data ?? "", Number(row.eur ?? 0), row.est ?? ""].join("|");
     if (seen.has(key)) return;
     coarseSeen.add(coarseKey); seen.add(key); merged.push(row);
   };

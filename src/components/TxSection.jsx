@@ -4,7 +4,7 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { fmtM, fmtSignedM, fmtSignedNative, usePersistedState } from "../utils.js";
 import { makeVehicleDetailPath } from "../data/privateRoutes.js";
-import { CAPITAL_CALL_STRATEGY_OPTIONS, estSection } from "../data/capitalCallStrategyModel.js";
+import { CAPITAL_CALL_STRATEGY_OPTIONS, estSection, isCompanyEst } from "../data/capitalCallStrategyModel.js";
 import { normalizeCapitalCallTipus, DISTRIBUCIONS_SET } from "../data/capitalCallTipusModel.js";
 import { Badge, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
 import { useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
@@ -42,10 +42,10 @@ export function TxSection({
   const [page, setPage] = useState(0);
   const TX_PP = 25;
 
-  const isCompanyRow = (row) => {
-    const v = String(row?.vehicleTipus ?? "").trim();
-    return v === "PC" || v === "SF";
-  };
+  // Classify by the resolved "Tipus de Vehicle" (est): fons → vehicles,
+  // participades / search funds → companies. This follows vehicle_est rather
+  // than the legacy PE/VC vehicle_tipus.
+  const isCompanyRow = (row) => isCompanyEst(row?.est);
 
   const scopedTx = useMemo(() => {
     if (!scopeToggle || scope === "all") return tx;
@@ -64,17 +64,19 @@ export function TxSection({
   // Enforce a single "Tipus de Vehicle" per NIF (= row.id) in the transaction register.
   // Search Funds can legitimately change phase (cerca vs participada), so skip SF.
   const canonicalEstByNif = useMemo(() => {
-    const ALLOWED = new Set(["PE", "VC", "RE", "PC"]);
     const countsById = new Map(); // id -> Map(est -> count)
     const lastSeenById = new Map(); // id -> { est, data }
 
     for (const row of allRows) {
-      const vehicleTipus = String(row?.vehicleTipus ?? "").trim();
-      if (!ALLOWED.has(vehicleTipus)) continue;
-      const id = String(row?.id ?? "").trim();
-      if (!id) continue;
       const est = String(row?.est ?? "").trim();
       if (!est) continue;
+      // Search Funds legitimately change phase (cerca vs participada), so leave
+      // their est untouched. Unclassified rows are skipped too. Everything else
+      // (fons, real estate, participades) is canonicalized to one est per NIF.
+      const section = estSection(est);
+      if (section === "SF" || section == null) continue;
+      const id = String(row?.id ?? "").trim();
+      if (!id) continue;
 
       if (!countsById.has(id)) countsById.set(id, new Map());
       const estCounts = countsById.get(id);

@@ -64,6 +64,5 @@ test("normalizePrivateWorkbookRows maps workbook aliases onto canonical company 
   const normalized = normalizePrivateWorkbookRows(workbookRows, [], companies);
 
   assert.equal(normalized[0].fons, "Greenfarm");
-  assert.equal(normalized[0].vehicleTipus, "PC");
-  assert.equal(normalized[0].est, null);
+  assert.equal(normalized[0].est, "Participada (Altres)");
 });

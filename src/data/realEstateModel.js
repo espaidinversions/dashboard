@@ -1,9 +1,9 @@
 import { estSection, normalizeCapitalCallStrategy } from "./capitalCallStrategyModel.js";
 
-// Route by normalized est so raw values ("SOCIMI", "Directe") and legacy rows
-// carrying only vehicleTipus="RE" land in the RE section like everywhere else.
+// Route by normalized est so raw values ("SOCIMI", "Directe") land in the RE
+// section like everywhere else. Classification is the resolved "Tipus de Vehicle".
 function isRealEstateRow(row) {
-  const est = normalizeCapitalCallStrategy(row?.est, row?.vehicleTipus ?? null, row?.fons ?? null);
+  const est = normalizeCapitalCallStrategy(row?.est, null, row?.fons ?? null);
   return estSection(est) === "RE";
 }
 

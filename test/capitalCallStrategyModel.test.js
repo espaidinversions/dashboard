@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { normalizeCapitalCallStrategy, setSnapshotInferrer } from "../src/data/capitalCallStrategyModel.js";
+import { normalizeCapitalCallStrategy, setSnapshotInferrer, isCompanyEst, isReEst } from "../src/data/capitalCallStrategyModel.js";
 
 // With the new design, stored canonical strategy values are trusted without re-inference.
 // Fallback inference applies only when the stored est is non-canonical (e.g. legacy "SF").
@@ -52,6 +52,30 @@ test("secondary strategy variants normalize to the canonical label", () => {
   assert.equal(normalizeCapitalCallStrategy("Fons Secondari",     "PE", null), "Fons Secundari");
   assert.equal(normalizeCapitalCallStrategy("Fons de Secundaris", "PE", null), "Fons Secundari");
   assert.equal(normalizeCapitalCallStrategy("Fons secundaris",    "PE", null), "Fons Secundari");
+});
+
+// Scope classification (Transactions + Model Caixa): "fons" are vehicles,
+// participades / search funds are companies — driven by est, not vehicle_tipus.
+test("isCompanyEst: search funds and participades are companies", () => {
+  assert.equal(isCompanyEst("Search Fund - Cerca"), true);
+  assert.equal(isCompanyEst("Search Fund - Participada"), true);
+  assert.equal(isCompanyEst("Participada (Altres)"), true);
+});
+
+test("isCompanyEst: fons and real estate are not companies (they are vehicles)", () => {
+  assert.equal(isCompanyEst("Fons Primari"), false);
+  assert.equal(isCompanyEst("Fons Secundari"), false);
+  assert.equal(isCompanyEst("Fons de Fons"), false);
+  assert.equal(isCompanyEst("Fons de Coinversió"), false);
+  assert.equal(isCompanyEst("Fons Real Estate"), false);
+  assert.equal(isCompanyEst(null), false);
+});
+
+test("isReEst: only Fons Real Estate is real estate", () => {
+  assert.equal(isReEst("Fons Real Estate"), true);
+  assert.equal(isReEst("Fons Primari"), false);
+  assert.equal(isReEst("Participada (Altres)"), false);
+  assert.equal(isReEst(null), false);
 });
 
 // Last test in this file: reset the module-global stub so it cannot leak into

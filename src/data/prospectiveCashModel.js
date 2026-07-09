@@ -1,5 +1,6 @@
 import { FUND_NAME_MAP } from "./fundNameMap.js";
 import { normalizeCapitalCallTipus } from "./capitalCallTipusModel.js";
+import { isReEst } from "./capitalCallStrategyModel.js";
 export { PROSPECTIVE_CASH_USD_FUNDS } from "./prospectiveCashUsdFunds.js";
 
 const EXCLUDED_CASH_MODEL_TIPUS = new Set([
@@ -11,9 +12,9 @@ function stripLegalSuffix(name) {
   return name.replace(/\s+(A\s+)?S\.?L\.?$|\s+S\.?A\.?$|\s+SCR(,\s*S\.?A\.?)?$|\s+FCRE$/i, "").trim();
 }
 
-// Fund name PREFIXES whose entire family is RE (all static rows with these prefixes
-// have vehicleTipus=RE and none are PE). Used for fuzzy matching when canonical names
-// in the DB/forecast table strip trailing identifiers like " D" or " FICC".
+// Fund name PREFIXES whose entire family is RE. Used for fuzzy matching when
+// canonical names in the DB/forecast table strip trailing identifiers like " D"
+// or " FICC".
 const RE_FAMILY_PREFIXES = [
   "inveractiva",
   "meridia",
@@ -22,8 +23,8 @@ const RE_FAMILY_PREFIXES = [
   "tectum",
 ];
 
-// RE funds derived from static capital-calls.js (authoritative for vehicleTipus classification).
-// Used as fallback when rawCapitalCalls (DB data) lacks vehicleTipus metadata.
+// RE funds derived from static capital-calls.js (classified by resolved est).
+// Used as fallback when rawCapitalCalls (DB data) is empty.
 let _staticRENames = null;   // Set<string> after init
 let _staticCommitted = null; // { [fund: string]: number } after init
 let _initPromise = null;
@@ -32,7 +33,7 @@ function initStaticData(RAW_CC) {
   const names = new Set();
   const committed = {};
   for (const row of RAW_CC) {
-    if (String(row?.vehicleTipus ?? "").trim() === "RE") {
+    if (isReEst(row?.est)) {
       const fund = String(row?.fons ?? "").trim();
       if (fund) {
         names.add(fund.toLowerCase());
@@ -122,7 +123,7 @@ export function editorDataToForecastRows(editorData, vehicleIds) {
 
 export function buildReFundMatcher(actualCapitalCalls = []) {
   // Start from the authoritative static set so RE detection works even when
-  // rawCapitalCalls (DB data) is empty or lacks vcpe metadata.
+  // rawCapitalCalls (DB data) is empty.
   const reFundsNorm = new Set(_staticRENames ?? []);
   if (Array.isArray(actualCapitalCalls)) {
     for (const row of actualCapitalCalls) {

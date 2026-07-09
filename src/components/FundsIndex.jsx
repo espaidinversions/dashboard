@@ -1,16 +1,16 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { VCPE_CFG, EST_CFG, VEHICLE_TIPUS_CFG } from "../config.js";
+import { EST_CFG } from "../config.js";
 import { ThemeProvider, useTheme } from "../theme.js";
 import { fmtM, readStoredJSON, writeStoredJSON, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, EditableCell, DeleteRowButton, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
-import { upsertFundMeta, upsertFundMetaFiEnd, updateFundMetaVehicleTipus, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
+import { upsertFundMeta, upsertFundMetaFiEnd, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 import { getVehiclePermissionSection } from "../permissions.js";
 import { computeFundIrrFromRows, makeFundRouteId } from "../data/fundDetailModel.js";
 import { convertAmountToEurOnDate } from "../fx.js";
-import { CAPITAL_CALL_STRATEGY_OPTIONS, defaultCapitalCallStrategyForVehicleTipus, estSection } from "../data/capitalCallStrategyModel.js";
+import { CAPITAL_CALL_STRATEGY_OPTIONS, estSection } from "../data/capitalCallStrategyModel.js";
 
 export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, excludeIds }) {
   const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
@@ -100,23 +100,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     if (error) toast({ message: "Error desant fi inversió: " + error.message, type: "error" });
   };
 
-  const saveVehicleTipus = async (fund, vehicleTipus) => {
-    if (!fund.id) return;
-    const { error } = await updateFundMetaVehicleTipus(fund.id, vehicleTipus || null);
-    if (error) { toast({ message: "Error desant tipus: " + error.message, type: "error" }); return; }
-    const updatedMeta = fundMeta.some(m => (m.id ?? m.fons) === (fund.id ?? fund.fons))
-      ? fundMeta.map(m => (m.id ?? m.fons) === (fund.id ?? fund.fons) ? { ...m, vehicleTipus: vehicleTipus || null } : m)
-      : [...fundMeta, { id: fund.id, fons: fund.fons, vehicleTipus: vehicleTipus || null }];
-    setFundMeta(updatedMeta);
-    writeStoredJSON("tc_fundMeta", updatedMeta);
-    const freshCC = await loadCapitalCalls({ skipCompanions: true });
-    if (freshCC) {
-      persistRawCC(freshCC);
-      window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
-    }
-    toast({ message: "Tipus desat" });
-  };
-
   const handleDeleteFund = async (fund) => {
     const err = await deleteFund(fund);
     if (err) {
@@ -133,17 +116,18 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     toast({ message: `Fons "${fundName}" eliminat.` });
   };
 
-  const defaultVcpe = canEditAlternatives ? "PE" : "RE";
+  const defaultEst = canEditAlternatives ? "Fons Primari" : "Fons Real Estate";
   const [addingFund, setAddingFund] = useState(false);
-  const [newFund, setNewFund] = useState({ fons: "", vehicleTipus: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe), compromis: "", divisa: "EUR" });
+  const [newFund, setNewFund] = useState({ fons: "", est: defaultEst, compromis: "", divisa: "EUR" });
 
   useEffect(() => {
     setNewFund((current) => {
-      if (current.vehicleTipus === "RE" && canEditRealEstate) return current;
-      if ((current.vehicleTipus === "PE" || current.vehicleTipus === "VC") && canEditAlternatives) return current;
-      return { ...current, vehicleTipus: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe) };
+      const section = estSection(current.est);
+      if (section === "RE" && canEditRealEstate) return current;
+      if (section !== "RE" && canEditAlternatives) return current;
+      return { ...current, est: defaultEst };
     });
-  }, [canEditAlternatives, canEditRealEstate, defaultVcpe]);
+  }, [canEditAlternatives, canEditRealEstate, defaultEst]);
 
   const handleAddFund = async (e) => {
     e.preventDefault();
@@ -162,7 +146,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     }
     const row = await insertFund(
       newFund.fons.trim(),
-      newFund.vehicleTipus,
       newFund.est,
       conversion.eur,
       newFund.divisa,
@@ -170,20 +153,20 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     );
     if (!row) { toast({ message: "Error en crear el fons", type: "error" }); return; }
     persistRawCC([...rawCC, row]);
-    setFundMeta(prev => [...prev, { id: row.id, fons: row.fons, vehicleTipus: row.vehicleTipus, tvpi: null, irr: null }]);
+    setFundMeta(prev => [...prev, { id: row.id, fons: row.fons, tvpi: null, irr: null }]);
     setAddingFund(false);
-    setNewFund({ fons: "", vehicleTipus: defaultVcpe, est: defaultCapitalCallStrategyForVehicleTipus(defaultVcpe), compromis: "", divisa: "EUR" });
+    setNewFund({ fons: "", est: defaultEst, compromis: "", divisa: "EUR" });
     toast({ message: `Fons "${newFund.fons.trim()}" afegit.` });
   };
 
   const STALE_VCPE_CODES = new Set(["PE", "VC", "RE", "SF", "PC"]);
   const rows = useMemo(() => {
     const map = new Map();
-    const vcpeSet = vcpeTypes ?? null;
-    for (const r of rawCC.filter((row) => (!vcpeSet || vcpeSet.includes(row?.vehicleTipus)) && !(excludeIds?.has(row?.id)))) {
+    // Section filtering (RE vs alternatives per vcpeTypes) happens in `filtered`.
+    for (const r of rawCC.filter((row) => !(excludeIds?.has(row?.id)))) {
       const key = makeFundRouteId(r);
-      const fundEst = (r.est && !STALE_VCPE_CODES.has(r.est)) ? r.est : defaultCapitalCallStrategyForVehicleTipus(r.vehicleTipus);
-      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, vehicleTipus: r.vehicleTipus, est: fundEst, compromis: 0, calls: 0, dist: 0, recallablePool: 0, year: null, isMock: !!r.isMock });
+      const fundEst = (r.est && !STALE_VCPE_CODES.has(r.est)) ? r.est : "Fons Primari";
+      if (!map.has(key)) map.set(key, { id: r.id ?? null, routeId: key, fons: r.fons, est: fundEst, compromis: 0, calls: 0, dist: 0, recallablePool: 0, year: null, isMock: !!r.isMock });
       const f = map.get(key);
       if (r.cat === "Compromís") {
         f.compromis += r.eur;
@@ -204,7 +187,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       const irr = meta?.irr ?? computeFundIrrFromRows(fundRows, tvpi);
       return {
         ...f,
-        vehicleTipus: meta?.vehicleTipus ?? null,
         utilizat: f.compromis > 0 ? (f.calls / f.compromis) * 100 : null,
         tvpi,
         irr,
@@ -459,8 +441,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                   placeholder="Nom del fons" style={{ padding: "6px 10px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, fontFamily: "inherit", outline: "none" }} />
               </div>
               {[
-                { label: "Fons", key: "vehicleTipus", options: [...(canEditAlternatives ? ["PE", "VC"] : []), ...(canEditRealEstate ? ["RE"] : [])] },
-                { label: "Estructura", key: "est", options: CAPITAL_CALL_STRATEGY_OPTIONS },
+                { label: "Tipus de Vehicle", key: "est", options: CAPITAL_CALL_STRATEGY_OPTIONS },
                 { label: "Divisa", key: "divisa", options: ["EUR", "USD"] },
               ].map(f => (
                 <div key={f.key}>

@@ -83,13 +83,11 @@ export async function saveCapitalCalls(rows) {
   const nextMetaRows = [...grouped.entries()].map(([key, fundRows]) => {
     const existing = metaByVehicle.get(key) ?? metaByVehicle.get(fundRows[0]?.fons) ?? {};
     const tvpi = existing.tvpi ?? null;
-    const vehicleTipus = existing.vehicle_tipus ?? fundRows.find(r => r.vehicleTipus)?.vehicleTipus ?? null;
     return {
       id: fundRows[0]?.id ?? undefined,
       fons: fundRows[0]?.fons ?? existing.fons ?? "",
       tvpi,
       irr: computeFundIrrFromRows(fundRows, tvpi),
-      vehicleTipus,
     };
   });
   if (nextMetaRows.length > 0) {
@@ -148,7 +146,7 @@ export async function insertCapitalCall(cc) {
     mes,
     year,
     fy,
-    est: normalizeCapitalCallStrategy(cc.est, cc.vehicleTipus ?? null, cc) ?? null,
+    est: normalizeCapitalCallStrategy(cc.est, null, cc) ?? null,
     eur,
     divisa: cc.divisa ?? "EUR",
     comentaris: cc.comentaris ?? null,
@@ -167,11 +165,11 @@ export async function insertCapitalCall(cc) {
   await supabase
     .from("fund_meta")
     .upsert(
-      { vehicle_id: resolved.id, fons: resolved.canonicalName, vehicle_tipus: cc.vehicleTipus ?? null },
+      { vehicle_id: resolved.id, fons: resolved.canonicalName },
       { onConflict: "vehicle_id", ignoreDuplicates: true },
     );
 
-  const { data, error } = await supabase.from("capital_calls").insert(row).select("*, fund_meta(vehicle_tipus)").single();
+  const { data, error } = await supabase.from("capital_calls").insert(row).select("*").single();
   if (!error) logAudit("insert", "capital_calls", String(data?.id), row);
   if (!error) {
     const metaResult = await upsertFundMetaComputed(resolved.id, resolved.canonicalName);
@@ -182,9 +180,8 @@ export async function insertCapitalCall(cc) {
 
 export async function updateCapitalCall(rowId, fields) {
   if (!supabase) return { error: null };
-  const { data: old } = await supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").eq("id", rowId).single();
+  const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
   const updates = { ...fields };
-  delete updates.vehicleTipus; // derived from fund_meta, not a capital_calls column
   if (Object.prototype.hasOwnProperty.call(updates, "amountNative")) {
     updates.amount_native = updates.amountNative;
     delete updates.amountNative;
@@ -215,8 +212,7 @@ export async function updateCapitalCall(rowId, fields) {
   if (Object.prototype.hasOwnProperty.call(fields, "est")) {
     const nextEst = Object.prototype.hasOwnProperty.call(updates, "est") ? updates.est : old?.est;
     const nextFons = Object.prototype.hasOwnProperty.call(updates, "fons") ? updates.fons : old?.fons;
-    const vehicleTipus = old?.fund_meta?.vehicle_tipus ?? null;
-    updates.est = normalizeCapitalCallStrategy(nextEst, vehicleTipus, { fons: nextFons });
+    updates.est = normalizeCapitalCallStrategy(nextEst, null, { fons: nextFons });
   }
   if (
     !Object.prototype.hasOwnProperty.call(fields, "cat")
@@ -260,7 +256,7 @@ export async function updateCapitalCall(rowId, fields) {
 
 export async function deleteCapitalCall(rowId) {
   if (!supabase) return { error: null };
-  const { data: old } = await supabase.from("capital_calls").select("*, fund_meta(vehicle_tipus)").eq("id", rowId).single();
+  const { data: old } = await supabase.from("capital_calls").select("*").eq("id", rowId).single();
   const { error } = await supabase.from("capital_calls").delete().eq("id", rowId);
   if (!error && old?.vehicle_id) {
     const metaResult = await upsertFundMetaComputed(old.vehicle_id, old.fons ?? "");

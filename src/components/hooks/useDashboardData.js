@@ -18,7 +18,7 @@ const LS_TS = "tc_loadedAt";
 function sanitizeCapitalCallValues(values) {
   // Only pick known capital_calls columns — drop UI-only fields like nif, fiscal_name
   const {
-    fons, tipus, cat, est, vehicleTipus, divisa, comentaris,
+    fons, tipus, cat, est, divisa, comentaris,
     data, eur, amountNative, fxRate, fxSource,
     recallable, non_recallable, from_recallable,
   } = values ?? {};
@@ -27,7 +27,6 @@ function sanitizeCapitalCallValues(values) {
     tipus: normalizeCapitalCallTipus(tipus),
     cat: cat ?? null,
     est: est ?? null,
-    vehicleTipus: vehicleTipus ?? null,
     divisa: divisa || "EUR",
     comentaris: String(comentaris ?? "").trim() || null,
     data,
@@ -273,7 +272,7 @@ export function useDashboardData() {
                 tipus,
                 eur,
                 cat: row.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
-                est: normalizeCapitalCallStrategy(row.est, row.vehicleTipus ?? null, row),
+                est: normalizeCapitalCallStrategy(row.est, null, row),
               };
             })
           : null;

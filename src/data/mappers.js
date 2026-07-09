@@ -1,6 +1,6 @@
 import { getPrivateEntityName, resolvePrivateEntity } from "./privateEntities.js";
 import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "./capitalCallTipusModel.js";
-import { normalizeCapitalCallStrategy, defaultCapitalCallStrategyForVehicleTipus } from "./capitalCallStrategyModel.js";
+import { normalizeCapitalCallStrategy } from "./capitalCallStrategyModel.js";
 
 /** @typedef {import("./dashboardTypes.js").CapitalCallRow} CapitalCallRow */
 /** @typedef {import("./dashboardTypes.js").FundMetaRow} FundMetaRow */
@@ -106,8 +106,7 @@ export function capitalCallToRow(row) {
     mes,
     year,
     fy,
-    vehicleTipus: row.fund_meta?.vehicle_tipus ?? row.vehicleTipus ?? null,
-    est: normalizeCapitalCallStrategy(row.est, row.fund_meta?.vehicle_tipus ?? row.vehicleTipus ?? null, row),
+    est: normalizeCapitalCallStrategy(row.est, null, row),
     eur,
     divisa: row.divisa,
     comentaris: row.comentaris ?? null,
@@ -132,7 +131,6 @@ export function rowToCapitalCall(row, entityMap) {
   const { mes, year, fy } = parseDateParts(dataStr);
   const tipus = normalizeCapitalCallTipus(row.tipus);
   const eur = normalizeCapitalCallSignedAmount(tipus, row.eur);
-  const vehicleTipus = row.fund_meta?.vehicle_tipus ?? null;
   const estOverride = entity?.vehicle_est ?? null;
   return {
     _rowId: row.id,
@@ -144,8 +142,7 @@ export function rowToCapitalCall(row, entityMap) {
     mes,
     any: year,
     fy,
-    vehicleTipus,
-    est: estOverride ?? (normalizeCapitalCallStrategy(row.est, vehicleTipus, { fons: row.fons }) ?? defaultCapitalCallStrategyForVehicleTipus(vehicleTipus)),
+    est: estOverride ?? (normalizeCapitalCallStrategy(row.est, null, { fons: row.fons }) ?? "Fons Primari"),
     eur,
     divisa: row.divisa,
     comentaris: row.comentaris ?? null,
@@ -168,7 +165,6 @@ export function fundMetaToRow(row) {
     fons: row.fons,
     tvpi: row.tvpi ?? null,
     irr: row.irr ?? null,
-    vehicle_tipus: row.vehicleTipus ?? null,
     fi_end: row.fiEnd ?? null,
   };
 }
@@ -185,7 +181,6 @@ export function rowToFundMeta(row, entityMap) {
     fons: getPrivateEntityName(entityMap, entityId, row.fons),
     tvpi: row.tvpi,
     irr: row.irr ?? null,
-    vehicleTipus: row.vehicle_tipus ?? null,
     fiEnd: row.fi_end ?? null,
   };
 }

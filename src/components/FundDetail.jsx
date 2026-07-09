@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
-import { VCPE_CFG, EST_CFG } from "../config.js";
+import { EST_CFG } from "../config.js";
 import { ThemeProvider, useTheme } from "../theme.js";
 import { fmtM, fmtSignedM, fmtSignedNative, readStoredJSON, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
 import { Badge, Logo, KpiCard, AddRowModal, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
@@ -49,7 +49,7 @@ function FundDetailInner() {
   const txs = detail?.txs ?? [];
 
   // Destructure with ?? {} so these are safe before detail loads
-  const { fundName, fundId, vehicleTipus, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, irrFund, txLog, recallablePool } = detail ?? {};
+  const { fundName, fundId, section, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, irrFund, txLog, recallablePool } = detail ?? {};
 
   const filteredTxLog = useMemo(() => (txLog ?? []).filter((r) => {
     if (txFilters.data && !String(r.data ?? "").includes(txFilters.data)) return false;
@@ -104,7 +104,7 @@ function FundDetailInner() {
     );
   }
 
-  const canAccessFund = vehicleTipus === "RE" ? canAccessSection("real-estate") : canAccessSection("alternatives");
+  const canAccessFund = section === "RE" ? canAccessSection("real-estate") : canAccessSection("alternatives");
   if (!canAccessFund) {
     return (
       <div style={{ minHeight: "100vh", background: tc.bg, color: tc.text, fontFamily: "'Outfit',system-ui,sans-serif", padding: 32 }}>
@@ -131,7 +131,6 @@ function FundDetailInner() {
         <span style={{ fontSize: 15, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{fundName}</span>
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           {fundId && <span style={{ fontSize: 10, background: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.9)", borderRadius: 4, padding: "2px 8px", fontWeight: 600, fontFamily: "'DM Mono',monospace" }}>{fundId}</span>}
-          <Badge label={vehicleTipus} cfg={VCPE_CFG[vehicleTipus] || {}} />
           <Badge label={est}  cfg={EST_CFG[est]   || {}} />
         </div>
       </div>
@@ -310,7 +309,7 @@ function FundDetailInner() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: tc.bgAlt }}>
-                {["Data", "Tipus", "Import (Original)", "Import (Euros)", "Recallable", ...(vehicleTipus === "SF" ? ["Fase"] : []), ...(canEdit ? [""] : [])].map(h => (
+                {["Data", "Tipus", "Import (Original)", "Import (Euros)", "Recallable", ...(section === "SF" ? ["Fase"] : []), ...(canEdit ? [""] : [])].map(h => (
                   <th key={h || "_actions"} style={{ padding: "10px 12px", textAlign: h === "Import (Original)" || h === "Import (Euros)" || h === "Recallable" ? "right" : "left", fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>{h}</th>
                 ))}
               </tr>
@@ -320,13 +319,13 @@ function FundDetailInner() {
                 <th style={{ padding: "6px 12px" }} />
                 <th style={{ padding: "6px 12px" }}><input value={txFilters.import} onChange={(e) => setTxFilters((v) => ({ ...v, import: e.target.value }))} style={{ width:"100%", padding:"4px 6px", borderRadius:4, border:`1px solid ${tc.border}`, background:tc.bg, color:tc.text, fontSize:11, fontFamily:"inherit" }} /></th>
                 <th style={{ padding: "6px 12px" }} />
-                {vehicleTipus === "SF" ? <th style={{ padding: "6px 12px" }} /> : null}
+                {section === "SF" ? <th style={{ padding: "6px 12px" }} /> : null}
                 {canEdit ? <th style={{ padding: "6px 12px" }} /> : null}
               </tr>
             </thead>
             <tbody>
               {filteredTxLog.map((r, i) => {
-                const sfPhaseCfg = vehicleTipus === "SF" && r.est ? EST_CFG[r.est] : null;
+                const sfPhaseCfg = section === "SF" && r.est ? EST_CFG[r.est] : null;
                 const sfPhaseLabel = r.est?.includes("Adquis") || r.est?.includes("Participada")
                   ? "Adquisició" : r.est?.includes("Cerca") ? "Cerca" : null;
                 return (
@@ -346,7 +345,7 @@ function FundDetailInner() {
                         ? fmtM(Math.abs(r.from_recallable))
                         : "—"}
                     </td>
-                    {vehicleTipus === "SF" ? (
+                    {section === "SF" ? (
                       <td style={{ padding: "10px 12px" }}>
                         {sfPhaseLabel && sfPhaseCfg ? (
                           <span style={{ fontSize: 10, fontWeight: 600, borderRadius: 4, padding: "2px 6px", background: sfPhaseCfg.bg, color: sfPhaseCfg.color }}>

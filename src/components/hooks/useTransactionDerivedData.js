@@ -18,7 +18,6 @@ export function useTransactionDerivedData({
   searcherCompr,
   excluded,
   fFy,
-  fVcpe,
   fEst,
   fTipus,
   txSearch,
@@ -68,7 +67,6 @@ export function useTransactionDerivedData({
   const filtered = useMemo(() => {
     let dat = baseTx;
     if (fFy !== "Tots") dat = dat.filter((r) => r.fy === fFy);
-    if (fVcpe.size > 0) dat = dat.filter((r) => fVcpe.has(r.vehicleTipus));
     if (fEst !== "Tots") dat = dat.filter((r) => r.est === fEst);
     if (fTipus !== "Tots") dat = dat.filter((r) => r.tipus === fTipus);
     if (txSearch.trim()) {
@@ -85,7 +83,7 @@ export function useTransactionDerivedData({
       dat = dat.filter((r) => (r.fons || "").toLowerCase().includes(q));
     }
     return dat;
-  }, [baseTx, fFy, fVcpe, fEst, fTipus, txSearch, globalSearch, section]);
+  }, [baseTx, fFy, fEst, fTipus, txSearch, globalSearch, section]);
 
   const fCalls = useMemo(
     () => filtered.filter((r) => r.cat === "Capital Call").reduce((s, r) => s + r.eur, 0),
@@ -133,19 +131,6 @@ export function useTransactionDerivedData({
     return Object.values(m).sort((a, b) => a.mes.localeCompare(b.mes));
   }, [filtered, fFy]);
 
-  const byVcpe = useMemo(() => {
-    const m = {};
-    filtered.filter((r) => r.cat === "Capital Call").forEach((r) => {
-      m[r.vehicleTipus] = (m[r.vehicleTipus] || 0) + r.eur;
-    });
-    const tot = Object.values(m).reduce((s, v) => s + v, 0);
-    return Object.entries(m).map(([name, value]) => ({
-      name,
-      value: +value.toFixed(0),
-      pct: ((value / tot) * 100).toFixed(1),
-    }));
-  }, [filtered]);
-
   const byEst = useMemo(() => {
     const m = {};
     filtered
@@ -168,7 +153,6 @@ export function useTransactionDerivedData({
         id: r.id ?? null,
         fons: r.fons,
         compr: r.eur,
-        vehicleTipus: r.vehicleTipus,
         est: r.est,
         calls: 0,
         dist: 0,
@@ -182,7 +166,6 @@ export function useTransactionDerivedData({
           id: r.id ?? null,
           fons: r.fons,
           compr: 0,
-          vehicleTipus: r.vehicleTipus,
           est: r.est,
           calls: 0,
           dist: 0,
@@ -197,10 +180,8 @@ export function useTransactionDerivedData({
 
   const fonsFiltered = useMemo(() => {
     let fl = [...FONS_MAP2];
-    if (fVcpe.size > 0) fl = fl.filter((f) => fVcpe.has(f.vehicleTipus));
     if (fEst !== "Tots") fl = fl.filter((f) => f.est === fEst);
     if (ccChartF) {
-      if (ccChartF.type === "vcpe") fl = fl.filter((f) => f.vehicleTipus === ccChartF.value);
       if (ccChartF.type === "est") fl = fl.filter((f) => f.est === ccChartF.value);
       if (ccChartF.type === "fy")
         fl = fl.filter(
@@ -222,11 +203,10 @@ export function useTransactionDerivedData({
       if (sortFons === "rebut") return dir * (a.dist + a.retorn - (b.dist + b.retorn));
       if (sortFons === "net")
         return dir * (a.dist + a.retorn - a.calls - (b.dist + b.retorn - b.calls));
-      if (sortFons === "vcpe") return dir * (a.vehicleTipus ?? "").localeCompare(b.vehicleTipus ?? "");
       if (sortFons === "est") return dir * a.est.localeCompare(b.est);
       return 0;
     });
-  }, [FONS_MAP2, fVcpe, fEst, sortFons, sortFonsDir, ccChartF, baseTx]);
+  }, [FONS_MAP2, fEst, sortFons, sortFonsDir, ccChartF, baseTx]);
 
   return {
     baseTx,
@@ -242,7 +222,6 @@ export function useTransactionDerivedData({
     fDist,
     byFy,
     byMes,
-    byVcpe,
     byEst,
     FONS_MAP2,
     fonsFiltered,

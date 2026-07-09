@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from "react";
-import { defaultCapitalCallStrategyForVehicleTipus } from "../../data/capitalCallStrategyModel.js";
 
 const CapitalCallModalContext = createContext(null);
 
@@ -12,7 +11,7 @@ export function CapitalCallModalProvider({ children, defaultVehicleCurrency }) {
     const fons = defaults.fons ?? "";
     setCcAddModalDefaults({
       ...defaults,
-      est: defaults.est ?? defaultCapitalCallStrategyForVehicleTipus(defaults.vehicleTipus ?? "PE"),
+      est: defaults.est ?? "Fons Primari",
       divisa: defaults.divisa ?? defaultVehicleCurrency(fons),
     });
     setCcAddModalFons(fons);

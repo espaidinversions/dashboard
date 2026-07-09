@@ -1,6 +1,5 @@
 import {
   buildPrivateEntitiesFromDashboardBundle,
-  defaultCapitalCallStrategyForVehicleTipus,
   fundMetaToRow,
   loadPrivateEntityMap,
   logAudit,
@@ -59,28 +58,20 @@ export async function upsertFundMetaFiEnd(fund, fiEnd) {
   return { error };
 }
 
-export async function updateFundMetaVehicleTipus(vehicleId, vehicleTipus) {
-  if (!supabase) return { error: null };
-  const { error } = await supabase
-    .from("fund_meta")
-    .update({ vehicle_tipus: vehicleTipus ?? null })
-    .eq("vehicle_id", vehicleId);
-  if (!error) logAudit("update", "fund_meta", vehicleId, { vehicle_tipus: vehicleTipus });
-  return { error };
-}
-
-export async function insertFund(fons, vehicleTipus, est, compromisEur, divisa, options = {}) {
+export async function insertFund(fons, est, compromisEur, divisa, options = {}) {
   if (!supabase) return null;
-  const resolved = resolvePrivateEntity("vehicle", fons);
+  const normalizedEst = normalizeCapitalCallStrategy(est, null, { fons }) ?? "Fons Primari";
+  // The chosen "Tipus de Vehicle" (est) lives on the private entity as vehicle_est,
+  // the single source of truth for classification.
+  const resolved = { ...resolvePrivateEntity("vehicle", fons), vehicleEst: normalizedEst };
   const { error: entityError } = await upsertPrivateEntities([resolved]);
   if (entityError) { console.error(entityError); return null; }
   const data_iso = new Date().toISOString().slice(0, 10);
   const { mes, year, fy } = parseDateParts(data_iso);
-  const normalizedEst = normalizeCapitalCallStrategy(est, vehicleTipus, { fons }) ?? defaultCapitalCallStrategyForVehicleTipus(vehicleTipus);
 
   const { error: fmErr } = await supabase
     .from("fund_meta")
-    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, vehicle_tipus: vehicleTipus, tvpi: null, irr: null }, { onConflict: "vehicle_id" });
+    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: null, irr: null }, { onConflict: "vehicle_id" });
   if (fmErr) { console.error(fmErr); return null; }
 
   const { error: ccErr } = await supabase.from("capital_calls").insert({
@@ -95,12 +86,11 @@ export async function insertFund(fons, vehicleTipus, est, compromisEur, divisa, 
   });
   if (ccErr) { console.error(ccErr); return null; }
 
-  logAudit("insert", "capital_calls", resolved.id, { fons: resolved.canonicalName, vehicleTipus, est: normalizedEst });
+  logAudit("insert", "capital_calls", resolved.id, { fons: resolved.canonicalName, est: normalizedEst });
   // Return in rawCC shape (key `any`, not `year`)
   return {
     id: resolved.id,
     fons: resolved.canonicalName,
-    vehicleTipus,
     est: normalizedEst,
     cat: "Compromís",
     eur: compromisEur,
