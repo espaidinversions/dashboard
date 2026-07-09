@@ -81,6 +81,20 @@ test("funds without a Compromís vintage are skipped", () => {
   assert.deepEqual(matrix.vintages, []);
 });
 
+test("vehicle strategy comes from the Compromís row, not the first row", () => {
+  // First row (a Capital Call) is mis-tagged Fons de Fons; the Compromís row —
+  // the source of truth — says Fons Primari. The fund must land in Primari.
+  const rows = [
+    { id: "M", fons: "Mixed Fund", est: "Fons de Fons", cat: "Capital Call", eur: 100000, data: "2021-06-01" },
+    { id: "M", fons: "Mixed Fund", est: "Fons Primari", cat: "Compromís", eur: 100000, data: "2021-02-01" },
+  ];
+  const meta = [{ id: "M", fons: "Mixed Fund", tvpi: 2.0 }];
+  const matrix = buildAltCohortMatrix(rows, meta, ASOF);
+  assert.deepEqual(matrix.vintages, [2021]);
+  assert.equal(matrix.cells["2021|Fons de Fons"], null);
+  assert.ok(Math.abs(matrix.cells["2021|Fons Primari"].moic - 2.0) < 1e-9);
+});
+
 test("totals: byStrategy and grand pool across vintages", () => {
   const rows = [
     ...primariRows(),

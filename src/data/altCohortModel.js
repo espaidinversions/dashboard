@@ -69,15 +69,19 @@ function summarizeAltFunds(rawCC, fundMeta) {
 
   const funds = [];
   for (const rows of groups.values()) {
-    const est = rows.find((r) => r.est)?.est ?? null;
+    // Single strategy per vehicle: classify by the commitment's declared est
+    // (the earliest-dated Compromís row), not the arbitrary first row. Many ALT
+    // vehicles carry mixed est across their call/distribution rows.
+    const compromisRows = rows
+      .filter((r) => r.cat === "Compromís" && r.data)
+      .sort((a, b) => String(a.data).localeCompare(String(b.data)));
+    const est = compromisRows.find((r) => r.est)?.est ?? null;
     if (estSection(est) !== "ALT") continue;
 
     // Vintage = earliest Compromís year; skip funds with no dated commitment.
-    const vintage = rows
-      .filter((r) => r.cat === "Compromís" && r.data)
+    const vintage = compromisRows
       .map((r) => Number(String(r.data).slice(0, 4)))
-      .filter((y) => Number.isFinite(y))
-      .sort((a, b) => a - b)[0];
+      .filter((y) => Number.isFinite(y))[0];
     if (vintage == null) continue;
 
     const calls = rows

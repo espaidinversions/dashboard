@@ -69,9 +69,11 @@ export async function insertFund(fons, est, compromisEur, divisa, options = {}) 
   const data_iso = new Date().toISOString().slice(0, 10);
   const { mes, year, fy } = parseDateParts(data_iso);
 
+  // A freshly committed vehicle's value equals its cost until real marks arrive,
+  // so TVPI defaults to 1.0 (editable later via the TVPI cell in FundsIndex).
   const { error: fmErr } = await supabase
     .from("fund_meta")
-    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: null, irr: null }, { onConflict: "vehicle_id" });
+    .upsert({ vehicle_id: resolved.id, fons: resolved.canonicalName, tvpi: 1, irr: null }, { onConflict: "vehicle_id" });
   if (fmErr) { console.error(fmErr); return null; }
 
   const { error: ccErr } = await supabase.from("capital_calls").insert({
