@@ -21,7 +21,7 @@ function FundDetailInner() {
   const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
   const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
   const [txFilters, setTxFilters] = useState({ data: "", tipus: "Tots", import: "" });
-  const [chartView, setChartView] = useState("quarterly");
+  const [chartView, setChartView] = useState("annual");
   const [editingRow, setEditingRow] = useState(null);
 
   // 2. All useEffect / useMemo calls — hoisted unconditionally before any return

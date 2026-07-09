@@ -30,7 +30,7 @@ export function findFundRowsByRouteId(rows, routeId) {
   return nonCompanyHits.length > 0 ? nonCompanyHits : hits;
 }
 
-function normalizeFundDetailRow(row) {
+export function normalizeFundDetailRow(row) {
   const tipus = normalizeCapitalCallTipus(row?.tipus);
   const eur = normalizeCapitalCallSignedAmount(tipus, row?.eur);
   return {
@@ -118,7 +118,10 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
   const tvpiFund = meta?.tvpi ?? null;
   const dpiFund = calls > 0 ? dist / calls : 0;
   const rvpiFund = tvpiFund != null ? tvpiFund - dpiFund : null;
-  const irrFund = meta?.irr ?? computeFundIrrFromRows(txs, tvpiFund);
+  // Prefer the live compute (uses current TVPI + transactions, so it includes
+  // up-to-date residual value / RVPI and can't go stale). Fall back to the
+  // stored fund_meta.irr only when there aren't enough flows to compute one.
+  const irrFund = computeFundIrrFromRows(txs, tvpiFund) ?? meta?.irr ?? null;
   const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
 
   return {
