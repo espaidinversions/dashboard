@@ -347,10 +347,10 @@ BEGIN
     WHERE kind IN ('company', 'vehicle');
   END IF;
   IF p_private_entities_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_private_entities_rows), 0) > 0 THEN
-    INSERT INTO private_entities (id, kind, canonical_name, source_name, workbook_name, match_type)
-    SELECT id, kind, canonical_name, source_name, workbook_name, match_type
+    INSERT INTO private_entities (id, kind, canonical_name, source_name, workbook_name, match_type, vehicle_est, nif, fiscal_name)
+    SELECT id, kind, canonical_name, source_name, workbook_name, match_type, vehicle_est, nif, fiscal_name
     FROM jsonb_to_recordset(COALESCE(p_private_entities_rows, '[]'::jsonb))
-    AS x(id TEXT, kind TEXT, canonical_name TEXT, source_name TEXT, workbook_name TEXT, match_type TEXT);
+    AS x(id TEXT, kind TEXT, canonical_name TEXT, source_name TEXT, workbook_name TEXT, match_type TEXT, vehicle_est TEXT, nif TEXT, fiscal_name TEXT);
   END IF;
   IF p_fund_meta_rows IS NOT NULL AND COALESCE(jsonb_array_length(p_fund_meta_rows), 0) > 0 THEN
     INSERT INTO fund_meta (vehicle_id, fons, tvpi, irr)
