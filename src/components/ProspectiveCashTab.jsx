@@ -6,7 +6,7 @@ import { makeFundRouteId, computeFundMetricsByName } from "../data/fundDetailMod
 import { readStoredJSON } from "../utils/storage.js";
 import { FUND_NAME_MAP } from "../data/fundNameMap.js";
 import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
-import { isCompanyEst, isReEst } from "../data/capitalCallStrategyModel.js";
+import { isCompanyEst, isReEst, estSection } from "../data/capitalCallStrategyModel.js";
 import { PROSPECTIVE_CASH_USD_FUNDS } from "../data/prospectiveCashUsdFunds.js";
 import {
   buildReFundMatcher,
