@@ -71,7 +71,9 @@ function computeCohort(funds, asOfDate) {
  * Collapse raw capital-call rows into one summary per fund, keeping only funds
  * whose resolved section is in `sections` (e.g. ["ALT"] or ["SF","PC"]).
  * Strategy = earliest-dated Compromís row's est; vintage = earliest Compromís
- * year; funds with no dated commitment are skipped.
+ * year; funds with no dated commitment are skipped. When `vintageFallback` is
+ * true, funds with no Compromís-derived est or vintage fall back to the earliest
+ * dated Capital Call row (used by the companies matrix, not by ALT vehicles).
  */
 function summarizeFundsBySection(rawCC, fundMeta, { sections, vintageFallback = false }) {
   const source = Array.isArray(rawCC) ? rawCC : [];
