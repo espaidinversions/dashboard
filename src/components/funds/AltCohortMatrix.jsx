@@ -30,7 +30,13 @@ function Cell({ metrics, tc }) {
  * Cross-tab of MOIC & IRR by vintage (rows) and strategy (columns) for the
  * Alternatives funds. Presentational only — consumes buildAltCohortMatrix output.
  */
-export default function AltCohortMatrix({ matrix, tc }) {
+export default function AltCohortMatrix({
+  matrix,
+  tc,
+  title = "MOIC i IRR per Vintage i Estratègia",
+  strategyLabels = ALT_STRATEGY_LABELS,
+  action,
+}) {
   const { vintages, strategies, cells, totals } = matrix ?? {};
 
   const headCell = {
@@ -49,7 +55,7 @@ export default function AltCohortMatrix({ matrix, tc }) {
 
   return (
     <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
-      <SectionHeader title="MOIC i IRR per Vintage i Estratègia" tc={tc} />
+      <SectionHeader title={title} tc={tc} action={action} />
       {(!vintages || vintages.length === 0) ? (
         <div style={{ textAlign: "center", color: tc.textLight, padding: "32px 0" }}>
           Encara no hi ha dades per mostrar.
@@ -60,7 +66,7 @@ export default function AltCohortMatrix({ matrix, tc }) {
             <tr>
               <th style={{ ...headCell, textAlign: "left" }}>Vintage</th>
               {strategies.map((s) => (
-                <th key={s} style={{ ...headCell, textAlign: "right" }}>{ALT_STRATEGY_LABELS[s] ?? s}</th>
+                <th key={s} style={{ ...headCell, textAlign: "right" }}>{strategyLabels[s] ?? s}</th>
               ))}
               <th style={{ ...headCell, textAlign: "right" }}>Total</th>
             </tr>
