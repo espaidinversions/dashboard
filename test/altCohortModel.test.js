@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildAltCohortMatrix, ALT_STRATEGIES } from "../src/data/altCohortModel.js";
+import { buildAltCohortMatrix, buildCompanyCohortMatrix, ALT_STRATEGIES, COMPANY_STRATEGIES } from "../src/data/altCohortModel.js";
 
 const ASOF = "2026-01-01";
 
@@ -116,4 +116,54 @@ test("totals: byStrategy and grand pool across vintages", () => {
   assert.ok(Math.abs(matrix.totals.byStrategy["Fons de Fons"].moic - 2.0) < 1e-9);
   // Grand MOIC = (2*100k + 1*300k + 2*200k) / 600k = 900k/600k = 1.5.
   assert.ok(Math.abs(matrix.totals.grand.moic - 1.5) < 1e-9);
+});
+
+test("company matrix groups SF and PC by company strategies × vintage; ignores ALT", () => {
+  const rows = [
+    { id: "S1", fons: "Searcher One", est: "Search Fund - Cerca", cat: "Compromís", eur: 50000, data: "2021-01-01" },
+    { id: "S1", fons: "Searcher One", est: "Search Fund - Cerca", cat: "Capital Call", eur: 50000, data: "2021-06-01" },
+    { id: "P1", fons: "Participada One", est: "Participada (Altres)", cat: "Compromís", eur: 200000, data: "2022-01-01" },
+    { id: "P1", fons: "Participada One", est: "Participada (Altres)", cat: "Capital Call", eur: 200000, data: "2022-06-01" },
+    // An ALT vehicle must be ignored by the company matrix.
+    { id: "A1", fons: "Alt Fund", est: "Fons Primari", cat: "Compromís", eur: 100000, data: "2020-01-01" },
+    { id: "A1", fons: "Alt Fund", est: "Fons Primari", cat: "Capital Call", eur: 100000, data: "2020-06-01" },
+  ];
+  const meta = [
+    { id: "S1", fons: "Searcher One", tvpi: 1.0 },
+    { id: "P1", fons: "Participada One", tvpi: 2.0 },
+    { id: "A1", fons: "Alt Fund", tvpi: 3.0 },
+  ];
+  const matrix = buildCompanyCohortMatrix(rows, meta, { asOfDate: ASOF });
+  assert.deepEqual(matrix.strategies, COMPANY_STRATEGIES);
+  assert.deepEqual(matrix.vintages, [2021, 2022]);
+  assert.ok(Math.abs(matrix.cells["2021|Search Fund - Cerca"].moic - 1.0) < 1e-9);
+  assert.ok(Math.abs(matrix.cells["2022|Participada (Altres)"].moic - 2.0) < 1e-9);
+  assert.equal(matrix.vintages.includes(2020), false);
+});
+
+test("acquired search funds (in excludeIds) are dropped from the company matrix SF set", () => {
+  const rows = [
+    { id: "ACQ", fons: "Acme Searcher", est: "Search Fund - Cerca", cat: "Compromís", eur: 50000, data: "2021-01-01" },
+    { id: "ACQ", fons: "Acme Searcher", est: "Search Fund - Cerca", cat: "Capital Call", eur: 50000, data: "2021-06-01" },
+    { id: "P2", fons: "Other Participada", est: "Participada (Altres)", cat: "Compromís", eur: 100000, data: "2021-01-01" },
+    { id: "P2", fons: "Other Participada", est: "Participada (Altres)", cat: "Capital Call", eur: 100000, data: "2021-06-01" },
+  ];
+  const meta = [
+    { id: "ACQ", fons: "Acme Searcher", tvpi: 1.5 },
+    { id: "P2", fons: "Other Participada", tvpi: 2.0 },
+  ];
+  const matrix = buildCompanyCohortMatrix(rows, meta, { excludeIds: new Set(["ACQ"]), asOfDate: ASOF });
+  // Acquired searcher excluded → its SF cell is empty.
+  assert.equal(matrix.cells["2021|Search Fund - Cerca"], null);
+  // Unrelated participada remains.
+  assert.ok(Math.abs(matrix.cells["2021|Participada (Altres)"].moic - 2.0) < 1e-9);
+});
+
+test("companies without a Compromís vintage are skipped", () => {
+  const rows = [
+    { id: "NP", fons: "No Compromís Co", est: "Participada (Altres)", cat: "Capital Call", eur: 100000, data: "2021-06-01" },
+  ];
+  const meta = [{ id: "NP", fons: "No Compromís Co", tvpi: 2.0 }];
+  const matrix = buildCompanyCohortMatrix(rows, meta, { asOfDate: ASOF });
+  assert.deepEqual(matrix.vintages, []);
 });

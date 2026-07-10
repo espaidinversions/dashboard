@@ -18,6 +18,19 @@ export const ALT_STRATEGY_LABELS = {
   "Fons de Coinversió": "Coinversió",
 };
 
+// Company strategies (Search Funds + Participades), in fixed display order.
+export const COMPANY_STRATEGIES = [
+  "Search Fund - Cerca",
+  "Search Fund - Participada",
+  "Participada (Altres)",
+];
+
+export const COMPANY_STRATEGY_LABELS = {
+  "Search Fund - Cerca": "Cerca",
+  "Search Fund - Participada": "Participada",
+  "Participada (Altres)": "Altres",
+};
+
 const DIST_CATS = new Set(["Distribució", "Retorn Capital"]);
 
 /** Cash flow rows that feed the money-weighted (XIRR) computation. */
@@ -143,4 +156,20 @@ export function buildAltCohortMatrix(
 ) {
   const funds = summarizeFundsBySection(rawCC, fundMeta, { sections: ["ALT"] });
   return buildMatrixFromFunds(funds, ALT_STRATEGIES, asOfDate);
+}
+
+/**
+ * Build the MOIC/IRR cohort matrix for companies (Search Funds + Participades).
+ * `excludeIds` drops acquired search funds from the SF set so they are not
+ * counted as both a searcher and a participada (mirrors useDashboardData's
+ * sfTx.filter(!actualCompanyIds.has(id))). Same output shape as buildAltCohortMatrix.
+ */
+export function buildCompanyCohortMatrix(
+  rawCC,
+  fundMeta,
+  { excludeIds = new Set(), asOfDate = new Date().toISOString().slice(0, 10) } = {},
+) {
+  const all = summarizeFundsBySection(rawCC, fundMeta, { sections: ["SF", "PC"] });
+  const funds = all.filter((f) => !(estSection(f.est) === "SF" && excludeIds.has(f.id)));
+  return buildMatrixFromFunds(funds, COMPANY_STRATEGIES, asOfDate);
 }
