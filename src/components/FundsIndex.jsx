@@ -11,8 +11,9 @@ import { getVehiclePermissionSection } from "../permissions.js";
 import { computeFundIrrFromRows, makeFundRouteId } from "../data/fundDetailModel.js";
 import { convertAmountToEurOnDate } from "../fx.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS, estSection } from "../data/capitalCallStrategyModel.js";
+import { IncludeCompaniesToggle } from "./funds/IncludeCompaniesToggle.jsx";
 
-export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, excludeIds }) {
+export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, excludeIds, includeCompanies = false, onToggleCompanies }) {
   const { canAccessSection, canEditSection, isAdmin, isSuperuser } = useAuth();
   const { toast } = useToast();
   const { tc } = useTheme();
@@ -206,7 +207,10 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       if (Array.isArray(vcpeTypes) && vcpeTypes.length > 0) {
         const sectionId = getVehiclePermissionSection(row);
         if (vcpeTypes.includes("RE")) return sectionId === "real-estate" && canAccessRealEstate;
-        return sectionId === "alternatives" && canAccessAlternatives && estSection(row.est) !== "SF";
+        if (!(sectionId === "alternatives" && canAccessAlternatives)) return false;
+        const sec = estSection(row.est);
+        // OFF: strict vehicles-only (ALT). ON: vehicles + companies (SF + PC).
+        return includeCompanies ? (sec === "ALT" || sec === "SF" || sec === "PC") : sec === "ALT";
       }
       const sectionId = getVehiclePermissionSection(row);
       if (canAccessAlternatives) return sectionId === "alternatives";
@@ -230,7 +234,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       if (filters.recallablePool && !String(row.recallablePool ?? "").includes(filters.recallablePool)) return false;
       return true;
     });
-  }, [rows, search, canAccessAlternatives, canAccessRealEstate, vcpeTypes, filters]);
+  }, [rows, search, canAccessAlternatives, canAccessRealEstate, vcpeTypes, filters, includeCompanies]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -295,7 +299,19 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
           ? <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
           : (
           <>
-            <SectionHeader title="Vehicles" count={filtered.length} tc={tc} />
+            <SectionHeader
+              title="Vehicles"
+              tc={tc}
+              action={
+                onToggleCompanies ? (
+                  <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
+                    <IncludeCompaniesToggle checked={includeCompanies} onChange={onToggleCompanies} tc={tc} />
+                    <span style={{ fontSize: 11, color: tc.textLight, fontWeight: 400 }}>{filtered.length}</span>
+                  </div>
+                ) : undefined
+              }
+              count={onToggleCompanies ? undefined : filtered.length}
+            />
             <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
