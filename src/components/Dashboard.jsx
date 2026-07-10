@@ -10,7 +10,7 @@ import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
 import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
-import { buildAltCohortMatrix } from "../data/altCohortModel.js";
+import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohortModel.js";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
 import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
@@ -116,6 +116,7 @@ function Dashboard() {
   const [showLoader, setShowLoader] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
+  const [includeCompanies, setIncludeCompanies] = usePersistedState("ui_alt_include_companies", false);
 
   const ccNameOptions = useMemo(() => dedupeOptionValues([
     ...d.rawCC.map((row) => row.fons),
@@ -527,6 +528,9 @@ function Dashboard() {
               byEst={byEst}
               estCfg={estCfg}
               matrix={buildAltCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []))}
+              companyMatrix={buildCompanyCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []), { excludeIds: d.actualCompanyIds })}
+              includeCompanies={includeCompanies}
+              onToggleCompanies={setIncludeCompanies}
             />
           )}
 
@@ -580,7 +584,7 @@ function Dashboard() {
               </div>
               <Suspense fallback={null}>
                 {inversionsSubTab === "fons"
-                  ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["PE", "VC"]} excludeIds={d.actualCompanyIds} />
+                  ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["PE", "VC"]} excludeIds={d.actualCompanyIds} includeCompanies={includeCompanies} onToggleCompanies={setIncludeCompanies} />
                   : inversionsSubTab === "pipeline"
                     ? <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
                     : <TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_all_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}

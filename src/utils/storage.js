@@ -63,6 +63,7 @@ const TC_LS_KEYS = [
   "tc_rawCC", "tc_fundMeta", "tc_portfolioCompanies", "tc_allSearchers",
   "tc_funds0", "tc_loadedAt",
   "ui_tab", "ui_excluded", "ui_navItem", "ui_sidebarCollapsed",
+  "ui_alt_include_companies",
   "ui_fFy", "ui_fVcpe", "ui_fEst", "ui_fCat", "ui_fTipus", "ui_txSearch",
   "ui_sortFons", "ui_sortFonsDir",
   "pl_cur", "pl_fGeo", "pl_fStr", "pl_fStat", "pl_fCanal",

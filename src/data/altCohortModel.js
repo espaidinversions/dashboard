@@ -18,6 +18,19 @@ export const ALT_STRATEGY_LABELS = {
   "Fons de Coinversió": "Coinversió",
 };
 
+// Company strategies (Search Funds + Participades), in fixed display order.
+export const COMPANY_STRATEGIES = [
+  "Search Fund - Cerca",
+  "Search Fund - Participada",
+  "Participada (Altres)",
+];
+
+export const COMPANY_STRATEGY_LABELS = {
+  "Search Fund - Cerca": "Cerca",
+  "Search Fund - Participada": "Participada",
+  "Participada (Altres)": "Altres",
+};
+
 const DIST_CATS = new Set(["Distribució", "Retorn Capital"]);
 
 /** Cash flow rows that feed the money-weighted (XIRR) computation. */
@@ -54,10 +67,18 @@ function computeCohort(funds, asOfDate) {
   return { moic, irr: xirr(flows) };
 }
 
-/** Collapse the raw capital-call rows into one summary per Alternatives fund. */
-function summarizeAltFunds(rawCC, fundMeta) {
+/**
+ * Collapse raw capital-call rows into one summary per fund, keeping only funds
+ * whose resolved section is in `sections` (e.g. ["ALT"] or ["SF","PC"]).
+ * Strategy = earliest-dated Compromís row's est; vintage = earliest Compromís
+ * year; funds with no dated commitment are skipped. When `vintageFallback` is
+ * true, funds with no Compromís-derived est or vintage fall back to the earliest
+ * dated Capital Call row (used by the companies matrix, not by ALT vehicles).
+ */
+function summarizeFundsBySection(rawCC, fundMeta, { sections, vintageFallback = false }) {
   const source = Array.isArray(rawCC) ? rawCC : [];
   const metaList = Array.isArray(fundMeta) ? fundMeta : [];
+  const keep = new Set(sections);
 
   const groups = new Map();
   for (const raw of source) {
@@ -69,19 +90,31 @@ function summarizeAltFunds(rawCC, fundMeta) {
 
   const funds = [];
   for (const rows of groups.values()) {
-    // Single strategy per vehicle: classify by the commitment's declared est
-    // (the earliest-dated Compromís row), not the arbitrary first row. Many ALT
-    // vehicles carry mixed est across their call/distribution rows.
     const compromisRows = rows
       .filter((r) => r.cat === "Compromís" && r.data)
       .sort((a, b) => String(a.data).localeCompare(String(b.data)));
-    const est = compromisRows.find((r) => r.est)?.est ?? null;
-    if (estSection(est) !== "ALT") continue;
-
-    // Vintage = earliest Compromís year; skip funds with no dated commitment.
-    const vintage = compromisRows
+    let est = compromisRows.find((r) => r.est)?.est ?? null;
+    let vintage = compromisRows
       .map((r) => Number(String(r.data).slice(0, 4)))
       .filter((y) => Number.isFinite(y))[0];
+
+    // Companies rarely have a Compromís row — they are funded by a single Capital
+    // Call. When enabled, fall back to the earliest dated Capital Call for strategy
+    // and vintage so companies are not silently dropped from the matrix. ALT
+    // vehicles never enable this, so their Compromís-based behavior is unchanged.
+    if (vintageFallback && (est == null || vintage == null)) {
+      const callRows = rows
+        .filter((r) => r.cat === "Capital Call" && r.data)
+        .sort((a, b) => String(a.data).localeCompare(String(b.data)));
+      if (est == null) est = callRows.find((r) => r.est)?.est ?? null;
+      if (vintage == null) {
+        vintage = callRows
+          .map((r) => Number(String(r.data).slice(0, 4)))
+          .filter((y) => Number.isFinite(y))[0];
+      }
+    }
+
+    if (!keep.has(estSection(est))) continue;
     if (vintage == null) continue;
 
     const calls = rows
@@ -97,29 +130,18 @@ function summarizeAltFunds(rawCC, fundMeta) {
     const meta = metaList.find((m) => (id && m.id === id) || m.fons === name);
     const tvpi = meta?.tvpi ?? null;
 
-    funds.push({ est, vintage, calls, dist, tvpi, flows });
+    funds.push({ id, est, vintage, calls, dist, tvpi, flows });
   }
   return funds;
 }
 
-/**
- * Build the MOIC/IRR cohort matrix for the Alternatives funds.
- * @returns {{ vintages: number[], strategies: string[],
- *   cells: Record<string, {moic:number|null, irr:number|null}|null>,
- *   totals: { byVintage: Record<string, object|null>,
- *             byStrategy: Record<string, object|null>, grand: object|null } }}
- */
-export function buildAltCohortMatrix(
-  rawCC,
-  fundMeta,
-  asOfDate = new Date().toISOString().slice(0, 10),
-) {
-  const funds = summarizeAltFunds(rawCC, fundMeta);
+/** Build the { vintages, strategies, cells, totals } cross-tab from fund summaries. */
+function buildMatrixFromFunds(funds, strategies, asOfDate) {
   const vintages = [...new Set(funds.map((f) => f.vintage))].sort((a, b) => a - b);
 
   const cells = {};
   for (const vintage of vintages) {
-    for (const strategy of ALT_STRATEGIES) {
+    for (const strategy of strategies) {
       const inCell = funds.filter((f) => f.vintage === vintage && f.est === strategy);
       cells[`${vintage}|${strategy}`] = inCell.length ? computeCohort(inCell, asOfDate) : null;
     }
@@ -130,15 +152,42 @@ export function buildAltCohortMatrix(
     byVintage[vintage] = computeCohort(funds.filter((f) => f.vintage === vintage), asOfDate);
   }
   const byStrategy = {};
-  for (const strategy of ALT_STRATEGIES) {
+  for (const strategy of strategies) {
     byStrategy[strategy] = computeCohort(funds.filter((f) => f.est === strategy), asOfDate);
   }
   const grand = computeCohort(funds, asOfDate);
 
-  return {
-    vintages,
-    strategies: ALT_STRATEGIES,
-    cells,
-    totals: { byVintage, byStrategy, grand },
-  };
+  return { vintages, strategies, cells, totals: { byVintage, byStrategy, grand } };
+}
+
+/**
+ * Build the MOIC/IRR cohort matrix for the Alternatives (vehicle) funds.
+ * @returns {{ vintages: number[], strategies: string[],
+ *   cells: Record<string, {moic:number|null, irr:number|null}|null>,
+ *   totals: { byVintage: Record<string, object|null>,
+ *             byStrategy: Record<string, object|null>, grand: object|null } }}
+ */
+export function buildAltCohortMatrix(
+  rawCC,
+  fundMeta,
+  asOfDate = new Date().toISOString().slice(0, 10),
+) {
+  const funds = summarizeFundsBySection(rawCC, fundMeta, { sections: ["ALT"] });
+  return buildMatrixFromFunds(funds, ALT_STRATEGIES, asOfDate);
+}
+
+/**
+ * Build the MOIC/IRR cohort matrix for companies (Search Funds + Participades).
+ * `excludeIds` drops acquired search funds from the SF set so they are not
+ * counted as both a searcher and a participada (mirrors useDashboardData's
+ * sfTx.filter(!actualCompanyIds.has(id))). Same output shape as buildAltCohortMatrix.
+ */
+export function buildCompanyCohortMatrix(
+  rawCC,
+  fundMeta,
+  { excludeIds = new Set(), asOfDate = new Date().toISOString().slice(0, 10) } = {},
+) {
+  const all = summarizeFundsBySection(rawCC, fundMeta, { sections: ["SF", "PC"], vintageFallback: true });
+  const funds = all.filter((f) => !(estSection(f.est) === "SF" && excludeIds.has(f.id)));
+  return buildMatrixFromFunds(funds, COMPANY_STRATEGIES, asOfDate);
 }

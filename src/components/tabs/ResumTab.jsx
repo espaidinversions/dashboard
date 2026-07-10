@@ -4,6 +4,8 @@ import { ecTheme } from "../../echartsTheme.js";
 import { TC_LIGHT } from "../../theme.js";
 import { SectionHeader } from "../SharedComponents.jsx";
 import AltCohortMatrix from "../funds/AltCohortMatrix.jsx";
+import { COMPANY_STRATEGY_LABELS } from "../../data/altCohortModel.js";
+import { IncludeCompaniesToggle } from "../funds/IncludeCompaniesToggle.jsx";
 
 export function ResumTab({
   tc = TC_LIGHT,
@@ -11,6 +13,9 @@ export function ResumTab({
   byEst = [],
   estCfg = {},
   matrix = null,
+  companyMatrix = null,
+  includeCompanies = false,
+  onToggleCompanies = () => {},
 }) {
   return (
     <>
@@ -46,7 +51,27 @@ export function ResumTab({
       </div>
       {matrix && matrix.vintages && matrix.vintages.length > 0 && (
         <div style={{ marginBottom: 18 }}>
-          <AltCohortMatrix matrix={matrix} tc={tc} />
+          <AltCohortMatrix
+            matrix={matrix}
+            tc={tc}
+            action={
+              <IncludeCompaniesToggle
+                checked={includeCompanies}
+                onChange={onToggleCompanies}
+                tc={tc}
+              />
+            }
+          />
+          {includeCompanies && companyMatrix && companyMatrix.vintages && companyMatrix.vintages.length > 0 && (
+            <div style={{ marginTop: 18 }}>
+              <AltCohortMatrix
+                matrix={companyMatrix}
+                tc={tc}
+                title="MOIC i IRR — Companies (Search Funds + Participades)"
+                strategyLabels={COMPANY_STRATEGY_LABELS}
+              />
+            </div>
+          )}
         </div>
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, marginBottom: 18 }}>
