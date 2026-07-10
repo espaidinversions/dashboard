@@ -54,10 +54,16 @@ function computeCohort(funds, asOfDate) {
   return { moic, irr: xirr(flows) };
 }
 
-/** Collapse the raw capital-call rows into one summary per Alternatives fund. */
-function summarizeAltFunds(rawCC, fundMeta) {
+/**
+ * Collapse raw capital-call rows into one summary per fund, keeping only funds
+ * whose resolved section is in `sections` (e.g. ["ALT"] or ["SF","PC"]).
+ * Strategy = earliest-dated Compromís row's est; vintage = earliest Compromís
+ * year; funds with no dated commitment are skipped.
+ */
+function summarizeFundsBySection(rawCC, fundMeta, { sections }) {
   const source = Array.isArray(rawCC) ? rawCC : [];
   const metaList = Array.isArray(fundMeta) ? fundMeta : [];
+  const keep = new Set(sections);
 
   const groups = new Map();
   for (const raw of source) {
@@ -69,16 +75,12 @@ function summarizeAltFunds(rawCC, fundMeta) {
 
   const funds = [];
   for (const rows of groups.values()) {
-    // Single strategy per vehicle: classify by the commitment's declared est
-    // (the earliest-dated Compromís row), not the arbitrary first row. Many ALT
-    // vehicles carry mixed est across their call/distribution rows.
     const compromisRows = rows
       .filter((r) => r.cat === "Compromís" && r.data)
       .sort((a, b) => String(a.data).localeCompare(String(b.data)));
     const est = compromisRows.find((r) => r.est)?.est ?? null;
-    if (estSection(est) !== "ALT") continue;
+    if (!keep.has(estSection(est))) continue;
 
-    // Vintage = earliest Compromís year; skip funds with no dated commitment.
     const vintage = compromisRows
       .map((r) => Number(String(r.data).slice(0, 4)))
       .filter((y) => Number.isFinite(y))[0];
@@ -97,29 +99,18 @@ function summarizeAltFunds(rawCC, fundMeta) {
     const meta = metaList.find((m) => (id && m.id === id) || m.fons === name);
     const tvpi = meta?.tvpi ?? null;
 
-    funds.push({ est, vintage, calls, dist, tvpi, flows });
+    funds.push({ id, est, vintage, calls, dist, tvpi, flows });
   }
   return funds;
 }
 
-/**
- * Build the MOIC/IRR cohort matrix for the Alternatives funds.
- * @returns {{ vintages: number[], strategies: string[],
- *   cells: Record<string, {moic:number|null, irr:number|null}|null>,
- *   totals: { byVintage: Record<string, object|null>,
- *             byStrategy: Record<string, object|null>, grand: object|null } }}
- */
-export function buildAltCohortMatrix(
-  rawCC,
-  fundMeta,
-  asOfDate = new Date().toISOString().slice(0, 10),
-) {
-  const funds = summarizeAltFunds(rawCC, fundMeta);
+/** Build the { vintages, strategies, cells, totals } cross-tab from fund summaries. */
+function buildMatrixFromFunds(funds, strategies, asOfDate) {
   const vintages = [...new Set(funds.map((f) => f.vintage))].sort((a, b) => a - b);
 
   const cells = {};
   for (const vintage of vintages) {
-    for (const strategy of ALT_STRATEGIES) {
+    for (const strategy of strategies) {
       const inCell = funds.filter((f) => f.vintage === vintage && f.est === strategy);
       cells[`${vintage}|${strategy}`] = inCell.length ? computeCohort(inCell, asOfDate) : null;
     }
@@ -130,15 +121,26 @@ export function buildAltCohortMatrix(
     byVintage[vintage] = computeCohort(funds.filter((f) => f.vintage === vintage), asOfDate);
   }
   const byStrategy = {};
-  for (const strategy of ALT_STRATEGIES) {
+  for (const strategy of strategies) {
     byStrategy[strategy] = computeCohort(funds.filter((f) => f.est === strategy), asOfDate);
   }
   const grand = computeCohort(funds, asOfDate);
 
-  return {
-    vintages,
-    strategies: ALT_STRATEGIES,
-    cells,
-    totals: { byVintage, byStrategy, grand },
-  };
+  return { vintages, strategies, cells, totals: { byVintage, byStrategy, grand } };
+}
+
+/**
+ * Build the MOIC/IRR cohort matrix for the Alternatives (vehicle) funds.
+ * @returns {{ vintages: number[], strategies: string[],
+ *   cells: Record<string, {moic:number|null, irr:number|null}|null>,
+ *   totals: { byVintage: Record<string, object|null>,
+ *             byStrategy: Record<string, object|null>, grand: object|null } }}
+ */
+export function buildAltCohortMatrix(
+  rawCC,
+  fundMeta,
+  asOfDate = new Date().toISOString().slice(0, 10),
+) {
+  const funds = summarizeFundsBySection(rawCC, fundMeta, { sections: ["ALT"] });
+  return buildMatrixFromFunds(funds, ALT_STRATEGIES, asOfDate);
 }
