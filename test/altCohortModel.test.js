@@ -159,11 +159,23 @@ test("acquired search funds (in excludeIds) are dropped from the company matrix 
   assert.ok(Math.abs(matrix.cells["2021|Participada (Altres)"].moic - 2.0) < 1e-9);
 });
 
-test("companies without a Compromís vintage are skipped", () => {
+test("companies with no Compromís fall back to earliest Capital Call for vintage and strategy", () => {
   const rows = [
     { id: "NP", fons: "No Compromís Co", est: "Participada (Altres)", cat: "Capital Call", eur: 100000, data: "2021-06-01" },
   ];
   const meta = [{ id: "NP", fons: "No Compromís Co", tvpi: 2.0 }];
   const matrix = buildCompanyCohortMatrix(rows, meta, { asOfDate: ASOF });
-  assert.deepEqual(matrix.vintages, []);
+  assert.deepEqual(matrix.vintages, [2021]);
+  assert.ok(Math.abs(matrix.cells["2021|Participada (Altres)"].moic - 2.0) < 1e-9);
+});
+
+test("Capital-Call fallback uses the EARLIEST dated call for vintage", () => {
+  const rows = [
+    { id: "SFX", fons: "Searcher X", est: "Search Fund - Cerca", cat: "Capital Call", eur: 30000, data: "2022-09-01" },
+    { id: "SFX", fons: "Searcher X", est: "Search Fund - Cerca", cat: "Capital Call", eur: 20000, data: "2020-03-01" },
+  ];
+  const meta = [{ id: "SFX", fons: "Searcher X", tvpi: 1.0 }];
+  const matrix = buildCompanyCohortMatrix(rows, meta, { asOfDate: ASOF });
+  assert.deepEqual(matrix.vintages, [2020]);
+  assert.ok(matrix.cells["2020|Search Fund - Cerca"] != null);
 });

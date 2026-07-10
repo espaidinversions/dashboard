@@ -73,7 +73,7 @@ function computeCohort(funds, asOfDate) {
  * Strategy = earliest-dated Compromís row's est; vintage = earliest Compromís
  * year; funds with no dated commitment are skipped.
  */
-function summarizeFundsBySection(rawCC, fundMeta, { sections }) {
+function summarizeFundsBySection(rawCC, fundMeta, { sections, vintageFallback = false }) {
   const source = Array.isArray(rawCC) ? rawCC : [];
   const metaList = Array.isArray(fundMeta) ? fundMeta : [];
   const keep = new Set(sections);
@@ -91,12 +91,28 @@ function summarizeFundsBySection(rawCC, fundMeta, { sections }) {
     const compromisRows = rows
       .filter((r) => r.cat === "Compromís" && r.data)
       .sort((a, b) => String(a.data).localeCompare(String(b.data)));
-    const est = compromisRows.find((r) => r.est)?.est ?? null;
-    if (!keep.has(estSection(est))) continue;
-
-    const vintage = compromisRows
+    let est = compromisRows.find((r) => r.est)?.est ?? null;
+    let vintage = compromisRows
       .map((r) => Number(String(r.data).slice(0, 4)))
       .filter((y) => Number.isFinite(y))[0];
+
+    // Companies rarely have a Compromís row — they are funded by a single Capital
+    // Call. When enabled, fall back to the earliest dated Capital Call for strategy
+    // and vintage so companies are not silently dropped from the matrix. ALT
+    // vehicles never enable this, so their Compromís-based behavior is unchanged.
+    if (vintageFallback && (est == null || vintage == null)) {
+      const callRows = rows
+        .filter((r) => r.cat === "Capital Call" && r.data)
+        .sort((a, b) => String(a.data).localeCompare(String(b.data)));
+      if (est == null) est = callRows.find((r) => r.est)?.est ?? null;
+      if (vintage == null) {
+        vintage = callRows
+          .map((r) => Number(String(r.data).slice(0, 4)))
+          .filter((y) => Number.isFinite(y))[0];
+      }
+    }
+
+    if (!keep.has(estSection(est))) continue;
     if (vintage == null) continue;
 
     const calls = rows
@@ -169,7 +185,7 @@ export function buildCompanyCohortMatrix(
   fundMeta,
   { excludeIds = new Set(), asOfDate = new Date().toISOString().slice(0, 10) } = {},
 ) {
-  const all = summarizeFundsBySection(rawCC, fundMeta, { sections: ["SF", "PC"] });
+  const all = summarizeFundsBySection(rawCC, fundMeta, { sections: ["SF", "PC"], vintageFallback: true });
   const funds = all.filter((f) => !(estSection(f.est) === "SF" && excludeIds.has(f.id)));
   return buildMatrixFromFunds(funds, COMPANY_STRATEGIES, asOfDate);
 }
