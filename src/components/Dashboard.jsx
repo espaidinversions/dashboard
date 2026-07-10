@@ -10,7 +10,7 @@ import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
 import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
-import { buildAltCohortMatrix } from "../data/altCohortModel.js";
+import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohortModel.js";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
 import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
@@ -116,6 +116,7 @@ function Dashboard() {
   const [showLoader, setShowLoader] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
+  const [includeCompanies, setIncludeCompanies] = usePersistedState("ui_alt_include_companies", false);
 
   const ccNameOptions = useMemo(() => dedupeOptionValues([
     ...d.rawCC.map((row) => row.fons),
@@ -527,6 +528,9 @@ function Dashboard() {
               byEst={byEst}
               estCfg={estCfg}
               matrix={buildAltCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []))}
+              companyMatrix={buildCompanyCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []), { excludeIds: d.actualCompanyIds })}
+              includeCompanies={includeCompanies}
+              onToggleCompanies={setIncludeCompanies}
             />
           )}
 
