@@ -6,6 +6,7 @@ import { SectionHeader } from "../SharedComponents.jsx";
 import AltCohortMatrix from "../funds/AltCohortMatrix.jsx";
 import { COMPANY_STRATEGY_LABELS } from "../../data/altCohortModel.js";
 import { IncludeCompaniesToggle } from "../funds/IncludeCompaniesToggle.jsx";
+import { CheckboxToggle } from "../shared/CheckboxToggle.jsx";
 
 export function ResumTab({
   tc = TC_LIGHT,
@@ -16,6 +17,8 @@ export function ResumTab({
   companyMatrix = null,
   includeCompanies = false,
   onToggleCompanies = () => {},
+  showDpi = false,
+  onToggleDpi = () => {},
 }) {
   return (
     <>
@@ -54,12 +57,22 @@ export function ResumTab({
           <AltCohortMatrix
             matrix={matrix}
             tc={tc}
+            showDpi={showDpi}
             action={
-              <IncludeCompaniesToggle
-                checked={includeCompanies}
-                onChange={onToggleCompanies}
-                tc={tc}
-              />
+              <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
+                <CheckboxToggle
+                  checked={showDpi}
+                  onChange={onToggleDpi}
+                  label="Mostrar DPI"
+                  tc={tc}
+                />
+                <div style={{ width: 1, height: 16, background: tc.border }} />
+                <IncludeCompaniesToggle
+                  checked={includeCompanies}
+                  onChange={onToggleCompanies}
+                  tc={tc}
+                />
+              </div>
             }
           />
           {includeCompanies && companyMatrix && companyMatrix.vintages && companyMatrix.vintages.length > 0 && (
@@ -67,7 +80,8 @@ export function ResumTab({
               <AltCohortMatrix
                 matrix={companyMatrix}
                 tc={tc}
-                title="MOIC i IRR — Companies (Search Funds + Participades)"
+                showDpi={showDpi}
+                title={`MOIC${showDpi ? ", IRR i DPI" : " i IRR"} — Companies (Search Funds + Participades)`}
                 strategyLabels={COMPANY_STRATEGY_LABELS}
               />
             </div>
