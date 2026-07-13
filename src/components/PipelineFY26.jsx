@@ -35,7 +35,7 @@ function normalizePipelineStrategy(value) {
 }
 
 // ══════════════════════════════════════════════════════════
-export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }) {
+export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, chartsOnly = false }) {
   const { rate, toEUR, toUSD } = useCurrency(eurUsd);
   const { tc: TC, dark } = useTheme();
   const { canEditSection } = useAuth();
@@ -204,12 +204,12 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
   const CPie = ({data,colors,type,title}) => (
     <div style={{background:TC.card,border:`1.5px solid ${chartF?.type===type?TC.green:TC.border}`,borderRadius:10,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.08)",transition:"border-color 0.2s"}}>
       <div style={{fontSize:10,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        {title}<span style={{fontSize:9,color:TC.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
+        {title}{!chartsOnly && <span style={{fontSize:9,color:TC.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>}
       </div>
       <ReactECharts
         style={{ width: "100%", height: 165 }}
         opts={{ renderer: "canvas" }}
-        onEvents={{ click: params => params?.name && clickChart(type, params.name) }}
+        onEvents={chartsOnly ? undefined : { click: params => params?.name && clickChart(type, params.name) }}
         option={{
           tooltip: {
             ...t.tooltip,
@@ -317,12 +317,12 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
         <CPie data={byCanal} colors={CCOL} type="canal" title="Per Canal"/>
         <div style={{background:TC.card,border:`1.5px solid ${chartF?.type==="sec"?TC.green:TC.border}`,borderRadius:10,padding:"14px 16px",boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>
           <div style={{fontSize:10,letterSpacing:"0.13em",color:TC.textLight,textTransform:"uppercase",marginBottom:8,fontWeight:600,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            Per Sector<span style={{fontSize:9,color:TC.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>
+            Per Sector{!chartsOnly && <span style={{fontSize:9,color:TC.green,background:greenBadgeBg,padding:"1px 6px",borderRadius:4}}>clicable</span>}
           </div>
           <ReactECharts
             style={{ width: "100%", height: 165 }}
             opts={{ renderer: "canvas" }}
-            onEvents={{ click: params => params?.name && clickChart("sec", params.name) }}
+            onEvents={chartsOnly ? undefined : { click: params => params?.name && clickChart("sec", params.name) }}
             option={{
               grid: { top: 8, right: 14, bottom: 8, left: 0, containLabel: true },
               tooltip: {
@@ -362,6 +362,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
         </div>
       </div>
 
+      {!chartsOnly && (<>
       {/* Taula pipeline */}
       <div style={{ ...tableCardStyle(TC), overflowX: "auto" }}>
         <SectionHeader title="Pipeline de Fons" tc={TC} action={
@@ -493,6 +494,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange }
           <button key={c} onClick={()=>setCur(c)} style={{background:cur===c?TC.navy:"transparent",border:`1.5px solid ${TC.navy}`,color:cur===c?"#fff":TC.navy,borderRadius:4,padding:"4px 13px",cursor:"pointer",fontSize:12,fontWeight:700,fontFamily:"inherit"}}>{c}</button>
         ))}
       </div>
+      </>)}
     </div>
   );
 }
