@@ -12,6 +12,7 @@ const PORTFOLI_SECTIONS = [
   {
     id:"alt", label:"Alternatius", icon:Briefcase,
     children:[
+      {id:"alt-resum",      label:"Resum",       icon:LineChart},
       {id:"fons",           label:"Fons",        icon:Building2},
       {id:"searchers",      label:"Searchers",   icon:Search},
       {id:"companies",      label:"Participades",icon:Building},
@@ -111,6 +112,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
       if (sec.id === "alt") {
         if (child.id === "searchers") return canAccessSection?.("alternatives") ?? true;
         if (child.id === "alt-cash-model") return canAccessSection?.("cash-model") ?? true;
+        if (child.id === "alt-resum") return canAccessSection?.("fons") ?? true;
         return canAccessSection?.(child.id === "posicions" ? "inversions" : child.id) ?? true;
       }
       if (sec.id === "re") {

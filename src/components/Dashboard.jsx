@@ -11,6 +11,7 @@ import { Sidebar } from "./Sidebar.jsx";
 import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohortModel.js";
+import { AltCohortSection } from "./funds/AltCohortSection.jsx";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
 import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
@@ -528,12 +529,6 @@ function Dashboard() {
               byFy={byFy}
               byEst={byEst}
               estCfg={estCfg}
-              matrix={buildAltCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []))}
-              companyMatrix={buildCompanyCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []), { excludeIds: d.actualCompanyIds })}
-              includeCompanies={includeCompanies}
-              onToggleCompanies={setIncludeCompanies}
-              showDpi={showDpi}
-              onToggleDpi={setShowDpi}
             />
           )}
 
@@ -581,12 +576,23 @@ function Dashboard() {
           {tab === "inversions" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
+                <button onClick={() => setInversionsSubTab("resum")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "resum" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "resum" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Resum</button>
                 <button onClick={() => setInversionsSubTab("pipeline")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "pipeline" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "pipeline" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Pipeline</button>
                 <button onClick={() => setInversionsSubTab("fons")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "fons" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "fons" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Portfoli</button>
                 <button onClick={() => setInversionsSubTab("tx")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "tx" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "tx" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Transaccions</button>
               </div>
               <Suspense fallback={null}>
-                {inversionsSubTab === "fons"
+                {inversionsSubTab === "resum"
+                  ? <AltCohortSection
+                      tc={tc}
+                      matrix={buildAltCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []))}
+                      companyMatrix={buildCompanyCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []), { excludeIds: d.actualCompanyIds })}
+                      includeCompanies={includeCompanies}
+                      onToggleCompanies={setIncludeCompanies}
+                      showDpi={showDpi}
+                      onToggleDpi={setShowDpi}
+                    />
+                  : inversionsSubTab === "fons"
                   ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["PE", "VC"]} excludeIds={d.actualCompanyIds} includeCompanies={includeCompanies} onToggleCompanies={setIncludeCompanies} />
                   : inversionsSubTab === "pipeline"
                     ? <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />

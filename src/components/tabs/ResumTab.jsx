@@ -3,22 +3,12 @@ import ReactECharts from "../../ReactECharts.jsx";
 import { ecTheme } from "../../echartsTheme.js";
 import { TC_LIGHT } from "../../theme.js";
 import { SectionHeader } from "../SharedComponents.jsx";
-import AltCohortMatrix from "../funds/AltCohortMatrix.jsx";
-import { COMPANY_STRATEGY_LABELS } from "../../data/altCohortModel.js";
-import { IncludeCompaniesToggle } from "../funds/IncludeCompaniesToggle.jsx";
-import { CheckboxToggle } from "../shared/CheckboxToggle.jsx";
 
 export function ResumTab({
   tc = TC_LIGHT,
   byFy = [],
   byEst = [],
   estCfg = {},
-  matrix = null,
-  companyMatrix = null,
-  includeCompanies = false,
-  onToggleCompanies = () => {},
-  showDpi = false,
-  onToggleDpi = () => {},
 }) {
   return (
     <>
@@ -52,42 +42,6 @@ export function ResumTab({
           return <ReactECharts option={option} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;
         })()}
       </div>
-      {matrix && matrix.vintages && matrix.vintages.length > 0 && (
-        <div style={{ marginBottom: 18 }}>
-          <AltCohortMatrix
-            matrix={matrix}
-            tc={tc}
-            showDpi={showDpi}
-            action={
-              <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
-                <CheckboxToggle
-                  checked={showDpi}
-                  onChange={onToggleDpi}
-                  label="Mostrar DPI"
-                  tc={tc}
-                />
-                <div style={{ width: 1, height: 16, background: tc.border }} />
-                <IncludeCompaniesToggle
-                  checked={includeCompanies}
-                  onChange={onToggleCompanies}
-                  tc={tc}
-                />
-              </div>
-            }
-          />
-          {includeCompanies && companyMatrix && companyMatrix.vintages && companyMatrix.vintages.length > 0 && (
-            <div style={{ marginTop: 18 }}>
-              <AltCohortMatrix
-                matrix={companyMatrix}
-                tc={tc}
-                showDpi={showDpi}
-                title={`MOIC${showDpi ? ", IRR i DPI" : " i IRR"} — Companies (Search Funds + Participades)`}
-                strategyLabels={COMPANY_STRATEGY_LABELS}
-              />
-            </div>
-          )}
-        </div>
-      )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, marginBottom: 18 }}>
         {[
           { title: "Capital Cridat per Tipus de Vehicle", data: byEst, colorFn: n => estCfg[n]?.color || tc.navy },

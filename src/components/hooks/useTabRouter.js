@@ -19,7 +19,12 @@ function normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublic
   if (tab === "tx-alt") return "tx-alt";
   if (tab === "tx-re") return "tx-re";
   if (tab === "tx-mp") return "tx-mp";
-  if (tab === "inversions") return inversionsSubTab === "pipeline" ? "pipeline" : inversionsSubTab === "tx" ? "tx-alt" : "fons";
+  if (tab === "inversions") {
+    if (inversionsSubTab === "resum") return "alt-resum";
+    if (inversionsSubTab === "pipeline") return "pipeline";
+    if (inversionsSubTab === "tx") return "tx-alt";
+    return "fons";
+  }
   return null;
 }
 
@@ -45,6 +50,7 @@ export function useTabRouter() {
   const handleNavigate = useCallback((itemId) => {
     setActiveNavItem(itemId);
     switch (itemId) {
+      case "alt-resum":      setTab("inversions"); setInversionsSubTab("resum"); break;
       case "fons":           setTab("inversions"); setInversionsSubTab("fons"); break;
       case "searchers":      setTab("searchers"); break;
       case "companies":      setTab("companies"); break;
