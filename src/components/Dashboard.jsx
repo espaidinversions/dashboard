@@ -117,6 +117,7 @@ function Dashboard() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
   const [includeCompanies, setIncludeCompanies] = usePersistedState("ui_alt_include_companies", false);
+  const [showDpi, setShowDpi] = usePersistedState("ui_alt_show_dpi", false);
 
   const ccNameOptions = useMemo(() => dedupeOptionValues([
     ...d.rawCC.map((row) => row.fons),
@@ -531,6 +532,8 @@ function Dashboard() {
               companyMatrix={buildCompanyCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []), { excludeIds: d.actualCompanyIds })}
               includeCompanies={includeCompanies}
               onToggleCompanies={setIncludeCompanies}
+              showDpi={showDpi}
+              onToggleDpi={setShowDpi}
             />
           )}
 

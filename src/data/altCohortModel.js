@@ -39,11 +39,12 @@ function isFlowCat(cat) {
 }
 
 /**
- * Reduce a group of funds to a pooled { moic, irr }, or null when no fund in the
- * group has a TVPI. MOIC is the capital-weighted average of TVPI; IRR is a single
- * XIRR over the union of the funds' dated flows plus one terminal residual value.
- * Mirrors the residual logic in computeFundIrrFromRows so cohort and per-fund
- * numbers stay consistent.
+ * Reduce a group of funds to a pooled { moic, irr, dpi }, or null when no fund
+ * in the group has a TVPI. MOIC is the capital-weighted average of TVPI; DPI is
+ * pooled distributions over pooled calls (same fund set, so both multiples share
+ * a denominator); IRR is a single XIRR over the union of the funds' dated flows
+ * plus one terminal residual value. Mirrors the residual logic in
+ * computeFundIrrFromRows so cohort and per-fund numbers stay consistent.
  */
 function computeCohort(funds, asOfDate) {
   const withTvpi = funds.filter((f) => f.tvpi != null);
@@ -52,6 +53,9 @@ function computeCohort(funds, asOfDate) {
   const sumCalls = withTvpi.reduce((s, f) => s + f.calls, 0);
   const moic = sumCalls > 0
     ? withTvpi.reduce((s, f) => s + f.tvpi * f.calls, 0) / sumCalls
+    : null;
+  const dpi = sumCalls > 0
+    ? withTvpi.reduce((s, f) => s + f.dist, 0) / sumCalls
     : null;
 
   const flows = [];
@@ -64,7 +68,7 @@ function computeCohort(funds, asOfDate) {
   }
   if (residual > 0) flows.push({ date: asOfDate, amount: residual });
 
-  return { moic, irr: xirr(flows) };
+  return { moic, irr: xirr(flows), dpi };
 }
 
 /**
@@ -163,7 +167,7 @@ function buildMatrixFromFunds(funds, strategies, asOfDate) {
 /**
  * Build the MOIC/IRR cohort matrix for the Alternatives (vehicle) funds.
  * @returns {{ vintages: number[], strategies: string[],
- *   cells: Record<string, {moic:number|null, irr:number|null}|null>,
+ *   cells: Record<string, {moic:number|null, irr:number|null, dpi:number|null}|null>,
  *   totals: { byVintage: Record<string, object|null>,
  *             byStrategy: Record<string, object|null>, grand: object|null } }}
  */

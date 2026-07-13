@@ -5,6 +5,7 @@ export { tableCardStyle } from "./shared/tableCardStyle.js";
 export { FlagImg, FlagSvgLabel } from "./shared/Flags.jsx";
 export { Logo } from "./shared/Logo.jsx";
 export { Badge } from "./shared/Badge.jsx";
+export { CheckboxToggle } from "./shared/CheckboxToggle.jsx";
 export { EditableCell } from "./shared/EditableCell.jsx";
 export { DeleteRowButton } from "./shared/DeleteRowButton.jsx";
 export { AddRowModal } from "./shared/AddRowModal.jsx";
