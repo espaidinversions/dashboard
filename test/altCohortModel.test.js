@@ -31,6 +31,32 @@ test("cell MOIC is the capital-weighted average of the funds' TVPI", () => {
   assert.equal(typeof cell.irr, "number");
 });
 
+test("cell DPI pools distributions over calls across the cohort's funds", () => {
+  const rows = [
+    ...primariRows(),
+    // Fund A returns 50k, Fund B returns 100k → pooled DPI = 150k / 400k = 0.375.
+    { id: "A", fons: "Fund A", est: "Fons Primari", tipus: "Distribució", cat: "Distribució", eur: -50000, data: "2023-06-01" },
+    { id: "B", fons: "Fund B", est: "Fons Primari", tipus: "Distribució", cat: "Distribució", eur: -100000, data: "2023-06-01" },
+  ];
+  const meta = [
+    { id: "A", fons: "Fund A", tvpi: 2.0 },
+    { id: "B", fons: "Fund B", tvpi: 1.0 },
+  ];
+  const matrix = buildAltCohortMatrix(rows, meta, ASOF);
+  const cell = matrix.cells["2020|Fons Primari"];
+  assert.ok(Math.abs(cell.dpi - 0.375) < 1e-9);
+  assert.ok(Math.abs(matrix.totals.grand.dpi - 0.375) < 1e-9);
+});
+
+test("cell DPI is 0 when the cohort has calls but no distributions", () => {
+  const meta = [
+    { id: "A", fons: "Fund A", tvpi: 2.0 },
+    { id: "B", fons: "Fund B", tvpi: 1.0 },
+  ];
+  const matrix = buildAltCohortMatrix(primariRows(), meta, ASOF);
+  assert.equal(matrix.cells["2020|Fons Primari"].dpi, 0);
+});
+
 test("strategies are the four canonical ALT labels in fixed order", () => {
   const matrix = buildAltCohortMatrix([], [], ASOF);
   assert.deepEqual(matrix.strategies, ALT_STRATEGIES);
