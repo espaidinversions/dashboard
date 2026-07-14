@@ -54,7 +54,7 @@ export default function AltCohortMatrix({
     color: tc.navyLight ?? tc.textLight,
     textTransform: "uppercase",
     letterSpacing: "0.06em",
-    background: "#F7FAFC",
+    background: tc.bgAlt,
     borderBottom: `2px solid ${tc.border}`,
     whiteSpace: "nowrap",
   };
