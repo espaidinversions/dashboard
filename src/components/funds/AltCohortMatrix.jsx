@@ -23,7 +23,9 @@ function Cell({ metrics, showDpi, tc }) {
         {irr != null ? `${irr.toFixed(1)}%` : "—"}
       </span>
       {showDpi && (
-        <span style={{ fontSize: 11, fontWeight: 600, color: multipleColor(dpi, tc) }}>
+        // Neutral color on purpose: DPI < 1× is expected for young vintages,
+        // so red/green semantics would read as failure across the matrix.
+        <span style={{ fontSize: 11, fontWeight: 600, color: tc.textMid }}>
           {formatMultiple(dpi)}
         </span>
       )}
