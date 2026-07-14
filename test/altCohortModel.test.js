@@ -195,6 +195,40 @@ test("companies with no Compromís fall back to earliest Capital Call for vintag
   assert.ok(Math.abs(matrix.cells["2021|Participada (Altres)"].moic - 2.0) < 1e-9);
 });
 
+test("participades with the default TVPI of 1 are excluded; real TVPIs and SF 1.0 stay", () => {
+  const rows = [
+    // Participada with the fund_meta upsert default (tvpi 1) → no tracked returns.
+    { id: "PD", fons: "Default Participada", est: "Participada (Altres)", cat: "Compromís", eur: 100000, data: "2021-01-01" },
+    { id: "PD", fons: "Default Participada", est: "Participada (Altres)", cat: "Capital Call", eur: 100000, data: "2021-06-01" },
+    // Participada with a real valuation → stays.
+    { id: "PR", fons: "Valued Participada", est: "Participada (Altres)", cat: "Compromís", eur: 100000, data: "2021-01-01" },
+    { id: "PR", fons: "Valued Participada", est: "Participada (Altres)", cat: "Capital Call", eur: 100000, data: "2021-06-01" },
+    // Search fund at 1.0 → SF TVPIs are genuinely tracked, so it stays.
+    { id: "SC", fons: "Searcher C", est: "Search Fund - Cerca", cat: "Compromís", eur: 50000, data: "2021-01-01" },
+    { id: "SC", fons: "Searcher C", est: "Search Fund - Cerca", cat: "Capital Call", eur: 50000, data: "2021-06-01" },
+  ];
+  const meta = [
+    { id: "PD", fons: "Default Participada", tvpi: 1.0 },
+    { id: "PR", fons: "Valued Participada", tvpi: 2.0 },
+    { id: "SC", fons: "Searcher C", tvpi: 1.0 },
+  ];
+  const matrix = buildCompanyCohortMatrix(rows, meta, { asOfDate: ASOF });
+  // Only the valued participada feeds the cell → MOIC 2.0, not (1+2)/2.
+  assert.ok(Math.abs(matrix.cells["2021|Participada (Altres)"].moic - 2.0) < 1e-9);
+  assert.ok(Math.abs(matrix.cells["2021|Search Fund - Cerca"].moic - 1.0) < 1e-9);
+});
+
+test("a participada cell whose only company has the default TVPI is null", () => {
+  const rows = [
+    { id: "PD2", fons: "Only Default", est: "Participada (Altres)", cat: "Compromís", eur: 100000, data: "2022-01-01" },
+    { id: "PD2", fons: "Only Default", est: "Participada (Altres)", cat: "Capital Call", eur: 100000, data: "2022-06-01" },
+  ];
+  const meta = [{ id: "PD2", fons: "Only Default", tvpi: 1.0 }];
+  const matrix = buildCompanyCohortMatrix(rows, meta, { asOfDate: ASOF });
+  assert.deepEqual(matrix.vintages, []);
+  assert.equal(matrix.totals.grand, null);
+});
+
 test("Capital-Call fallback uses the EARLIEST dated call for vintage", () => {
   const rows = [
     { id: "SFX", fons: "Searcher X", est: "Search Fund - Cerca", cat: "Capital Call", eur: 30000, data: "2022-09-01" },

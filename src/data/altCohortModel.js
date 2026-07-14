@@ -192,6 +192,12 @@ export function buildCompanyCohortMatrix(
   { excludeIds = new Set(), asOfDate = new Date().toISOString().slice(0, 10) } = {},
 ) {
   const all = summarizeFundsBySection(rawCC, fundMeta, { sections: ["SF", "PC"], vintageFallback: true });
-  const funds = all.filter((f) => !(estSection(f.est) === "SF" && excludeIds.has(f.id)));
+  const funds = all
+    .filter((f) => !(estSection(f.est) === "SF" && excludeIds.has(f.id)))
+    // Participades don't have tracked returns: a TVPI of exactly 1 there is the
+    // fund_meta upsert default (db/funds.js), not a real valuation, so drop the
+    // company from the matrix entirely (no dash-only vintage rows). Search funds
+    // keep TVPI 1 — theirs comes from the searchers table and is genuinely tracked.
+    .filter((f) => !(estSection(f.est) === "PC" && f.tvpi === 1));
   return buildMatrixFromFunds(funds, COMPANY_STRATEGIES, asOfDate);
 }
