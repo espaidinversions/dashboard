@@ -120,6 +120,18 @@ function Dashboard() {
   const [includeCompanies, setIncludeCompanies] = usePersistedState("ui_alt_include_companies", false);
   const [showDpi, setShowDpi] = usePersistedState("ui_alt_show_dpi", false);
 
+  // tc_fundMeta is only rewritten by data loads that also refresh rawCC,
+  // so keying on rawCC keeps these in sync without re-parsing localStorage
+  // (and rebuilding both matrices) on every keystroke of the global search.
+  const altCohortMatrix = useMemo(
+    () => buildAltCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", [])),
+    [d.rawCC]
+  );
+  const altCompanyCohortMatrix = useMemo(
+    () => buildCompanyCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []), { excludeIds: d.actualCompanyIds }),
+    [d.rawCC, d.actualCompanyIds]
+  );
+
   const ccNameOptions = useMemo(() => dedupeOptionValues([
     ...d.rawCC.map((row) => row.fons),
     ...d.companiesData.map((row) => row.nom),
@@ -587,8 +599,8 @@ function Dashboard() {
                       <PipelineFY26 chartsOnly initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
                       <AltCohortSection
                         tc={tc}
-                        matrix={buildAltCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []))}
-                        companyMatrix={buildCompanyCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []), { excludeIds: d.actualCompanyIds })}
+                        matrix={altCohortMatrix}
+                        companyMatrix={altCompanyCohortMatrix}
                         includeCompanies={includeCompanies}
                         onToggleCompanies={setIncludeCompanies}
                         showDpi={showDpi}
