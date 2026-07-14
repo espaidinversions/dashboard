@@ -124,10 +124,7 @@ export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "
   return (
     <div style={indexPageStyles.page(tc, inline)}>
       <div style={indexPageStyles.contentWrap}>
-        {sorted.length === 0
-          ? <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
-          : (
-            <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
+        <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr>
@@ -162,6 +159,9 @@ export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "
                 </tr>
               </thead>
               <tbody>
+                {sorted.length === 0 && (
+                  <tr><td colSpan={COLS.length} style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</td></tr>
+                )}
                 {sorted.map((r, i) => (
                   <tr key={r.id} className="hoverable" style={{ background: i % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, opacity: r.isMock ? 0.45 : 1 }}>
                     <td style={{ padding: "10px 12px", fontWeight: 700 }}>
@@ -202,8 +202,6 @@ export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "
               </tbody>
             </table>
             </div>
-          )
-        }
       </div>
     </div>
   );

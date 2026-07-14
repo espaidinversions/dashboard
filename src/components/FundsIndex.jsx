@@ -295,10 +295,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
   return (
     <div style={indexPageStyles.page(tc, inline)}>
       <div style={indexPageStyles.contentWrap}>
-        {sorted.length === 0
-          ? <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
-          : (
-          <>
+        <>
             <SectionHeader
               title="Vehicles"
               tc={tc}
@@ -358,6 +355,9 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                 </tr>
               </thead>
               <tbody>
+                {sorted.length === 0 && (
+                  <tr><td colSpan={canEditAny ? COLS.length + 1 : COLS.length} style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</td></tr>
+                )}
                 {sorted.map((r, i) => {
                   const rowCanEdit = getVehiclePermissionSection(r) === "real-estate" ? canEditRealEstate : canEditAlternatives;
                   const canEditTvpi = rowCanEdit || isAdmin || isSuperuser;
@@ -438,8 +438,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
             </table>
             </div>
           </>
-          )
-        }
       {canEditAny && (
         <div style={{ marginTop: 16 }}>
           {!addingFund ? (

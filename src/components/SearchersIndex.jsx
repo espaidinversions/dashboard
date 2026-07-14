@@ -333,9 +333,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
           ) : null}
         </div>
 
-        {(subTab === "tots" || subTab === "actius" || !showSubTabs) && sorted.length === 0 ? (
-          <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</div>
-        ) : (subTab === "tots" || subTab === "actius" || !showSubTabs) ? (
+        {(subTab === "tots" || subTab === "actius" || !showSubTabs) ? (
           <div style={indexPageStyles.panel(tc)}>
             <div style={indexPageStyles.tableScroll}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -388,6 +386,9 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
               </tr>
             </thead>
             <tbody>
+              {sorted.length === 0 && (
+                <tr><td colSpan={canEdit ? cols.length + 1 : cols.length} style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</td></tr>
+              )}
               {sorted.map((row, index) => (
                 <tr key={row.id ?? row.nom} className="hoverable"
                   onClick={() => row.id && navigate(`/investments/searchers/${encodeURIComponent(row.id)}`)}
