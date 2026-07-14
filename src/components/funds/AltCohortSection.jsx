@@ -17,8 +17,9 @@ export function AltCohortSection({
   showDpi = false,
   onToggleDpi = () => {},
 }) {
-  if (!matrix || !matrix.vintages || matrix.vintages.length === 0) return null;
-
+  // Always render: AltCohortMatrix shows an inline "Encara no hi ha dades" message
+  // when the matrix is empty, so the DPI / companies toggles stay visible instead of
+  // the whole section vanishing.
   return (
     <div>
       <AltCohortMatrix
