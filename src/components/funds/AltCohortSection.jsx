@@ -34,7 +34,9 @@ export function AltCohortSection({
           </div>
         }
       />
-      {includeCompanies && companyMatrix && companyMatrix.vintages && companyMatrix.vintages.length > 0 && (
+      {/* Same rule as the main matrix: keep it mounted when empty so the toggle
+          visibly does something — AltCohortMatrix renders its own empty message. */}
+      {includeCompanies && (
         <div style={{ marginTop: 18 }}>
           <AltCohortMatrix
             matrix={companyMatrix}
