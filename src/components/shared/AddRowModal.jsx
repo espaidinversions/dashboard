@@ -2,6 +2,11 @@ import React, { useEffect, useState } from "react";
 import { useTheme } from "../../theme.js";
 import { formatDisplayValue, formatLive } from "./numericInput.js";
 
+// Elements the focus trap treats as tabbable. Disabled and tabindex="-1"
+// elements are excluded; hidden fields are never rendered so need no filter.
+const FOCUSABLE_SELECTOR =
+  'input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", submitLabel = "Afegir" }) {
   const { tc } = useTheme();
   const [values, setValues] = useState(() =>
@@ -20,10 +25,59 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
   // DOM refs keyed by field.key, used to restore caret after React re-renders
   // the formatted string.
   const numberInputRefs = React.useRef({});
+  // Modal card element, used to scope focus management to the dialog.
+  const cardRef = React.useRef(null);
+  // Element that had focus before the modal opened, restored on close.
+  const previouslyFocusedRef = React.useRef(null);
   const handleClose = () => { setClosing(true); setTimeout(onClose, 175); };
 
+  // Move focus into the dialog on open and restore it to the trigger on close.
+  // Without this, keyboard focus stays on the page behind the overlay and Tab
+  // drives the background content instead of the modal.
   useEffect(() => {
-    const onKey = (e) => { if (e.key === "Escape") { setClosing(true); setTimeout(onClose, 175); } };
+    previouslyFocusedRef.current = document.activeElement;
+    // Defer to the next frame: focusing synchronously during the modal's mount /
+    // entrance animation can be dropped by the browser, leaving focus on <body>
+    // so the user has to click before Tab works. Land focus on the first real
+    // form control (input/select/textarea), falling back to any focusable node.
+    const raf = requestAnimationFrame(() => {
+      const card = cardRef.current;
+      if (!card) return;
+      const field = card.querySelector(
+        'input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+      );
+      (field ?? card.querySelector(FOCUSABLE_SELECTOR) ?? card).focus();
+    });
+    return () => {
+      cancelAnimationFrame(raf);
+      const prev = previouslyFocusedRef.current;
+      if (prev && typeof prev.focus === "function") prev.focus();
+    };
+  }, []);
+
+  // Escape closes; Tab/Shift+Tab cycle focus within the dialog (focus trap).
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") { setClosing(true); setTimeout(onClose, 175); return; }
+      if (e.key !== "Tab") return;
+      const card = cardRef.current;
+      if (!card) return;
+      const focusable = Array.from(card.querySelectorAll(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (!card.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      } else if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
@@ -62,6 +116,11 @@ export function AddRowModal({ fields, onSave, onClose, title = "Nou registre", s
         alignItems: "center", justifyContent: "center", zIndex: 1000 }}
       >
       <div className={`modal-card${closing ? " closing" : ""}`}
+        ref={cardRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        tabIndex={-1}
         style={{ background: tc.card, borderRadius: 14, padding: "28px 28px 24px",
           width: 420, maxWidth: "90vw", boxShadow: "0 8px 40px rgba(0,0,0,.25)",
           fontFamily: "'Outfit',system-ui,sans-serif" }}>

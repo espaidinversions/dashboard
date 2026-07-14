@@ -584,6 +584,7 @@ function Dashboard() {
               <Suspense fallback={null}>
                 {inversionsSubTab === "resum"
                   ? <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                      <PipelineFY26 chartsOnly initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
                       <AltCohortSection
                         tc={tc}
                         matrix={buildAltCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []))}
@@ -593,7 +594,6 @@ function Dashboard() {
                         showDpi={showDpi}
                         onToggleDpi={setShowDpi}
                       />
-                      <PipelineFY26 chartsOnly initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
                     </div>
                   : inversionsSubTab === "fons"
                   ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["PE", "VC"]} excludeIds={d.actualCompanyIds} includeCompanies={includeCompanies} onToggleCompanies={setIncludeCompanies} />
