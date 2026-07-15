@@ -118,7 +118,7 @@ function Dashboard() {
   const [globalSearch, setGlobalSearch] = useState("");
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
   const [includeCompanies, setIncludeCompanies] = usePersistedState("ui_alt_include_companies", false);
-  const [showDpi, setShowDpi] = usePersistedState("ui_alt_show_dpi", false);
+  const [matrixMetric, setMatrixMetric] = usePersistedState("ui_alt_matrix_metric", "tvpi");
 
   // tc_fundMeta is only rewritten by data loads that also refresh rawCC,
   // so keying on rawCC keeps these in sync without re-parsing localStorage
@@ -603,8 +603,8 @@ function Dashboard() {
                         companyMatrix={altCompanyCohortMatrix}
                         includeCompanies={includeCompanies}
                         onToggleCompanies={setIncludeCompanies}
-                        showDpi={showDpi}
-                        onToggleDpi={setShowDpi}
+                        metric={matrixMetric}
+                        onMetricChange={setMatrixMetric}
                       />
                     </div>
                   : inversionsSubTab === "fons"
