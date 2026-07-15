@@ -121,14 +121,17 @@ export function mapLegacySearchFundRows(rows) {
 }
 
 export function mergeCapitalCallRows(baseRows, extraRows) {
-  const merged = [], seen = new Set(), coarseSeen = new Set();
+  const merged = [], seen = new Set();
   const add = (row) => {
     if (!row) return;
-    const coarseKey = [row.fons ?? "", row.data ?? "", Number(row.eur ?? 0), row.est ?? ""].join("|");
-    if (coarseSeen.has(coarseKey)) return;
-    const key = [row.fons ?? "", row.tipus ?? "", row.cat ?? "", row.data ?? "", Number(row.eur ?? 0), row.est ?? ""].join("|");
+    // Identity is (fons, cat, data, eur). tipus wording and est classification
+    // drift between imports ("Aportació capital" vs "Aportació"; est gets
+    // reclassified by migrations), so keying on them let the 2026-05 import
+    // re-add 26 existing calls (cleaned up by migration 20260715000000).
+    // Base rows are added first, so on a collision the stored row wins.
+    const key = [row.fons ?? "", row.cat ?? "", row.data ?? "", Number(row.eur ?? 0)].join("|");
     if (seen.has(key)) return;
-    coarseSeen.add(coarseKey); seen.add(key); merged.push(row);
+    seen.add(key); merged.push(row);
   };
   (Array.isArray(baseRows) ? baseRows : []).forEach(add);
   (Array.isArray(extraRows) ? extraRows : []).forEach(add);
