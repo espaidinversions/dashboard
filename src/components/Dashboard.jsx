@@ -4,7 +4,7 @@ import {
   CAPITAL_CALL_TIPUS_GROUPED,
 } from "../config.js";
 import { useTheme } from "../theme.js";
-import { usePersistedState, exportMultiXLSX, readStoredJSON, normalizeOptionValue, dedupeOptionValues } from "../utils.js";
+import { usePersistedState, exportMultiXLSX, normalizeOptionValue, dedupeOptionValues } from "../utils.js";
 import { useAuth } from "../auth.jsx";
 import { ResumTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
@@ -31,8 +31,6 @@ const HoldingsTable       = lazy(() => import("./HoldingsTable.jsx").then(m => (
 const PMTipusTab          = lazy(() => import("./PMTipusTab.jsx").then(m => ({ default: m.PMTipusTab })));
 const PMTransaccionsTab   = lazy(() => import("./PMTransaccionsTab.jsx").then(m => ({ default: m.PMTransaccionsTab })));
 const PMTraçabilitatTab   = lazy(() => import("./PMTraçabilitatTab.jsx").then(m => ({ default: m.PMTraçabilitatTab })));
-
-const LS_CC = "tc_rawCC";
 
 function CapitalCallModals({
   ccNameOptions,
@@ -120,16 +118,13 @@ function Dashboard() {
   const [includeCompanies, setIncludeCompanies] = usePersistedState("ui_alt_include_companies", false);
   const [matrixMetric, setMatrixMetric] = usePersistedState("ui_alt_matrix_metric", "tvpi");
 
-  // tc_fundMeta is only rewritten by data loads that also refresh rawCC,
-  // so keying on rawCC keeps these in sync without re-parsing localStorage
-  // (and rebuilding both matrices) on every keystroke of the global search.
   const altCohortMatrix = useMemo(
-    () => buildAltCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", [])),
-    [d.rawCC]
+    () => buildAltCohortMatrix(d.rawCC, d.fundMeta),
+    [d.rawCC, d.fundMeta]
   );
   const altCompanyCohortMatrix = useMemo(
-    () => buildCompanyCohortMatrix(d.rawCC, readStoredJSON("tc_fundMeta", []), { excludeIds: d.actualCompanyIds }),
-    [d.rawCC, d.actualCompanyIds]
+    () => buildCompanyCohortMatrix(d.rawCC, d.fundMeta, { excludeIds: d.actualCompanyIds }),
+    [d.rawCC, d.fundMeta, d.actualCompanyIds]
   );
 
   const ccNameOptions = useMemo(() => dedupeOptionValues([
@@ -231,11 +226,11 @@ function Dashboard() {
   const exportAll = useCallback(async () => {
     setExporting(true);
     try {
-    const companies = readStoredJSON("tc_portfolioCompanies", []);
-    const searchers = readStoredJSON("tc_allSearchers", []);
-    const pipeline  = readStoredJSON("tc_funds0", []);
-    const cc        = readStoredJSON("tc_rawCC", []);
-    const fundMeta = readStoredJSON("tc_fundMeta", []);
+    const companies = d.companiesData;
+    const searchers = d.searchersData;
+    const pipeline  = d.funds0;
+    const cc        = d.rawCC;
+    const fundMeta  = d.fundMeta;
     const fmtN = v => v != null ? +(v / 1e6).toFixed(3) : "";
 
     await exportMultiXLSX([
@@ -314,7 +309,7 @@ function Dashboard() {
       },
     ], "TurtleCapital_Data");
     } finally { setExporting(false); }
-  }, []);
+  }, [d.companiesData, d.searchersData, d.funds0, d.rawCC, d.fundMeta]);
 
   const [fFy,     setFFy]     = usePersistedState("ui_fFy",  "Tots");
   const [fEst,    setFEst]    = usePersistedState("ui_fEst",  "Tots");
@@ -618,19 +613,19 @@ function Dashboard() {
 
           {tab === "cash-model" && (
             canAccessSection("cash-model")
-              ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} /></Suspense>
+              ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} fundMeta={d.fundMeta} /></Suspense>
               : <div style={{ padding: 32, color: tc.textLight, fontSize: 14 }}>No tens permisos per accedir al Model Caixa.</div>
           )}
 
           {tab === "alt-cash-model" && (
             canAccessSection("cash-model")
-              ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} forceScope="alt" /></Suspense>
+              ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} fundMeta={d.fundMeta} forceScope="alt" /></Suspense>
               : <div style={{ padding: 32, color: tc.textLight, fontSize: 14 }}>No tens permisos per accedir al Model Caixa.</div>
           )}
 
           {tab === "re-cash-model" && (
             canAccessSection("cash-model")
-              ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} forceScope="re" /></Suspense>
+              ? <Suspense fallback={null}><ProspectiveCashTab rawCapitalCalls={d.rawCC} fundMeta={d.fundMeta} forceScope="re" /></Suspense>
               : <div style={{ padding: 32, color: tc.textLight, fontSize: 14 }}>No tens permisos per accedir al Model Caixa.</div>
           )}
 

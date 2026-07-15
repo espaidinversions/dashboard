@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState, useRef } from "react";
 import { useTheme } from "../theme.js";
-import { calcMesos, parseSearchersCSV, usePersistedState, readStoredJSON } from "../utils.js";
+import { calcMesos, parseSearchersCSV, usePersistedState } from "../utils.js";
 import { GEO_NAME } from "../config.js";
 import { estSection } from "../data/capitalCallStrategyModel.js";
 import { AddRowModal } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
-import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies } from "../db.js";
+import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies, loadCapitalCalls } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { apiFetchJson } from "../apiClient.js";
 import { isSfBackedCompany } from "../data/privateCompanyModel.js";
@@ -26,8 +26,8 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const { toast } = useToast();
   const [showAddModal, setShowAddModal] = useState(false);
 
-  const [historicData, setHistoricData] = usePersistedState("tc_allSearchers", []);
-  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
+  const [historicData, setHistoricData] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const [histFilter, setHistFilter]     = useState({ status: "Tots", geo: "Tots", entrada: "Tots" });
   const [histSort, setHistSort]         = useState({ k: "nom", d: "asc" });
   const [activeGeoFilter, setActiveGeoFilter] = usePersistedState("ui_searchersGeo", "Tots");
@@ -38,10 +38,20 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const [activeSort, setActiveSort] = usePersistedState("ui_searchersSort", { k: "nom", d: "asc" });
   const csvRef    = useRef(null);
   const nifXlsRef = useRef(null);
+  const [fetchedRawCC, setFetchedRawCC] = useState([]);
   const capitalCalls = useMemo(
-    () => (Array.isArray(rawCC) && rawCC.length ? rawCC : readStoredJSON("tc_rawCC", [])),
-    [rawCC]
+    () => (Array.isArray(rawCC) && rawCC.length ? rawCC : fetchedRawCC),
+    [rawCC, fetchedRawCC]
   );
+
+  useEffect(() => {
+    if (Array.isArray(rawCC) && rawCC.length) return;
+    loadCapitalCalls().then((data) => {
+      if (Array.isArray(data)) setFetchedRawCC(data);
+    }).catch((error) => {
+      console.error("Searchers capital calls refresh failed:", error);
+    });
+  }, [rawCC]);
 
   useEffect(() => {
     if (!Array.isArray(historicData) || historicData.length === 0) {

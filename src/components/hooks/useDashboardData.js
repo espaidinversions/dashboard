@@ -1,5 +1,4 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { readStoredJSON, writeStoredJSON } from "../../utils.js";
 import { loadAll, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle } from "../../db.js";
 import { apiFetchJson } from "../../apiClient.js";
 import { useToast } from "../../toast.jsx";
@@ -10,10 +9,6 @@ import { mergeCapitalCallRows } from "../../utils.js";
 import { isActualCompany, isSearchFundShell } from "../../data/privateCompanyModel.js";
 import { splitRealEstateRows } from "../../data/realEstateModel.js";
 import { convertAmountToEurOnDate } from "../../fx.js";
-
-const LS_CC = "tc_rawCC";
-const LS_PL = "tc_funds0";
-const LS_TS = "tc_loadedAt";
 
 function sanitizeCapitalCallValues(values) {
   // Only pick known capital_calls columns — drop UI-only fields like nif, fiscal_name
@@ -114,23 +109,42 @@ async function resolveEstimatedFxRates(rows) {
 
 export function useDashboardData() {
   const { toast } = useToast();
-  const [rawCC,   setRawCC]   = useState(()=>readStoredJSON(LS_CC, []));
-  const [funds0,  setFunds0]  = useState(()=>readStoredJSON(LS_PL, []));
-  const [companiesData, setCompaniesData] = useState(()=>readStoredJSON("tc_portfolioCompanies", []));
-  const [searchersData, setSearchersData] = useState(()=>readStoredJSON("tc_allSearchers", []));
-  const [loadedAt,setLoadedAt]= useState(()=>readStoredJSON(LS_TS, null));
+  const [rawCC,   setRawCC]   = useState([]);
+  const [funds0,  setFunds0]  = useState([]);
+  const [companiesData, setCompaniesData] = useState([]);
+  const [searchersData, setSearchersData] = useState([]);
+  const [fundMeta, setFundMeta] = useState([]);
+  const [loadedAt,setLoadedAt]= useState(null);
   const [eurUsd,  setEurUsd]  = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const rawCCRef = useRef(rawCC);
   const searchersDataRef = useRef(searchersData);
+  const companiesDataRef = useRef(companiesData);
   useEffect(() => { rawCCRef.current = rawCC; }, [rawCC]);
   useEffect(() => { searchersDataRef.current = searchersData; }, [searchersData]);
+  useEffect(() => { companiesDataRef.current = companiesData; }, [companiesData]);
+
+  // Dispatches tc-rawcc-updated for other components while letting this hook
+  // skip its own event (it already holds the fresh rows in state).
+  const selfDispatchRef = useRef(false);
+  const refetchingRef = useRef(false);
+  const dispatchRawCCUpdated = useCallback(() => {
+    selfDispatchRef.current = true;
+    window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+    selfDispatchRef.current = false;
+  }, []);
 
   useEffect(() => {
     const handler = () => {
-      const fresh = readStoredJSON(LS_CC, []);
-      setRawCC(fresh);
+      if (selfDispatchRef.current || refetchingRef.current) return;
+      refetchingRef.current = true;
+      loadCapitalCalls({ skipCompanions: true })
+        .then((fresh) => {
+          if (Array.isArray(fresh)) setRawCC(fresh);
+        })
+        .catch((err) => console.error("Capital calls refetch failed:", err))
+        .finally(() => { refetchingRef.current = false; });
     };
     window.addEventListener("tc-rawcc-updated", handler);
     return () => window.removeEventListener("tc-rawcc-updated", handler);
@@ -150,35 +164,23 @@ export function useDashboardData() {
         const now = new Date().toLocaleDateString("ca-ES");
         if (Array.isArray(data.rawCC)) {
           setRawCC(data.rawCC);
-          writeStoredJSON(LS_CC, data.rawCC);
-          window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+          dispatchRawCCUpdated();
           resolveEstimatedFxRates(data.rawCC)
             .then((anyResolved) => {
               if (!anyResolved || cancelled) return;
               return loadCapitalCalls({ skipCompanions: true }).then((fresh) => {
                 if (!fresh || cancelled) return;
                 setRawCC(fresh);
-                writeStoredJSON(LS_CC, fresh);
-                window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+                dispatchRawCCUpdated();
               });
             })
             .catch((err) => console.warn("[resolveEstimatedFxRates] unexpected error:", err));
         }
-        if (Array.isArray(data.funds0)) {
-          setFunds0(data.funds0);
-          writeStoredJSON(LS_PL, data.funds0);
-        }
-        if (Array.isArray(data.companies)) {
-          setCompaniesData(data.companies);
-          writeStoredJSON("tc_portfolioCompanies", data.companies);
-        }
-        if (Array.isArray(data.searchers)) {
-          setSearchersData(data.searchers);
-          writeStoredJSON("tc_allSearchers", data.searchers);
-        }
-        if (Array.isArray(data.fundMeta)) writeStoredJSON("tc_fundMeta", data.fundMeta);
+        if (Array.isArray(data.funds0)) setFunds0(data.funds0);
+        if (Array.isArray(data.companies)) setCompaniesData(data.companies);
+        if (Array.isArray(data.searchers)) setSearchersData(data.searchers);
+        if (Array.isArray(data.fundMeta)) setFundMeta(data.fundMeta);
         setLoadedAt(now);
-        writeStoredJSON(LS_TS, now);
       })
       .catch(err => {
         console.error("Initial dashboard load failed:", err);
@@ -205,13 +207,12 @@ export function useDashboardData() {
     const fresh = await loadCapitalCalls({ skipCompanions: true });
     if (fresh) {
       setRawCC(fresh);
-      writeStoredJSON(LS_CC, fresh);
-      window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+      dispatchRawCCUpdated();
       await syncSearchersFromCapitalCalls(fresh);
     } else {
       console.error("[handleCCInsert] loadCapitalCalls returned null after successful insert", { insertedRow });
     }
-  }, []);
+  }, [dispatchRawCCUpdated]);
 
   const handleCCUpdate = useCallback(async (rowId, values, setError, existingRow = null) => {
     if (!values.data || !values.eur || !values.tipus) { setError("Data, tipus i import són obligatoris."); return; }
@@ -231,11 +232,10 @@ export function useDashboardData() {
     const fresh = await loadCapitalCalls({ skipCompanions: true });
     if (fresh) {
       setRawCC(fresh);
-      writeStoredJSON(LS_CC, fresh);
-      window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+      dispatchRawCCUpdated();
       await syncSearchersFromCapitalCalls(fresh);
     }
-  }, []);
+  }, [dispatchRawCCUpdated]);
 
   const handleCCDelete = useCallback(async (rowId) => {
     const { error } = await deleteCapitalCall(rowId);
@@ -247,22 +247,21 @@ export function useDashboardData() {
     const fresh = await loadCapitalCalls({ skipCompanions: true });
     if (fresh) {
       setRawCC(fresh);
-      writeStoredJSON(LS_CC, fresh);
-      window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+      dispatchRawCCUpdated();
     }
-  }, [toast]);
+  }, [toast, dispatchRawCCUpdated]);
 
   const handleLoad = useCallback(async (key, rows, clearExcluded) => {
     const now = new Date().toLocaleDateString("ca-ES");
     try {
       if (key === "xlsx") {
         const byNom = rows.kpiTrimestral;
-        const existingCompanies = rows.companies || readStoredJSON("tc_portfolioCompanies", []);
+        const existingCompanies = rows.companies || companiesDataRef.current;
         const mergedCompanies = existingCompanies.map(c => {
           const qs = byNom.get(c.nom);
           return qs ? { ...c, quarters: qs } : c;
         });
-        const baseSearchers = rows.searchers || readStoredJSON("tc_allSearchers", searchersDataRef.current);
+        const baseSearchers = rows.searchers || searchersDataRef.current;
         const normalizedCcRows = Array.isArray(rows.cc)
           ? rows.cc.map((row) => {
               const tipus = normalizeCapitalCallTipus(row.tipus);
@@ -276,7 +275,7 @@ export function useDashboardData() {
               };
             })
           : null;
-        const baseRawCC = normalizedCcRows ?? readStoredJSON(LS_CC, rawCCRef.current);
+        const baseRawCC = normalizedCcRows ?? rawCCRef.current;
         const hasCapitalCallsSheet = Array.isArray(rows.cc);
         const searchFundTx = hasCapitalCallsSheet
           ? []
@@ -295,57 +294,44 @@ export function useDashboardData() {
         if (error) throw error;
         if (bundle.rawCC != null) {
           setRawCC(bundle.rawCC);
-          writeStoredJSON(LS_CC, bundle.rawCC);
-          window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+          dispatchRawCCUpdated();
           await syncSearchersFromCapitalCalls(bundle.rawCC);
         }
-        if (bundle.funds0 != null) {
-          setFunds0(bundle.funds0);
-          writeStoredJSON(LS_PL, bundle.funds0);
-        }
+        if (bundle.funds0 != null) setFunds0(bundle.funds0);
         setCompaniesData(bundle.companies);
-        writeStoredJSON("tc_portfolioCompanies", bundle.companies);
-        if (bundle.searchers != null) {
-          setSearchersData(bundle.searchers);
-          writeStoredJSON("tc_allSearchers", bundle.searchers);
-        }
-        if (bundle.fundMeta != null) writeStoredJSON("tc_fundMeta", bundle.fundMeta);
+        if (bundle.searchers != null) setSearchersData(bundle.searchers);
+        if (bundle.fundMeta != null) setFundMeta(bundle.fundMeta);
         clearExcluded?.();
       } else if (key === "cc") {
         const { error } = await saveCapitalCalls(rows);
         if (error) throw error;
         setRawCC(rows);
         clearExcluded?.();
-        writeStoredJSON(LS_CC, rows);
-        window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
+        dispatchRawCCUpdated();
         await syncSearchersFromCapitalCalls(rows);
       } else if (key === "pl") {
         const { error } = await savePipeline(rows);
         if (error) throw error;
         setFunds0(rows);
-        writeStoredJSON(LS_PL, rows);
       } else if (key === "companies") {
         const { error } = await saveCompanies(rows);
         if (error) throw error;
         setCompaniesData(rows);
-        writeStoredJSON("tc_portfolioCompanies", rows);
       } else if (key === "searchers") {
         const { error } = await saveSearchers(rows);
         if (error) throw error;
         setSearchersData(rows);
-        writeStoredJSON("tc_allSearchers", rows);
       } else if (key === "fundMeta") {
         const { error } = await saveFundMeta(rows);
         if (error) throw error;
-        writeStoredJSON("tc_fundMeta", rows);
+        setFundMeta(rows);
       }
       setLoadedAt(now);
-      writeStoredJSON(LS_TS, now);
     } catch (err) {
       console.error("Load failed:", err);
       throw err;
     }
-  }, []);
+  }, [dispatchRawCCUpdated]);
 
   const TRANSACTIONS = useMemo(()=>rawCC.filter(r=>r.cat!=="Compromís"),[rawCC]);
   const COMPROMISOS  = useMemo(()=>rawCC.filter(r=>r.cat==="Compromís"),[rawCC]);
@@ -366,6 +352,7 @@ export function useDashboardData() {
     funds0, setFunds0,
     companiesData, setCompaniesData,
     searchersData, setSearchersData,
+    fundMeta, setFundMeta,
     loadedAt, setLoadedAt,
     isLoading,
     eurUsd,

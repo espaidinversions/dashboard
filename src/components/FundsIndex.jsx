@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { EST_CFG } from "../config.js";
 import { ThemeProvider, useTheme } from "../theme.js";
-import { fmtM, readStoredJSON, writeStoredJSON, formatMultiple, multipleColor } from "../utils.js";
+import { fmtM, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, EditableCell, DeleteRowButton, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { upsertFundMeta, upsertFundMetaFiEnd, insertFund, deleteFund, loadAll, loadCapitalCalls, loadFundMeta, renamePrivateEntity } from "../db.js";
 import { useAuth } from "../auth.jsx";
@@ -41,27 +41,25 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     recallablePool: "",
   });
 
-  const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
+  const [rawCC, setRawCC] = useState([]);
 
   useEffect(() => {
-    const handler = () => setRawCC(readStoredJSON("tc_rawCC", []));
+    const handler = () => {
+      loadCapitalCalls({ skipCompanions: true }).then((fresh) => {
+        if (Array.isArray(fresh)) setRawCC(fresh);
+      }).catch((error) => {
+        console.error("FundsIndex rawCC refetch failed:", error);
+      });
+    };
     window.addEventListener("tc-rawcc-updated", handler);
     return () => window.removeEventListener("tc-rawcc-updated", handler);
   }, []);
 
-  const persistRawCC = (updated) => {
-    setRawCC(updated);
-    writeStoredJSON("tc_rawCC", updated);
-  };
-
-  const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
+  const [fundMeta, setFundMeta] = useState([]);
 
   useEffect(() => {
     loadCapitalCalls({ skipCompanions: true }).then((fresh) => {
-      if (Array.isArray(fresh)) {
-        setRawCC(fresh);
-        writeStoredJSON("tc_rawCC", fresh);
-      }
+      if (Array.isArray(fresh)) setRawCC(fresh);
     }).catch((error) => {
       console.error("FundsIndex rawCC refresh failed:", error);
     });
@@ -69,10 +67,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
 
   useEffect(() => {
     loadFundMeta().then((meta) => {
-      if (Array.isArray(meta)) {
-        setFundMeta(meta);
-        writeStoredJSON("tc_fundMeta", meta);
-      }
+      if (Array.isArray(meta)) setFundMeta(meta);
     }).catch((error) => {
       console.error("Fund meta refresh failed:", error);
     });
@@ -85,7 +80,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       ? fundMeta.map(m => (m.id ?? m.fons) === (fund.id ?? fund.fons) ? { ...m, tvpi, irr } : m)
       : [...fundMeta, { id: fund.id ?? undefined, fons: fund.fons, tvpi, irr }];
     setFundMeta(updated);
-    writeStoredJSON("tc_fundMeta", updated);
     const { error } = await upsertFundMeta(fund, tvpi, irr);
     if (error) toast({ message: "Error desant TVPI: " + error.message, type: "error" });
   };
@@ -96,7 +90,6 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       ? fundMeta.map(m => (m.id ?? m.fons) === (fund.id ?? fund.fons) ? { ...m, fiEnd: val } : m)
       : [...fundMeta, { id: fund.id ?? undefined, fons: fund.fons, fiEnd: val }];
     setFundMeta(updated);
-    writeStoredJSON("tc_fundMeta", updated);
     const { error } = await upsertFundMetaFiEnd(fund, val);
     if (error) toast({ message: "Error desant fi inversió: " + error.message, type: "error" });
   };
@@ -110,10 +103,9 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
     const fundId = fund?.id ?? null;
     const fundName = fund?.fons ?? "";
     const updatedCC = rawCC.filter(r => (fundId ? r.id !== fundId : r.fons !== fundName));
-    persistRawCC(updatedCC);
+    setRawCC(updatedCC);
     const updatedMeta = fundMeta.filter(m => (fundId ? m.id !== fundId : m.fons !== fundName));
     setFundMeta(updatedMeta);
-    writeStoredJSON("tc_fundMeta", updatedMeta);
     toast({ message: `Fons "${fundName}" eliminat.` });
   };
 
@@ -153,7 +145,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
       conversion,
     );
     if (!row) { toast({ message: "Error en crear el fons", type: "error" }); return; }
-    persistRawCC([...rawCC, row]);
+    setRawCC([...rawCC, row]);
     setFundMeta(prev => [...prev, { id: row.id, fons: row.fons, tvpi: null, irr: null }]);
     setAddingFund(false);
     setNewFund({ fons: "", est: defaultEst, compromis: "", divisa: "EUR" });
@@ -377,11 +369,8 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
                               return;
                             }
                             const refreshed = await loadAll();
-                            if (refreshed?.rawCC) persistRawCC(refreshed.rawCC);
-                            if (refreshed?.fundMeta) {
-                              setFundMeta(refreshed.fundMeta);
-                              writeStoredJSON("tc_fundMeta", refreshed.fundMeta);
-                            }
+                            if (refreshed?.rawCC) setRawCC(refreshed.rawCC);
+                            if (refreshed?.fundMeta) setFundMeta(refreshed.fundMeta);
                           }}
                           disabled={!rowCanEdit || !r.id} />
                       </Link>

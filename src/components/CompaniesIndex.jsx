@@ -1,9 +1,9 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ThemeProvider, useTheme } from "../theme.js";
-import { fmtM, formatMultiple, multipleColor, usePersistedState } from "../utils.js";
+import { fmtM, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
-import { loadCompanies } from "../db.js";
+import { loadCapitalCalls, loadCompanies } from "../db.js";
 import { isActualCompany } from "../data/privateCompanyModel.js";
 import { SF_STRATEGY_ADQUISICIO, STRATEGY_PARTICIPADA_ALTRES } from "../data/searchFundSnapshotModel.js";
 
@@ -27,8 +27,8 @@ export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "
     dpi: "",
     rvpi: "",
   });
-  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
-  const [rawCC] = usePersistedState("tc_rawCC", []);
+  const [companies, setCompanies] = useState([]);
+  const [rawCC, setRawCC] = useState([]);
 
   useEffect(() => {
     loadCompanies().then((data) => {
@@ -36,7 +36,12 @@ export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "
     }).catch((error) => {
       console.error("Companies index refresh failed:", error);
     });
-  }, [setCompanies]);
+    loadCapitalCalls().then((data) => {
+      if (Array.isArray(data)) setRawCC(data);
+    }).catch((error) => {
+      console.error("Companies transactions refresh failed:", error);
+    });
+  }, []);
 
   // Map vehicle_id → strategy, derived from capital calls (est field).
   // Used to infer company origin when company.tipus is missing or stale.

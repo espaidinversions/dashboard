@@ -3,7 +3,6 @@ import { useTheme } from "../theme.js";
 import { usePersistedState } from "../utils.js";
 import { fetchProspectiveCashForecasts, saveProspectiveCashForecasts, fetchCommittedOverrides, saveCommittedOverrides } from "../db.js";
 import { makeFundRouteId, computeFundMetricsByName } from "../data/fundDetailModel.js";
-import { readStoredJSON } from "../utils/storage.js";
 import { FUND_NAME_MAP } from "../data/fundNameMap.js";
 import { normalizeCapitalCallTipus } from "../data/capitalCallTipusModel.js";
 import { isCompanyEst, isReEst, estSection } from "../data/capitalCallStrategyModel.js";
@@ -57,7 +56,7 @@ function colorFor(tc, color) {
   return tc.textLight;
 }
 
-export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
+export function ProspectiveCashTab({ rawCapitalCalls = [], fundMeta = [], forceScope }) {
   const { tc, dark } = useTheme();
   const [editorData, setEditorData] = useState({ years: [], funds: {} });
   const [vehicleIds, setVehicleIds] = useState({});
@@ -354,8 +353,8 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], forceScope }) {
 
   // Lifetime DPI/TVPI per fund, sourced the same way as the fund page (fund_meta + capital calls).
   const metricsByFund = useMemo(
-    () => computeFundMetricsByName(rawCapitalCalls, readStoredJSON("tc_fundMeta", [])),
-    [rawCapitalCalls],
+    () => computeFundMetricsByName(rawCapitalCalls, fundMeta),
+    [rawCapitalCalls, fundMeta],
   );
 
   const table = useMemo(() => buildTable({

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ThemeProvider, useTheme } from "../theme.js";
-import { fmtM, fmtSignedM, formatIsoDateDMY, usePersistedState } from "../utils.js";
+import { fmtM, fmtSignedM, formatIsoDateDMY } from "../utils.js";
 import { loadCapitalCalls, loadCompanies, loadSearchers } from "../db.js";
 import { FlagImg, Badge, AddRowModal, DeleteRowButton, indexPageStyles } from "./SharedComponents.jsx";
 import { isActualCompany } from "../data/privateCompanyModel.js";
@@ -54,9 +54,9 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   const [sortKey, setSortKey] = useState("ticket");
   const [sortDir, setSortDir] = useState("desc");
   const [showAddModal, setShowAddModal] = useState(false);
-  const [searchers, setSearchers] = usePersistedState("tc_allSearchers", []);
-  const [rawCCStored, setRawCC] = usePersistedState("tc_rawCC", []);
-  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
+  const [searchers, setSearchers] = useState([]);
+  const [rawCCStored, setRawCC] = useState([]);
+  const [companies, setCompanies] = useState([]);
   const rawCC = rawCCOverride !== undefined ? rawCCOverride : rawCCStored;
 
   useEffect(() => {

@@ -6,7 +6,7 @@ import { useAuth } from "../auth.jsx";
 import { loadCompanies, upsertCompany } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { ThemeProvider, useTheme } from "../theme.js";
-import { fmtM, slugify, usePersistedState, formatMultiple, multipleColor } from "../utils.js";
+import { fmtM, slugify, formatMultiple, multipleColor } from "../utils.js";
 import { EditableCell, FlagImg, Logo, KpiCard, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 
 function MetricChart({ title, data, actualKey, budgetKey, ltmKey, color, view, tc, withMargin }) {
@@ -126,7 +126,7 @@ function CompanyDetailInner() {
   const [chartView, setChartView] = useState("quarterly");
   const [quarterFilters, setQuarterFilters] = useState({ trimestre: "", ingressos: "", ebitda: "", dfn: "", ingPress: "", ebitdaPress: "", dfnPress: "" });
 
-  const [companies, setCompanies] = usePersistedState("tc_portfolioCompanies", []);
+  const [companies, setCompanies] = useState([]);
 
   useEffect(() => {
     loadCompanies()

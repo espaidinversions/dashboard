@@ -4,7 +4,7 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { EST_CFG } from "../config.js";
 import { ThemeProvider, useTheme } from "../theme.js";
-import { fmtM, fmtSignedM, fmtSignedNative, readStoredJSON, formatMultiple, multipleColor, writeStoredJSON } from "../utils.js";
+import { fmtM, fmtSignedM, fmtSignedNative, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, Logo, KpiCard, AddRowModal, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCapitalCalls, loadFundMeta, updateCapitalCall } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
@@ -18,8 +18,8 @@ function FundDetailInner() {
   const navigate = useNavigate();
 
   // 1. All useState calls — hoisted unconditionally before any return
-  const [rawCC, setRawCC] = useState(() => readStoredJSON("tc_rawCC", []));
-  const [fundMeta, setFundMeta] = useState(() => readStoredJSON("tc_fundMeta", []));
+  const [rawCC, setRawCC] = useState([]);
+  const [fundMeta, setFundMeta] = useState([]);
   const [txFilters, setTxFilters] = useState({ data: "", tipus: "Tots", import: "" });
   const [chartView, setChartView] = useState("annual");
   const [editingRow, setEditingRow] = useState(null);
@@ -29,15 +29,8 @@ function FundDetailInner() {
     let cancelled = false;
     Promise.all([loadCapitalCalls(), loadFundMeta()]).then(([capitalCalls, meta]) => {
       if (cancelled) return;
-      if (Array.isArray(capitalCalls)) {
-        setRawCC(capitalCalls);
-        writeStoredJSON("tc_rawCC", capitalCalls);
-        window.dispatchEvent(new CustomEvent("tc-rawcc-updated"));
-      }
-      if (Array.isArray(meta)) {
-        setFundMeta(meta);
-        writeStoredJSON("tc_fundMeta", meta);
-      }
+      if (Array.isArray(capitalCalls)) setRawCC(capitalCalls);
+      if (Array.isArray(meta)) setFundMeta(meta);
     }).catch((error) => {
       console.error("Fund detail refresh failed:", error);
     });
@@ -300,7 +293,7 @@ function FundDetailInner() {
                   return;
                 }
                 const fresh = await loadCapitalCalls();
-                if (Array.isArray(fresh)) { setRawCC(fresh); writeStoredJSON("tc_rawCC", fresh); window.dispatchEvent(new CustomEvent("tc-rawcc-updated")); }
+                if (Array.isArray(fresh)) { setRawCC(fresh); window.dispatchEvent(new CustomEvent("tc-rawcc-updated")); }
                 setEditingRow(null);
               }}
               onClose={() => setEditingRow(null)}
