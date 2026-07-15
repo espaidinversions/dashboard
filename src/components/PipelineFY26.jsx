@@ -291,8 +291,14 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, 
   return (
     <div>
       {/* In the Resum sub-tab these prospective figures sit right above the
-          actual-performance matrix, so they need a label of their own. */}
-      {chartsOnly && <SectionHeader title="Pipeline FY26" tc={TC} />}
+          actual-performance matrix, so they need a label of their own. Styled as
+          the site's uppercase micro-label (see TxSection chart headers), not a
+          bordered SectionHeader — those live inside cards. */}
+      {chartsOnly && (
+        <div style={{ fontSize: 11, letterSpacing: "0.13em", color: TC.textLight, textTransform: "uppercase", fontWeight: 600, marginBottom: 10 }}>
+          Pipeline FY26
+        </div>
+      )}
       <div className="grid-4" style={{gap:14,marginBottom:18}}>
         {kpis.map((k,i)=>(
           <div key={i} style={{background:TC.card,border:`1px solid ${TC.border}`,borderRadius:10,padding:"16px 18px",borderTop:`4px solid ${k.accent}`,boxShadow:"0 2px 8px rgba(0,0,0,.08)"}}>

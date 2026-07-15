@@ -27,9 +27,8 @@ export function AltCohortSection({
         tc={tc}
         showDpi={showDpi}
         action={
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 12 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
             <CheckboxToggle checked={showDpi} onChange={onToggleDpi} label="Mostrar DPI" tc={tc} />
-            <div style={{ width: 1, height: 16, background: tc.border }} />
             <IncludeCompaniesToggle checked={includeCompanies} onChange={onToggleCompanies} tc={tc} />
           </div>
         }
