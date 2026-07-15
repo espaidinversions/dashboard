@@ -144,6 +144,17 @@ test("totals: byStrategy and grand pool across vintages", () => {
   assert.ok(Math.abs(matrix.totals.grand.moic - 1.5) < 1e-9);
 });
 
+test("matrix exposes per-fund drill-down rows with commitment fields", () => {
+  const meta = [{ id: "A", fons: "Fund A", tvpi: 2.0 }, { id: "B", fons: "Fund B", tvpi: 1.0 }];
+  const matrix = buildAltCohortMatrix(primariRows(), meta, ASOF);
+  const a = matrix.funds.find((f) => f.id === "A");
+  assert.equal(a.name, "Fund A");
+  assert.equal(a.compromis, 100000);
+  assert.equal(a.vintage, 2020);
+  assert.ok(a.routeId);
+  assert.equal(typeof a.irr, "number");
+});
+
 test("company matrix groups SF and PC by company strategies × vintage; ignores ALT", () => {
   const rows = [
     { id: "S1", fons: "Searcher One", est: "Search Fund - Cerca", cat: "Compromís", eur: 50000, data: "2021-01-01" },

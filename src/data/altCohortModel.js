@@ -93,7 +93,7 @@ function summarizeFundsBySection(rawCC, fundMeta, { sections, vintageFallback = 
   }
 
   const funds = [];
-  for (const rows of groups.values()) {
+  for (const [routeId, rows] of groups.entries()) {
     const compromisRows = rows
       .filter((r) => r.cat === "Compromís" && r.data)
       .sort((a, b) => String(a.data).localeCompare(String(b.data)));
@@ -128,13 +128,14 @@ function summarizeFundsBySection(rawCC, fundMeta, { sections, vintageFallback = 
       .filter((r) => DIST_CATS.has(r.cat))
       .reduce((s, r) => s + Math.abs(Number(r.eur || 0)), 0);
     const flows = rows.filter((r) => isFlowCat(r.cat) && r.data);
+    const compromis = compromisRows.reduce((s, r) => s + Number(r.eur || 0), 0);
 
     const id = rows.find((r) => r.id)?.id ?? null;
     const name = rows[0]?.fons ?? null;
     const meta = metaList.find((m) => (id && m.id === id) || m.fons === name);
     const tvpi = meta?.tvpi ?? null;
 
-    funds.push({ id, est, vintage, calls, dist, tvpi, flows });
+    funds.push({ id, routeId, name, est, vintage, compromis, calls, dist, tvpi, fiEnd: meta?.fiEnd ?? null, flows });
   }
   return funds;
 }
@@ -161,7 +162,11 @@ function buildMatrixFromFunds(funds, strategies, asOfDate) {
   }
   const grand = computeCohort(funds, asOfDate);
 
-  return { vintages, strategies, cells, totals: { byVintage, byStrategy, grand } };
+  // Per-fund drill-down rows for the expandable vintage view: a single-fund
+  // cohort yields that fund's own IRR with the same residual logic as the cells.
+  const fundRows = funds.map((f) => ({ ...f, irr: computeCohort([f], asOfDate)?.irr ?? null }));
+
+  return { vintages, strategies, cells, totals: { byVintage, byStrategy, grand }, funds: fundRows };
 }
 
 /**
