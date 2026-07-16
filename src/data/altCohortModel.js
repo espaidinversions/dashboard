@@ -1,5 +1,6 @@
 import { xirr } from "../utils.js";
 import { estSection } from "./capitalCallStrategyModel.js";
+import { SF_STRATEGY_CERCA } from "./searchFundSnapshotModel.js";
 import { makeFundRouteId, normalizeFundDetailRow } from "./fundDetailModel.js";
 
 // The four Alternatives strategies, in fixed display order. Matches the canonical
@@ -187,9 +188,12 @@ export function buildAltCohortMatrix(
 
 /**
  * Build the MOIC/IRR cohort matrix for companies (Search Funds + Participades).
- * `excludeIds` drops acquired search funds from the SF set so they are not
+ * `excludeIds` drops acquired searchers still classified Cerca so they are not
  * counted as both a searcher and a participada (mirrors useDashboardData's
- * sfTx.filter(!actualCompanyIds.has(id))). Same output shape as buildAltCohortMatrix.
+ * sfTx.filter(!actualCompanyIds.has(id))). "Search Fund - Participada" entities
+ * are deliberately NOT excluded: company-held SF deals (CW Group, Grupo FIRE,
+ * Alfavet) are actual companies, so their ids are always in excludeIds — they
+ * belong under the Participada column. Same output shape as buildAltCohortMatrix.
  */
 export function buildCompanyCohortMatrix(
   rawCC,
@@ -198,7 +202,7 @@ export function buildCompanyCohortMatrix(
 ) {
   const all = summarizeFundsBySection(rawCC, fundMeta, { sections: ["SF", "PC"], vintageFallback: true });
   const funds = all
-    .filter((f) => !(estSection(f.est) === "SF" && excludeIds.has(f.id)))
+    .filter((f) => !(f.est === SF_STRATEGY_CERCA && excludeIds.has(f.id)))
     // Participades don't have tracked returns: a TVPI of exactly 1 there is the
     // fund_meta upsert default (db/funds.js), not a real valuation, so drop the
     // company from the matrix entirely (no dash-only vintage rows). Search funds

@@ -196,6 +196,23 @@ test("acquired search funds (in excludeIds) are dropped from the company matrix 
   assert.ok(Math.abs(matrix.cells["2021|Participada (Altres)"].moic - 2.0) < 1e-9);
 });
 
+test("Search Fund - Participada companies stay in the matrix even when their id is in excludeIds", () => {
+  // Company-held SF deals (e.g. CW Group) are actual companies, so their ids are
+  // always in excludeIds — but they ARE the participada, not a double-counted
+  // searcher, so they must render under the Participada column.
+  const rows = [
+    { id: "CW", fons: "CW Group", est: "Search Fund - Participada", cat: "Compromís", eur: 500000, data: "2022-01-01" },
+    { id: "CW", fons: "CW Group", est: "Search Fund - Participada", cat: "Capital Call", eur: 500000, data: "2022-03-01" },
+  ];
+  const meta = [
+    { id: "CW", fons: "CW Group", tvpi: 1.4 },
+  ];
+  const matrix = buildCompanyCohortMatrix(rows, meta, { excludeIds: new Set(["CW"]), asOfDate: ASOF });
+  assert.ok(Math.abs(matrix.cells["2022|Search Fund - Participada"].moic - 1.4) < 1e-9);
+  // No spillover into the Cerca column.
+  assert.equal(matrix.cells["2022|Search Fund - Cerca"], null);
+});
+
 test("companies with no Compromís fall back to earliest Capital Call for vintage and strategy", () => {
   const rows = [
     { id: "NP", fons: "No Compromís Co", est: "Participada (Altres)", cat: "Capital Call", eur: 100000, data: "2021-06-01" },
