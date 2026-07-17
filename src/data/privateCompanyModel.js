@@ -1,8 +1,14 @@
 import { getPrivateEntityName } from "./privateEntities.js";
 import { estSection, isCompanyEst } from "./capitalCallStrategyModel.js";
+import { SF_STRATEGY_CERCA } from "./searchFundSnapshotModel.js";
 
 export function isSearchFundShell(company) {
   if (company?.tipus !== "SF") return false;
+  // The entity's est classification is authoritative: a cerca-phase searcher is
+  // a shell no matter how large its ticket (e.g. Hargrave at €100,519), and an
+  // acquired SF is a real company no matter how small. The ticket heuristic
+  // only remains as a fallback for companies with no entity classification.
+  if (company?.vehicleEst) return company.vehicleEst === SF_STRATEGY_CERCA;
   const ticket = Number(company?.ticket ?? 0);
   return Number.isFinite(ticket) && ticket > 0 && ticket < 100000;
 }
@@ -56,6 +62,7 @@ export function buildFallbackCompaniesFromCapitalCalls(capitalCallRows, entityMa
       id: entityId,
       nom: companyName,
       tipus: estSection(row.est),
+      vehicleEst: entityMap.get(entityId)?.vehicle_est ?? row.est ?? null,
       segment: null,
       entrepreneurs: null,
       origen: null,

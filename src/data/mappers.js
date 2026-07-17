@@ -75,6 +75,7 @@ export function rowToCompany(r, entityMap) {
   const entity = entityMap.get(entityId);
   return {
     id: entityId, nom: name, tipus: r.tipus, segment: r.segment,
+    vehicleEst: entity?.vehicle_est ?? null,
     entrepreneurs: r.entrepreneurs, origen: r.origen, geo: r.geo,
     ticket: r.ticket, tvpi: r.tvpi,
     rvpiEur: r.rvpi_eur, dpiEur: r.dpi_eur,
