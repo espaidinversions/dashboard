@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { usePersistedState } from "../../utils.js";
 
-function normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublicsTab, activeNavItem }) {
+export function normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublicsTab, activeNavItem }) {
+  if (tab === "home") return "home";
   if (tab === "real-estate") {
     if (realEstateTab === "altres-vehicles") return "re-altres";
     return "re-directe";
@@ -30,7 +31,7 @@ function normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublic
 
 export function useTabRouter() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tab = searchParams.get("tab") ?? "resum";
+  const tab = searchParams.get("tab") ?? "home";
   const setTab = useCallback((newTab) => {
     setSearchParams(params => {
       const next = new URLSearchParams(params);
@@ -50,6 +51,7 @@ export function useTabRouter() {
   const handleNavigate = useCallback((itemId) => {
     setActiveNavItem(itemId);
     switch (itemId) {
+      case "home":           setTab("home"); break;
       case "alt-resum":      setTab("inversions"); setInversionsSubTab("resum"); break;
       case "fons":           setTab("inversions"); setInversionsSubTab("fons"); break;
       case "searchers":      setTab("searchers"); break;
