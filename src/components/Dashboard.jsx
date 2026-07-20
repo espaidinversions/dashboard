@@ -6,11 +6,12 @@ import {
 import { useTheme } from "../theme.js";
 import { usePersistedState, exportMultiXLSX, normalizeOptionValue, dedupeOptionValues } from "../utils.js";
 import { useAuth } from "../auth.jsx";
-import { ResumTab } from "./tabs/index.js";
+import { ResumTab, LandingTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
 import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohortModel.js";
+import { buildLandingModel } from "../data/landingModel.js";
 import { AltCohortSection } from "./funds/AltCohortSection.jsx";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
@@ -31,6 +32,7 @@ const HoldingsTable       = lazy(() => import("./HoldingsTable.jsx").then(m => (
 const PMTipusTab          = lazy(() => import("./PMTipusTab.jsx").then(m => ({ default: m.PMTipusTab })));
 const PMTransaccionsTab   = lazy(() => import("./PMTransaccionsTab.jsx").then(m => ({ default: m.PMTransaccionsTab })));
 const PMTraçabilitatTab   = lazy(() => import("./PMTraçabilitatTab.jsx").then(m => ({ default: m.PMTraçabilitatTab })));
+const PmLandingCard       = lazy(() => import("./tabs/PmLandingCard.jsx"));
 
 function CapitalCallModals({
   ccNameOptions,
@@ -397,6 +399,15 @@ function Dashboard() {
 
   const RE_FONS_MAP = useMemo(() => buildRealEstateFundsMap(d.reCompr, d.reTx), [d.reCompr, d.reTx]);
 
+  const landingModel = useMemo(() => buildLandingModel({
+    altTx: altAllTx,
+    altCompr: altAllCompr,
+    reTx: d.reTx,
+    reCompr: d.reCompr,
+    pmSummary: canAccessSection("mercats-publics") ? { valorActual: 0, nGestors: 0 } : null,
+    canAccess: canAccessSection,
+  }), [altAllTx, altAllCompr, d.reTx, d.reCompr, canAccessSection]);
+
   const clearFilters = ()=>{setFFy("Tots");setFEst("Tots");setFTipus("Tots");setTxSearch("");};
   const anyFilter = fFy!=="Tots"||fEst!=="Tots"||fTipus!=="Tots"||txSearch.trim()!="";
 
@@ -506,7 +517,7 @@ function Dashboard() {
           <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
-                {(tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re" || tab === "re-cash-model") ? "Real Estate" : tab === "cash-model" ? "Model Caixa" : "Mercats Privats"}
+                {tab === "home" ? "Inici" : (tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re" || tab === "re-cash-model") ? "Real Estate" : tab === "cash-model" ? "Model Caixa" : "Mercats Privats"}
               </div>
               {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
             </div>
@@ -530,6 +541,17 @@ function Dashboard() {
           </div>
         )}
         <main id="dashboard-content" style={{ flex: 1, padding: "24px 32px" }}>
+          {tab === "home" && (
+            <LandingTab
+              model={landingModel}
+              tc={tc}
+              onNavigate={handleNavigate}
+              pmCard={canAccessSection("mercats-publics")
+                ? <Suspense fallback={null}><PmLandingCard tc={tc} onNavigate={handleNavigate} /></Suspense>
+                : null}
+            />
+          )}
+
           {tab === "resum" && (
             <ResumTab
               tc={tc}
