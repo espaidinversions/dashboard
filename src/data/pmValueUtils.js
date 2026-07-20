@@ -102,3 +102,24 @@ export function summarizeLatestPmValues(
     unmappedTotal,
   };
 }
+
+/**
+ * Latest PM summary including WAM positions (which have no PM_VALUES entries).
+ * @param {PMValuesByIsin} nestedValues
+ * @param {PMPositionSnapshot[]} positions
+ * @param {PMPositionSnapshot[]} [wamPositions]
+ * @param {{ managerRouter?: Function }} [options]
+ * @returns {{ total: number, byManager: Record<string,number>, byType: Record<string,number>, unmappedTotal: number }}
+ */
+export function summarizeLatestPmValuesWithWam(nestedValues = {}, positions = [], wamPositions = [], options = {}) {
+  const summary = summarizeLatestPmValues(nestedValues, positions, options);
+  for (const pos of wamPositions ?? []) {
+    const v = pos?.valorMercat ?? 0;
+    if (!v) continue;
+    summary.total += v;
+    summary.byManager.andbank = (summary.byManager.andbank ?? 0) + v;
+    const t = String(pos?.tipus ?? "").trim();
+    if (t) summary.byType[t] = (summary.byType[t] ?? 0) + v;
+  }
+  return summary;
+}

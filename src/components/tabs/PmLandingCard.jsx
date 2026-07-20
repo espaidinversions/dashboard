@@ -1,17 +1,14 @@
 import React from "react";
-import { usePmMonthly } from "../hooks/usePmMonthly.js";
+import { PM_MODEL } from "../../data/publicMarketsModel.js";
+import { WAM_POSITIONS } from "../../data/wamPositions.js";
+import { summarizeLatestPmValuesWithWam } from "../../data/pmValueUtils.js";
 import { KpiCard } from "../shared/KpiCard.jsx";
 import { formatEur } from "./landingFormat.js";
 
-const PM_VALUE_FIELDS = ["caixaRV", "caixaRF", "ubsRV", "ubsRF", "abelBK", "andbank"];
+const PM_LANDING_VALOR_ACTUAL =
+  summarizeLatestPmValuesWithWam(PM_MODEL.series.values, PM_MODEL.holdings.active, WAM_POSITIONS).total;
 
 export default function PmLandingCard({ tc, onNavigate }) {
-  const { monthly, loading } = usePmMonthly();
-  const latest = Array.isArray(monthly) && monthly.length ? monthly[monthly.length - 1] : null;
-  const valorActual = latest
-    ? PM_VALUE_FIELDS.reduce((s, f) => s + (Number(latest[f]) || 0), 0)
-    : 0;
-
   return (
     <button
       type="button"
@@ -21,8 +18,7 @@ export default function PmLandingCard({ tc, onNavigate }) {
       <KpiCard
         tc={tc}
         label="Mercats Públics — Valor actual"
-        value={loading && !latest ? "—" : formatEur(valorActual)}
-        sub={latest ? latest.label : null}
+        value={formatEur(PM_LANDING_VALOR_ACTUAL)}
       />
     </button>
   );

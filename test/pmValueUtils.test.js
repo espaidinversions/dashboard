@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { routeManagerFromCustodian, summarizeLatestPmValues } from "../src/data/pmValueUtils.js";
+import { routeManagerFromCustodian, summarizeLatestPmValues, summarizeLatestPmValuesWithWam } from "../src/data/pmValueUtils.js";
 
 test("routeManagerFromCustodian maps supported custodians", () => {
   assert.equal(routeManagerFromCustodian({ custodian: "CaixaBank" }), "caixa");
@@ -34,4 +34,15 @@ test("summarizeLatestPmValues groups latest values by manager and asset type", (
   assert.deepEqual(summary.byManager, { caixa: 120, abel: 80, jpmorgan: 40 });
   assert.deepEqual(summary.byType, { RV: 160, RF: 80 });
   assert.equal(summary.unmappedTotal, 0);
+});
+
+test("summarizeLatestPmValuesWithWam adds WAM valorMercat to total, andbank, and byType", () => {
+  const nested = { "ISIN1": { CaixaBank: [{ date: "2024-01", value: 1000 }] } };
+  const positions = [{ isin: "ISIN1", custodian: "CaixaBank", tipus: "RV" }];
+  const wam = [{ custodian: "Andbank", tipus: "RF", valorMercat: 250 }, { custodian: "Andbank", tipus: "RF", valorMercat: 0 }];
+  const s = summarizeLatestPmValuesWithWam(nested, positions, wam);
+  assert.equal(s.total, 1250);            // 1000 + 250 (the 0 skipped)
+  assert.equal(s.byManager.andbank, 250);
+  assert.equal(s.byType.RF, 250);
+  assert.equal(s.byType.RV, 1000);
 });

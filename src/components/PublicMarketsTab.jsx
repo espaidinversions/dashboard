@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from "react";
 import { useTheme } from "../theme.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
-import { summarizeLatestPmValues } from "../data/pmValueUtils.js";
+import { summarizeLatestPmValuesWithWam } from "../data/pmValueUtils.js";
 import { buildGroupedMonthlySeriesFromNestedValues, buildMonthlySeriesFromNestedValues } from "../chartSeries.js";
 import {
   PERIODS,
@@ -83,19 +83,10 @@ export function PublicMarketsTab() {
     return [...PM_TRANSACTIONS, ...extras];
   }, [manualTxs]);
 
-  const latestPmSummary = useMemo(() => {
-    const summary = summarizeLatestPmValues(PM_VALUES, PM_POSITIONS);
-    // WAM positions have no PM_VALUES entries — add their static valorMercat directly.
-    for (const pos of WAM_POSITIONS) {
-      const v = pos.valorMercat ?? 0;
-      if (!v) continue;
-      summary.total += v;
-      summary.byManager.andbank = (summary.byManager.andbank ?? 0) + v;
-      const t = String(pos.tipus ?? "").trim();
-      if (t) summary.byType[t] = (summary.byType[t] ?? 0) + v;
-    }
-    return summary;
-  }, []);
+  const latestPmSummary = useMemo(
+    () => summarizeLatestPmValuesWithWam(PM_VALUES, PM_POSITIONS, WAM_POSITIONS),
+    []
+  );
 
   const currentManagerValues = useMemo(() => {
     const bankinterVal = _custodianPositions.bankinter
