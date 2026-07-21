@@ -11,7 +11,7 @@
 - Missing in source: 0
 - Changed rows: 0
 - Extra rows in source: 0
-- Workbook total row (row 105): 81,076,076.41
+- Workbook total row (row 105): 80,366,644.28
 - Workbook sum of active rows: 59,662,676.92
 - Current source sum of active rows: 59,662,676.92
 - Delta vs workbook sum: -0

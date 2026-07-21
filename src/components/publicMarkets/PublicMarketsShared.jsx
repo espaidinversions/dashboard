@@ -3,6 +3,7 @@ import { MGR_COLORS as _MGR_COLORS } from "../../chartColors.js";
 import { TC_LIGHT } from "../../theme.js";
 import { KpiCard as _KpiCard } from "../SharedComponents.jsx";
 import { PM_MODEL } from "../../data/publicMarketsModel.js";
+import { canonicalPmCustodian, isEtfPosition as isEtfPositionData } from "../../data/pmClassification.js";
 const PM_MANAGERS = PM_MODEL.metadata.managers;
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
@@ -65,13 +66,13 @@ export function weightedReturn(field, managerValueById, tipus = null, managers =
 }
 
 function custodianMatch(custodians) {
-  return (p) => custodians.includes(p.custodian);
+  return (p) => custodians.includes(canonicalPmCustodian(p.custodian));
 }
 
 export function getMgrPositions(mgrId) {
   let custodians;
   if (mgrId === "caixa")          custodians = ["CaixaBank"];
-  else if (mgrId === "ubs")       custodians = ["UBS", "Credit Suisse"];
+  else if (mgrId === "ubs")       custodians = ["UBS"];
   else if (mgrId === "bankinter") custodians = ["Bankinter"];
   else if (mgrId === "jpmorgan")  custodians = ["JPMorgan"];
   else return null; // andbank, ib: aggregated only, no drill-down
@@ -87,8 +88,7 @@ export function getMgrPositions(mgrId) {
 }
 
 export function isEtfPosition(pos) {
-  const nom = (pos?.nom ?? "").toUpperCase();
-  return nom.includes("ETF") || nom.includes("ISHARES") || nom.includes("XETRA");
+  return isEtfPositionData(pos);
 }
 
 export function computeWeightedTer(positions) {

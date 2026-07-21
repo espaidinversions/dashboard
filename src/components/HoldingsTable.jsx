@@ -2,13 +2,53 @@ import React, { useState, useMemo, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
+import { makeAggregatePosition, splitIbPositions, sumMarketValue } from "../data/pmClassification.js";
 import { TC_LIGHT, useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
 import { useAuth } from "../auth.jsx";
 import { loadPMPositionOverrides, upsertPMPositionOverride } from "../db.js";
 import { useToast } from "../toast.jsx";
 
-const PM_STATIC = [...PM_MODEL.holdings.active, ...WAM_POSITIONS];
+const PM_ACTIVE = PM_MODEL.holdings.active;
+
+function buildHoldingsRows() {
+  const { etfs: ibEtfs, stocks: ibStocks } = splitIbPositions(PM_ACTIVE);
+  const rows = PM_ACTIVE.filter(position => position.custodian !== "Interactive Brokers");
+
+  if (sumMarketValue(ibEtfs) > 0) {
+    rows.push(makeAggregatePosition({
+      id: "aggregate-ib-etfs",
+      nom: "Interactive Brokers · ETFs (agregat)",
+      gestor: "Interactive Brokers",
+      custodian: "Interactive Brokers",
+      tipus: "RV",
+      positions: ibEtfs,
+    }));
+  }
+  if (sumMarketValue(ibStocks) > 0) {
+    rows.push(makeAggregatePosition({
+      id: "aggregate-ib-accions",
+      nom: "Interactive Brokers · Accions (agregat)",
+      gestor: "Interactive Brokers",
+      custodian: "Interactive Brokers",
+      tipus: "RV",
+      positions: ibStocks,
+    }));
+  }
+  if (sumMarketValue(WAM_POSITIONS) > 0) {
+    rows.push(makeAggregatePosition({
+      id: "aggregate-wam-andbank",
+      nom: "WAM–Andbank · Renda Fixa (agregat)",
+      gestor: "WAM",
+      custodian: "Andbank",
+      tipus: "RF",
+      positions: WAM_POSITIONS,
+    }));
+  }
+  return rows;
+}
+
+const PM_STATIC = buildHoldingsRows();
 
 function SectionHeader({ tipus, count, total, tc = TC_LIGHT }) {
   const isRV  = tipus === "RV";
@@ -91,7 +131,7 @@ function EditableCell({ value, canEdit, onSave, renderValue, td }) {
   );
 }
 
-export function HoldingsTable() {
+export function HoldingsTable({ assetClass = "all", title = "Posicions" } = {}) {
   const { tc, dark } = useTheme();
   const { canEditSection }  = useAuth();
   const canEdit = canEditSection("mercats-publics");
@@ -102,7 +142,7 @@ export function HoldingsTable() {
   const prevKey = `rend${currentYear - 1}`;
 
   const [custodianFilter, setCustodianFilter] = useState("all");
-  const [tipusFilter,     setTipusFilter]     = useState("all");
+  const [tipusFilter,     setTipusFilter]     = useState(assetClass === "RV" || assetClass === "RF" ? assetClass : "all");
   const [columnFilters, setColumnFilters] = useState({ nom:"", custodian:"", tipus:"Tots", isin:"", dataCompra:"", valorMercat:"", rendInici:"", pes:"", [ytdKey]:"", [prevKey]:"", costAnual:"" });
   const [sortCol, setSortCol] = useState("valorMercat");
   const [sortDir, setSortDir] = useState("desc");
@@ -143,7 +183,7 @@ export function HoldingsTable() {
   // Merge static data with overrides, then recompute pes
   const mergedPositions = useMemo(() => {
     const merged = PM_STATIC.map(p => {
-      const ov = overrides.get(p.isin);
+      const ov = p._aggregate || !p.isin ? null : overrides.get(p.isin);
       if (!ov) return p;
       const out = { ...p, _overrideFields: new Set() };
       const ovf = out._overrideFields;
@@ -227,6 +267,8 @@ export function HoldingsTable() {
     }}>
       <style>{`.hoverable:hover .edit-pencil { opacity: 1 !important; }`}</style>
 
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.11em", textTransform: "uppercase", color: tc.textLight, marginBottom: 12 }}>{title}</div>
+
       {/* ── Filter pills ── */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
         <div style={{ display: "flex", gap: 4 }}>
@@ -242,7 +284,6 @@ export function HoldingsTable() {
           {pillBtn(custodianFilter === "Interactive Brokers", () => setCustodianFilter("Interactive Brokers"), "Interactive Brokers")}
           {pillBtn(custodianFilter === "JPMorgan",        () => setCustodianFilter("JPMorgan"),        "JPMorgan")}
           {pillBtn(custodianFilter === "UBS",             () => setCustodianFilter("UBS"),             "UBS")}
-          {pillBtn(custodianFilter === "Credit Suisse",  () => setCustodianFilter("Credit Suisse"),   "Credit Suisse")}
           {pillBtn(custodianFilter === "Andbank",         () => setCustodianFilter("Andbank"),         "Andbank")}
         </div>
         <div style={{ fontSize: 11, color: tc.textLight, marginLeft: "auto" }}>
@@ -301,17 +342,21 @@ export function HoldingsTable() {
             {rows.map((p, i) => {
               const zebra  = i % 2 === 1;
               const bg     = zebra ? (dark ? tc.bgAlt : "#f8f9fb") : tc.card;
-              const msUrl  = `https://www.morningstar.es/es/search/results.aspx?keyword=${p.isin}`;
+              const msUrl  = p.isin ? `https://www.morningstar.es/es/search/results.aspx?keyword=${p.isin}` : null;
               const isRV   = p.tipus === "RV";
               const typColor = isRV ? "#2B5070" : "#7A6000";
               const typBg    = isRV ? "#E6EDF3" : "#FFF8E1";
               return (
                 <tr key={p.id} className="hoverable" style={{ background: bg, borderBottom: `1px solid ${tc.border}` }}>
                   <td style={{ padding: "6px 10px", fontWeight: 500 }}>
-                    <Link to={`/mercats-publics/${p.id}`}
-                      style={{ color: tc.navy, textDecoration: "none" }}>
-                      {p.nom}
-                    </Link>
+                    {p._aggregate ? (
+                      <span style={{ color: tc.text, fontWeight: 600 }}>{p.nom}</span>
+                    ) : (
+                      <Link to={`/mercats-publics/${p.id}`}
+                        style={{ color: tc.navy, textDecoration: "none" }}>
+                        {p.nom}
+                      </Link>
+                    )}
                   </td>
                   <td style={{ padding: "6px 10px", fontSize: 11, color: tc.textLight }}>{p.custodian}</td>
                   <td style={{ padding: "6px 10px" }}>
@@ -325,7 +370,7 @@ export function HoldingsTable() {
                   {/* Editable: valorMercat */}
                   <EditableCell
                     value={p.valorMercat}
-                    canEdit={canEdit}
+                    canEdit={canEdit && !p._aggregate && !!p.isin}
                     onSave={v => handleSave(p.isin, "valorMercat", v)}
                     renderValue={() => (
                       <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>
@@ -339,7 +384,7 @@ export function HoldingsTable() {
                   {/* Editable: rendInici — wraps PnlCell inline */}
                   <EditableCell
                     value={p.rendInici}
-                    canEdit={canEdit}
+                    canEdit={canEdit && !p._aggregate && !!p.isin}
                     onSave={v => handleSave(p.isin, "rendInici", v)}
                     renderValue={() => {
                       const v = p.rendInici;
@@ -361,7 +406,7 @@ export function HoldingsTable() {
                   {/* Editable: YTD (current year) */}
                   <EditableCell
                     value={p[ytdKey]}
-                    canEdit={canEdit}
+                    canEdit={canEdit && !p._aggregate && !!p.isin}
                     onSave={v => handleSave(p.isin, ytdKey, v)}
                     renderValue={() => {
                       const v = p[ytdKey];
@@ -379,7 +424,7 @@ export function HoldingsTable() {
                   {/* Editable: previous year */}
                   <EditableCell
                     value={p[prevKey]}
-                    canEdit={canEdit}
+                    canEdit={canEdit && !p._aggregate && !!p.isin}
                     onSave={v => handleSave(p.isin, prevKey, v)}
                     renderValue={() => {
                       const v = p[prevKey];
@@ -397,7 +442,7 @@ export function HoldingsTable() {
                   {/* Editable: costAnual (TER) */}
                   <EditableCell
                     value={p.costAnual}
-                    canEdit={canEdit}
+                    canEdit={canEdit && !p._aggregate && !!p.isin}
                     onSave={v => handleSave(p.isin, "costAnual", v)}
                     renderValue={() => (
                       <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: tc.textLight }}>
@@ -422,7 +467,7 @@ export function HoldingsTable() {
       </div>
 
       <div style={{ fontSize: 10, color: tc.textLight, marginTop: 12, fontStyle: "italic" }}>
-        UBS, WAM i Andbank inclosos quan hi ha posicions individuals; la vista consolidada també conserva els mandats de custòdia.
+        WAM–Andbank i Interactive Brokers es mostren agregats. Credit Suisse queda integrat dins UBS.
       </div>
     </div>
   );

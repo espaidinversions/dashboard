@@ -10,6 +10,7 @@ import { fmtM, usePersistedState, yearsHeld, cagr } from "../utils.js";
 import { buildClosedTransactionSummaryByIsinCustodian } from "../data/pmClosedUtils.js";
 import { makePmPositionRouteId } from "../data/pmPositionRouting.js";
 import { isEtfPosition } from "./publicMarkets/PublicMarketsShared.jsx";
+import { canonicalPmCustodian, makeAggregatePosition, splitIbPositions, sumMarketValue } from "../data/pmClassification.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 
@@ -27,21 +28,25 @@ const BUCKET_TOGGLES = [
   { id: "all",           label: "Tots" },
   { id: "etfs",          label: "ETFs" },
   { id: "fgp-caixa",     label: "Fons CB" },
+  { id: "fgp-ubs",       label: "Fons UBS" },
+  { id: "fgp-jpmorgan",  label: "Fons JPM" },
   { id: "fgp-bankinter", label: "Fons BK" },
   { id: "rf-wam",        label: "RF – WAM" },
   { id: "accions-ib",    label: "Accions – IB" },
 ];
 
 const BUCKET_LABELS = {
-  "etfs":          "ETFs · CaixaBank + Bankinter",
+  "etfs":          "ETFs · classificat per subjacent",
   "fgp-caixa":     "Fons Gestió Pròpia · CaixaBank",
+  "fgp-ubs":       "Fons Gestió Pròpia · UBS",
+  "fgp-jpmorgan":  "Fons Gestió Pròpia · JPMorgan",
   "fgp-bankinter": "Fons Gestió Pròpia · Bankinter",
   "rf-wam":        "Renda Fixa · WAM – Andbank",
   "accions-ib":    "Accions · Interactive Brokers",
 };
 
 // Sections shown when toggle === "all"
-const ALL_SECTIONS = ["etfs", "fgp-caixa", "rf-wam", "accions-ib", "fgp-bankinter"];
+const ALL_SECTIONS = ["etfs", "fgp-caixa", "fgp-ubs", "fgp-jpmorgan", "fgp-bankinter", "rf-wam", "accions-ib"];
 
 // rendInici: always % form for all positions (script: (valorMercat-costEur)/costEur*100).
 // rend${year}: mixed conventions — ETf's Espai sheet stores direct % (34.24 = 34.24%),
@@ -54,22 +59,64 @@ function rendPct(pos, field) {
   return Math.abs(v) > 0.5 ? v : v * 100;
 }
 
+function getIbAggregate(kind) {
+  const { etfs, stocks } = splitIbPositions(PM_POSITIONS);
+  const positions = kind === "stocks" ? stocks : etfs;
+  const value = sumMarketValue(positions);
+  if (value <= 0) return null;
+  return makeAggregatePosition({
+    id: kind === "stocks" ? "aggregate-ib-accions" : "aggregate-ib-etfs",
+    nom: kind === "stocks" ? "Interactive Brokers · Accions (agregat)" : "Interactive Brokers · ETFs (agregat)",
+    gestor: "Interactive Brokers",
+    custodian: "Interactive Brokers",
+    tipus: "RV",
+    positions,
+  });
+}
+
+function getWamAggregate() {
+  const value = sumMarketValue(WAM_POSITIONS);
+  if (value <= 0) return null;
+  return makeAggregatePosition({
+    id: "aggregate-wam-andbank",
+    nom: "WAM–Andbank · Renda Fixa (agregat)",
+    gestor: "WAM",
+    custodian: "Andbank",
+    tipus: "RF",
+    positions: WAM_POSITIONS,
+  });
+}
+
+function compact(rows) {
+  return rows.filter(Boolean);
+}
+
 function getBucketPositions(bucketId) {
   switch (bucketId) {
     case "etfs":
-      return PM_POSITIONS.filter(p =>
-        (p.custodian === "CaixaBank" || p.custodian === "Bankinter") && isEtfPosition(p)
-      );
+      return compact([
+        ...PM_POSITIONS.filter(p => p.custodian !== "Interactive Brokers" && isEtfPosition(p)),
+        getIbAggregate("etfs"),
+      ]);
     case "fgp-caixa":
       return PM_POSITIONS.filter(p => p.custodian === "CaixaBank" && !isEtfPosition(p));
+    case "fgp-ubs":
+      return PM_POSITIONS.filter(p => canonicalPmCustodian(p.custodian) === "UBS" && !isEtfPosition(p));
+    case "fgp-jpmorgan":
+      return PM_POSITIONS.filter(p => p.custodian === "JPMorgan" && !isEtfPosition(p));
     case "fgp-bankinter":
       return PM_POSITIONS.filter(p => p.custodian === "Bankinter" && !isEtfPosition(p));
     case "rf-wam":
-      return [];
+      return compact([getWamAggregate()]);
     case "accions-ib":
-      return [];
+      return compact([getIbAggregate("stocks")]);
     default:
-      return [...PM_POSITIONS, ...WAM_POSITIONS];
+      return compact([
+        ...PM_POSITIONS.filter(p => p.custodian !== "Interactive Brokers"),
+        getIbAggregate("etfs"),
+        getIbAggregate("stocks"),
+        getWamAggregate(),
+      ]);
   }
 }
 
@@ -215,7 +262,7 @@ export function PMTipusTab() {
 
         const bucketMV = positions.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
 
-        if (toggle !== "all" && positions.length === 0) return null;
+        if (positions.length === 0) return null;
 
         return (
           <div key={bucketId} style={{ ...card, overflowX: "auto" }}>
@@ -253,13 +300,13 @@ export function PMTipusTab() {
                           <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: 2, background: CHART_PALETTE[i % CHART_PALETTE.length] }} />
                         </td>
                         <td style={{ padding: "7px 10px" }}>
-                          {p.isin ? (
+                          {p.isin && !p._aggregate ? (
                             <Link to={`/mercats-publics/${makePmPositionRouteId(p)}`}
                               style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>
                               {p.nom}
                             </Link>
                           ) : (
-                            <span style={{ color: tc.text, fontWeight: 500 }}>{p.nom}</span>
+                            <span style={{ color: tc.text, fontWeight: 600 }}>{p.nom}</span>
                           )}
                         </td>
                         <td style={{ padding: "7px 10px", color: tc.textLight, fontSize: 11 }}>{p.custodian}</td>

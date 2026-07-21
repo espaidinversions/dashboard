@@ -291,7 +291,7 @@ async function parseWorkbook() {
 
   const workbookTotalRow = masterRows.find(row => String(row?.[1] ?? "").includes("TOTAL FINANCER AMB INVERSIÓ VIVA")) ?? null;
   const workbookTotal = workbookTotalRow
-    ? workbookTotalRow.find(v => typeof v === "number" && v > 70_000_000 && v < 90_000_000) ?? null
+    ? normalizeValue(workbookTotalRow[29])
     : null;
 
   return {

@@ -1,6 +1,7 @@
 /** @typedef {import("./publicMarketsTypes.js").PMPositionSnapshot} PMPositionSnapshot */
 /** @typedef {import("./publicMarketsTypes.js").PMValuesByIsin} PMValuesByIsin */
 /** @typedef {import("./publicMarketsTypes.js").PMValuePoint} PMValuePoint */
+import { canonicalPmCustodian } from "./pmClassification.js";
 
 const VALID_TIPUS = new Set(["RV", "RF"]);
 
@@ -18,14 +19,13 @@ function latestSeriesValue(series = []) {
 
 /**
  * @param {PMPositionSnapshot | null} position
- * @returns {"caixa" | "ubs" | "creditSuisse" | "andbank" | "abel" | "jpmorgan" | "altres"}
+ * @returns {"caixa" | "ubs" | "andbank" | "abel" | "jpmorgan" | "altres"}
  */
 export function routeManagerFromCustodian(position = null) {
-  const custodian = String(position?.custodian ?? "").trim();
+  const custodian = canonicalPmCustodian(position?.custodian);
   if (custodian === "CaixaBank") return "caixa";
   if (custodian === "UBS") return "ubs";
-  if (custodian === "Credit Suisse") return "creditSuisse";
-  if (custodian === "Andbank" || custodian === "WAM") return "andbank";
+  if (custodian === "Andbank") return "andbank";
   if (custodian === "JPMorgan") return "jpmorgan";
   if (custodian === "Bankinter" || custodian === "Interactive Brokers") return "abel";
   return "altres";

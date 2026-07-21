@@ -14,6 +14,7 @@ import {
   isEtfPosition,
 } from "./publicMarkets/PublicMarketsShared.jsx";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
+import { canonicalPmCustodian, splitIbPositions } from "../data/pmClassification.js";
 import { loadPMOverrides } from "../db.js";
 import { usePmMonthly, applyManagerOverrides } from "./hooks/usePmMonthly.js";
 import { PublicMarketsSummarySection } from "./publicMarkets/PublicMarketsSummarySection.jsx";
@@ -24,14 +25,24 @@ const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 const PM_MANAGERS = PM_MODEL.metadata.managers;
 
-// Credit Suisse is merged into UBS; Interactive Brokers renamed to "ib".
+// Interactive Brokers is shown separately as "ib" for custody analytics.
 const CUSTODIAN_GROUPS = ["caixa", "ubs", "bankinter", "ib", "jpmorgan", "andbank", "altres"];
 const TYPE_GROUPS = ["rv", "rf", "altres"];
+const WORKBOOK_TOTAL_MONTH = "2026-04";
+
+function pmMonthlyTotal(row = {}) {
+  return (row.caixaRV ?? 0)
+    + (row.caixaRF ?? 0)
+    + (row.ubsRV ?? 0)
+    + (row.ubsRF ?? 0)
+    + (row.abelBK ?? 0)
+    + (row.andbank ?? 0);
+}
 
 // Pre-filter positions by custodian for reuse across memos (module-level, stable reference).
 const _custodianPositions = {
   caixa:     PM_POSITIONS.filter(p => p.custodian === "CaixaBank"),
-  ubs:       PM_POSITIONS.filter(p => p.custodian === "UBS" || p.custodian === "Credit Suisse"),
+  ubs:       PM_POSITIONS.filter(p => canonicalPmCustodian(p.custodian) === "UBS"),
   bankinter: PM_POSITIONS.filter(p => p.custodian === "Bankinter"),
   ib:        PM_POSITIONS.filter(p => p.custodian === "Interactive Brokers"),
   jpmorgan:  PM_POSITIONS.filter(p => p.custodian === "JPMorgan"),
@@ -42,7 +53,7 @@ const _custodianPositions = {
 function groupPmCustodian(position = null) {
   const custodian = String(position?.custodian ?? "").trim();
   if (custodian === "CaixaBank") return "caixa";
-  if (custodian === "UBS" || custodian === "Credit Suisse") return "ubs";
+  if (canonicalPmCustodian(custodian) === "UBS") return "ubs";
   if (custodian === "Bankinter") return "bankinter";
   if (custodian === "Interactive Brokers") return "ib";
   if (custodian === "JPMorgan") return "jpmorgan";
@@ -57,13 +68,31 @@ function groupPmAssetType(position = null) {
   return "altres";
 }
 
+function latestSeriesValue(series = []) {
+  for (let i = (series?.length ?? 0) - 1; i >= 0; i -= 1) {
+    const value = Number(series[i]?.value);
+    if (Number.isFinite(value)) return value;
+  }
+  return null;
+}
+
+function latestPositionValue(position) {
+  const byCustodian = PM_VALUES[position?.isin];
+  const series = byCustodian?.[position?.custodian];
+  return latestSeriesValue(series) ?? (Number(position?.valorMercat) || 0);
+}
+
 export function PublicMarketsTab() {
   const { tc, dark } = useTheme();
   const [chartView, setChartView] = useState("total");
   const [expanded, setExpanded] = useState(new Set());
-  const [flowGroupBy, setFlowGroupBy] = useState("position");
+  const [flowGroupBy, setFlowGroupBy] = useState("total");
   const [manualTxs, setManualTxs] = useState([]);
   const { monthly: pmMonthly, managerOverrides } = usePmMonthly();
+  const reportMonthly = useMemo(
+    () => (pmMonthly ?? []).filter((month) => month.date <= WORKBOOK_TOTAL_MONTH),
+    [pmMonthly]
+  );
   const effectiveManagers = useMemo(
     () => applyManagerOverrides(PM_MANAGERS, managerOverrides),
     [managerOverrides]
@@ -87,6 +116,7 @@ export function PublicMarketsTab() {
     () => summarizeLatestPmValuesWithWam(PM_VALUES, PM_POSITIONS, WAM_POSITIONS),
     []
   );
+  const workbookTotalRow = Number(PM_MODEL.metadata?.totals?.workbookRow) || null;
 
   const currentManagerValues = useMemo(() => {
     const bankinterVal = _custodianPositions.bankinter
@@ -95,7 +125,7 @@ export function PublicMarketsTab() {
       .reduce((s, p) => s + (p.valorMercat ?? 0), 0);
     return {
       caixa:     latestPmSummary.byManager.caixa ?? 0,
-      ubs:       (latestPmSummary.byManager.ubs ?? 0) + (latestPmSummary.byManager.creditSuisse ?? 0),
+      ubs:       latestPmSummary.byManager.ubs ?? 0,
       abel:      latestPmSummary.byManager.abel ?? 0, // kept for TWR/returns analytics (Bankinter+IB combined series)
       bankinter: bankinterVal,
       ib:        ibVal,
@@ -113,7 +143,9 @@ export function PublicMarketsTab() {
     });
   };
 
-  const total = latestPmSummary.total;
+  const total = workbookTotalRow && workbookTotalRow > latestPmSummary.total
+    ? workbookTotalRow
+    : latestPmSummary.total;
   const totalRV = useMemo(() => latestPmSummary.byType.RV ?? 0, [latestPmSummary]);
   const totalRF = useMemo(() => latestPmSummary.byType.RF ?? 0, [latestPmSummary]);
 
@@ -162,10 +194,10 @@ export function PublicMarketsTab() {
       ...monthlyPortfolioValueSeries.map((row) => row.date),
       ...monthlyCustodianValueSeries.map((row) => row.date),
       ...monthlyTypeValueSeries.map((row) => row.date),
-      ...pmMonthly.map((month) => month.date),
+      ...reportMonthly.map((month) => month.date),
     ]);
-    return [...months].sort();
-  }, [monthlyCustodianValueSeries, monthlyPortfolioValueSeries, monthlyTypeValueSeries, pmMonthly]);
+    return [...months].filter((month) => month <= WORKBOOK_TOTAL_MONTH).sort();
+  }, [monthlyCustodianValueSeries, monthlyPortfolioValueSeries, monthlyTypeValueSeries, reportMonthly]);
 
   const reportStartMonth = chartMonths[0] ?? "2023-12";
 
@@ -176,9 +208,9 @@ export function PublicMarketsTab() {
 
   const portfolioTWR = useMemo(() => {
     let cumulative = 1;
-    for (let i = 1; i < pmMonthly.length; i += 1) {
-      const prev = pmMonthly[i - 1];
-      const curr = pmMonthly[i];
+    for (let i = 1; i < reportMonthly.length; i += 1) {
+      const prev = reportMonthly[i - 1];
+      const curr = reportMonthly[i];
       const prevValue = (prev.caixaRV ?? 0) + (prev.caixaRF ?? 0) + (prev.ubsRV ?? 0) + (prev.ubsRF ?? 0) + (prev.abelBK ?? 0);
       const inceptionCF = prev.abelBK == null && curr.abelBK != null ? curr.abelBK : 0;
       const midPeriodCF = curr.cashflows?.abelBK ?? 0;
@@ -189,19 +221,19 @@ export function PublicMarketsTab() {
       cumulative *= 1 + (currValue - prevValue - cashflow) / denominator;
     }
     return (cumulative - 1) * 100;
-  }, [pmMonthly]);
+  }, [reportMonthly]);
 
   const portfolioMWR = useMemo(() => {
-    const first = pmMonthly[0];
-    const last = pmMonthly[pmMonthly.length - 1];
+    const first = reportMonthly[0];
+    const last = reportMonthly[reportMonthly.length - 1];
     if (!first || !last) return null;
     const startValue = (first.caixaRV ?? 0) + (first.caixaRF ?? 0) + (first.ubsRV ?? 0) + (first.ubsRF ?? 0);
     const endValue = (last.caixaRV ?? 0) + (last.caixaRF ?? 0) + (last.ubsRV ?? 0) + (last.ubsRF ?? 0) + (last.abelBK ?? 0);
-    const totalMonths = pmMonthly.length - 1;
-    const abelIdx = pmMonthly.findIndex((point) => point.abelBK != null);
+    const totalMonths = reportMonthly.length - 1;
+    const abelIdx = reportMonthly.findIndex((point) => point.abelBK != null);
     if (abelIdx === -1 || totalMonths <= 0) return null;
-    const cashflowEntries = [{ amount: pmMonthly[abelIdx].abelBK, idx: abelIdx }];
-    pmMonthly.forEach((m, idx) => {
+    const cashflowEntries = [{ amount: reportMonthly[abelIdx].abelBK, idx: abelIdx }];
+    reportMonthly.forEach((m, idx) => {
       if (m.cashflows?.abelBK) cashflowEntries.push({ amount: m.cashflows.abelBK, idx });
     });
     const totalCF = cashflowEntries.reduce((s, cf) => s + cf.amount, 0);
@@ -209,7 +241,7 @@ export function PublicMarketsTab() {
     const totalReturn = (endValue - startValue - totalCF) / (startValue + weightedCF);
     const years = totalMonths / 12;
     return (Math.pow(1 + totalReturn, 1 / years) - 1) * 100;
-  }, [pmMonthly]);
+  }, [reportMonthly]);
 
   const residualValue = total - (
     currentManagerValues.caixa +
@@ -288,7 +320,7 @@ export function PublicMarketsTab() {
       }, _custodianPositions.jpmorgan),
       withMeta({
         id: "altres",
-        nom: "Altres / no assignat",
+        nom: "Cash / Excel no assignat",
         tipus: "RV+RF",
         valorActual: currentManagerValues.altres + residualValue,
         rendPct: null,
@@ -318,12 +350,27 @@ export function PublicMarketsTab() {
     }))
   ), [managerValueByIdForReturns, effectiveManagers]);
 
-  const totalValueSeries = monthlyPortfolioValueSeries;
+  const totalValueSeries = useMemo(() => {
+    const monthlyRows = (reportMonthly ?? [])
+      .map(row => ({ date: row.date, value: pmMonthlyTotal(row) }))
+      .filter(row => row.date && Number.isFinite(row.value));
+    if (monthlyRows.length === 0) return monthlyPortfolioValueSeries;
+
+    const anchor = monthlyRows.find(row => row.date === WORKBOOK_TOTAL_MONTH);
+    const workbookResidual = workbookTotalRow && anchor
+      ? Math.max(workbookTotalRow - anchor.value, 0)
+      : 0;
+
+    return monthlyRows.map(row => ({
+      date: row.date,
+      value: row.value + (workbookResidual > 0 && row.date >= WORKBOOK_TOTAL_MONTH ? workbookResidual : 0),
+    }));
+  }, [monthlyPortfolioValueSeries, reportMonthly, workbookTotalRow]);
   const custodianValueByMonth = useMemo(() => new Map(monthlyCustodianValueSeries.map((row) => [row.date, row])), [monthlyCustodianValueSeries]);
   const typeValueByMonth = useMemo(() => new Map(monthlyTypeValueSeries.map((row) => [row.date, row])), [monthlyTypeValueSeries]);
 
   const chartData = useMemo(() => {
-    const pmByDate = Object.fromEntries(pmMonthly.map(m => [m.date, m]));
+    const pmByDate = Object.fromEntries(reportMonthly.map(m => [m.date, m]));
 
     if (chartView === "total") {
       const totalByMonth = new Map(totalValueSeries.map((row) => [row.date, row.value]));
@@ -331,25 +378,38 @@ export function PublicMarketsTab() {
     }
 
     if (chartView === "estrategia") {
-      const caixaPos  = _custodianPositions.caixa;
-      const bkPos     = _custodianPositions.bankinter;
-      const caixaTot  = caixaPos.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
-      const caixaEtfR = caixaTot > 0 ? caixaPos.filter(isEtfPosition).reduce((s, p) => s + (p.valorMercat ?? 0), 0) / caixaTot : 0;
-      const bkTot     = bkPos.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
-      const bkEtfR    = bkTot > 0 ? bkPos.filter(isEtfPosition).reduce((s, p) => s + (p.valorMercat ?? 0), 0) / bkTot : 1;
+      const ratio = (positions, predicate, fallback = 0) => {
+        const totalValue = positions.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+        if (totalValue <= 0) return fallback;
+        return positions.filter(predicate).reduce((s, p) => s + (p.valorMercat ?? 0), 0) / totalValue;
+      };
+      const caixaEtfR = ratio(_custodianPositions.caixa, isEtfPosition);
+      const bkEtfR    = ratio(_custodianPositions.bankinter, isEtfPosition, 1);
+      const ubsEtfR   = ratio(_custodianPositions.ubs, isEtfPosition);
+      const jpmEtfR   = ratio(_custodianPositions.jpmorgan, isEtfPosition);
+      const { etfs: ibEtfs, stocks: ibStocks } = splitIbPositions(_custodianPositions.ib);
+      const ibTotal   = [...ibEtfs, ...ibStocks].reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+      const ibEtfR    = ibTotal > 0 ? ibEtfs.reduce((s, p) => s + (p.valorMercat ?? 0), 0) / ibTotal : 0;
 
+      const totalByMonth = new Map(totalValueSeries.map((row) => [row.date, row.value]));
       return chartMonths.map((month) => {
         const custodian = custodianValueByMonth.get(month) ?? {};
         const caixa     = custodian.caixa ?? 0;
         const bk        = custodian.bankinter ?? 0;
         const ubs       = custodian.ubs ?? 0;
-        const etfs      = caixa * caixaEtfR + bk * bkEtfR;
-        const fgp       = caixa * (1 - caixaEtfR) + bk * (1 - bkEtfR) + ubs;
+        const jpmorgan  = custodian.jpmorgan ?? 0;
         const pm        = pmByDate[month];
         const wam       = pm?.andbank ?? 0;
         const abelBK    = pm?.abelBK ?? null;
         const ib        = abelBK != null ? Math.max(abelBK - bk, 0) : 0;
-        return { month, etfs, fgp, wam, ib };
+        const etfCaixa      = caixa * caixaEtfR;
+        const etfBankinter  = bk * bkEtfR;
+        const etfAltres     = ubs * ubsEtfR + jpmorgan * jpmEtfR + ib * ibEtfR;
+        const fgp           = caixa * (1 - caixaEtfR) + bk * (1 - bkEtfR) + ubs * (1 - ubsEtfR) + jpmorgan * (1 - jpmEtfR);
+        const accions       = ib * (1 - ibEtfR);
+        const assigned      = etfCaixa + etfBankinter + etfAltres + fgp + wam + accions;
+        const altres        = Math.max((totalByMonth.get(month) ?? assigned) - assigned, 0);
+        return { month, etfCaixa, etfBankinter, etfAltres, fgp, wam, accions, altres };
       });
     }
 
@@ -369,31 +429,29 @@ export function PublicMarketsTab() {
       const altres = totalValue == null ? null : Math.max(totalValue - caixa - ubs - bankinter - interactiveBrokers - andbank - jpmorgan, 0);
       return { month, caixa, ubs, bankinter, interactiveBrokers, andbank, jpmorgan, altres };
     });
-  }, [chartMonths, chartView, custodianValueByMonth, totalValueSeries, typeValueByMonth, pmMonthly]);
+  }, [chartMonths, chartView, custodianValueByMonth, totalValueSeries, typeValueByMonth, reportMonthly]);
 
   // ── Bucket KPI values ──────────────────────────────────────────────────────
   const bucketValues = useMemo(() => {
-    const caixaPos = _custodianPositions.caixa;
-    const bkPos    = _custodianPositions.bankinter;
-
-    const caixaEtfMV  = caixaPos.filter(isEtfPosition).reduce((s, p) => s + (p.valorMercat ?? 0), 0);
-    const caixaFgpMV  = caixaPos.filter(p => !isEtfPosition(p)).reduce((s, p) => s + (p.valorMercat ?? 0), 0);
-    const caixaTotMV  = caixaEtfMV + caixaFgpMV;
-    const caixaEtfR   = caixaTotMV > 0 ? caixaEtfMV / caixaTotMV : 0;
-
-    const bkEtfMV     = bkPos.filter(isEtfPosition).reduce((s, p) => s + (p.valorMercat ?? 0), 0);
-    const bkFgpMV     = bkPos.filter(p => !isEtfPosition(p)).reduce((s, p) => s + (p.valorMercat ?? 0), 0);
-    const bkTotMV     = bkEtfMV + bkFgpMV;
-    const bkEtfR      = bkTotMV > 0 ? bkEtfMV / bkTotMV : 1;
+    const { stocks: ibStocks } = splitIbPositions(_custodianPositions.ib);
+    const valueOf = (positions) => positions.reduce((s, p) => s + latestPositionValue(p), 0);
+    const isCaixa = p => p.custodian === "CaixaBank";
+    const isBankinter = p => p.custodian === "Bankinter";
+    const etfCaixa = PM_POSITIONS.filter(p => isEtfPosition(p) && isCaixa(p));
+    const etfBankinter = PM_POSITIONS.filter(p => isEtfPosition(p) && isBankinter(p));
+    const etfAltres = PM_POSITIONS.filter(p => isEtfPosition(p) && !isCaixa(p) && !isBankinter(p));
+    const fgp = PM_POSITIONS.filter(p => p.custodian !== "Interactive Brokers" && !isEtfPosition(p));
 
     return {
-      etfs:        currentManagerValues.caixa * caixaEtfR + currentManagerValues.bankinter * bkEtfR,
-      fgpCaixa:    currentManagerValues.caixa * (1 - caixaEtfR),
-      fgpBankinter: currentManagerValues.bankinter * (1 - bkEtfR),
-      rfWam:       currentManagerValues.andbank,
-      accionsIB:   currentManagerValues.ib,
+      etfCaixa:      valueOf(etfCaixa),
+      etfBankinter:  valueOf(etfBankinter),
+      etfAltres:     valueOf(etfAltres),
+      fgp:           valueOf(fgp),
+      rfWam:         currentManagerValues.andbank,
+      accionsIB:     valueOf(ibStocks),
+      residualExcel: Math.max(residualValue, 0),
     };
-  }, [currentManagerValues]);
+  }, [currentManagerValues, residualValue]);
 
   // ── Bucket weighted annual returns ────────────────────────────────────────
   const bucketReturns = useMemo(() => {
@@ -419,16 +477,16 @@ export function PublicMarketsTab() {
       return w > 0 ? sum / w : null;
     }
 
-    const caixaPos = _custodianPositions.caixa;
-    const bkPos    = _custodianPositions.bankinter;
+    const { stocks: ibStocks } = splitIbPositions(_custodianPositions.ib);
 
     const buckets = [
-      { id: "etfs",          label: "ETFs",                   positions: [...caixaPos.filter(isEtfPosition), ...bkPos.filter(isEtfPosition)] },
-      { id: "fgp-caixa",     label: "Fons Gestió Pròpia CB",  positions: caixaPos.filter(p => !isEtfPosition(p)) },
-      { id: "fgp-bankinter", label: "Fons Gestió Pròpia BK",  positions: bkPos.filter(p => !isEtfPosition(p)) },
-      { id: "rf-wam",        label: "Renda Fixa – WAM",       positions: WAM_POSITIONS },
-      { id: "accions-ib",    label: "Accions – IB",           positions: _custodianPositions.ib },
-    ];
+      { id: "etf-caixa",      label: "ETFs CaixaBank",       positions: PM_POSITIONS.filter(p => p.custodian === "CaixaBank" && isEtfPosition(p)) },
+      { id: "etf-bankinter",  label: "ETFs Bankinter",       positions: PM_POSITIONS.filter(p => p.custodian === "Bankinter" && isEtfPosition(p)) },
+      { id: "etf-altres",     label: "ETFs Altres",          positions: PM_POSITIONS.filter(p => p.custodian !== "CaixaBank" && p.custodian !== "Bankinter" && isEtfPosition(p)) },
+      { id: "fgp",            label: "Fons Gestió Pròpia",   positions: PM_POSITIONS.filter(p => p.custodian !== "Interactive Brokers" && !isEtfPosition(p)) },
+      { id: "rf-wam",         label: "Renda Fixa – WAM",     positions: WAM_POSITIONS },
+      { id: "accions-ib",     label: "Accions – IB",         positions: ibStocks },
+    ].filter(bucket => bucket.positions.length > 0);
 
     return buckets.map(b => ({
       ...b,
@@ -442,12 +500,10 @@ export function PublicMarketsTab() {
     const cy = new Date().getFullYear();
     const baseMonthKey = `${cy - 1}-12`;
 
-    const etfPos   = [
-      ..._custodianPositions.caixa.filter(p => isEtfPosition(p) && p.isin && p.unitats),
-      ..._custodianPositions.bankinter.filter(p => isEtfPosition(p) && p.isin && p.unitats),
-    ];
-    const cbPos    = _custodianPositions.caixa.filter(p => !isEtfPosition(p) && p.isin && p.unitats);
-    const bkFgpPos = _custodianPositions.bankinter.filter(p => !isEtfPosition(p) && p.isin && p.unitats);
+    const etfCaixaPos = _custodianPositions.caixa.filter(p => isEtfPosition(p) && p.isin && p.unitats);
+    const etfBankinterPos = _custodianPositions.bankinter.filter(p => isEtfPosition(p) && p.isin && p.unitats);
+    const etfAltresPos = PM_POSITIONS.filter(p => p.custodian !== "CaixaBank" && p.custodian !== "Bankinter" && p.custodian !== "Interactive Brokers" && isEtfPosition(p) && p.isin && p.unitats);
+    const fgpPos = PM_POSITIONS.filter(p => p.custodian !== "Interactive Brokers" && !isEtfPosition(p) && p.isin && p.unitats);
     const bkAllPos = _custodianPositions.bankinter.filter(p => p.isin && p.unitats);
 
     function valueAt(positions, monthKey) {
@@ -458,23 +514,31 @@ export function PublicMarketsTab() {
       }, 0);
     }
 
-    const pmByDate  = Object.fromEntries(pmMonthly.map(m => [m.date, m]));
-    const etfBase   = valueAt(etfPos,    baseMonthKey);
-    const cbBase    = valueAt(cbPos,     baseMonthKey);
-    const bkBase    = valueAt(bkFgpPos,  baseMonthKey);
+    const pmByDate  = Object.fromEntries(reportMonthly.map(m => [m.date, m]));
+    const { etfs: ibEtfs, stocks: ibStocks } = splitIbPositions(_custodianPositions.ib);
+    const ibCurrentTotal = [...ibEtfs, ...ibStocks].reduce((s, p) => s + (p.valorMercat ?? 0), 0);
+    const ibEtfRatio = ibCurrentTotal > 0 ? ibEtfs.reduce((s, p) => s + (p.valorMercat ?? 0), 0) / ibCurrentTotal : 0;
+
+    const etfCaixaBase = valueAt(etfCaixaPos, baseMonthKey);
+    const etfBankinterBase = valueAt(etfBankinterPos, baseMonthKey);
+    const etfAltresBase = valueAt(etfAltresPos, baseMonthKey);
+    const fgpBase = valueAt(fgpPos, baseMonthKey);
     const wamBase   = pmByDate[baseMonthKey]?.andbank ?? 0;
     const abelBase  = pmByDate[baseMonthKey]?.abelBK  ?? 0;
     const bkAllBase = valueAt(bkAllPos,  baseMonthKey);
     const ibBase    = Math.max(abelBase - bkAllBase, 0);
-    const totalBase = etfBase + cbBase + bkBase + wamBase + ibBase;
+    const ibEtfBase = ibBase * ibEtfRatio;
+    const ibStockBase = ibBase * (1 - ibEtfRatio);
+    const totalBase = etfCaixaBase + etfBankinterBase + etfAltresBase + ibEtfBase + fgpBase + wamBase + ibStockBase;
 
     if (totalBase <= 0) return [];
 
     const now      = new Date();
     const curMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const endMonth = curMonth < WORKBOOK_TOTAL_MONTH ? curMonth : WORKBOOK_TOTAL_MONTH;
     const months   = ["01","02","03","04","05","06","07","08","09","10","11","12"]
       .map(mm => `${cy}-${mm}`)
-      .filter(m => m <= curMonth);
+      .filter(m => m <= endMonth);
 
     // TWR for IB: derived as abelBK − all-Bankinter-ISIN, adjusted for abelBK cashflows
     let ibCum     = 1;
@@ -493,26 +557,32 @@ export function PublicMarketsTab() {
     }
 
     return months.map(monthKey => {
-      const etfVal = valueAt(etfPos,    monthKey);
-      const cbVal  = valueAt(cbPos,     monthKey);
-      const bkVal  = valueAt(bkFgpPos,  monthKey);
+      const etfCaixaVal = valueAt(etfCaixaPos, monthKey);
+      const etfBankinterVal = valueAt(etfBankinterPos, monthKey);
+      const etfAltresVal = valueAt(etfAltresPos, monthKey);
+      const fgpVal = valueAt(fgpPos, monthKey);
       const pm     = pmByDate[monthKey];
       const wamVal = pm?.andbank ?? null;
       const ibRet  = ibTwrMap[monthKey];
       const ibEstV = ibBase > 0 && ibRet != null ? ibBase * (1 + ibRet / 100) : ibBase;
-      const totVal = etfVal + cbVal + bkVal + (wamVal ?? wamBase) + ibEstV;
+      const ibEtfV = ibEstV * ibEtfRatio;
+      const ibStockV = ibEstV * (1 - ibEtfRatio);
+      const etfAltresCombinedBase = etfAltresBase + ibEtfBase;
+      const etfAltresCombinedVal = etfAltresVal + ibEtfV;
+      const totVal = etfCaixaVal + etfBankinterVal + etfAltresCombinedVal + fgpVal + (wamVal ?? wamBase) + ibStockV;
 
       return {
         date:  monthKey,
-        etfs:  etfBase  > 0 ? (etfVal - etfBase) / etfBase * 100 : null,
-        cb:    cbBase   > 0 ? (cbVal  - cbBase)  / cbBase  * 100 : null,
-        bk:    bkBase   > 0 ? (bkVal  - bkBase)  / bkBase  * 100 : null,
+        etfCaixa: etfCaixaBase > 0 ? (etfCaixaVal - etfCaixaBase) / etfCaixaBase * 100 : null,
+        etfBankinter: etfBankinterBase > 0 ? (etfBankinterVal - etfBankinterBase) / etfBankinterBase * 100 : null,
+        etfAltres: etfAltresCombinedBase > 0 ? (etfAltresCombinedVal - etfAltresCombinedBase) / etfAltresCombinedBase * 100 : null,
+        fgp:   fgpBase  > 0 ? (fgpVal - fgpBase) / fgpBase * 100 : null,
         wam:   wamBase  > 0 && wamVal != null ? (wamVal - wamBase) / wamBase * 100 : null,
-        ib:    ibTwrMap[monthKey],
+        accions: ibStockBase > 0 ? (ibStockV - ibStockBase) / ibStockBase * 100 : null,
         total: (totVal  - totalBase) / totalBase * 100,
       };
     });
-  }, [pmMonthly]);
+  }, [reportMonthly]);
 
   const card = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
   const secLabel = { fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600 };
@@ -537,6 +607,7 @@ export function PublicMarketsTab() {
         setFlowGroupBy={setFlowGroupBy}
         totalValueSeries={totalValueSeries}
         reportStartMonth={reportStartMonth}
+        reportEndMonth={WORKBOOK_TOTAL_MONTH}
         transactions={allTransactions}
         currentYearMonthlyReturns={currentYearMonthlyReturns}
       />
@@ -546,7 +617,7 @@ export function PublicMarketsTab() {
         dark={dark}
         secLabel={secLabel}
         displayManagers={displayManagers}
-        monthly={pmMonthly}
+        monthly={reportMonthly}
         expanded={expanded}
         toggleExpand={toggleExpand}
       />

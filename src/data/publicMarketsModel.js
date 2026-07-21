@@ -1,5 +1,6 @@
 import { PM_MODEL_GENERATED } from "../generated/publicMarkets/publicMarketsModel.generated.js";
 import { PM_POSITIONS_RAW_SUPPLEMENT } from "./publicMarketsRawSupplement.js";
+import { isPmPlaceholderPosition } from "./pmClassification.js";
 
 /**
  * @template T
@@ -50,7 +51,9 @@ function _applySupp(pos) {
   if (supp.gestor    !== undefined) out.gestor    = supp.gestor;
   return out;
 }
-const PM_POSITIONS_RAW = PM_MODEL_GENERATED.holdings.active.map(_applySupp);
+const PM_POSITIONS_RAW = PM_MODEL_GENERATED.holdings.active
+  .map(_applySupp)
+  .filter(position => !isPmPlaceholderPosition(position));
 const PM_CLOSED = PM_MODEL_GENERATED.holdings.closed;
 const PM_TRANSACTIONS = PM_MODEL_GENERATED.activity.transactions;
 

@@ -7,6 +7,7 @@ import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
 import { START_MONTH_2019, buildMonthGrid, forwardFillMonthValues, getPriceScale, toMonthKey } from "../chartSeries.js";
 import { MGR_COLORS, CHART_PALETTE, FLOW_COLORS, ASSET_COLORS, NEUTRAL, PORTFOLIO_VALUE_COLOR } from "../chartColors.js";
+import { canonicalPmCustodian } from "../data/pmClassification.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 
@@ -16,24 +17,24 @@ const ABEL_ISINS = new Set(
 );
 
 function custodianToMgr(custodian, isin) {
-  if (custodian === "Bankinter")           return "bankinter";
-  if (custodian === "Interactive Brokers") return "interactiveBrokers";
-  if (custodian === "UBS")                 return "ubs";
-  if (custodian === "Credit Suisse")       return "creditSuisse";
-  if (custodian === "CaixaBank") return ABEL_ISINS.has(isin) ? "bankinter" : "caixa";
-  if (custodian === "Andbank" || custodian === "WAM") return "andbank";
-  if (custodian === "JPMorgan") return "jpmorgan";
+  const c = canonicalPmCustodian(custodian);
+  if (c === "Bankinter")           return "bankinter";
+  if (c === "Interactive Brokers") return "interactiveBrokers";
+  if (c === "UBS")                 return "ubs";
+  if (c === "CaixaBank") return ABEL_ISINS.has(isin) ? "bankinter" : "caixa";
+  if (c === "Andbank") return "andbank";
+  if (c === "JPMorgan") return "jpmorgan";
   return "altres";
 }
 
 function custodianToGroup(custodian) {
-  if (custodian === "CaixaBank")           return "caixa";
-  if (custodian === "UBS")                 return "ubs";
-  if (custodian === "Credit Suisse")       return "creditSuisse";
-  if (custodian === "Bankinter")           return "bankinter";
-  if (custodian === "Interactive Brokers") return "interactiveBrokers";
-  if (custodian === "JPMorgan")            return "jpmorgan";
-  if (custodian === "Andbank" || custodian === "WAM") return "andbank";
+  const c = canonicalPmCustodian(custodian);
+  if (c === "CaixaBank")           return "caixa";
+  if (c === "UBS")                 return "ubs";
+  if (c === "Bankinter")           return "bankinter";
+  if (c === "Interactive Brokers") return "interactiveBrokers";
+  if (c === "JPMorgan")            return "jpmorgan";
+  if (c === "Andbank")             return "andbank";
   return "altres";
 }
 
@@ -48,7 +49,7 @@ function estimateTxValue(t) {
   return price != null ? (price * t.units) / scale : 0;
 }
 
-const MGR_NAMES  = { caixa: "CaixaBank", ubs: "UBS", creditSuisse: "Credit Suisse", bankinter: "Bankinter", interactiveBrokers: "Interactive Brokers", andbank: "WAM–Andbank", jpmorgan: "JPMorgan", altres: "Altres" };
+const MGR_NAMES  = { caixa: "CaixaBank", ubs: "UBS", bankinter: "Bankinter", interactiveBrokers: "Interactive Brokers", andbank: "WAM–Andbank", jpmorgan: "JPMorgan", altres: "Altres" };
 const ASSET_NAMES  = { RV: "Renda Variable", RF: "Renda Fixa" };
 
 /**
@@ -57,7 +58,7 @@ const ASSET_NAMES  = { RV: "Renda Variable", RF: "Renda Fixa" };
  * Props:
  *   transactions  — array of PM_TRANSACTIONS rows already filtered to scope
  *   valuesSeries  — array of { date: string, value: number } portfolio value time series
- *   groupBy       — "total" | "assetType" | "manager" | "position"
+ *   groupBy       — "total" | "assetType" | "manager" | "custodian" | "position"
  *   topN          — number of top positions to name (rest → "Altres"), default 5
  *   height        — chart height in px, default 260
  */
@@ -123,7 +124,7 @@ export function CumulativeFlowsChart({
           inflow: flow.inflow,
           outflow: -flow.outflow,
         };
-        cumulative += flow.inflow;
+        cumulative += flow.inflow - flow.outflow;
         row.cumulative = cumulative;
         return row;
       });
@@ -147,28 +148,17 @@ export function CumulativeFlowsChart({
       };
     }
 
-    // Accumulate monthly cumulative flows per group key
+    // Grouped modes show monthly net flow columns instead of running totals.
     const monthMap = {};
     txs.forEach(t => {
-      if (!monthMap[toMonthKey(t.date)]) monthMap[toMonthKey(t.date)] = {};
       const month = toMonthKey(t.date);
+      if (!month) return;
+      if (!monthMap[month]) monthMap[month] = {};
       const key = resolveKey(t);
       monthMap[month][key] = (monthMap[month][key] ?? 0) + (t.action === "sell" ? -t._flowValue : t._flowValue);
     });
 
-    // Build cumulative running totals across full range
-    const running = {};
-    const rows = allMonths.map(month => {
-      const row = { month };
-      if (monthMap[month]) {
-        Object.entries(monthMap[month]).forEach(([k, v]) => {
-          running[k] = (running[k] ?? 0) + v;
-        });
-      }
-      // Emit current running total for every known key (forward-fill)
-      Object.entries(running).forEach(([k, v]) => { row[k] = v; });
-      return row;
-    });
+    const rows = allMonths.map(month => ({ month, ...(monthMap[month] ?? {}) }));
 
     // Merge portfolio value (forward-fill missing months)
     const valByMonth = {};
@@ -238,7 +228,7 @@ export function CumulativeFlowsChart({
     tooltip: {
       ...t.tooltip,
       trigger: "axis",
-      axisPointer: { type: isTotalMode ? "shadow" : "line" },
+      axisPointer: { type: "shadow" },
       formatter: (params) => {
         const label = fmtMonthKey(params[0]?.axisValue ?? "");
         let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
@@ -302,12 +292,11 @@ export function CumulativeFlowsChart({
       ] : [
         ...keys.map(k => ({
           name: nameMap[k] ?? k,
-          type: "line",
+          type: "bar",
+          stack: "flows",
           data: chartData.map(r => r[k] ?? null),
-          lineStyle: { color: colorMap[k] ?? NEUTRAL, width: 2 },
-          itemStyle: { color: colorMap[k] ?? NEUTRAL },
-          symbol: "none",
-          connectNulls: true,
+          itemStyle: { color: colorMap[k] ?? NEUTRAL, opacity: 0.85, borderRadius: [3, 3, 0, 0] },
+          barMaxWidth: 34,
         })),
       ]),
       ...(hasPortfolioValue ? [{

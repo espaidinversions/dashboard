@@ -1,7 +1,7 @@
 // Auto-generated from Mercats Públics workbook by scripts/pm_autoresearch.mjs
 // Do not edit manually.
 export const PM_WORKBOOK_TOTAL_ACTIVE = 59662676.92486473;
-export const PM_WORKBOOK_TOTAL_ROW = 81076076.41038154;
+export const PM_WORKBOOK_TOTAL_ROW = 80366644.27515145;
 export const PM_POSITIONS_RAW_WORKBOOK = [
   {
     "id": "dws-corporate-hybrid-bonds-tfc-ubs-4676-056",

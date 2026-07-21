@@ -43,6 +43,7 @@ export function PublicMarketsSummarySection({
   setFlowGroupBy,
   totalValueSeries,
   reportStartMonth,
+  reportEndMonth,
   transactions,
   currentYearMonthlyReturns = [],
 }) {
@@ -51,7 +52,7 @@ export function PublicMarketsSummarySection({
     <>
       <SectionHeader title="Resum" tc={tc} />
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <KpiCard label="Total Patrimoni" value={fmtM(total)} sub="Mercats Públics" tc={tc} hero />
+        <KpiCard label="Total Patrimoni" value={fmtM(total)} sub={`Mercats Públics · Excel ${reportEndMonth ?? ""}`.trim()} tc={tc} hero />
         <KpiCard label="YTD Global" value={pctFmt(ytdWeighted)} sub="Ponderat per AUM" tc={tc} valueColor={ytdWeighted >= 0 ? tc.green : tc.red} />
         <KpiCard label={`TWR Cartera (${fmtMonthKey(reportStartMonth)})`} value={pctFmt(portfolioTWR)} sub="Retorn acumulat, sense fluxos (excl. Andbank, JPMorgan)" tc={tc} valueColor={portfolioTWR != null ? (portfolioTWR >= 0 ? tc.green : tc.red) : tc.textLight} />
         <KpiCard label={`MWR Cartera (${fmtMonthKey(reportStartMonth)})`} value={pctFmt(portfolioMWR)} sub="Anualitzat, Modified Dietz (excl. Andbank, JPMorgan)" tc={tc} valueColor={portfolioMWR != null ? (portfolioMWR >= 0 ? tc.green : tc.red) : tc.textLight} />
@@ -59,11 +60,19 @@ export function PublicMarketsSummarySection({
 
       {/* ── Bucket breakdown ─────────────────────────────────────────────── */}
       <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-        <KpiCard label="ETFs" value={fmtM(bucketValues.etfs ?? 0)} sub={`${pctSub(bucketValues.etfs ?? 0)} · CaixaBank + Bankinter`} tc={tc} />
-        <KpiCard label="Fons Gestió Pròpia CaixaBank" value={fmtM(bucketValues.fgpCaixa ?? 0)} sub={pctSub(bucketValues.fgpCaixa ?? 0)} tc={tc} />
-        <KpiCard label="Fons Gestió Pròpia Bankinter" value={fmtM(bucketValues.fgpBankinter ?? 0)} sub={pctSub(bucketValues.fgpBankinter ?? 0)} tc={tc} />
-        <KpiCard label="Renda Fixa – WAM" value={fmtM(bucketValues.rfWam ?? 0)} sub={`${pctSub(bucketValues.rfWam ?? 0)} · Andbank`} tc={tc} />
-        <KpiCard label="Accions – IB" value={fmtM(bucketValues.accionsIB ?? 0)} sub={`${pctSub(bucketValues.accionsIB ?? 0)} · Interactive Brokers`} tc={tc} />
+        <KpiCard label="ETFs CaixaBank" value={fmtM(bucketValues.etfCaixa ?? 0)} sub={`${pctSub(bucketValues.etfCaixa ?? 0)} · ETF`} tc={tc} />
+        <KpiCard label="ETFs Bankinter" value={fmtM(bucketValues.etfBankinter ?? 0)} sub={`${pctSub(bucketValues.etfBankinter ?? 0)} · ETF`} tc={tc} />
+        {(bucketValues.etfAltres ?? 0) > 0 && (
+          <KpiCard label="ETFs Altres" value={fmtM(bucketValues.etfAltres ?? 0)} sub={`${pctSub(bucketValues.etfAltres ?? 0)} · UBS/JPM/IB`} tc={tc} />
+        )}
+        <KpiCard label="Fons Gestió Pròpia" value={fmtM(bucketValues.fgp ?? 0)} sub={`${pctSub(bucketValues.fgp ?? 0)} · no ETF`} tc={tc} />
+        <KpiCard label="Renda Fixa – WAM" value={fmtM(bucketValues.rfWam ?? 0)} sub={`${pctSub(bucketValues.rfWam ?? 0)} · Andbank agregat`} tc={tc} />
+        {(bucketValues.accionsIB ?? 0) > 0 && (
+          <KpiCard label="Accions – IB" value={fmtM(bucketValues.accionsIB ?? 0)} sub={`${pctSub(bucketValues.accionsIB ?? 0)} · Interactive Brokers agregat`} tc={tc} />
+        )}
+        {(bucketValues.residualExcel ?? 0) > 0 && (
+          <KpiCard label="Cash / Excel" value={fmtM(bucketValues.residualExcel ?? 0)} sub={`${pctSub(bucketValues.residualExcel ?? 0)} · comptes i reconciliació`} tc={tc} />
+        )}
       </div>
 
       {/* ── Bucket performance table ──────────────────────────────────────────── */}
@@ -100,11 +109,12 @@ export function PublicMarketsSummarySection({
       {currentYearMonthlyReturns.length > 0 && (() => {
         const theme = ecTheme(tc);
         const BUCKETS = [
-          { key: "etfs", name: "ETFs",    color: "#2B5070" },
-          { key: "cb",   name: "Fons CB", color: "#4A90D9" },
-          { key: "bk",   name: "Fons BK", color: "#7FB3E0" },
+          { key: "etfCaixa", name: "ETFs CaixaBank", color: "#2B5070" },
+          { key: "etfBankinter", name: "ETFs Bankinter", color: "#356F9F" },
+          { key: "etfAltres", name: "ETFs Altres", color: "#7196B3" },
+          { key: "fgp", name: "Fons Gestió Pròpia", color: "#4A90D9" },
           { key: "wam",  name: "WAM",     color: "#E8A020" },
-          { key: "ib",   name: "IB",      color: "#28A029" },
+          { key: "accions", name: "Accions IB", color: "#28A029" },
         ];
         const series = [
           ...BUCKETS.map(b => ({
@@ -173,7 +183,7 @@ export function PublicMarketsSummarySection({
             <div style={{ ...secLabel, marginBottom: 16 }}>Retorn acumulat {_cy} — per mes</div>
             <ReactECharts option={option} style={{ width: "100%", height: 260 }} opts={{ renderer: "canvas" }} />
             <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-              Retorn acumulat des del desembre {_cy - 1}. ETFs/Fons CB/BK: sèries de preus × participacions. WAM i IB: valor agregat mensual (IB ajustat TWR per fluxos).
+              Retorn acumulat des del desembre {_cy - 1}. ETFs se separen per CaixaBank, Bankinter i Altres; WAM i IB es calculen amb valor agregat mensual ajustat per fluxos.
             </div>
           </div>
         );
@@ -181,13 +191,14 @@ export function PublicMarketsSummarySection({
 
       {bucketReturns.length > 0 && (() => {
         const BUCKET_COLORS = {
-          "etfs":          "#2B5070",
-          "fgp-caixa":     "#4A90D9",
-          "fgp-bankinter": "#7FB3E0",
+          "etf-caixa":     "#2B5070",
+          "etf-bankinter": "#356F9F",
+          "etf-altres":    "#7196B3",
+          "fgp":           "#4A90D9",
           "rf-wam":        "#E8A020",
           "accions-ib":    "#28A029",
         };
-        const STRATEGY_COLORS = { rf: "#E8A020", etfs: "#2B5070", accions: "#28A029", fgp: "#4A90D9" };
+        const STRATEGY_COLORS = { rf: "#E8A020", etfCaixa: "#2B5070", etfBankinter: "#356F9F", etfAltres: "#7196B3", accions: "#28A029", fgp: "#4A90D9" };
         const years = PERF_YEARS.map(String);
 
         const mkBarOpt = (theme, series) => ({
@@ -212,38 +223,29 @@ export function PublicMarketsSummarySection({
           data: PERF_YEARS.map(y => b.years[y] ?? null),
           itemStyle: { color: BUCKET_COLORS[b.id], borderRadius: [3, 3, 0, 0] },
           barMaxWidth: 20,
-          markLine: b.id === "etfs" ? { data: [{ yAxis: 0 }], lineStyle: { color: tc.border, type: "dashed", width: 1 }, symbol: "none", label: { show: false } } : undefined,
+          markLine: b.id === "etf-caixa" ? { data: [{ yAxis: 0 }], lineStyle: { color: tc.border, type: "dashed", width: 1 }, symbol: "none", label: { show: false } } : undefined,
         }));
 
         const rfB      = bucketReturns.find(b => b.id === "rf-wam");
-        const etfB     = bucketReturns.find(b => b.id === "etfs");
+        const etfCaixaB = bucketReturns.find(b => b.id === "etf-caixa");
+        const etfBankinterB = bucketReturns.find(b => b.id === "etf-bankinter");
+        const etfAltresB = bucketReturns.find(b => b.id === "etf-altres");
         const accionsB = bucketReturns.find(b => b.id === "accions-ib");
-        const cbFgpB   = bucketReturns.find(b => b.id === "fgp-caixa");
-        const bkFgpB   = bucketReturns.find(b => b.id === "fgp-bankinter");
-        const cbW      = bucketValues.fgpCaixa ?? 0;
-        const bkW      = bucketValues.fgpBankinter ?? 0;
-        const fgpCombB = (cbFgpB || bkFgpB) ? {
-          id: "fgp",
-          years: Object.fromEntries(PERF_YEARS.map(y => {
-            const cbV = cbFgpB?.years[y], bkV = bkFgpB?.years[y];
-            if (cbV == null && bkV == null) return [y, null];
-            const ew = (cbV != null ? cbW : 0) + (bkV != null ? bkW : 0);
-            if (ew === 0) return [y, null];
-            return [y, ((cbV ?? 0) * (cbV != null ? cbW : 0) + (bkV ?? 0) * (bkV != null ? bkW : 0)) / ew];
-          })),
-        } : null;
+        const fgpB     = bucketReturns.find(b => b.id === "fgp");
         const stratSeries = [
-          { id: "etfs",    name: "ETFs",               src: etfB },
-          { id: "fgp",     name: "Fons Gestió Pròpia", src: fgpCombB },
-          { id: "rf",      name: "Renda Fixa (WAM)",   src: rfB },
-          { id: "accions", name: "Accions (IB)",        src: accionsB },
+          { id: "etfCaixa",     name: "ETFs CaixaBank",       src: etfCaixaB },
+          { id: "etfBankinter", name: "ETFs Bankinter",       src: etfBankinterB },
+          { id: "etfAltres",    name: "ETFs Altres",          src: etfAltresB },
+          { id: "fgp",          name: "Fons Gestió Pròpia",   src: fgpB },
+          { id: "rf",           name: "Renda Fixa (WAM)",     src: rfB },
+          { id: "accions",      name: "Accions (IB)",         src: accionsB },
         ].filter(s => s.src?.years && Object.values(s.src.years).some(v => v != null)).map(s => ({
           name: s.name,
           type: "bar",
           data: PERF_YEARS.map(y => s.src.years[y] ?? null),
           itemStyle: { color: STRATEGY_COLORS[s.id], borderRadius: [3, 3, 0, 0] },
           barMaxWidth: 28,
-          markLine: s.id === "etfs" ? { data: [{ yAxis: 0 }], lineStyle: { color: tc.border, type: "dashed", width: 1 }, symbol: "none", label: { show: false } } : undefined,
+          markLine: s.id === "etfCaixa" ? { data: [{ yAxis: 0 }], lineStyle: { color: tc.border, type: "dashed", width: 1 }, symbol: "none", label: { show: false } } : undefined,
         }));
 
         const theme = ecTheme(tc);
@@ -253,14 +255,14 @@ export function PublicMarketsSummarySection({
               <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment per Categoria · anual</div>
               <ReactECharts option={mkBarOpt(theme, catSeries)} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />
               <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-                Ponderat per valor de mercat. ETFs inclou CaixaBank i Bankinter. WAM: retorn acumulat 2026.
+                Ponderat per valor de mercat. ETFs es classifiquen per subjacent. WAM: retorn acumulat 2026.
               </div>
             </div>
             <div style={{ ...card, flex: "1 1 38%" }}>
               <div style={{ ...secLabel, marginBottom: 16 }}>Rendiment per Estratègia · anual</div>
               <ReactECharts option={mkBarOpt(theme, stratSeries)} style={{ width: "100%", height: 240 }} opts={{ renderer: "canvas" }} />
               <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-                ETFs = CaixaBank + Bankinter · FGP = fons gestió pròpia CB+BK (ponderat MV) · RF = WAM · Accions = IB.
+                ETFs separats per custodi principal · FGP = posicions no ETF · RF = WAM · Accions = IB no ETF.
               </div>
             </div>
           </div>
@@ -316,10 +318,13 @@ export function PublicMarketsSummarySection({
             }];
           } else if (chartView === "estrategia") {
             const ESTRAT = [
-              { key: "etfs", name: "ETFs",               color: "#2B5070" },
-              { key: "fgp",  name: "Fons Gestió Pròpia", color: "#4A90D9" },
-              { key: "wam",  name: "WAM",                color: "#E8A020" },
-              { key: "ib",   name: "IB",                 color: "#28A029" },
+              { key: "etfCaixa", name: "ETFs CaixaBank",       color: "#2B5070" },
+              { key: "etfBankinter", name: "ETFs Bankinter",   color: "#356F9F" },
+              { key: "etfAltres", name: "ETFs Altres",         color: "#7196B3" },
+              { key: "fgp",  name: "Fons Gestió Pròpia",        color: "#4A90D9" },
+              { key: "wam",  name: "WAM",                       color: "#E8A020" },
+              { key: "accions", name: "Accions IB",             color: "#28A029" },
+              { key: "altres", name: "Cash / Excel",            color: "#B0B8C4" },
             ];
             series = ESTRAT
               .filter(({ key }) => chartData.some(row => (row[key] ?? 0) > 0))
@@ -404,7 +409,7 @@ export function PublicMarketsSummarySection({
             : chartView === "total"
               ? "Sèrie històrica reconstruïda a partir de participacions i NAV històrics, amb fallback a valors importats quan falta preu."
               : chartView === "estrategia"
-                ? "ETFs i FGP derivats del pes per MV actual × valor custodi mensual. WAM i IB des de PM Monthly (IB = abelBK − Bankinter)."
+                ? "ETFs separats per CaixaBank, Bankinter i Altres; FGP derivat del pes per MV actual × valor custodi mensual. WAM i IB des de PM Monthly (IB = abelBK − Bankinter)."
                 : "Sèries mensuals reconstruïdes des de participacions i NAV històrics, amb residual per a posicions no assignades."}
         </div>
       </div>
@@ -416,10 +421,9 @@ export function PublicMarketsSummarySection({
           </div>
           <FilterPills
             options={[
-              { id: "position", label: "Per Posició" },
-              { id: "custodian", label: "Per Custodi" },
-              { id: "assetType", label: "Per Actiu" },
               { id: "total", label: "Total" },
+              { id: "assetType", label: "Per Actiu" },
+              { id: "custodian", label: "Per Custodi" },
             ]}
             value={flowGroupBy}
             onChange={setFlowGroupBy}
@@ -438,7 +442,7 @@ export function PublicMarketsSummarySection({
           height={260}
         />
         <div style={{ fontSize: 10, color: tc.textLight, marginTop: 8, fontStyle: "italic" }}>
-          Capital acumulat brut des de la primera mostra mensual: barres d'entrades i sortides de capital, amb línia de patrimoni mensual i línia agregada de capital. UBS i WAM–Andbank mostren les posicions dels PDFs, però no els moviments individuals.
+          Entrades i sortides mensuals en columnes fins a l'últim mes Excel. Total mostra capital acumulat; Per Actiu i Per Custodi apilen el flux net mensual amb línia de patrimoni mensual reconciliada amb Excel.
         </div>
       </div>
     </>

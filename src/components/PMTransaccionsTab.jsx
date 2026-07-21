@@ -7,6 +7,7 @@ import { fmtM } from "../utils.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { loadPMOverrides, upsertTransaction } from "../db.js";
 import { resolvePmTransactionRouteId } from "../data/pmPositionRouting.js";
+import { canonicalPmCustodian } from "../data/pmClassification.js";
 
 const PM_POSITIONS    = PM_MODEL.holdings.active;
 const PM_CLOSED       = PM_MODEL.holdings.closed;
@@ -19,7 +20,7 @@ const fmtYYYYMMShort = yyyymm => {
   return `${MESOS_SHORT[parseInt(m, 10)]} '${y.slice(2)}`;
 };
 
-const CUSTODIANS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Credit Suisse", "Altre"];
+const CUSTODIANS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Andbank", "Altre"];
 
 const EMPTY_FILTERS = { date: "", nom: "", tipus: "Tots", action: "Tots", units: "", nav: "", value: "", custodian: "" };
 
@@ -42,7 +43,9 @@ export function PMTransaccionsTab({ search = "" }) {
   const allTxs = useMemo(() => {
     const staticIds = new Set(PM_TRANSACTIONS.map(t => t.id));
     const extras = manualTxs.filter(t => !staticIds.has(t.id));
-    return [...PM_TRANSACTIONS, ...extras].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+    return [...PM_TRANSACTIONS, ...extras]
+      .map(t => ({ ...t, custodian: canonicalPmCustodian(t.custodian) }))
+      .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
   }, [manualTxs]);
 
   const custodians = useMemo(() =>

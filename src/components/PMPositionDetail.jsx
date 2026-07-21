@@ -267,7 +267,7 @@ function PMPositionDetail() {
       </div>
 
       {/* ── Historial de transaccions ── */}
-      <PositionTxHistory isin={isin} tc={tc} card={card} secLabel={secLabel} />
+      <PositionTxHistory txs={positionTxs} tc={tc} card={card} secLabel={secLabel} />
 
       {/* ── Two-column: weight chart + IRR / cost ── */}
       <div style={{ display: "flex", gap: 16 }}>
@@ -464,15 +464,14 @@ function PMPositionDetail() {
 
 export default PMPositionDetail;
 
-function PositionTxHistory({ isin, tc = TC_LIGHT, card, secLabel }) {
+function PositionTxHistory({ txs: scopedTxs = [], tc = TC_LIGHT, card, secLabel }) {
   const [sortDesc, setSortDesc] = useState(true);
   const txs = useMemo(() => {
-    const rows = PM_TRANSACTIONS.filter(t => t.isin === isin);
-    return [...rows].sort((a, b) => {
+    return [...scopedTxs].sort((a, b) => {
       const cmp = (a.date ?? "").localeCompare(b.date ?? "");
       return sortDesc ? -cmp : cmp;
     });
-  }, [isin, sortDesc]);
+  }, [scopedTxs, sortDesc]);
 
   return (
     <div style={card}>
@@ -528,7 +527,7 @@ function PositionTxHistory({ isin, tc = TC_LIGHT, card, secLabel }) {
 }
 
 // ── Position metadata editor ──────────────────────────────────
-const CUSTODIAN_OPTIONS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Credit Suisse", "Abel Font", "WAM", "Andbank", "Altre"];
+const CUSTODIAN_OPTIONS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Abel Font", "WAM", "Andbank", "Altre"];
 
 function PositionMetaEditor({ p, isin, tc = TC_LIGHT, dark, card, secLabel, metaOverride, terOverride, onSaveMeta, onSaveTer }) {
   const [open, setOpen] = useState(false);
