@@ -85,7 +85,7 @@ function TransactionsTab() {
     const manualIds = new Set(manualRows.map(r => r.id));
     const modelRows = PM_TRANSACTIONS_STATIC
       .filter(r => !manualIds.has(r.id))
-      .map(r => ({ ...r, _source: "model", value_eur: r.valueEur ?? r.value_eur }));
+      .map(r => ({ ...r, _source: "model", value_eur: r.valueEur }));
     const manual = manualRows.map(r => ({ ...r, _source: "manual" }));
     return [...modelRows, ...manual].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
   }, [manualRows]);
