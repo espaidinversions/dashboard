@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { usePersistedState } from "../../utils.js";
 import { TxSection } from "../TxSection.jsx";
 import { AltCohortSection } from "../funds/AltCohortSection.jsx";
+import { LiquiditatSection } from "../shared/LiquiditatSection.jsx";
 import { buildRealEstateCohortMatrix, RE_STRATEGY_LABELS } from "../../data/altCohortModel.js";
 
 /**
@@ -10,7 +11,7 @@ import { buildRealEstateCohortMatrix, RE_STRATEGY_LABELS } from "../../data/altC
  * plus a per-vintage cohort matrix built from the RE vehicles. RE has no
  * company rows, so there is no scope/companies toggle here.
  */
-export function RealEstateSummarySection({ tc, dark, reTx = [], reCompr = [], rawCC, fundMeta, estCfg }) {
+export function RealEstateSummarySection({ tc, dark, reTx = [], reCompr = [], rawCC, fundMeta, estCfg, liquidityAccounts = [] }) {
   const [metric, setMetric] = usePersistedState("ui_re_matrix_metric", "tvpi");
 
   const matrix = useMemo(
@@ -40,6 +41,7 @@ export function RealEstateSummarySection({ tc, dark, reTx = [], reCompr = [], ra
         metric={metric}
         onMetricChange={setMetric}
       />
+      <LiquiditatSection accounts={liquidityAccounts} section="real-estate" tc={tc} />
     </div>
   );
 }

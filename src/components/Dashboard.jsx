@@ -13,6 +13,7 @@ import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohor
 import { buildLandingModel } from "../data/landingModel.js";
 import { AltCohortSection } from "./funds/AltCohortSection.jsx";
 import { RealEstateSummarySection } from "./realEstate/RealEstateSummarySection.jsx";
+import { LiquiditatSection } from "./shared/LiquiditatSection.jsx";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
 import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
@@ -689,9 +690,13 @@ function Dashboard() {
                         metric={matrixMetric}
                         onMetricChange={setMatrixMetric}
                       />
+                      <LiquiditatSection accounts={d.liquidityAccounts} section="alternatives" tc={tc} />
                     </div>
                   : inversionsSubTab === "fons"
-                  ? <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["PE", "VC"]} excludeIds={d.actualCompanyIds} includeCompanies={includeCompanies} onToggleCompanies={setIncludeCompanies} />
+                  ? <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                      <FundsIndexInner searchOverride={globalSearch} vcpeTypes={["PE", "VC"]} excludeIds={d.actualCompanyIds} includeCompanies={includeCompanies} onToggleCompanies={setIncludeCompanies} />
+                      <LiquiditatSection accounts={d.liquidityAccounts} section="alternatives" tc={tc} />
+                    </div>
                   : inversionsSubTab === "pipeline"
                     ? <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
                     : <TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_all_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
@@ -726,9 +731,12 @@ function Dashboard() {
                 ))}
               </div>
               {realEstateTab === "resum"
-                ? <RealEstateSummarySection tc={tc} dark={dark} reTx={d.reTx} reCompr={d.reCompr} rawCC={d.rawCC} fundMeta={d.fundMeta} estCfg={estCfg} />
+                ? <RealEstateSummarySection tc={tc} dark={dark} reTx={d.reTx} reCompr={d.reCompr} rawCC={d.rawCC} fundMeta={d.fundMeta} estCfg={estCfg} liquidityAccounts={d.liquidityAccounts} />
                 : (realEstateTab === "inversions" || realEstateTab === "altres-vehicles")
-                ? <Suspense fallback={null}><FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} /></Suspense>
+                ? <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+                    <Suspense fallback={null}><FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} /></Suspense>
+                    <LiquiditatSection accounts={d.liquidityAccounts} section="real-estate" tc={tc} />
+                  </div>
                 : <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, padding:"80px 24px", color:tc.textLight, textAlign:"center" }}>
                     <span style={{ fontSize:36 }}>🚧</span>
                     <div style={{ fontSize:16, fontWeight:700, color:tc.text }}>Secció en construcció</div>
