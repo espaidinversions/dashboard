@@ -14,7 +14,7 @@ import {
 } from "./publicMarkets/PublicMarketsShared.jsx";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
 import { canonicalPmCustodian, splitIbPositions } from "../data/pmClassification.js";
-import { loadPMOverrides } from "../db.js";
+import { loadPMOverrides, loadLiquidityAccounts } from "../db.js";
 import { usePmMonthly, applyManagerOverrides } from "./hooks/usePmMonthly.js";
 import { PublicMarketsSummarySection } from "./publicMarkets/PublicMarketsSummarySection.jsx";
 import { PublicMarketsTablesSection } from "./publicMarkets/PublicMarketsTablesSection.jsx";
@@ -88,6 +88,7 @@ export function PublicMarketsTab() {
   const [expanded, setExpanded] = useState(new Set());
   const [flowGroupBy, setFlowGroupBy] = useState("total");
   const [manualTxs, setManualTxs] = useState([]);
+  const [tableLiquidity, setTableLiquidity] = useState([]);
   const { monthly: pmMonthly, managerOverrides } = usePmMonthly();
   const reportMonthly = useMemo(
     () => (pmMonthly ?? []).filter((month) => month.date <= WORKBOOK_TOTAL_MONTH),
@@ -105,6 +106,23 @@ export function PublicMarketsTab() {
       })
       .catch(console.error);
   }, []);
+
+  // Cross-section liquidity: once Mercats Públics bank accounts exist in the
+  // Supabase liquidity_accounts table, they become the source of truth for PM's
+  // liquidity. Until then, PM falls back to the generated PM_LIQUIDITY_POSITIONS.
+  useEffect(() => {
+    loadLiquidityAccounts()
+      .then((accounts) => setTableLiquidity((accounts ?? []).filter((a) => a.section === "mercats-publics")))
+      .catch(console.error);
+  }, []);
+
+  const usingTableLiquidity = tableLiquidity.length > 0;
+  const liquidityPositions = useMemo(
+    () => usingTableLiquidity
+      ? tableLiquidity.map((a) => ({ id: a.id, nom: a.nom, custodian: a.banc ?? null, valorMercat: Number(a.saldo) || 0 }))
+      : PM_LIQUIDITY_POSITIONS,
+    [usingTableLiquidity, tableLiquidity],
+  );
 
   const allTransactions = useMemo(() => {
     const staticIds = new Set(PM_TRANSACTIONS.map(t => t.id));
@@ -241,7 +259,7 @@ export function PublicMarketsTab() {
     return (Math.pow(1 + totalReturn, 1 / years) - 1) * 100;
   }, [reportMonthly]);
 
-  const liquidityValue = PM_LIQUIDITY_POSITIONS.reduce((sum, row) => sum + (Number(row.valorMercat) || 0), 0);
+  const liquidityValue = liquidityPositions.reduce((sum, row) => sum + (Number(row.valorMercat) || 0), 0);
   const residualValue = total - (
     liquidityValue +
     currentManagerValues.caixa +
@@ -327,7 +345,7 @@ export function PublicMarketsTab() {
         ytd: null,
         [`r${_cy - 1}`]: null,
         [`r${_cy - 2}`]: null,
-      }, PM_LIQUIDITY_POSITIONS),
+      }, liquidityPositions),
       withMeta({
         id: "altres",
         nom: "Excel no assignat",
@@ -339,7 +357,7 @@ export function PublicMarketsTab() {
         [`r${_cy - 2}`]: null,
       }, _custodianPositions.altres),
     ];
-  }, [currentManagerValues, residualValue, liquidityValue, effectiveManagers]);
+  }, [currentManagerValues, residualValue, liquidityValue, liquidityPositions, effectiveManagers]);
 
 
   const totalValueSeries = useMemo(() => {
@@ -591,7 +609,7 @@ export function PublicMarketsTab() {
         secLabel={secLabel}
         total={total}
         bucketValues={bucketValues}
-        liquidityAccounts={PM_LIQUIDITY_POSITIONS}
+        liquidityAccounts={liquidityPositions}
         bucketReturns={bucketReturns}
         ytdWeighted={ytdWeighted}
         portfolioTWR={portfolioTWR}
