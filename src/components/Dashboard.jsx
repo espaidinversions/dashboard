@@ -598,6 +598,12 @@ function Dashboard() {
                       <Suspense fallback={null}><PublicMarketsTab /></Suspense>
                     </section>
                   )}
+                  {d.liquidityAccounts.length > 0 && (
+                    <section>
+                      <h2 style={{ fontSize: 18, fontWeight: 700, color: tc.navy, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Liquiditat</h2>
+                      <LiquiditatSection accounts={d.liquidityAccounts} tc={tc} title="Liquiditat total" />
+                    </section>
+                  )}
                 </div>
               }
             />
