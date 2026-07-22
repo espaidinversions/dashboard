@@ -39,7 +39,7 @@ function CashflowCard({ card, tc, onNavigate }) {
   );
 }
 
-export function LandingTab({ model, tc, onNavigate, pmCard }) {
+export function LandingTab({ model, tc, onNavigate, pmCard, chartSections }) {
   return (
     <div>
       <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, color: tc.navy, margin: "0 0 20px" }}>Inici</h1>
@@ -50,6 +50,7 @@ export function LandingTab({ model, tc, onNavigate, pmCard }) {
           .map((c) => <CashflowCard key={c.sectionId} card={c} tc={tc} onNavigate={onNavigate} />)}
         {pmCard}
       </div>
+      {chartSections}
     </div>
   );
 }

@@ -389,14 +389,26 @@ function Dashboard() {
 
 
 
+  // Real Public Markets landing figures. The PM dataset is large, so it is
+  // loaded lazily and held in state rather than imported into this bundle.
+  const [pmSummary, setPmSummary] = useState(null);
+  useEffect(() => {
+    if (!canAccessSection("mercats-publics")) { setPmSummary(null); return; }
+    let cancelled = false;
+    import("./tabs/pmLandingValue.js")
+      .then((m) => { if (!cancelled) setPmSummary(m.getPmLandingSummary()); })
+      .catch(() => { if (!cancelled) setPmSummary(null); });
+    return () => { cancelled = true; };
+  }, [canAccessSection]);
+
   const landingModel = useMemo(() => buildLandingModel({
     altTx: altAllTx,
     altCompr: altAllCompr,
     reTx: d.reTx,
     reCompr: d.reCompr,
-    pmSummary: canAccessSection("mercats-publics") ? { valorActual: 0, nGestors: 0 } : null,
+    pmSummary: canAccessSection("mercats-publics") ? pmSummary : null,
     canAccess: canAccessSection,
-  }), [altAllTx, altAllCompr, d.reTx, d.reCompr, canAccessSection]);
+  }), [altAllTx, altAllCompr, d.reTx, d.reCompr, canAccessSection, pmSummary]);
 
 
 
@@ -538,6 +550,30 @@ function Dashboard() {
               pmCard={canAccessSection("mercats-publics")
                 ? <Suspense fallback={null}><PmLandingCard tc={tc} onNavigate={handleNavigate} /></Suspense>
                 : null}
+              chartSections={
+                <div style={{ display: "flex", flexDirection: "column", gap: 28, marginTop: 32 }}>
+                  {canAccessSection("alternatives") && (
+                    <section>
+                      <h2 style={{ fontSize: 18, fontWeight: 700, color: tc.navy, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Alternatius</h2>
+                      <ResumTab tc={tc} byFy={byFy} byEst={byEst} estCfg={estCfg} />
+                    </section>
+                  )}
+                  {canAccessSection("real-estate") && (
+                    <section>
+                      <h2 style={{ fontSize: 18, fontWeight: 700, color: tc.navy, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Real Estate</h2>
+                      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "28px 24px", color: tc.textLight, fontSize: 13, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+                        Els gràfics de Real Estate estaran disponibles quan hi hagi dades de la cartera.
+                      </div>
+                    </section>
+                  )}
+                  {canAccessSection("mercats-publics") && (
+                    <section>
+                      <h2 style={{ fontSize: 18, fontWeight: 700, color: tc.navy, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Mercats Públics</h2>
+                      <Suspense fallback={null}><PublicMarketsTab /></Suspense>
+                    </section>
+                  )}
+                </div>
+              }
             />
           )}
 
@@ -593,12 +629,13 @@ function Dashboard() {
 
           {tab === "inversions" && (
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-              <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
-                <button onClick={() => setInversionsSubTab("resum")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "resum" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "resum" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Resum</button>
-                <button onClick={() => setInversionsSubTab("pipeline")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "pipeline" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "pipeline" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Pipeline</button>
-                <button onClick={() => setInversionsSubTab("fons")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "fons" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "fons" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Portfoli</button>
-                <button onClick={() => setInversionsSubTab("tx")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "tx" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "tx" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Transaccions</button>
-              </div>
+              {inversionsSubTab !== "resum" && (
+                <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
+                  <button onClick={() => setInversionsSubTab("fons")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "fons" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "fons" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Portfoli</button>
+                  <button onClick={() => setInversionsSubTab("pipeline")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "pipeline" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "pipeline" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Pipeline</button>
+                  <button onClick={() => setInversionsSubTab("tx")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "tx" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "tx" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Transaccions</button>
+                </div>
+              )}
               <Suspense fallback={null}>
                 {inversionsSubTab === "resum"
                   ? <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

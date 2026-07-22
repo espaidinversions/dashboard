@@ -1,11 +1,8 @@
-import { PM_MODEL } from "../../data/publicMarketsModel.js";
-import { WAM_POSITIONS } from "../../data/wamPositions.js";
-import { summarizeLatestPmValuesWithWam } from "../../data/pmValueUtils.js";
+import { getPmLandingSummary } from "./pmLandingValue.js";
 import { KpiCard } from "../shared/KpiCard.jsx";
 import { formatEur } from "./landingFormat.js";
 
-const PM_LANDING_VALOR_ACTUAL =
-  summarizeLatestPmValuesWithWam(PM_MODEL.series.values, PM_MODEL.holdings.active, WAM_POSITIONS).total;
+const PM_LANDING_VALOR_ACTUAL = getPmLandingSummary().valorActual;
 
 export default function PmLandingCard({ tc, onNavigate }) {
   return (
