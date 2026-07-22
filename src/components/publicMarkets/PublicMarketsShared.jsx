@@ -7,6 +7,7 @@ import { canonicalPmCustodian, isEtfPosition as isEtfPositionData } from "../../
 const PM_MANAGERS = PM_MODEL.metadata.managers;
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
+const PM_LIQUIDITY = PM_MODEL.holdings.liquidity ?? [];
 
 const _abelCustodians = new Set(["Bankinter", "Interactive Brokers"]);
 const _abelPos = PM_POSITIONS.filter(p => _abelCustodians.has(p.custodian));
@@ -21,6 +22,8 @@ export const TIPUS_CFG = {
   RV: { color: "#2B5070", bg: "#E6EDF3" },
   RF: { color: "#7A6000", bg: "#FFF8E1" },
   "RV+RF": { color: "#28A029", bg: "#E8F8E8" },
+  Cash: { color: "#56616F", bg: "#EEF2F6" },
+  Liquiditat: { color: "#56616F", bg: "#EEF2F6" },
 };
 
 export const MGR_COLORS = _MGR_COLORS;
@@ -75,6 +78,9 @@ export function getMgrPositions(mgrId) {
   else if (mgrId === "ubs")       custodians = ["UBS"];
   else if (mgrId === "bankinter") custodians = ["Bankinter"];
   else if (mgrId === "jpmorgan")  custodians = ["JPMorgan"];
+  else if (mgrId === "liquidity") {
+    return [...PM_LIQUIDITY].sort((a, b) => (b.valorMercat ?? 0) - (a.valorMercat ?? 0));
+  }
   else return null; // andbank, ib: aggregated only, no drill-down
 
   const match = custodianMatch(custodians);

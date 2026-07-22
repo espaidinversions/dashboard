@@ -32,6 +32,7 @@ export function PublicMarketsSummarySection({
   secLabel,
   total,
   bucketValues = {},
+  liquidityAccounts = [],
   bucketReturns = [],
   ytdWeighted,
   portfolioTWR,
@@ -70,10 +71,45 @@ export function PublicMarketsSummarySection({
         {(bucketValues.accionsIB ?? 0) > 0 && (
           <KpiCard label="Accions – IB" value={fmtM(bucketValues.accionsIB ?? 0)} sub={`${pctSub(bucketValues.accionsIB ?? 0)} · Interactive Brokers agregat`} tc={tc} />
         )}
+        {(bucketValues.liquiditat ?? 0) > 0 && (
+          <KpiCard label="Liquiditat" value={fmtM(bucketValues.liquiditat ?? 0)} sub={`${pctSub(bucketValues.liquiditat ?? 0)} · comptes C/c Excel`} tc={tc} />
+        )}
         {(bucketValues.residualExcel ?? 0) > 0 && (
-          <KpiCard label="Cash / Excel" value={fmtM(bucketValues.residualExcel ?? 0)} sub={`${pctSub(bucketValues.residualExcel ?? 0)} · comptes i reconciliació`} tc={tc} />
+          <KpiCard label="Excel no assignat" value={fmtM(bucketValues.residualExcel ?? 0)} sub={`${pctSub(bucketValues.residualExcel ?? 0)} · possible JPM agregat`} tc={tc} />
         )}
       </div>
+
+      {liquidityAccounts.length > 0 && (
+        <div style={{ ...card, padding: "14px 18px", overflowX: "auto" }}>
+          <div style={{ ...secLabel, marginBottom: 10 }}>Liquiditat per compte</div>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12, minWidth: 520 }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${tc.border}` }}>
+                <th style={{ padding: "6px 8px", textAlign: "left", color: tc.textLight, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>Compte</th>
+                <th style={{ padding: "6px 8px", textAlign: "left", color: tc.textLight, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>Custodi</th>
+                <th style={{ padding: "6px 8px", textAlign: "right", color: tc.textLight, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>Saldo</th>
+                <th style={{ padding: "6px 8px", textAlign: "right", color: tc.textLight, fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>% liquiditat</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...liquidityAccounts]
+                .sort((a, b) => (b.valorMercat ?? 0) - (a.valorMercat ?? 0))
+                .map((account) => {
+                  const value = Number(account.valorMercat) || 0;
+                  const pct = (bucketValues.liquiditat ?? 0) > 0 ? value / bucketValues.liquiditat * 100 : null;
+                  return (
+                    <tr key={account.id} style={{ borderBottom: `1px solid ${tc.border}` }}>
+                      <td style={{ padding: "6px 8px", fontWeight: 600, color: tc.text }}>{account.nom}</td>
+                      <td style={{ padding: "6px 8px", color: tc.textLight }}>{account.custodian ?? "—"}</td>
+                      <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 700, color: value > 0 ? tc.navy : tc.textLight }}>{fmtM(value)}</td>
+                      <td style={{ padding: "6px 8px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.textLight }}>{pct == null ? "—" : `${pct.toFixed(1)}%`}</td>
+                    </tr>
+                  );
+                })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {/* ── Bucket performance table ──────────────────────────────────────────── */}
       {bucketReturns.length > 0 && (
@@ -115,6 +151,7 @@ export function PublicMarketsSummarySection({
           { key: "fgp", name: "Fons Gestió Pròpia", color: "#4A90D9" },
           { key: "wam",  name: "WAM",     color: "#E8A020" },
           { key: "accions", name: "Accions IB", color: "#28A029" },
+          { key: "liquiditat", name: "Liquiditat", color: "#8C9AA9" },
         ];
         const series = [
           ...BUCKETS.map(b => ({
@@ -197,8 +234,9 @@ export function PublicMarketsSummarySection({
           "fgp":           "#4A90D9",
           "rf-wam":        "#E8A020",
           "accions-ib":    "#28A029",
+          "liquiditat":    "#8C9AA9",
         };
-        const STRATEGY_COLORS = { rf: "#E8A020", etfCaixa: "#2B5070", etfBankinter: "#356F9F", etfAltres: "#7196B3", accions: "#28A029", fgp: "#4A90D9" };
+        const STRATEGY_COLORS = { rf: "#E8A020", etfCaixa: "#2B5070", etfBankinter: "#356F9F", etfAltres: "#7196B3", accions: "#28A029", fgp: "#4A90D9", liquiditat: "#8C9AA9" };
         const years = PERF_YEARS.map(String);
 
         const mkBarOpt = (theme, series) => ({
@@ -239,6 +277,7 @@ export function PublicMarketsSummarySection({
           { id: "fgp",          name: "Fons Gestió Pròpia",   src: fgpB },
           { id: "rf",           name: "Renda Fixa (WAM)",     src: rfB },
           { id: "accions",      name: "Accions (IB)",         src: accionsB },
+          { id: "liquiditat",   name: "Liquiditat",           src: bucketReturns.find(b => b.id === "liquiditat") },
         ].filter(s => s.src?.years && Object.values(s.src.years).some(v => v != null)).map(s => ({
           name: s.name,
           type: "bar",
@@ -324,7 +363,8 @@ export function PublicMarketsSummarySection({
               { key: "fgp",  name: "Fons Gestió Pròpia",        color: "#4A90D9" },
               { key: "wam",  name: "WAM",                       color: "#E8A020" },
               { key: "accions", name: "Accions IB",             color: "#28A029" },
-              { key: "altres", name: "Cash / Excel",            color: "#B0B8C4" },
+              { key: "liquiditat", name: "Liquiditat",           color: "#8C9AA9" },
+              { key: "altres", name: "Excel no assignat",       color: "#B0B8C4" },
             ];
             series = ESTRAT
               .filter(({ key }) => chartData.some(row => (row[key] ?? 0) > 0))
@@ -348,7 +388,8 @@ export function PublicMarketsSummarySection({
               { key: "ubs",                name: "UBS",                  color: AREA_COLORS.ubs },
               { key: "caixa",              name: "CaixaBank",            color: AREA_COLORS.caixa },
               { key: "jpmorgan",           name: "JPMorgan",             color: AREA_COLORS.jpmorgan },
-              { key: "altres",             name: "Altres / no assignat", color: AREA_COLORS.altres ?? "#B0B8C4" },
+              { key: "liquiditat",         name: "Liquiditat",           color: "#8C9AA9" },
+              { key: "altres",             name: "Excel no assignat",    color: AREA_COLORS.altres ?? "#B0B8C4" },
             ]
               .filter(({ key }) => chartData.some((row) => row[key] != null && row[key] > 0))
               .map(({ key, name, color }) => ({

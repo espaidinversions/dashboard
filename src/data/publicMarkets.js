@@ -52,6 +52,21 @@ export const PM_POSITIONS_RAW = synchronizeWorkbookRows(
   PM_POSITIONS_RAW_WORKBOOK,
 );
 
+export const PM_LIQUIDITY_POSITIONS = [
+  { id: "liquidity-jpm-cc", nom: "JPM cc", gestor: "JPMorgan", custodian: "JPMorgan", tipus: "Liquiditat", divisa: "EUR", valorMercat: 17_000, _source: "Master cash" },
+  { id: "liquidity-ubs-cc", nom: "C/c UBS", gestor: "UBS", custodian: "UBS", tipus: "Liquiditat", divisa: "EUR", valorMercat: 0, _source: "Master cash" },
+  { id: "liquidity-ubs-cs-cc", nom: "C/c CS", gestor: "UBS", custodian: "UBS", tipus: "Liquiditat", divisa: "EUR", valorMercat: 81_276.96, _source: "Master cash" },
+  { id: "liquidity-caixabank-cc", nom: "C/c Caixabank", gestor: "CaixaBank", custodian: "CaixaBank", tipus: "Liquiditat", divisa: "EUR", valorMercat: 1_326_055, _source: "Master cash" },
+  { id: "liquidity-caixabank-scr-cc", nom: "C/c Caixabank SCR", gestor: "CaixaBank", custodian: "CaixaBank", tipus: "Liquiditat", divisa: "EUR", valorMercat: 5_284_850, _source: "Master cash" },
+  { id: "liquidity-caixabank-solvic-cc", nom: "C/c Caixabank Solvic", gestor: "CaixaBank", custodian: "CaixaBank", tipus: "Liquiditat", divisa: "EUR", valorMercat: 1_045_740, _source: "Master cash" },
+  { id: "liquidity-santander-cc", nom: "C/c Santander", gestor: "Santander", custodian: "Santander", tipus: "Liquiditat", divisa: "EUR", valorMercat: 1_000, _source: "Master cash" },
+  { id: "liquidity-solvic-ubs-cc", nom: "C/C Solvic UBS", gestor: "UBS", custodian: "UBS", tipus: "Liquiditat", divisa: "EUR", valorMercat: 0, _source: "Master cash" },
+  { id: "liquidity-bankinter-cc", nom: "C/C Bankinter", gestor: "Bankinter", custodian: "Bankinter", tipus: "Liquiditat", divisa: "EUR", valorMercat: 0, _source: "Master cash" },
+  { id: "liquidity-sabadell-cc", nom: "C/c Sabadell", gestor: "Sabadell", custodian: "Sabadell", tipus: "Liquiditat", divisa: "EUR", valorMercat: 25_070.64, _source: "Master cash" },
+];
+
+export const PM_TOTAL_LIQUIDITY = PM_LIQUIDITY_POSITIONS.reduce((sum, row) => sum + (Number(row.valorMercat) || 0), 0);
+
 export const PM_MONTHLY = [
   // ── Dec 2023 ────────────────────────────────────────────
   { date:"2023-12", label:"Des '23", caixaRV:6_260_222, caixaRF:4_013_654, ubsRV:10_236_736, ubsRF:3_690_362, abelBK:null, andbank:5_464_174 },

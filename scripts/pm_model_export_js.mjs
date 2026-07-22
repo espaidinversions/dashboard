@@ -4,12 +4,14 @@ import { fileURLToPath } from "url";
 
 import {
   PM_CLOSED,
+  PM_LIQUIDITY_POSITIONS,
   PM_MANAGERS,
   PM_MONTHLY,
   PM_POSITION_ID_ALIASES,
   PM_POSITIONS,
   PM_POSITIONS_RAW,
   PM_TOTAL_ACTIVE,
+  PM_TOTAL_LIQUIDITY,
   PM_TOTAL_WORKBOOK_ROW,
 } from "../src/data/publicMarkets.js";
 import { PM_CLOSED_VALUES } from "../src/data/pmClosedValues.js";
@@ -29,6 +31,7 @@ const PM_MODEL_GENERATED = {
     active: PM_POSITIONS,
     activeRaw: PM_POSITIONS_RAW,
     closed: PM_CLOSED,
+    liquidity: PM_LIQUIDITY_POSITIONS,
   },
   activity: {
     transactions: PM_TRANSACTIONS,
@@ -43,6 +46,7 @@ const PM_MODEL_GENERATED = {
     positionIdAliases: PM_POSITION_ID_ALIASES,
     totals: {
       active: PM_TOTAL_ACTIVE,
+      liquidity: PM_TOTAL_LIQUIDITY,
       workbookRow: PM_TOTAL_WORKBOOK_ROW,
     },
   },

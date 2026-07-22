@@ -24,6 +24,7 @@ const PM_VALUES = PM_MODEL.series.values;
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 const PM_MANAGERS = PM_MODEL.metadata.managers;
+const PM_LIQUIDITY_POSITIONS = PM_MODEL.holdings.liquidity ?? [];
 
 // Interactive Brokers is shown separately as "ib" for custody analytics.
 const CUSTODIAN_GROUPS = ["caixa", "ubs", "bankinter", "ib", "jpmorgan", "andbank", "altres"];
@@ -243,7 +244,9 @@ export function PublicMarketsTab() {
     return (Math.pow(1 + totalReturn, 1 / years) - 1) * 100;
   }, [reportMonthly]);
 
+  const liquidityValue = PM_LIQUIDITY_POSITIONS.reduce((sum, row) => sum + (Number(row.valorMercat) || 0), 0);
   const residualValue = total - (
+    liquidityValue +
     currentManagerValues.caixa +
     currentManagerValues.ubs +
     currentManagerValues.bankinter +
@@ -319,8 +322,18 @@ export function PublicMarketsTab() {
         [`r${_cy - 2}`]: null,
       }, _custodianPositions.jpmorgan),
       withMeta({
+        id: "liquidity",
+        nom: "Liquiditat",
+        tipus: "Cash",
+        valorActual: liquidityValue,
+        rendPct: null,
+        ytd: null,
+        [`r${_cy - 1}`]: null,
+        [`r${_cy - 2}`]: null,
+      }, PM_LIQUIDITY_POSITIONS),
+      withMeta({
         id: "altres",
-        nom: "Cash / Excel no assignat",
+        nom: "Excel no assignat",
         tipus: "RV+RF",
         valorActual: currentManagerValues.altres + residualValue,
         rendPct: null,
@@ -329,7 +342,7 @@ export function PublicMarketsTab() {
         [`r${_cy - 2}`]: null,
       }, _custodianPositions.altres),
     ];
-  }, [currentManagerValues, residualValue, effectiveManagers]);
+  }, [currentManagerValues, residualValue, liquidityValue, effectiveManagers]);
 
   const providerData = useMemo(() => (
     PERIODS.map(({ field, label }) => {
@@ -407,9 +420,10 @@ export function PublicMarketsTab() {
         const etfAltres     = ubs * ubsEtfR + jpmorgan * jpmEtfR + ib * ibEtfR;
         const fgp           = caixa * (1 - caixaEtfR) + bk * (1 - bkEtfR) + ubs * (1 - ubsEtfR) + jpmorgan * (1 - jpmEtfR);
         const accions       = ib * (1 - ibEtfR);
-        const assigned      = etfCaixa + etfBankinter + etfAltres + fgp + wam + accions;
+        const liquiditat    = month >= WORKBOOK_TOTAL_MONTH ? liquidityValue : 0;
+        const assigned      = etfCaixa + etfBankinter + etfAltres + fgp + wam + accions + liquiditat;
         const altres        = Math.max((totalByMonth.get(month) ?? assigned) - assigned, 0);
-        return { month, etfCaixa, etfBankinter, etfAltres, fgp, wam, accions, altres };
+        return { month, etfCaixa, etfBankinter, etfAltres, fgp, wam, accions, liquiditat, altres };
       });
     }
 
@@ -425,9 +439,10 @@ export function PublicMarketsTab() {
       const andbank   = pm?.andbank ?? (custodian.andbank ?? 0);
       const abelBK    = pm?.abelBK ?? null;
       const interactiveBrokers = abelBK != null ? Math.max(abelBK - bankinter, 0) : (custodian.ib ?? 0);
+      const liquiditat = month >= WORKBOOK_TOTAL_MONTH ? liquidityValue : 0;
       const totalValue = totalByMonth.get(month) ?? null;
-      const altres = totalValue == null ? null : Math.max(totalValue - caixa - ubs - bankinter - interactiveBrokers - andbank - jpmorgan, 0);
-      return { month, caixa, ubs, bankinter, interactiveBrokers, andbank, jpmorgan, altres };
+      const altres = totalValue == null ? null : Math.max(totalValue - caixa - ubs - bankinter - interactiveBrokers - andbank - jpmorgan - liquiditat, 0);
+      return { month, caixa, ubs, bankinter, interactiveBrokers, andbank, jpmorgan, liquiditat, altres };
     });
   }, [chartMonths, chartView, custodianValueByMonth, totalValueSeries, typeValueByMonth, reportMonthly]);
 
@@ -449,9 +464,10 @@ export function PublicMarketsTab() {
       fgp:           valueOf(fgp),
       rfWam:         currentManagerValues.andbank,
       accionsIB:     valueOf(ibStocks),
+      liquiditat:    liquidityValue,
       residualExcel: Math.max(residualValue, 0),
     };
-  }, [currentManagerValues, residualValue]);
+  }, [currentManagerValues, residualValue, liquidityValue]);
 
   // ── Bucket weighted annual returns ────────────────────────────────────────
   const bucketReturns = useMemo(() => {
@@ -596,6 +612,7 @@ export function PublicMarketsTab() {
         secLabel={secLabel}
         total={total}
         bucketValues={bucketValues}
+        liquidityAccounts={PM_LIQUIDITY_POSITIONS}
         bucketReturns={bucketReturns}
         ytdWeighted={ytdWeighted}
         portfolioTWR={portfolioTWR}

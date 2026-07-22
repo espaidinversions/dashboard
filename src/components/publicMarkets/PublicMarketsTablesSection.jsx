@@ -70,6 +70,8 @@ function SubPositionRow({ position, tc }) {
   const heldYears = yearsHeld(position.dataCompra);
   const positionCagr = cagr(position.rendInici, heldYears);
   const disc = position._discontinued === true;
+  const isCashAccount = position.tipus === "Liquiditat" || position.tipus === "Cash";
+  const canRoute = !disc && !isCashAccount && position.isin;
   return (
     <tr style={{ borderBottom: `1px solid ${tc.border}`, opacity: disc ? 0.6 : 1 }}>
       <td style={{ padding: "5px 8px", color: tc.navy }}>
@@ -78,10 +80,12 @@ function SubPositionRow({ position, tc }) {
             {position.nom}
             <span style={{ marginLeft: 6, fontSize: 9, fontWeight: 700, letterSpacing: "0.07em", color: tc.red, background: tc.red + "18", borderRadius: 4, padding: "1px 4px" }}>DISC.</span>
           </span>
-        ) : (
+        ) : canRoute ? (
           <Link to={`/mercats-publics/${makePmPositionRouteId(position)}`} style={{ color: tc.navy, textDecoration: "none", fontWeight: 500 }}>
             {position.nom}
           </Link>
+        ) : (
+          <span style={{ fontWeight: 500, color: isCashAccount ? tc.text : tc.navy }}>{position.nom}</span>
         )}
       </td>
       <td style={{ padding: "5px 8px", fontSize: 10, color: tc.textLight }}>{position.custodian ?? "—"}</td>
@@ -252,7 +256,7 @@ export function PublicMarketsTablesSection({
         </tbody>
       </table>
       <div style={{ fontSize: 10, color: tc.textLight, marginTop: 10, fontStyle: "italic" }}>
-        {`Des d'inici: TWR des del primer snapshot mensual (UBS/Caixa/Andbank des des. 2023; Bankinter des de ${_bankinterInceptionLabel} — model, pot diferir dels estats del gestor). CAGR: retorn anualitzat equivalent. TER: mitjana ponderada del cost anual declarat per posició. MTM: darrera valoració disponible (verd ≤15d, ambre 16–30d, vermell >30d).`}
+        {`Des d'inici: TWR des del primer snapshot mensual (UBS/Caixa/Andbank des des. 2023; Bankinter des de ${_bankinterInceptionLabel} — model, pot diferir dels estats del gestor). Liquiditat desplega els comptes C/c de l'Excel. CAGR: retorn anualitzat equivalent. TER: mitjana ponderada del cost anual declarat per posició. MTM: darrera valoració disponible (verd ≤15d, ambre 16–30d, vermell >30d).`}
       </div>
     </div>
   );

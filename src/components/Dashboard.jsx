@@ -119,6 +119,11 @@ function Dashboard() {
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
   const [includeCompanies, setIncludeCompanies] = usePersistedState("ui_alt_include_companies", false);
   const [matrixMetric, setMatrixMetric] = usePersistedState("ui_alt_matrix_metric", "tvpi");
+  // Single control for the Resum tab: the 3-way figures scope also drives whether
+  // the companies matrix is shown (Fons → hidden, All/Companyies → shown).
+  const [resumScope, setResumScope] = usePersistedState("ui_resum_scope", "all");
+  const resumIncludeCompanies = resumScope !== "vehicles"; // shown for "all" and "companies"
+  const resumShowFunds = resumScope !== "companies";       // shown for "all" and "vehicles"
 
   const altCohortMatrix = useMemo(
     () => buildAltCohortMatrix(d.rawCC, d.fundMeta),
@@ -613,13 +618,28 @@ function Dashboard() {
               <Suspense fallback={null}>
                 {inversionsSubTab === "resum"
                   ? <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
-                      <PipelineFY26 chartsOnly initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
+                      <TxSection
+                        summaryOnly
+                        tx={altAllTx}
+                        compr={altAllCompr}
+                        scopeToggle
+                        scope={resumScope}
+                        onScopeChange={setResumScope}
+                        vehiclesLabel="Fons"
+                        search={globalSearch}
+                        catCfg={catCfg}
+                        estCfg={estCfg}
+                        tc={tc}
+                        dark={dark}
+                        canEdit={false}
+                      />
                       <AltCohortSection
                         tc={tc}
                         matrix={altCohortMatrix}
                         companyMatrix={altCompanyCohortMatrix}
-                        includeCompanies={includeCompanies}
-                        onToggleCompanies={setIncludeCompanies}
+                        includeCompanies={resumIncludeCompanies}
+                        showFundsMatrix={resumShowFunds}
+                        hideCompaniesToggle
                         metric={matrixMetric}
                         onMetricChange={setMatrixMetric}
                       />

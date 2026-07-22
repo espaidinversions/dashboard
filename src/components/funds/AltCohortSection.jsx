@@ -2,7 +2,7 @@ import AltCohortMatrix, { MATRIX_METRIC_LABELS } from "./AltCohortMatrix.jsx";
 import { COMPANY_STRATEGY_LABELS } from "../../data/altCohortModel.js";
 import { IncludeCompaniesToggle } from "./IncludeCompaniesToggle.jsx";
 
-const METRIC_OPTIONS = ["tvpi", "irr", "dpi"];
+const METRIC_OPTIONS = ["dpi", "tvpi", "irr"];
 
 /** Segmented metric selector — same visual language as the TxSection scope toggle. */
 function MetricToggle({ metric, onChange, tc }) {
@@ -47,33 +47,40 @@ export function AltCohortSection({
   onToggleCompanies = () => {},
   metric = "tvpi",
   onMetricChange = () => {},
+  hideCompaniesToggle = false, // hide the include-companies toggle when it's driven externally
+  showFundsMatrix = true, // render the Fons matrix (set false to show only companies)
 }) {
-  // Always render: AltCohortMatrix shows an inline "Encara no hi ha dades" message
-  // when the matrix is empty, so the header controls stay visible instead of
-  // the whole section vanishing.
+  // The metric toggle (and optional companies toggle) lives on the first visible
+  // matrix, so it stays reachable even when only the companies matrix shows.
+  const action = (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
+      <MetricToggle metric={metric} onChange={onMetricChange} tc={tc} />
+      {!hideCompaniesToggle && <IncludeCompaniesToggle checked={includeCompanies} onChange={onToggleCompanies} tc={tc} />}
+    </div>
+  );
+
+  // Always mount at least one matrix; AltCohortMatrix renders its own inline
+  // "Encara no hi ha dades" message when empty, so controls stay visible.
   return (
     <div>
-      <AltCohortMatrix
-        matrix={matrix}
-        tc={tc}
-        metric={metric}
-        action={
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 10 }}>
-            <MetricToggle metric={metric} onChange={onMetricChange} tc={tc} />
-            <IncludeCompaniesToggle checked={includeCompanies} onChange={onToggleCompanies} tc={tc} />
-          </div>
-        }
-      />
-      {/* Same rule as the main matrix: keep it mounted when empty so the toggle
-          visibly does something — AltCohortMatrix renders its own empty message. */}
+      {showFundsMatrix && (
+        <AltCohortMatrix
+          matrix={matrix}
+          tc={tc}
+          metric={metric}
+          title="Resum Fons"
+          action={action}
+        />
+      )}
       {includeCompanies && (
-        <div style={{ marginTop: 18 }}>
+        <div style={{ marginTop: showFundsMatrix ? 18 : 0 }}>
           <AltCohortMatrix
             matrix={companyMatrix}
             tc={tc}
             metric={metric}
-            title={`${MATRIX_METRIC_LABELS[metric] ?? "TVPI"} — Companies (Search Funds + Participades)`}
+            title="Resum Companyies"
             strategyLabels={COMPANY_STRATEGY_LABELS}
+            action={showFundsMatrix ? undefined : action}
           />
         </div>
       )}

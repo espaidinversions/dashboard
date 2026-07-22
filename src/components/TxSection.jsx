@@ -33,11 +33,19 @@ export function TxSection({
   scopeToggle = false,
   scopeStorageKey = null,
   defaultScope = "vehicles", // "vehicles" | "companies" | "all"
+  summaryOnly = false, // when true, render only the flow chart + KPI cards (no filters/table)
+  vehiclesLabel = "Vehicles", // label for the "vehicles" scope button
+  scope: scopeProp, // optional controlled scope ("all" | "vehicles" | "companies")
+  onScopeChange, // optional setter for controlled scope
 }) {
   const { openAddModal, openEditModal } = useCapitalCallModal();
   const [sort, setSort] = useState({ k: "data", d: "desc" });
   const storageKey = scopeStorageKey || "ui_tx_scope";
-  const [scope, setScope] = usePersistedState(storageKey, defaultScope);
+  const [internalScope, setInternalScope] = usePersistedState(storageKey, defaultScope);
+  // Controlled when a `scope` prop is supplied (lets a parent link this toggle to
+  // other controls); otherwise self-managed via persisted state.
+  const scope = scopeProp !== undefined ? scopeProp : internalScope;
+  const setScope = onScopeChange !== undefined ? onScopeChange : setInternalScope;
   const [filters, setFilters] = useState({ year: "Tots", month: "Tots", fons: "", tipus: "Tots", eur: "", est: "Tots", comentaris: "" });
   const [page, setPage] = useState(0);
   const TX_PP = 25;
@@ -295,7 +303,7 @@ export function TxSection({
           {scopeToggle ? (
             <div style={{ display: "inline-flex", border: `1px solid ${tc.border}`, borderRadius: 8, overflow: "hidden", background: tc.bg }}>
               <button onClick={() => setScope("all")} style={{ ...scopeBtnStyle("all"), borderRight: `1px solid ${tc.border}` }}>All</button>
-              <button onClick={() => setScope("vehicles")} style={{ ...scopeBtnStyle("vehicles"), borderRight: `1px solid ${tc.border}` }}>Vehicles</button>
+              <button onClick={() => setScope("vehicles")} style={{ ...scopeBtnStyle("vehicles"), borderRight: `1px solid ${tc.border}` }}>{vehiclesLabel}</button>
               <button onClick={() => setScope("companies")} style={scopeBtnStyle("companies")}>Companies</button>
             </div>
           ) : null}
@@ -367,6 +375,7 @@ export function TxSection({
         ))}
       </div>
 
+      {!summaryOnly && (
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14, gap: 12 }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.11em", textTransform: "uppercase", color: tc.textLight }}>{title}</div>
@@ -516,6 +525,7 @@ export function TxSection({
           </div>
         ) : null}
       </div>
+      )}
     </div>
   );
 }
