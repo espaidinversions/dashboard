@@ -18,6 +18,8 @@ import {
   rowToSearcher,
   dealToRow,
   rowToDeal,
+  liquidityAccountToRow,
+  rowToLiquidityAccount,
 } from "../data/mappers.js";
 import { mergeSearchersWithCapitalCalls } from "../data/searcherModel.js";
 import { buildFallbackCompaniesFromCapitalCalls } from "../data/privateCompanyModel.js";
@@ -44,6 +46,8 @@ export {
   rowToSearcher,
   dealToRow,
   rowToDeal,
+  liquidityAccountToRow,
+  rowToLiquidityAccount,
   mergeSearchersWithCapitalCalls,
   buildFallbackCompaniesFromCapitalCalls,
   inferCapitalCallCategoryFromTipus,

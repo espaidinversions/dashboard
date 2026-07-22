@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useTheme } from "../theme.js";
-import { parseCapitalCallsCSV, parsePipelineCSV, mapCapitalCallsRows, mapLegacySearchFundRows, mapPipelineRows, mapCompanyRows, mapSearcherRows, mapFundMetaRows, mapKpiRows } from "../utils.js";
+import { parseCapitalCallsCSV, parsePipelineCSV, mapCapitalCallsRows, mapLegacySearchFundRows, mapPipelineRows, mapCompanyRows, mapSearcherRows, mapFundMetaRows, mapKpiRows, mapLiquidityAccountsRows } from "../utils.js";
 import { apiFetchJson } from "../apiClient.js";
 import { readWorkbookFromArrayBuffer, sheetToRows } from "../utils/xlsx.js";
 
@@ -45,7 +45,9 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
       if (hasHeaders(fmRows, ["Fons", "TVPI"])) { bundle.fundMeta = mapFundMetaRows(fmRows); loaded++; }
       const kpiRows = sheet("KPIs Trimestral");
       if (kpiRows?.length && hasHeaders(kpiRows, ["Nom"])) { bundle.kpiTrimestral = mapKpiRows(kpiRows); loaded++; }
-      if (!loaded) throw new Error("No s'ha trobat cap full reconegut (Capital Calls, Search_Funds, Pipeline, Participades, Searchers, Fund Meta, KPIs Trimestral).");
+      const laRows = sheet("Liquiditat");
+      if (hasHeaders(laRows, ["Compte", "Secció", "Saldo (€)"])) { bundle.liquidityAccounts = mapLiquidityAccountsRows(laRows); loaded++; }
+      if (!loaded) throw new Error("No s'ha trobat cap full reconegut (Capital Calls, Search_Funds, Pipeline, Participades, Searchers, Fund Meta, KPIs Trimestral, Liquiditat).");
       await Promise.resolve(onLoad("xlsx", bundle));
       setXlsxStatus({ name: file.name, sheets: loaded });
       setError(null);

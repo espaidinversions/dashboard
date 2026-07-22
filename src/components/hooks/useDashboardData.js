@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { loadAll, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle } from "../../db.js";
+import { loadAll, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle, saveLiquidityAccounts } from "../../db.js";
 import { apiFetchJson } from "../../apiClient.js";
 import { useToast } from "../../toast.jsx";
 import { normalizePrivateWorkbookRows } from "../../data/alternativesModel.js";
@@ -114,6 +114,7 @@ export function useDashboardData() {
   const [companiesData, setCompaniesData] = useState([]);
   const [searchersData, setSearchersData] = useState([]);
   const [fundMeta, setFundMeta] = useState([]);
+  const [liquidityAccounts, setLiquidityAccounts] = useState([]);
   const [loadedAt,setLoadedAt]= useState(null);
   const [eurUsd,  setEurUsd]  = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -180,6 +181,7 @@ export function useDashboardData() {
         if (Array.isArray(data.companies)) setCompaniesData(data.companies);
         if (Array.isArray(data.searchers)) setSearchersData(data.searchers);
         if (Array.isArray(data.fundMeta)) setFundMeta(data.fundMeta);
+        if (Array.isArray(data.liquidityAccounts)) setLiquidityAccounts(data.liquidityAccounts);
         setLoadedAt(now);
       })
       .catch(err => {
@@ -301,6 +303,13 @@ export function useDashboardData() {
         setCompaniesData(bundle.companies);
         if (bundle.searchers != null) setSearchersData(bundle.searchers);
         if (bundle.fundMeta != null) setFundMeta(bundle.fundMeta);
+        // Liquidity is its own source of truth — persisted separately from the
+        // dashboard bundle RPC, only when the Excel included a Liquiditat sheet.
+        if (Array.isArray(rows.liquidityAccounts)) {
+          const { error: laError } = await saveLiquidityAccounts(rows.liquidityAccounts);
+          if (laError) throw laError;
+          setLiquidityAccounts(rows.liquidityAccounts);
+        }
         clearExcluded?.();
       } else if (key === "cc") {
         const { error } = await saveCapitalCalls(rows);
@@ -353,6 +362,7 @@ export function useDashboardData() {
     companiesData, setCompaniesData,
     searchersData, setSearchersData,
     fundMeta, setFundMeta,
+    liquidityAccounts, setLiquidityAccounts,
     loadedAt, setLoadedAt,
     isLoading,
     eurUsd,

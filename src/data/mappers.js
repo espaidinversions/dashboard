@@ -274,3 +274,34 @@ export function rowToDeal(r) {
     estimatedClosing: r.estimated_closing ?? null,
   };
 }
+
+const LIQUIDITY_SECTIONS = new Set(["alternatives", "real-estate", "mercats-publics"]);
+
+/** App liquidity account → DB row (snake_case). id is identity-generated, so it is omitted. */
+export function liquidityAccountToRow(a) {
+  const saldo = Number(a.saldo);
+  const saldoNative = a.saldoNative != null && a.saldoNative !== "" ? Number(a.saldoNative) : null;
+  return {
+    nom: String(a.nom ?? "").trim(),
+    banc: a.banc != null && a.banc !== "" ? String(a.banc).trim() : null,
+    section: LIQUIDITY_SECTIONS.has(a.section) ? a.section : "alternatives",
+    saldo: Number.isFinite(saldo) ? saldo : 0,
+    saldo_native: saldoNative != null && Number.isFinite(saldoNative) ? saldoNative : null,
+    divisa: String(a.divisa ?? "EUR").trim() || "EUR",
+    data: a.data || null,
+  };
+}
+
+/** DB liquidity row (snake_case) → app account (camelCase). */
+export function rowToLiquidityAccount(row) {
+  return {
+    id: row.id,
+    nom: row.nom ?? "",
+    banc: row.banc ?? null,
+    section: row.section,
+    saldo: row.saldo != null ? Number(row.saldo) : 0,
+    saldoNative: row.saldo_native != null ? Number(row.saldo_native) : null,
+    divisa: row.divisa ?? "EUR",
+    data: row.data ?? null,
+  };
+}
