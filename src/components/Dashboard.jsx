@@ -499,6 +499,22 @@ function Dashboard() {
 
   const canEdit = canEditSection(currentPermissionId);
 
+  // Inici (home) is visible only to admins and explicitly-granted users.
+  const canAccessInici = isAdmin || canAccessSection("inici");
+
+  // Redirect non-allowed users off the home tab to their first accessible
+  // section (alternatives → real-estate → mercats-publics). Users with zero
+  // section access fall through and see an explicit no-access state below.
+  useEffect(() => {
+    if (tab !== "home" || canAccessInici) return;
+    const target = [
+      { section: "alternatives", item: "alt-resum" },
+      { section: "real-estate", item: "re-resum" },
+      { section: "mercats-publics", item: "mp-resum" },
+    ].find((entry) => canAccessSection(entry.section));
+    if (target) handleNavigate(target.item);
+  }, [tab, canAccessInici, canAccessSection, handleNavigate]);
+
   return (
     <CapitalCallModalProvider defaultVehicleCurrency={defaultVehicleCurrency}>
       <div className={`dashboard-wrapper ${dark ? "dark-theme" : "light-theme"}`} style={{ display: "flex", minHeight: "100vh", background: tc.bg }}>
@@ -544,7 +560,14 @@ function Dashboard() {
           </div>
         )}
         <main id="dashboard-content" style={{ flex: 1, padding: "24px 32px" }}>
-          {tab === "home" && (
+          {tab === "home" && !canAccessInici && SECTIONS.length === 0 && (
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: "80px 24px", color: tc.textLight, textAlign: "center" }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: tc.text }}>No tens accés a cap secció</div>
+              <div style={{ fontSize: 13 }}>Contacta amb un administrador per obtenir permisos.</div>
+            </div>
+          )}
+
+          {tab === "home" && canAccessInici && (
             <LandingTab
               model={landingModel}
               tc={tc}

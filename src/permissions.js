@@ -4,6 +4,9 @@ export const ACCESS_SUPERUSER = "superuser";
 
 export const ACCESS_LEVELS = [ACCESS_NONE, ACCESS_USER, ACCESS_SUPERUSER];
 
+// The Inici (home/landing) page. Grantable like a section, but denied by default
+// for non-elevated users — only admins/superusers and explicitly-granted users see it.
+export const INICI_SECTION_ID = "inici";
 export const TOP_LEVEL_SECTION_IDS = ["alternatives", "real-estate", "mercats-publics"];
 export const ALTERNATIVES_SECTION_IDS = ["fons", "searchers", "companies", "inversions", "cash-model", "txlog"];
 export const REAL_ESTATE_SUBSECTION_IDS = ["re-directe", "re-altres"];
@@ -17,6 +20,7 @@ export const PUBLIC_MARKETS_SUBSECTION_IDS = [
 ];
 export const TRANSACTION_SUBSECTION_IDS = ["tx-alt", "tx-re", "tx-mp"];
 const ALL_SECTION_IDS = [
+  INICI_SECTION_ID,
   ...TOP_LEVEL_SECTION_IDS,
   ...ALTERNATIVES_SECTION_IDS,
   ...REAL_ESTATE_SUBSECTION_IDS,
@@ -87,10 +91,11 @@ export function buildSectionAccessMap({ role, sectionRoles, deniedSections } = {
 
   const access = Object.fromEntries(ALL_SECTION_IDS.map((sectionId) => [sectionId, baseLevel]));
 
-  // Restrict cash-model to admin/superuser by default.
+  // Restrict cash-model and Inici to admin/superuser by default.
   // Regular users can be granted access explicitly via section_roles.
   if (!isAdminRole(role) && !isLegacySuperuserRole(role)) {
     access["cash-model"] = ACCESS_NONE;
+    access[INICI_SECTION_ID] = ACCESS_NONE;
   }
 
   for (const [sectionIdRaw, levelRaw] of Object.entries(sectionRoles ?? {})) {

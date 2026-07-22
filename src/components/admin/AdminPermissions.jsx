@@ -25,6 +25,7 @@ const SECTION_GROUPS = [
   {
     groupLabel: "Seccions principals",
     items: [
+      { id: "inici", label: "Inici" },
       { id: "alternatives", label: "Alternatius" },
       { id: "real-estate", label: "Real Estate" },
       { id: "mercats-publics", label: "Mercats Públics" },

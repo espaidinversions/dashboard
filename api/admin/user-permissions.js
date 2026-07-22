@@ -9,6 +9,7 @@ import {
 } from "../_security.js";
 
 const VALID_SECTIONS = new Set([
+  "inici",                                            // home/landing page (grantable)
   "alternatives", "mercats-publics", "real-estate",   // top-level sections
   "fons", "searchers", "companies", "inversions", "cash-model", "txlog", // within alternatives
   "re-directe", "re-altres",

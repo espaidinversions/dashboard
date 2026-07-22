@@ -84,6 +84,23 @@ test("transaction shortcut leaves can escalate independently from display subsec
   assert.equal(getSectionAccessLevel(access, "mp-transaccions"), ACCESS_NONE);
 });
 
+test("inici is denied by default for regular users but can be granted explicitly", () => {
+  const baseUser = buildSectionAccessMap({ role: "user" });
+  assert.equal(getSectionAccessLevel(baseUser, "inici"), ACCESS_NONE);
+  assert.equal(hasSectionAccess(baseUser, "inici"), false);
+
+  const granted = buildSectionAccessMap({
+    role: "user",
+    sectionRoles: { inici: ACCESS_USER },
+  });
+  assert.equal(hasSectionAccess(granted, "inici"), true);
+});
+
+test("inici is allowed by default for admins and legacy superusers", () => {
+  assert.equal(hasSectionAccess(buildSectionAccessMap({ role: "admin" }), "inici"), true);
+  assert.equal(hasSectionAccess(buildSectionAccessMap({ role: "superuser" }), "inici"), true);
+});
+
 test("cash-model is denied by default but can be granted explicitly via sectionRoles", () => {
   const baseUser = buildSectionAccessMap({ role: "user" });
   assert.equal(getSectionAccessLevel(baseUser, "cash-model"), ACCESS_NONE);

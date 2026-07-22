@@ -236,8 +236,10 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
       {/* scrollable nav body */}
       <div style={{flex:1, overflowY:"auto", overflowX:"hidden", padding:"4px 0"}}>
 
-        {/* ── Inici ── */}
-        <Leaf item={{ id: "home", label: "Inici", icon: Home }} />
+        {/* ── Inici (admins + explicitly-granted users only) ── */}
+        {(isAdmin || (canAccessSection?.("inici") ?? false)) && (
+          <Leaf item={{ id: "home", label: "Inici", icon: Home }} />
+        )}
 
         {/* ── Portfoli group ── */}
         <GroupLabel label="Portfoli" />
