@@ -1,17 +1,9 @@
 // ── Paleta ────────────────────────────────────────────────
 import { TC_LIGHT } from "./theme.js";
 import { CAPITAL_CALL_TIPUS_OPTIONS as CAPITAL_CALL_TIPUS_MODEL_OPTIONS, CAPITAL_CALL_TIPUS_GROUPED } from "./data/capitalCallTipusModel.js";
-import { CAPITAL_CALL_STRATEGY_OPTIONS } from "./data/capitalCallStrategyModel.js";
 const TC = TC_LIGHT;
 
 // ── Configs ───────────────────────────────────────────────
-const CAT_CFG = {
-  "Capital Call":    { color:TC.navy,      bg:"#E8EFF5" },
-  "Distribució":     { color:TC.green,     bg:"#E8F5E9" },
-  "Retorn Capital":  { color:TC.greenDark, bg:"#D6EAE0" },
-  "Compromís":       { color:TC.navyLight, bg:"#EAF0F6" },
-  "Altres":          { color:TC.textLight, bg:TC.bgAlt  },
-};
 export const VEHICLE_TIPUS_CFG = {
   "Primari":     { color: TC.navy,      bg: "#E6EDF3" },
   "FoF":         { color: TC.greenDark, bg: "#E8F8E8" },
@@ -72,19 +64,12 @@ export const SEARCHER_MODALITAT_OPTIONS = ["Solo", "Duo", "Trio", "Partnership"]
 export const SEARCHER_FORM_ENTRADA_OPTIONS = ["Search Capital", "Equity Gap"];
 export const COMPANY_TIPUS_OPTIONS      = ["SF", "PE"];
 export const COMPANY_ORIGEN_OPTIONS     = ["Search Capital", "Equity Gap", "Direct PE"];
-const CAPITAL_CALL_CAT_OPTIONS   = Object.keys(CAT_CFG).filter(k => k !== "Compromís");
-const CAPITAL_CALL_VCPE_OPTIONS  = Object.keys(VCPE_CFG);
-const CAPITAL_CALL_EST_OPTIONS   = CAPITAL_CALL_STRATEGY_OPTIONS;
 export const CAPITAL_CALL_TIPUS_OPTIONS = CAPITAL_CALL_TIPUS_MODEL_OPTIONS;
 export { CAPITAL_CALL_TIPUS_GROUPED };
 
 // ── Data imports ─────────────────────────────────────────
-import { RAW_CC as RAW_CC_DATA } from "./data/capital-calls.js";
-import { FUNDS0 as FUNDS0_DATA } from "./data/pipeline.js";
 
 export const EUR_USD = 1.08;
-const toEUR = (a,c) => c==="USD" ? a/EUR_USD : a;
-const toUSD = (a,c) => c==="EUR" ? a*EUR_USD : a;
 export const SCOL  = {"Fons primari":TC.navy,"Coinversions":TC.green,"Fons secundaris":TC.navyLight,"Fons de fons":TC.greenDark};
 export const GCOL  = {EU:TC.green,US:TC.navy,"EU/US":TC.navyLight};
 export const SECCOL= {Software:TC.navy,Generalista:TC.green,"B2B Services":TC.greenDark,Healthcare:TC.purple,"Software / B2B":TC.greenLight};
@@ -94,7 +79,4 @@ export const SBADGE= {"Fons primari":{bg:"#E8EFF5",color:TC.navy},"Coinversions"
 export const GBADGE= {EU:{bg:"#E8F4EE",color:TC.greenDark},US:{bg:"#E8EFF5",color:TC.navyDark},"EU/US":{bg:"#EAF0F6",color:TC.navyLight}};
 
 // ── Precompute ────────────────────────────────────────────
-const COMPROMISOS  = RAW_CC_DATA.filter(r=>r.cat==="Compromís");
-const TRANSACTIONS = RAW_CC_DATA.filter(r=>r.cat!=="Compromís");
-const ALL_FONS = [...new Set(RAW_CC_DATA.map(r=>r.fons))].sort();
 

@@ -1,4 +1,3 @@
-import React from "react";
 import { TC_LIGHT } from "../../theme.js";
 
 export function KpiCard({ label, value, sub, valueColor, hero = false, progress, tc = TC_LIGHT }) {

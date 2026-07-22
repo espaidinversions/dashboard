@@ -5,51 +5,6 @@ const ENTITY_ID_PREFIX = {
   vehicle: "MOCKNIF:VEHICLE:",
 };
 
-const ENTITY_STOPWORDS = new Set([
-  "a",
-  "an",
-  "and",
-  "capital",
-  "partner",
-  "partners",
-  "fund",
-  "funds",
-  "invest",
-  "investment",
-  "investments",
-  "holding",
-  "holdings",
-  "group",
-  "global",
-  "private",
-  "equity",
-  "program",
-  "class",
-  "corporation",
-  "corp",
-  "company",
-  "companies",
-  "limited",
-  "ltd",
-  "llp",
-  "llc",
-  "lp",
-  "sl",
-  "slp",
-  "srl",
-  "sa",
-  "spa",
-  "scra",
-  "scr",
-  "scsp",
-  "sicav",
-  "raif",
-  "fcr",
-  "fcre",
-  "ficc",
-  "u",
-  "ua",
-]);
 
 const EXACT_MATCH_STOPWORDS = new Set([
   "sl",
@@ -128,15 +83,6 @@ function normalizePrivateEntityName(value) {
     .trim();
 }
 
-function tokenizePrivateEntityName(value) {
-  return normalizePrivateEntityName(value)
-    .split(/\s+/)
-    .filter((token) => token && (token.length > 1 || /^\d+$/.test(token)) && !ENTITY_STOPWORDS.has(token));
-}
-
-function uniqueSorted(values) {
-  return [...new Set(values)].sort();
-}
 
 function normalizedMatchKey(value) {
   const tokens = normalizePrivateEntityName(value)

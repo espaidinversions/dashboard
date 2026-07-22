@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { echarts } from "../../echarts.js";
 import { ecTheme } from "../../echartsTheme.js";
 import { modeValue, fmtK, periodOf } from "./prospectiveUtils.js";

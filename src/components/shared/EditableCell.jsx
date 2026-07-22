@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTheme } from "../../theme.js";
 import { readStoredJSON, writeStoredJSON } from "../../utils.js";
 

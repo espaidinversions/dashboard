@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useTheme } from "../../theme.js";
 
 export function DeleteRowButton({ onDelete }) {

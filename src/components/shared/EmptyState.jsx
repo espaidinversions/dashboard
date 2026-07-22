@@ -1,4 +1,3 @@
-import React from "react";
 import { useTheme } from "../../theme.js";
 
 export function EmptyState({ message = "Cap resultat amb els filtres actuals." }) {

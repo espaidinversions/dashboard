@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
 import { makeAggregatePosition, splitIbPositions, sumMarketValue } from "../data/pmClassification.js";
-import { TC_LIGHT, useTheme } from "../theme.js";
+import { useTheme } from "../theme.js";
 import { fmtM } from "../utils.js";
 import { useAuth } from "../auth.jsx";
 import { loadPMPositionOverrides, upsertPMPositionOverride } from "../db.js";
@@ -50,37 +50,6 @@ function buildHoldingsRows() {
 
 const PM_STATIC = buildHoldingsRows();
 
-function SectionHeader({ tipus, count, total, tc = TC_LIGHT }) {
-  const isRV  = tipus === "RV";
-  const color = isRV ? tc.navy : "#7A6000";
-  const label = isRV ? "Renda Variable" : "Renda Fixa";
-  return (
-    <tr>
-      <td colSpan={11} style={{
-        padding: "8px 10px", fontWeight: 700, fontSize: 10,
-        letterSpacing: "0.09em", textTransform: "uppercase",
-        color, borderBottom: `2px solid ${tc.border}`,
-        borderTop: `1px solid ${tc.border}`,
-      }}>
-        {label} · <span style={{ fontFamily: "'DM Mono',monospace" }}>{count} posicions · {fmtM(total)}</span>
-      </td>
-    </tr>
-  );
-}
-
-function PnlCell({ v, tc = TC_LIGHT }) {
-  if (v == null) {
-    return <td style={{ padding: "6px 10px", textAlign: "right", color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</td>;
-  }
-  const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
-  const bg    = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
-  const label = (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
-  return (
-    <td style={{ padding: "6px 10px", textAlign: "right" }}>
-      <span style={{ fontFamily: "'DM Mono',monospace", fontWeight: 700, fontSize: 11, color, background: bg, borderRadius: 4, padding: "1px 5px" }}>{label}</span>
-    </td>
-  );
-}
 
 /** Inline editable cell — shows value normally, becomes an input on click when canEdit=true. */
 function EditableCell({ value, canEdit, onSave, renderValue, td }) {

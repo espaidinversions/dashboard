@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { useTheme } from "../theme.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { FUND_PRICES } from "../generated/prices/fundPrices.js";

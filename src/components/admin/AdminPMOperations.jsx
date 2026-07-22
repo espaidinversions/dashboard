@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useTheme } from "../../theme.js";
 import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
@@ -57,20 +57,6 @@ function InlineInput({ value, type = "text", onSave, disabled, style }) {
       onKeyDown={e => { if (e.key === "Enter") commit(); if (e.key === "Escape") setEditing(false); }}
       style={{ padding: "2px 6px", borderRadius: 4, border: `1.5px solid ${tc.green}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit", width: 100, ...style }}
     />
-  );
-}
-
-function InlineSelect({ value, options, onSave, disabled }) {
-  const { tc } = useTheme();
-  return (
-    <select
-      value={value ?? ""}
-      onChange={e => onSave(e.target.value)}
-      disabled={disabled}
-      style={{ padding: "2px 6px", borderRadius: 4, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 12, fontFamily: "inherit" }}
-    >
-      {options.map(o => <option key={o} value={o}>{o}</option>)}
-    </select>
   );
 }
 

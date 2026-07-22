@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ThemeProvider, useTheme } from "../theme.js";
 import { fmtM, fmtSignedM, formatIsoDateDMY } from "../utils.js";
@@ -46,7 +46,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   const { canEditSection } = useAuth();
   const { toast } = useToast();
   const canEdit = canEditSection("searchers");
-  const [searchLocal, setSearchLocal] = useState("");
+  const [searchLocal] = useState("");
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [subTab, setSubTab] = useState(subTabOverride ?? "tots");
   const showSubTabs = subTabOverride !== undefined;

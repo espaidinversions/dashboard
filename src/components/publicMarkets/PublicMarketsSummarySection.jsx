@@ -1,10 +1,9 @@
-import React from "react";
 import ReactECharts from "../../ReactECharts.jsx";
 import { ecTheme } from "../../echartsTheme.js";
 import { fmtM, fmtMonthKey } from "../../utils.js";
 import { CumulativeFlowsChart } from "../CumulativeFlowsChart.jsx";
 import { FilterPills } from "./PublicMarketsFilters.jsx";
-import { AREA_COLORS, KpiCard, MGR_COLORS, pctFmt } from "./PublicMarketsShared.jsx";
+import { AREA_COLORS, KpiCard, pctFmt } from "./PublicMarketsShared.jsx";
 import { SectionHeader } from "../SharedComponents.jsx";
 
 const _cy = new Date().getFullYear();

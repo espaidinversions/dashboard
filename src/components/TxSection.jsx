@@ -1,12 +1,12 @@
-import React, { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { fmtM, fmtSignedM, fmtSignedNative, usePersistedState } from "../utils.js";
 import { makeVehicleDetailPath } from "../data/privateRoutes.js";
-import { CAPITAL_CALL_STRATEGY_OPTIONS, estSection, isCompanyEst } from "../data/capitalCallStrategyModel.js";
+import { estSection, isCompanyEst } from "../data/capitalCallStrategyModel.js";
 import { normalizeCapitalCallTipus, DISTRIBUCIONS_SET } from "../data/capitalCallTipusModel.js";
-import { Badge, DeleteRowButton, EditableCell } from "./SharedComponents.jsx";
+import { Badge, DeleteRowButton } from "./SharedComponents.jsx";
 import { useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
 
 const PM_TX_MONTHS_SHORT = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
@@ -21,14 +21,12 @@ export function TxSection({
   tx,
   compr = [],
   search = "",
-  catCfg,
   estCfg,
   tc,
   dark,
   canEdit,
   addDefaults,
   onDelete,
-  onQuickUpdate,
   title,
   scopeToggle = false,
   scopeStorageKey = null,

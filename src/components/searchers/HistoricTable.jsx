@@ -1,9 +1,7 @@
-import React from "react";
 import { SEARCHER_FORM_ENTRADA_OPTIONS } from "../../config.js";
 import { FlagImg, EditableCell, DeleteRowButton } from "../SharedComponents.jsx";
 import { tableCardStyle } from "../SharedComponents.jsx";
 import { SectionHeading, StatusBadge, StageBadge, ENTRY_BADGE_CFG } from "../SearchersBadges.jsx";
-import { searcherKey } from "../../data/searcherFormatting.js";
 
 export function HistoricTable({
   TC,

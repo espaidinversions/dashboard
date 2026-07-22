@@ -4,7 +4,6 @@ import { useToast } from "../../toast.jsx";
 import { sharedStyles } from "../SharedComponents.jsx";
 import { loadAuditLog, revertChange } from "./adminApi.js";
 import { formatIsoDateTime } from "../../utils.js";
-import { useAuth } from "../../auth.jsx";
 import { useDataLoader } from "../hooks/useDataLoader.js";
 
 function exportCsv(logs) {

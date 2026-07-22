@@ -1,4 +1,3 @@
-import React from "react";
 import { KpiCard } from "../shared/KpiCard.jsx";
 import { SECTION_NAV_TARGET } from "../../data/landingModel.js";
 import { formatEur } from "./landingFormat.js";

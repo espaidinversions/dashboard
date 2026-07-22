@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useTheme } from "../theme.js";
 import { calcMesos, parseSearchersCSV, usePersistedState } from "../utils.js";
 import { GEO_NAME } from "../config.js";

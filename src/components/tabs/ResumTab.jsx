@@ -1,4 +1,3 @@
-import React from "react";
 import ReactECharts from "../../ReactECharts.jsx";
 import { ecTheme } from "../../echartsTheme.js";
 import { TC_LIGHT } from "../../theme.js";

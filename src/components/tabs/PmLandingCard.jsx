@@ -1,4 +1,3 @@
-import React from "react";
 import { PM_MODEL } from "../../data/publicMarketsModel.js";
 import { WAM_POSITIONS } from "../../data/wamPositions.js";
 import { summarizeLatestPmValuesWithWam } from "../../data/pmValueUtils.js";

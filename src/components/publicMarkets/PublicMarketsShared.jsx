@@ -1,4 +1,3 @@
-import React from "react";
 import { MGR_COLORS as _MGR_COLORS } from "../../chartColors.js";
 import { TC_LIGHT } from "../../theme.js";
 import { KpiCard as _KpiCard } from "../SharedComponents.jsx";
@@ -42,12 +41,6 @@ export const PERIODS = [
   { field: "ytd", label: `YTD '${String(_cy).slice(2)}` },
 ];
 
-const DEFAULT_EXPAND_TIPUS = {
-  caixa: "all",
-  ubs: "all",
-  abel: "all",
-  andbank: null,
-};
 
 export function weightedReturn(field, managerValueById, tipus = null, managers = PM_MANAGERS) {
   const entries = managers.flatMap((manager) => {
@@ -172,10 +165,3 @@ export function pctFmt(v) {
   return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
 }
 
-const TX_MONTH_NAMES = ["Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"];
-
-function fmtTxMonth(yyyymm) {
-  if (!yyyymm || yyyymm === "????-??") return "Sense data";
-  const [year, month] = yyyymm.split("-");
-  return `${TX_MONTH_NAMES[parseInt(month, 10) - 1]} ${year}`;
-}

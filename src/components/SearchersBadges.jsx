@@ -1,4 +1,3 @@
-import React from "react";
 import { useTheme } from "../theme.js";
 import { SEARCHER_STATUS_CFG } from "../config.js";
 import { SANKEY_NODE_COLORS as _SANKEY_NODE_COLORS } from "../chartColors.js";

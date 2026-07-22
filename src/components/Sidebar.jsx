@@ -1,5 +1,5 @@
 // src/components/Sidebar.jsx
-import React, { useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { TC_LIGHT } from "../theme.js";
 import { Briefcase, Building2, Search, Building, Home, TrendingUp, BookOpen, Users, DollarSign, Menu, ChevronLeft, LineChart } from "lucide-react";
@@ -60,7 +60,7 @@ const BOTTOM_ITEMS = [
 ];
 
 // ── component ─────────────────────────────────────────────
-export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavigate, tc = TC_LIGHT, dark, isAdmin, canAccessSection, canAccessAny }) {
+export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavigate, tc = TC_LIGHT, dark, isAdmin, canAccessSection }) {
   const [expanded, setExpanded] = useState(new Set(["alt","re","mp"]));
   const [popover,  setPopover]  = useState(null);
   const activeId = activeItem ?? activeNavItem;

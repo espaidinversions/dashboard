@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
@@ -13,7 +13,6 @@ const PM_POSITIONS    = PM_MODEL.holdings.active;
 const PM_CLOSED       = PM_MODEL.holdings.closed;
 const PM_TRANSACTIONS = PM_MODEL.activity.transactions;
 
-const MONTH_NAMES  = ["Gener","Febrer","Març","Abril","Maig","Juny","Juliol","Agost","Setembre","Octubre","Novembre","Desembre"];
 const MESOS_SHORT  = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
 const fmtYYYYMMShort = yyyymm => {
   const [y, m] = yyyymm.split("-");
@@ -357,7 +356,7 @@ export function PMTransaccionsTab({ search = "" }) {
 }
 
 // ── Nova transacció modal ─────────────────────────────────────
-function NovaTxModal({ tc, dark, onClose, onSave }) {
+function NovaTxModal({ tc, onClose, onSave }) {
   const [form, setForm] = useState({
     action: "buy", date: new Date().toISOString().slice(0, 10),
     isin: "", nom: "", tipus: "RV", custodian: "CaixaBank",

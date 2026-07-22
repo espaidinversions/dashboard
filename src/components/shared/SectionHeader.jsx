@@ -1,4 +1,3 @@
-import React from "react";
 import { useTheme } from "../../theme.js";
 
 export function SectionHeader({ title, count, action, tc: tcProp }) {

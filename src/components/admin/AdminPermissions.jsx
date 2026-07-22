@@ -69,7 +69,6 @@ const SECTION_GROUPS = [
   },
 ];
 
-const ALL_SECTIONS = SECTION_GROUPS.flatMap((group) => group.items);
 
 function normalizeStoredPermissions(role, row) {
   return buildSectionAccessMap({

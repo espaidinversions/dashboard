@@ -1,4 +1,3 @@
-import React from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { fmtM } from "../utils.js";
 import { formatPercent } from "../data/searcherFormatting.js";

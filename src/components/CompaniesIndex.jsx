@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ThemeProvider, useTheme } from "../theme.js";
 import { fmtM, formatMultiple, multipleColor } from "../utils.js";
-import { Badge, indexPageStyles, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
+import { Badge, indexPageStyles, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCapitalCalls, loadCompanies } from "../db.js";
 import { isActualCompany } from "../data/privateCompanyModel.js";
 import { SF_STRATEGY_ADQUISICIO, STRATEGY_PARTICIPADA_ALTRES } from "../data/searchFundSnapshotModel.js";
@@ -14,7 +14,7 @@ const TIPUS_CFG = {
 
 export function CompaniesIndexInner({ inline = false, searchOverride, subTab = "totes" }) {
   const { tc } = useTheme();
-  const [searchLocal, setSearchLocal] = useState("");
+  const [searchLocal] = useState("");
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [sortKey, setSortKey] = useState("ticket");
   const [sortDir, setSortDir] = useState("desc");

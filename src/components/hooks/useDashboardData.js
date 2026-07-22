@@ -6,7 +6,7 @@ import { normalizePrivateWorkbookRows } from "../../data/alternativesModel.js";
 import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "../../data/capitalCallTipusModel.js";
 import { normalizeCapitalCallStrategy, estSection } from "../../data/capitalCallStrategyModel.js";
 import { mergeCapitalCallRows } from "../../utils.js";
-import { isActualCompany, isSearchFundShell } from "../../data/privateCompanyModel.js";
+import { isActualCompany } from "../../data/privateCompanyModel.js";
 import { splitRealEstateRows } from "../../data/realEstateModel.js";
 import { convertAmountToEurOnDate } from "../../fx.js";
 
@@ -35,7 +35,7 @@ function sanitizeCapitalCallValues(values) {
   };
 }
 
-async function prepareCapitalCallPayload(values, existingRow = null) {
+async function prepareCapitalCallPayload(values) {
   const sanitized = sanitizeCapitalCallValues(values);
   const rawAmount = normalizeCapitalCallSignedAmount(sanitized.tipus, parseFloat(values?.eur));
   if (!Number.isFinite(rawAmount)) {

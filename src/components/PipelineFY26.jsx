@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { fmtM, usePersistedState, readStoredJSON } from "../utils.js";
@@ -36,7 +36,7 @@ function normalizePipelineStrategy(value) {
 
 // ══════════════════════════════════════════════════════════
 export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, chartsOnly = false }) {
-  const { rate, toEUR, toUSD } = useCurrency(eurUsd);
+  const { toEUR, toUSD } = useCurrency(eurUsd);
   const { tc: TC, dark } = useTheme();
   const { canEditSection } = useAuth();
   const canEdit = canEditSection("fons");

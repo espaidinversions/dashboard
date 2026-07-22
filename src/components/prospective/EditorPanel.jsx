@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { fmtC, numberAtYear, yearMapValue, tdStyle, periodBg, editorNumberStyle, buttonStyle, inputStyle } from "./prospectiveUtils.js";
 import { Segmented, Th } from "./ProspectivePrimitives.jsx";

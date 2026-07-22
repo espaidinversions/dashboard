@@ -1,11 +1,10 @@
-import React, { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useTheme } from "../theme.js";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
 import { summarizeLatestPmValuesWithWam } from "../data/pmValueUtils.js";
 import { buildGroupedMonthlySeriesFromNestedValues, buildMonthlySeriesFromNestedValues } from "../chartSeries.js";
 import {
-  PERIODS,
   weightedReturn,
   computeWeightedTer,
   computePositionWeightedYtd,
@@ -147,8 +146,6 @@ export function PublicMarketsTab() {
   const total = workbookTotalRow && workbookTotalRow > latestPmSummary.total
     ? workbookTotalRow
     : latestPmSummary.total;
-  const totalRV = useMemo(() => latestPmSummary.byType.RV ?? 0, [latestPmSummary]);
-  const totalRF = useMemo(() => latestPmSummary.byType.RF ?? 0, [latestPmSummary]);
 
   const managerValueByIdForReturns = useMemo(() => {
     const result = {
@@ -344,24 +341,6 @@ export function PublicMarketsTab() {
     ];
   }, [currentManagerValues, residualValue, liquidityValue, effectiveManagers]);
 
-  const providerData = useMemo(() => (
-    PERIODS.map(({ field, label }) => {
-      const point = { year: label };
-      displayManagers.forEach((manager) => {
-        if (manager[field] != null) point[manager.id] = parseFloat(manager[field].toFixed(2));
-      });
-      return point;
-    })
-  ), [displayManagers]);
-
-  const strategyData = useMemo(() => (
-    PERIODS.map(({ field, label }) => ({
-      year: label,
-      rv: weightedReturn(field, managerValueByIdForReturns, "RV", effectiveManagers),
-      rf: weightedReturn(field, managerValueByIdForReturns, "RF", effectiveManagers),
-      total: weightedReturn(field, managerValueByIdForReturns, null, effectiveManagers),
-    }))
-  ), [managerValueByIdForReturns, effectiveManagers]);
 
   const totalValueSeries = useMemo(() => {
     const monthlyRows = (reportMonthly ?? [])

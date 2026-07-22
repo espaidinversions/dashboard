@@ -112,7 +112,6 @@ const ubsRFValue   = d => PM_MONTHLY_BY_DATE[d]?.ubsRF   ?? null;
 const caixaRVValue = d => PM_MONTHLY_BY_DATE[d]?.caixaRV ?? null;
 const caixaRFValue = d => PM_MONTHLY_BY_DATE[d]?.caixaRF ?? null;
 const andbankValue = d => PM_MONTHLY_BY_DATE[d]?.andbank  ?? null;
-const abelBKValue  = d => PM_MONTHLY_BY_DATE[d]?.abelBK   ?? null;
 
 // Abel TWR since first observation in PM_MONTHLY (mid-period cashflows use 0.5×CF in denominator)
 const _abelInceptionIdx = PM_MONTHLY.findIndex(m => m.abelBK != null);
@@ -196,7 +195,6 @@ function aggregatePct(rows, field, weightField = "valorMercat") {
 function aggregateGroup(rows) {
   const ordered = [...rows].sort((a, b) => String(a.dataCompra ?? "").localeCompare(String(b.dataCompra ?? "")));
   const first = ordered[0];
-  const last  = ordered.at(-1);
   const unitats = rows.reduce((sum, row) => sum + (Number(row.unitats) || 0), 0);
   const costEur = rows.reduce((sum, row) => sum + (Number(row.costEur) || 0), 0);
   const valorMercat = rows.reduce((sum, row) => sum + (Number(row.valorMercat) || 0), 0);

@@ -1,4 +1,3 @@
-import React from "react";
 import { fmtM, formatMultiple, tvpiColor } from "../../utils.js";
 import { FlagImg } from "../SharedComponents.jsx";
 import { tableCardStyle } from "../SharedComponents.jsx";

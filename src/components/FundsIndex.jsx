@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { EST_CFG } from "../config.js";
 import { ThemeProvider, useTheme } from "../theme.js";
@@ -22,7 +22,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
   const canEditAlternatives = canEditSection("alternatives");
   const canEditRealEstate = canEditSection("real-estate");
   const canEditAny = canEditAlternatives || canEditRealEstate;
-  const [searchLocal, setSearchLocal] = useState("");
+  const [searchLocal] = useState("");
   const search = searchOverride !== undefined ? searchOverride : searchLocal;
   const [sortKey, setSortKey] = useState("compromis");
   const [sortDir, setSortDir] = useState("desc");

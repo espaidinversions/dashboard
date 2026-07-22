@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { Link } from "react-router-dom";
@@ -7,7 +7,6 @@ import { WAM_POSITIONS } from "../data/wamPositions.js";
 import { TC_LIGHT, useTheme } from "../theme.js";
 import { CHART_PALETTE } from "../chartColors.js";
 import { fmtM, usePersistedState, yearsHeld, cagr } from "../utils.js";
-import { buildClosedTransactionSummaryByIsinCustodian } from "../data/pmClosedUtils.js";
 import { makePmPositionRouteId } from "../data/pmPositionRouting.js";
 import { isEtfPosition } from "./publicMarkets/PublicMarketsShared.jsx";
 import { canonicalPmCustodian, makeAggregatePosition, splitIbPositions, sumMarketValue } from "../data/pmClassification.js";
@@ -141,8 +140,6 @@ export function PMTipusTab() {
   const th   = { padding: "8px 10px", fontSize: 10, letterSpacing: "0.09em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, borderBottom: `2px solid ${tc.border}`, whiteSpace: "nowrap" };
   const secLabel = { fontSize: 11, letterSpacing: "0.11em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
 
-  // eslint-disable-next-line no-unused-vars
-  const _closedSummary = useMemo(() => buildClosedTransactionSummaryByIsinCustodian(), []);
 
   const visible = useMemo(() => {
     const base = getBucketPositions(toggle);

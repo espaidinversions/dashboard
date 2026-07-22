@@ -1,4 +1,3 @@
-import React from "react";
 import { useTheme } from "../../theme.js";
 
 function hexToRgba(hex, alpha) {

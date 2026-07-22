@@ -1,4 +1,3 @@
-import React from "react";
 import { fmtM, formatIsoDateDMY, mesosColor, mesosBg, tvpiColor, tvpiBg, formatMultiple } from "../../utils.js";
 import { SEARCHER_FORM_ENTRADA_OPTIONS, SEARCHER_MODALITAT_OPTIONS } from "../../config.js";
 import { FlagImg, EditableCell } from "../SharedComponents.jsx";
@@ -27,7 +26,6 @@ export function ActiveSearchersTable({
   setActiveModalityFilter,
   sortActive,
   saveSearcherField,
-  setShowAddModal,
 }) {
   const th = { padding: "9px 10px", fontSize: 10, fontWeight: 700, color: TC.navyLight ?? TC.textLight, textTransform: "uppercase", letterSpacing: "0.06em", background: "#F7FAFC", borderBottom: `2px solid ${TC.border}`, whiteSpace: "nowrap", userSelect: "none" };
   const sec = { fontSize: 10, letterSpacing: "0.11em", color: TC.textLight, textTransform: "uppercase", marginBottom: 16, fontWeight: 600 };

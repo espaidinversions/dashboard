@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react";
 import {
   CAPITAL_CALL_TIPUS_OPTIONS,
   CAPITAL_CALL_TIPUS_GROUPED,
@@ -8,7 +8,6 @@ import { usePersistedState, exportMultiXLSX, normalizeOptionValue, dedupeOptionV
 import { useAuth } from "../auth.jsx";
 import { ResumTab, LandingTab } from "./tabs/index.js";
 import { Sidebar } from "./Sidebar.jsx";
-import { buildRealEstateFundsMap } from "../data/realEstateModel.js";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohortModel.js";
 import { buildLandingModel } from "../data/landingModel.js";
@@ -101,7 +100,6 @@ function Dashboard() {
     realEstateTab,
     setRealEstateTab,
     mercatsPublicsTab,
-    setMercatsPublicsTab,
     searchersSubTab,
     setSearchersSubTab,
     companiesSubTab,
@@ -318,14 +316,13 @@ function Dashboard() {
     } finally { setExporting(false); }
   }, [d.companiesData, d.searchersData, d.funds0, d.rawCC, d.fundMeta]);
 
-  const [fFy,     setFFy]     = usePersistedState("ui_fFy",  "Tots");
-  const [fEst,    setFEst]    = usePersistedState("ui_fEst",  "Tots");
-  const [fTipus,  setFTipus]  = usePersistedState("ui_fTipus",  "Tots");
-  const [txSearch,setTxSearch]= usePersistedState("ui_txSearch", "");
-  const [sortFons, setSortFons] = usePersistedState("ui_sortFons", "compr");
-  const [sortFonsDir, setSortFonsDir] = usePersistedState("ui_sortFonsDir", "desc");
-  const [expandedFons, setExpandedFons] = useState(new Set());
-  const [ccChartF, setCcChartF] = useState(null);
+  const [fFy] = usePersistedState("ui_fFy",  "Tots");
+  const [fEst] = usePersistedState("ui_fEst",  "Tots");
+  const [fTipus] = usePersistedState("ui_fTipus",  "Tots");
+  const [txSearch] = usePersistedState("ui_txSearch", "");
+  const [sortFons] = usePersistedState("ui_sortFons", "compr");
+  const [sortFonsDir] = usePersistedState("ui_sortFonsDir", "desc");
+  const [ccChartF] = useState(null);
 
   const section = tab==="mercats-publics" ? "mercats-publics"
               : tab==="real-estate"     ? "real-estate"
@@ -335,22 +332,10 @@ function Dashboard() {
               : "alternatives";
 
   const {
-    baseTx,
-    baseCompr,
-    allAltTx,
-    allAltCompr,
-    altCompanyTx,
-    altCompanyCompr,
     altAllTx,
     altAllCompr,
-    filtered,
-    fCalls,
-    fDist,
     byFy,
-    byMes,
     byEst,
-    FONS_MAP2,
-    fonsFiltered,
   } = useTransactionDerivedData({
     TRANSACTIONS: d.TRANSACTIONS,
     COMPROMISOS: d.COMPROMISOS,
@@ -402,7 +387,7 @@ function Dashboard() {
                 ? "inversions"
                 : "fons";
 
-  const RE_FONS_MAP = useMemo(() => buildRealEstateFundsMap(d.reCompr, d.reTx), [d.reCompr, d.reTx]);
+
 
   const landingModel = useMemo(() => buildLandingModel({
     altTx: altAllTx,
@@ -413,8 +398,7 @@ function Dashboard() {
     canAccess: canAccessSection,
   }), [altAllTx, altAllCompr, d.reTx, d.reCompr, canAccessSection]);
 
-  const clearFilters = ()=>{setFFy("Tots");setFEst("Tots");setFTipus("Tots");setTxSearch("");};
-  const anyFilter = fFy!=="Tots"||fEst!=="Tots"||fTipus!=="Tots"||txSearch.trim()!="";
+
 
   const estCfg = {
     "Fons Primari": { color:tc.navy, bg: dark ? "#112030" : "#E6EDF3" },

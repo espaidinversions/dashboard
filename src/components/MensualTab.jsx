@@ -3,7 +3,7 @@ import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useTheme } from "../theme.js";
 import { EST_CFG } from "../config.js";
-import { fmtM, fmtS, fmtSignedM } from "../utils.js";
+import { fmtM, fmtSignedM } from "../utils.js";
 
 export function MensualTab({filtered, fFy}) {
   const { tc: TC, dark } = useTheme();
@@ -23,7 +23,7 @@ export function MensualTab({filtered, fFy}) {
   const greenRow4 = dark ? "#133218" : "#E0F2E0";   // total row
   const greenRow5 = dark ? "#091C0B" : "#F0FBF0";   // tx table bg
   const greenRow6 = dark ? "#071A08" : "#E0F2E0";   // tx table header
-  const greenRow7 = dark ? "#0A1E0C" : "#E8F8E8";   // expanded header
+
   const rowMain   = dark ? TC.card    : "#fff";
   const rowAlt    = dark ? TC.bgAlt   : "#FAFBFC";
 
@@ -64,12 +64,6 @@ export function MensualTab({filtered, fFy}) {
   const toggleMes   = key => setExpanded(p  => { const n=new Set(p); n.has(key)?n.delete(key):n.add(key); return n; });
   const toggleFonsTx = key => setExpandedTx(p => { const n=new Set(p); n.has(key)?n.delete(key):n.add(key); return n; });
 
-  const CAT_CFG_LOCAL = {
-    "Capital Call":   { color:TC.navy,      bg: dark ? "#112030" : "#E6EDF3" },
-    "Distribució":    { color:TC.green,     bg: dark ? "#0A2010" : "#E8F8E8" },
-    "Retorn Capital": { color:TC.greenDark, bg: dark ? "#0A2010" : "#D6EAD6" },
-    "Altres":         { color:TC.textLight, bg: TC.bgAlt },
-  };
 
   const estBg = (est) => dark ? "#112030" : (EST_CFG[est]?.bg || TC.bgAlt);
   const fmtMaybeSignedM = (value) => value ? fmtSignedM(value) : "—";

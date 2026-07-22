@@ -3,7 +3,6 @@ export const ACCESS_USER = "user";
 export const ACCESS_SUPERUSER = "superuser";
 
 export const ACCESS_LEVELS = [ACCESS_NONE, ACCESS_USER, ACCESS_SUPERUSER];
-const GLOBAL_ROLES = ["user", "superuser", "admin"];
 
 export const TOP_LEVEL_SECTION_IDS = ["alternatives", "real-estate", "mercats-publics"];
 export const ALTERNATIVES_SECTION_IDS = ["fons", "searchers", "companies", "inversions", "cash-model", "txlog"];

@@ -1,4 +1,3 @@
-import React from "react";
 
 // EN maps to GB (United Kingdom ISO code)
 const GEO_TO_ISO = { EN:"gb" };

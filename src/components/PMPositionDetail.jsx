@@ -1,10 +1,10 @@
-import React, { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
 import { useParams, useNavigate } from "react-router-dom";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { TC_LIGHT, useTheme } from "../theme.js";
-import { fmtM, fmtMonth, yearsHeld, cagr } from "../utils.js";
+import { fmtM, yearsHeld, cagr } from "../utils.js";
 import { PM_TER } from "../generated/publicMarkets/pmTer.js";
 import { loadPMOverrides, loadPMPositionOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
 import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
@@ -98,7 +98,7 @@ function PMPositionDetail() {
   const isAbelFont  = displayGestor === "Abel Font";
   const pnl         = p.costEur != null ? (p.valorMercat ?? 0) - p.costEur : null;
   const pnlColor    = pnl == null ? tc.textLight : pnl > 0 ? tc.green : pnl < 0 ? tc.red : tc.textLight;
-  const msUrl       = isin ? `https://www.morningstar.es/es/search/results.aspx?keyword=${isin}` : null;
+
   const yh          = yearsHeld(p.dataCompra, isClosed && p.any ? `${p.any}-12-31` : undefined);
   const ter         = terOverride ?? PM_TER[isin] ?? p.costAnual ?? 0;
   const netInici    = p.rendInici != null
@@ -151,7 +151,7 @@ function PMPositionDetail() {
 
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card        = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
-  const tooltipStyle = { contentStyle: { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10 }, labelStyle: { color: tc.text, fontWeight: 600 } };
+
 
   const rendIniciColor = p.rendInici == null ? tc.textLight : p.rendInici > 0 ? tc.green : tc.red;
   const netIniciColor  = netInici == null ? tc.textLight : netInici > 0 ? tc.green : tc.red;
@@ -464,7 +464,7 @@ function PMPositionDetail() {
 
 export default PMPositionDetail;
 
-function PositionTxHistory({ txs: scopedTxs = [], tc = TC_LIGHT, card, secLabel }) {
+function PositionTxHistory({ txs: scopedTxs = [], tc = TC_LIGHT, card }) {
   const [sortDesc, setSortDesc] = useState(true);
   const txs = useMemo(() => {
     return [...scopedTxs].sort((a, b) => {
@@ -529,7 +529,7 @@ function PositionTxHistory({ txs: scopedTxs = [], tc = TC_LIGHT, card, secLabel 
 // ── Position metadata editor ──────────────────────────────────
 const CUSTODIAN_OPTIONS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Abel Font", "WAM", "Andbank", "Altre"];
 
-function PositionMetaEditor({ p, isin, tc = TC_LIGHT, dark, card, secLabel, metaOverride, terOverride, onSaveMeta, onSaveTer }) {
+function PositionMetaEditor({ p, isin, tc = TC_LIGHT, card, metaOverride, terOverride, onSaveMeta, onSaveTer }) {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);

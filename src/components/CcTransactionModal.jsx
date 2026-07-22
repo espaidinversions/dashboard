@@ -3,7 +3,6 @@ import { AddRowModal } from "./SharedComponents.jsx";
 import { fmtFull } from "../utils.js";
 import { inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS } from "../data/capitalCallStrategyModel.js";
-import { CAPITAL_CALL_TIPUS_OPTIONS } from "../config.js";
 
 /**
  * Single modal for adding or editing a capital call / transaction row.

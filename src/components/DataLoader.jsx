@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import { useState, useRef } from "react";
 import { useTheme } from "../theme.js";
 import { parseCapitalCallsCSV, parsePipelineCSV, mapCapitalCallsRows, mapLegacySearchFundRows, mapPipelineRows, mapCompanyRows, mapSearcherRows, mapFundMetaRows, mapKpiRows } from "../utils.js";
 import { apiFetchJson } from "../apiClient.js";
@@ -113,7 +113,7 @@ function DataLoader({ onLoad, onClose, dataInfo }) {
     hint: { fontSize:11, color:TC.textLight, marginTop:5 },
   };
 
-  const DropZone = ({ parser, setStatus, status, fileRef, inputProps, label, dragActive, setDrag }) => (
+  const DropZone = ({ parser, setStatus, status, fileRef, inputProps, dragActive, setDrag }) => (
     <div
       style={sty.dropZone(dragActive)}
       {...makeDrop(parser, setStatus, inputProps.key_, setDrag)}

@@ -1,5 +1,4 @@
-import React from "react";
-import { colorFor, periodBg, periodColor, tdStyle, vintageStyle } from "./prospectiveUtils.js";
+import { colorFor, tdStyle } from "./prospectiveUtils.js";
 
 export function Kpi({ tc, label, value, color, sub, muted }) {
   return (

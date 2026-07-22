@@ -1,7 +1,6 @@
-import React from "react";
 import { Link } from "react-router-dom";
 import { PROSPECTIVE_CASH_USD_FUNDS } from "../../data/prospectiveCashUsdFunds.js";
-import { fmtC, signed, periodColor, periodBg, tdStyle, vintageStyle, buttonStyle } from "./prospectiveUtils.js";
+import { fmtC, signed, periodColor, tdStyle, vintageStyle, buttonStyle } from "./prospectiveUtils.js";
 import { formatMultiple, multipleColor } from "../../utils/formatters.js";
 import { Segmented, MiniTag, Th, YearCell } from "./ProspectivePrimitives.jsx";
 
