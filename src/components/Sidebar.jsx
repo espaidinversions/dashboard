@@ -22,6 +22,7 @@ const PORTFOLI_SECTIONS = [
   {
     id:"re", label:"Real Estate", icon:Home,
     children:[
+      {id:"re-resum",      label:"Resum"},
       {id:"re-directe",    label:"Directe"},
       {id:"re-altres",     label:"Vehicles Real Estate"},
       {id:"re-inversions", label:"Totes les Posicions"},
@@ -117,6 +118,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
       }
       if (sec.id === "re") {
         if (child.id === "re-cash-model") return canAccessSection?.("cash-model") ?? true;
+        if (child.id === "re-resum") return canAccessSection?.("real-estate") ?? true;
         return canAccessSection?.(child.id) ?? true;
       }
       if (sec.id === "mp") return canAccessSection?.(child.id) ?? true;

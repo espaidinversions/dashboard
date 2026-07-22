@@ -49,6 +49,8 @@ export function AltCohortSection({
   onMetricChange = () => {},
   hideCompaniesToggle = false, // hide the include-companies toggle when it's driven externally
   showFundsMatrix = true, // render the Fons matrix (set false to show only companies)
+  fundsStrategyLabels, // override column labels for the funds matrix (e.g. Real Estate)
+  fundsTitle = "Resum Fons", // override the funds matrix title
 }) {
   // The metric toggle (and optional companies toggle) lives on the first visible
   // matrix, so it stays reachable even when only the companies matrix shows.
@@ -68,7 +70,8 @@ export function AltCohortSection({
           matrix={matrix}
           tc={tc}
           metric={metric}
-          title="Resum Fons"
+          title={fundsTitle}
+          strategyLabels={fundsStrategyLabels}
           action={action}
         />
       )}

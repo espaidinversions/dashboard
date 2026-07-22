@@ -5,6 +5,7 @@ import { usePersistedState } from "../../utils.js";
 export function normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublicsTab, activeNavItem }) {
   if (tab === "home") return "home";
   if (tab === "real-estate") {
+    if (realEstateTab === "resum") return "re-resum";
     if (realEstateTab === "altres-vehicles") return "re-altres";
     return "re-directe";
   }
@@ -41,7 +42,7 @@ export function useTabRouter() {
   }, [setSearchParams]);
 
   const [inversionsSubTab, setInversionsSubTab] = useState("fons");
-  const [realEstateTab, setRealEstateTab] = useState("directe");
+  const [realEstateTab, setRealEstateTab] = useState("resum");
   const [mercatsPublicsTab, setMercatsPublicsTab] = useState("resum");
   const [searchersSubTab, setSearchersSubTab] = useState("tots");
   const [companiesSubTab, setCompaniesSubTab] = useState("portfoli");
@@ -60,6 +61,7 @@ export function useTabRouter() {
       case "alt-cash-model": setTab("alt-cash-model"); break;
       case "re-cash-model":  setTab("re-cash-model");  break;
       case "posicions":      setTab("inversions"); break;
+      case "re-resum":       setTab("real-estate");     setRealEstateTab("resum"); break;
       case "re-directe":     setTab("real-estate");     setRealEstateTab("directe"); break;
       case "re-altres":      setTab("real-estate");     setRealEstateTab("altres-vehicles"); break;
       case "re-inversions":  setTab("real-estate");     setRealEstateTab("inversions"); break;

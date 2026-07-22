@@ -32,6 +32,13 @@ export const COMPANY_STRATEGY_LABELS = {
   "Participada (Altres)": "Altres",
 };
 
+// Real Estate has a single canonical strategy label (estSection === "RE").
+export const RE_STRATEGIES = ["Fons Real Estate"];
+
+export const RE_STRATEGY_LABELS = {
+  "Fons Real Estate": "Real Estate",
+};
+
 const DIST_CATS = new Set(["Distribució", "Retorn Capital"]);
 
 /** Cash flow rows that feed the money-weighted (XIRR) computation. */
@@ -209,4 +216,18 @@ export function buildCompanyCohortMatrix(
     // keep TVPI 1 — theirs comes from the searchers table and is genuinely tracked.
     .filter((f) => !(estSection(f.est) === "PC" && f.tvpi === 1));
   return buildMatrixFromFunds(funds, COMPANY_STRATEGIES, asOfDate);
+}
+
+/**
+ * Build the MOIC/IRR cohort matrix for the Real Estate vehicles (estSection === "RE").
+ * RE funds carry Compromís rows like ALT vehicles, so no vintage fallback is used.
+ * Single-strategy ("Fons Real Estate") — same output shape as buildAltCohortMatrix.
+ */
+export function buildRealEstateCohortMatrix(
+  rawCC,
+  fundMeta,
+  asOfDate = new Date().toISOString().slice(0, 10),
+) {
+  const funds = summarizeFundsBySection(rawCC, fundMeta, { sections: ["RE"] });
+  return buildMatrixFromFunds(funds, RE_STRATEGIES, asOfDate);
 }

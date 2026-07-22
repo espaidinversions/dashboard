@@ -12,6 +12,7 @@ import { useDashboardData } from "./hooks/useDashboardData.js";
 import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohortModel.js";
 import { buildLandingModel } from "../data/landingModel.js";
 import { AltCohortSection } from "./funds/AltCohortSection.jsx";
+import { RealEstateSummarySection } from "./realEstate/RealEstateSummarySection.jsx";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
 import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
@@ -357,7 +358,7 @@ function Dashboard() {
 
   const currentPermissionId =
     tab === "real-estate"
-      ? (realEstateTab === "altres-vehicles" ? "re-altres" : "re-directe")
+      ? (realEstateTab === "resum" ? "real-estate" : realEstateTab === "altres-vehicles" ? "re-altres" : "re-directe")
       : tab === "mercats-publics"
         ? (
           mercatsPublicsTab === "transaccions" && activeNavItem === "tx-mp" ? "tx-mp"
@@ -458,10 +459,11 @@ function Dashboard() {
     { id: "transaccions", label: "Transaccions" },
   ]), []);
   const REAL_ESTATE_NAV = useMemo(() => [
+    { id: "re-resum", tab: "resum", perm: "real-estate" },
     { id: "re-directe", tab: "directe" },
     { id: "re-altres", tab: "altres-vehicles" },
     { id: "re-inversions", tab: "inversions" },
-  ].filter((item) => canAccessSection(item.id)), [canAccessSection]);
+  ].filter((item) => canAccessSection(item.perm ?? item.id)), [canAccessSection]);
   const PUBLIC_MARKETS_NAV = useMemo(() => [
     { id: "mp-resum", tab: "resum" },
     { id: "mp-rv", tab: "rv" },
@@ -697,10 +699,12 @@ function Dashboard() {
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
                 {REAL_ESTATE_NAV.map(item => (
-                  <button key={item.id} onClick={() => setRealEstateTab(item.tab)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: realEstateTab === item.tab ? `2px solid ${tc.navy}` : "2px solid transparent", color: realEstateTab === item.tab ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{item.tab === "directe" ? "RE Directe" : item.tab === "altres-vehicles" ? "Vehicles Real Estate" : "Totes les Posicions"}</button>
+                  <button key={item.id} onClick={() => setRealEstateTab(item.tab)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: realEstateTab === item.tab ? `2px solid ${tc.navy}` : "2px solid transparent", color: realEstateTab === item.tab ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{item.tab === "resum" ? "Resum" : item.tab === "directe" ? "RE Directe" : item.tab === "altres-vehicles" ? "Vehicles Real Estate" : "Totes les Posicions"}</button>
                 ))}
               </div>
-              {(realEstateTab === "inversions" || realEstateTab === "altres-vehicles")
+              {realEstateTab === "resum"
+                ? <RealEstateSummarySection tc={tc} dark={dark} reTx={d.reTx} reCompr={d.reCompr} rawCC={d.rawCC} fundMeta={d.fundMeta} estCfg={estCfg} />
+                : (realEstateTab === "inversions" || realEstateTab === "altres-vehicles")
                 ? <Suspense fallback={null}><FundsIndexInner searchOverride={globalSearch} vcpeTypes={["RE"]} /></Suspense>
                 : <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:12, padding:"80px 24px", color:tc.textLight, textAlign:"center" }}>
                     <span style={{ fontSize:36 }}>🚧</span>

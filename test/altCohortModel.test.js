@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildAltCohortMatrix, buildCompanyCohortMatrix, ALT_STRATEGIES, COMPANY_STRATEGIES } from "../src/data/altCohortModel.js";
+import { buildAltCohortMatrix, buildCompanyCohortMatrix, buildRealEstateCohortMatrix, ALT_STRATEGIES, COMPANY_STRATEGIES, RE_STRATEGIES } from "../src/data/altCohortModel.js";
 
 const ASOF = "2026-01-01";
 
@@ -266,4 +266,31 @@ test("Capital-Call fallback uses the EARLIEST dated call for vintage", () => {
   const matrix = buildCompanyCohortMatrix(rows, meta, { asOfDate: ASOF });
   assert.deepEqual(matrix.vintages, [2020]);
   assert.ok(matrix.cells["2020|Search Fund - Cerca"] != null);
+});
+
+test("RE matrix keeps only Real Estate vehicles under the single RE strategy", () => {
+  const rows = [
+    // RE vehicle: 200k committed/called, TVPI 1.5, 2021 vintage.
+    { id: "RE1", fons: "RE Fund One", est: "Fons Real Estate", cat: "Compromís", eur: 200000, data: "2021-02-01" },
+    { id: "RE1", fons: "RE Fund One", est: "Fons Real Estate", cat: "Capital Call", eur: 200000, data: "2021-06-01" },
+    // An ALT vehicle must be ignored by the RE matrix.
+    { id: "A1", fons: "Alt Fund", est: "Fons Primari", cat: "Compromís", eur: 100000, data: "2020-01-01" },
+    { id: "A1", fons: "Alt Fund", est: "Fons Primari", cat: "Capital Call", eur: 100000, data: "2020-06-01" },
+  ];
+  const meta = [
+    { id: "RE1", fons: "RE Fund One", tvpi: 1.5 },
+    { id: "A1", fons: "Alt Fund", tvpi: 3.0 },
+  ];
+  const matrix = buildRealEstateCohortMatrix(rows, meta, ASOF);
+  assert.deepEqual(matrix.strategies, RE_STRATEGIES);
+  assert.deepEqual(matrix.vintages, [2021]);
+  assert.ok(Math.abs(matrix.cells["2021|Fons Real Estate"].moic - 1.5) < 1e-9);
+  assert.ok(Math.abs(matrix.totals.grand.moic - 1.5) < 1e-9);
+});
+
+test("RE matrix is empty when there are no Real Estate vehicles", () => {
+  const matrix = buildRealEstateCohortMatrix(primariRows(), [{ id: "A", fons: "Fund A", tvpi: 2.0 }], ASOF);
+  assert.deepEqual(matrix.strategies, RE_STRATEGIES);
+  assert.deepEqual(matrix.vintages, []);
+  assert.equal(matrix.totals.grand, null);
 });

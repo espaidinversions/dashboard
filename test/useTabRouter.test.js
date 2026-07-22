@@ -10,3 +10,15 @@ test("normalizeNavState maps the home tab to the home nav item", () => {
 test("normalizeNavState still maps inversions/resum to alt-resum", () => {
   assert.equal(normalizeNavState({ tab: "inversions", inversionsSubTab: "resum" }), "alt-resum");
 });
+
+test("normalizeNavState maps real-estate/resum to re-resum", () => {
+  assert.equal(normalizeNavState({ tab: "real-estate", realEstateTab: "resum" }), "re-resum");
+});
+
+test("normalizeNavState still maps real-estate/altres-vehicles to re-altres", () => {
+  assert.equal(normalizeNavState({ tab: "real-estate", realEstateTab: "altres-vehicles" }), "re-altres");
+});
+
+test("normalizeNavState defaults real-estate to re-directe", () => {
+  assert.equal(normalizeNavState({ tab: "real-estate", realEstateTab: "directe" }), "re-directe");
+});
