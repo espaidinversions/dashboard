@@ -185,51 +185,6 @@ export function mapFundMetaRows(rows) {
   }));
 }
 
-// Maps a human section label (Catalan or the raw key) to a liquidity section key.
-const LIQUIDITY_SECTION_BY_LABEL = {
-  "alternatives": "alternatives",
-  "alternatius": "alternatives",
-  "real estate": "real-estate",
-  "real-estate": "real-estate",
-  "re": "real-estate",
-  "mercats publics": "mercats-publics",
-  "mercats públics": "mercats-publics",
-  "mercats-publics": "mercats-publics",
-  "public markets": "mercats-publics",
-  "pm": "mercats-publics",
-};
-
-export function normalizeLiquiditySection(value) {
-  const key = String(value ?? "").trim().toLowerCase();
-  return LIQUIDITY_SECTION_BY_LABEL[key] ?? null;
-}
-
-/**
- * Maps a "Liquiditat" sheet into liquidity account rows. Expected columns:
- * "Compte" (account name), "Banc", "Secció", "Saldo (€)" (EUR balance),
- * "Divisa", "Saldo Divisa" (native balance, optional), "Data".
- * Rows without a recognized section or account name are dropped.
- */
-export function mapLiquidityAccountsRows(rows) {
-  return rows.map((r) => {
-    const nom = String(r["Compte"] ?? r["Nom"] ?? "").trim();
-    const section = normalizeLiquiditySection(r["Secció"] ?? r["Seccio"] ?? r["Section"]);
-    if (!nom || !section) return null;
-    const saldo = Number(r["Saldo (€)"] ?? r["Saldo"] ?? 0) || 0;
-    const divisa = String(r["Divisa"] ?? "EUR").trim() || "EUR";
-    const nativeRaw = r["Saldo Divisa"] ?? r["Saldo Native"];
-    const saldoNative = nativeRaw != null && nativeRaw !== "" ? Number(nativeRaw) : (divisa === "EUR" ? saldo : null);
-    return {
-      nom,
-      banc: String(r["Banc"] ?? "").trim() || null,
-      section,
-      saldo,
-      saldoNative: Number.isFinite(saldoNative) ? saldoNative : null,
-      divisa,
-      data: excelSerialToIsoDate(r["Data"]) || null,
-    };
-  }).filter(Boolean);
-}
 
 export function mapKpiRows(rows) {
   const KPI_MAP = {
