@@ -207,9 +207,10 @@ New migration `supabase/migrations/<ts>_liquidity_history.sql`:
    indexes, RLS policies.
 2. `CREATE OR REPLACE FUNCTION` the four RPCs (§5).
 3. **Copy existing data:** for each `liquidity_accounts` row, insert one registry row
-   (`nom, banc, section, divisa`) and one balance (`account_id`, `data` — falling back to
-   a sensible default such as `now()::date` if `data` is NULL —, `saldo`, `saldo_native`),
-   in a single statement/CTE so `account_id` links correctly.
+   (`nom, banc, section, divisa`). If the row's `data` is **non-NULL**, also insert one
+   balance (`account_id`, `data`, `saldo`, `saldo_native`), linked in a single
+   statement/CTE. If `data` is **NULL**, insert **no** balance — the account then reads
+   as `saldo 0` / no history (via `buildLatestAccounts`) until a superuser adds one.
 4. `DROP FUNCTION IF EXISTS public.replace_liquidity_accounts(jsonb);`
    `DROP TABLE IF EXISTS liquidity_accounts;`
 
@@ -234,7 +235,7 @@ Existing migrations remain immutable. Applied via the Supabase MCP `apply_migrat
 
 - FX rate lookup / auto EUR conversion (user enters both amounts).
 - Bulk balance import / CSV upload (Excel path is being removed by design).
-- Editing history of the `data`-less accounts beyond the one migrated balance.
+- Backfilling history for migrated `data`-less accounts (they start with zero balances).
 - Per-account trend drill-down (only section-level stacked area for now).
 
 ## 12. Files touched
