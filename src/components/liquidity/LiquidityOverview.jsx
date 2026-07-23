@@ -1,7 +1,7 @@
 import { fmtM } from "../../utils.js";
 import { KpiCard } from "../shared/KpiCard.jsx";
 import { LiquiditatSection } from "../shared/LiquiditatSection.jsx";
-import { LiquidityCharts } from "./LiquidityCharts.jsx";
+import { LiquidityCharts, LiquidityTrendChart } from "./LiquidityCharts.jsx";
 import { buildLiquiditySummary, buildLiquidityByBank } from "../../data/liquidityModel.js";
 
 /**
@@ -11,7 +11,7 @@ import { buildLiquiditySummary, buildLiquidityByBank } from "../../data/liquidit
  *
  * @param {{ accounts: Array, tc: object, dark: boolean }} props
  */
-export function LiquidityOverview({ accounts, tc, dark }) {
+export function LiquidityOverview({ accounts, registry, balances, tc, dark }) {
   const list = Array.isArray(accounts) ? accounts : [];
   const { total } = buildLiquiditySummary(list);
   const bankCount = buildLiquidityByBank(list).length;
@@ -23,6 +23,8 @@ export function LiquidityOverview({ accounts, tc, dark }) {
         <KpiCard label="Comptes" value={list.length} sub="comptes de liquiditat" tc={tc} />
         <KpiCard label="Bancs" value={bankCount} sub="entitats" tc={tc} />
       </div>
+
+      <LiquidityTrendChart registry={registry} balances={balances} tc={tc} />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 14 }}>
         <LiquidityCharts accounts={list} tc={tc} dark={dark} />

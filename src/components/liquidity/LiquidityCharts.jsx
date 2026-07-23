@@ -2,7 +2,7 @@ import ReactECharts from "../../ReactECharts.jsx";
 import { fmtM } from "../../utils.js";
 import { CHART_PALETTE, NEUTRAL } from "../../chartColors.js";
 import { ecTheme } from "../../echartsTheme.js";
-import { buildLiquiditySummary, buildLiquidityByBank, buildLiquidityByCurrency } from "../../data/liquidityModel.js";
+import { buildLiquiditySummary, buildLiquidityByBank, buildLiquidityByCurrency, buildLiquidityTrend } from "../../data/liquidityModel.js";
 
 const SECTION_LABELS = {
   alternatives: "Alternatius",
@@ -132,6 +132,59 @@ export function LiquidityBankBar({ accounts, tc }) {
               barMaxWidth: 26,
               label: { show: true, position: "right", color: tc.textMid, fontSize: 10, formatter: ({ value }) => fmtM(value) },
             }],
+          }}
+        />
+      )}
+    </ChartCard>
+  );
+}
+
+export function LiquidityTrendChart({ registry, balances, tc }) {
+  const { months, series } = buildLiquidityTrend(registry, balances);
+  const t = ecTheme(tc);
+
+  return (
+    <ChartCard tc={tc} title="Evolució de la Liquiditat">
+      {months.length === 0 ? (
+        <EmptyState tc={tc} />
+      ) : (
+        <ReactECharts
+          style={{ width: "100%", height: 300 }}
+          opts={{ renderer: "canvas" }}
+          option={{
+            grid: { top: 16, right: 20, bottom: 24, left: 12, containLabel: true },
+            tooltip: {
+              ...t.tooltip, trigger: "axis", axisPointer: { type: "shadow" },
+              formatter: (params) => {
+                if (!params?.length) return "";
+                const rows = params
+                  .map((p) => `${p.marker}${p.seriesName}: ${fmtM(p.value)}`)
+                  .join("<br/>");
+                return `<b>${params[0].axisValue}</b><br/>${rows}`;
+              },
+            },
+            legend: {
+              show: true, bottom: 0, textStyle: { color: tc.textMid, fontSize: 10 },
+              data: series.map((s) => SECTION_LABELS[s.section] ?? s.section),
+            },
+            xAxis: {
+              type: "category", data: months, boundaryGap: false,
+              axisLine: { lineStyle: { color: tc.border } }, axisTick: { show: false },
+              axisLabel: { color: tc.textLight, fontSize: 10 },
+            },
+            yAxis: {
+              type: "value", axisLine: { show: false }, axisTick: { show: false },
+              axisLabel: { color: tc.textLight, fontSize: 10, formatter: (v) => fmtM(v) },
+              splitLine: { lineStyle: { color: tc.border } },
+            },
+            series: series.map((s, i) => ({
+              name: SECTION_LABELS[s.section] ?? s.section,
+              type: "line", stack: "total", areaStyle: { opacity: 0.75 },
+              smooth: false, showSymbol: false,
+              lineStyle: { width: 1.5 },
+              itemStyle: { color: CHART_PALETTE[i % CHART_PALETTE.length] ?? NEUTRAL },
+              data: s.values,
+            })),
           }}
         />
       )}

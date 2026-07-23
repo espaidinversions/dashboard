@@ -771,7 +771,7 @@ function Dashboard() {
           {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" /></Suspense>}
           {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ est: "Fons Real Estate" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
           {tab === "tx-mp" && <Suspense fallback={null}><PMTransaccionsTab search={globalSearch} /></Suspense>}
-          {tab === "liquidity" && <LiquidityOverview accounts={d.liquidityAccounts} tc={tc} dark={dark} />}
+          {tab === "liquidity" && <LiquidityOverview accounts={d.liquidityAccounts} registry={d.liquidityRegistry} balances={d.liquidityBalances} reloadLiquidity={d.reloadLiquidity} canManage={canEditSection("liquidity")} tc={tc} dark={dark} />}
         </main>
       </div>
 
