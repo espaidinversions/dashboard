@@ -46,11 +46,10 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   const { canEditSection } = useAuth();
   const { toast } = useToast();
   const canEdit = canEditSection("searchers");
-  const [nameSearch, setNameSearch] = useState("");
   const globalSearch = searchOverride !== undefined ? searchOverride : "";
   const [subTab, setSubTab] = useState(subTabOverride ?? "tots");
   const showSubTabs = subTabOverride !== undefined;
-  const [filters, setFilters] = useState({ tipus: "Tots", modalitat: "Tots", geo: "Tots", entrada: "Tots" });
+  const [filters, setFilters] = useState({ nom: "", tipus: "Tots", modalitat: "Tots", geo: "Tots", entrada: "Tots" });
   const [sortKey, setSortKey] = useState("ticket");
   const [sortDir, setSortDir] = useState("desc");
   const [showAddModal, setShowAddModal] = useState(false);
@@ -256,7 +255,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
 
   const filtered = useMemo(() => {
     const q = globalSearch.toLowerCase().trim();
-    const nameQ = nameSearch.toLowerCase().trim();
+    const nameQ = filters.nom.toLowerCase().trim();
     return rows.filter((row) => {
       if (subTab === "actius" && !isActiveSearcher(row)) return false;
       if (nameQ && !String(row.nom ?? "").toLowerCase().includes(nameQ)) return false;
@@ -270,11 +269,11 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
       if (filters.entrada !== "Tots" && row.formEntrada !== filters.entrada) return false;
       return true;
     });
-  }, [filters, globalSearch, nameSearch, rows, subTab]);
+  }, [filters, globalSearch, rows, subTab]);
 
   const filteredLegacyRows = useMemo(() => {
     const q = globalSearch.toLowerCase().trim();
-    const nameQ = nameSearch.toLowerCase().trim();
+    const nameQ = filters.nom.toLowerCase().trim();
     return legacyRows.filter((row) => {
       if (nameQ && !String(row.nom ?? "").toLowerCase().includes(nameQ)) return false;
       if (q && !(
@@ -283,7 +282,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
       )) return false;
       return true;
     });
-  }, [globalSearch, legacyRows, nameSearch]);
+  }, [globalSearch, legacyRows, filters.nom]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -300,12 +299,17 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
     });
   }, [filtered, sortDir, sortKey]);
 
+  const transactionRowsBase = useMemo(
+    () => (Array.isArray(rawCC) ? rawCC : [])
+      .filter((row) => estSection(row?.est) === "SF" && row?.cat !== "Compromís" && !actualCompanyIds.has(row?.id))
+      .filter((row) => belongsToTrackedSearcher(row)),
+    [actualCompanyIds, rawCC, trackedSearcherCoreTokens, trackedSearcherIds, trackedSearcherNames]
+  );
+
   const transactionRows = useMemo(() => {
     const q = globalSearch.toLowerCase().trim();
-    const nameQ = nameSearch.toLowerCase().trim();
-    return (Array.isArray(rawCC) ? rawCC : [])
-      .filter((row) => estSection(row?.est) === "SF" && row?.cat !== "Compromís" && !actualCompanyIds.has(row?.id))
-      .filter((row) => belongsToTrackedSearcher(row))
+    const nameQ = filters.nom.toLowerCase().trim();
+    return transactionRowsBase
       .filter((row) => !nameQ || String(row?.fons ?? "").toLowerCase().includes(nameQ))
       .filter((row) => (
         !q ||
@@ -314,7 +318,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
         String(row?.cat ?? "").toLowerCase().includes(q)
       ))
       .sort((a, b) => String(b?.data ?? "").localeCompare(String(a?.data ?? "")));
-  }, [actualCompanyIds, globalSearch, nameSearch, rawCC, trackedSearcherCoreTokens, trackedSearcherIds, trackedSearcherNames]);
+  }, [globalSearch, transactionRowsBase, filters.nom]);
 
   const commitmentRows = useMemo(
     () => (Array.isArray(rawCC) ? rawCC : [])
@@ -338,30 +342,16 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   return (
     <div style={indexPageStyles.page(tc, inline)}>
       <div style={indexPageStyles.contentWrap}>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 220 }}>
-            <input
-              value={nameSearch}
-              onChange={(e) => setNameSearch(e.target.value)}
-              placeholder="Cerca per nom..."
-              aria-label="Cerca searchers per nom"
-              style={{ ...indexPageStyles.searchInput(tc), width: "min(360px, 100%)" }}
-            />
-            {nameSearch ? (
-              <button onClick={() => setNameSearch("")} style={indexPageStyles.clearButton(tc)}>
-                netejar
-              </button>
-            ) : null}
-          </div>
-          {canEdit ? (
+        {canEdit ? (
+          <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 16 }}>
             <button
               onClick={() => setShowAddModal(true)}
               style={{ padding: "7px 14px", borderRadius: 6, border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.navy, cursor: "pointer", fontFamily: "inherit", fontSize: 12, fontWeight: 600 }}
             >
               + Nou searcher
             </button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
 
         {(subTab === "tots" || subTab === "actius" || !showSubTabs) ? (
           <div style={indexPageStyles.panel(tc)}>
@@ -377,7 +367,11 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
                 ))}
               </tr>
               <tr style={{ background: tc.card, borderBottom: `1px solid ${tc.border}` }}>
-                <th style={{ padding: "6px 12px" }} />
+                <th style={{ padding: "6px 12px" }}>
+                  <input value={filters.nom} onChange={(e) => setFilters((current) => ({ ...current, nom: e.target.value }))}
+                    aria-label="Filtrar searchers per nom"
+                    style={indexPageStyles.filterControl(tc)} />
+                </th>
                 <th style={{ padding: "6px 12px" }}>
                   <select value={filters.tipus} onChange={(e) => setFilters((current) => ({ ...current, tipus: e.target.value }))}
                     style={indexPageStyles.filterControl(tc)}>
@@ -403,8 +397,8 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
                   </select>
                 </th>
                 <th style={{ padding: "6px 12px", textAlign: "right" }}>
-                  {Object.values(filters).some((value) => value !== "Tots") ? (
-                    <button onClick={() => setFilters({ tipus: "Tots", modalitat: "Tots", geo: "Tots", entrada: "Tots" })}
+                  {Object.values(filters).some((value) => value !== "" && value !== "Tots") ? (
+                    <button onClick={() => setFilters({ nom: "", tipus: "Tots", modalitat: "Tots", geo: "Tots", entrada: "Tots" })}
                       style={indexPageStyles.clearButton(tc)}>
                       netejar
                     </button>
@@ -459,7 +453,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
             </div>
           </div>
         ) : subTab === "legacy" ? (
-          filteredLegacyRows.length === 0 ? (
+          legacyRows.length === 0 ? (
             <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap searcher a Legacy</div>
           ) : (
             <div style={indexPageStyles.panel(tc)}>
@@ -474,8 +468,33 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
                       ))}
                       {canEdit ? <th style={{ padding: "10px 12px" }} /> : null}
                     </tr>
+                    <tr style={{ background: tc.card, borderBottom: `1px solid ${tc.border}` }}>
+                      <th style={{ padding: "6px 12px" }}>
+                        <input value={filters.nom} onChange={(e) => setFilters((current) => ({ ...current, nom: e.target.value }))}
+                          aria-label="Filtrar searchers legacy per nom"
+                          style={indexPageStyles.filterControl(tc)} />
+                      </th>
+                      <th style={{ padding: "6px 12px" }} />
+                      <th style={{ padding: "6px 12px" }} />
+                      <th style={{ padding: "6px 12px" }} />
+                      <th style={{ padding: "6px 12px" }} />
+                      <th style={{ padding: "6px 12px", textAlign: "right" }}>
+                        {filters.nom ? (
+                          <button onClick={() => setFilters((current) => ({ ...current, nom: "" }))}
+                            style={indexPageStyles.clearButton(tc)}>
+                            netejar
+                          </button>
+                        ) : null}
+                      </th>
+                      <th style={{ padding: "6px 12px" }} />
+                      <th style={{ padding: "6px 12px" }} />
+                      {canEdit ? <th style={{ padding: "6px 12px" }} /> : null}
+                    </tr>
                   </thead>
                   <tbody>
+                    {filteredLegacyRows.length === 0 && (
+                      <tr><td colSpan={canEdit ? cols.length + 1 : cols.length} style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</td></tr>
+                    )}
                     {filteredLegacyRows.map((row, index) => (
                       <tr key={row.id ?? row.nom} className="hoverable" style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
                         <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>
@@ -528,7 +547,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
               ))}
             </div>
 
-            {transactionRows.length === 0 ? (
+            {transactionRowsBase.length === 0 ? (
               <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap transacció</div>
             ) : (
               <div style={indexPageStyles.panel(tc)}>
@@ -549,8 +568,30 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
                       </th>
                     ))}
                   </tr>
+                  <tr style={{ background: tc.card, borderBottom: `1px solid ${tc.border}` }}>
+                    <th style={{ padding: "6px 12px" }} />
+                    <th style={{ padding: "6px 12px" }}>
+                      <input value={filters.nom} onChange={(e) => setFilters((current) => ({ ...current, nom: e.target.value }))}
+                        aria-label="Filtrar transaccions de searchers per nom"
+                        style={indexPageStyles.filterControl(tc)} />
+                    </th>
+                    <th style={{ padding: "6px 12px" }} />
+                    <th style={{ padding: "6px 12px" }} />
+                    <th style={{ padding: "6px 12px", textAlign: "right" }}>
+                      {filters.nom ? (
+                        <button onClick={() => setFilters((current) => ({ ...current, nom: "" }))}
+                          style={indexPageStyles.clearButton(tc)}>
+                          netejar
+                        </button>
+                      ) : null}
+                    </th>
+                    <th style={{ padding: "6px 12px" }} />
+                  </tr>
                 </thead>
                 <tbody>
+                  {transactionRows.length === 0 && (
+                    <tr><td colSpan={6} style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</td></tr>
+                  )}
                   {transactionRows.map((row, index) => (
                     <tr key={row._rowId ?? `${row.fons}-${row.data}-${row.cat}-${index}`} style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
                       <td style={{ padding: "10px 12px", color: tc.textMid }}>{formatIsoDateDMY(row.data)}</td>
