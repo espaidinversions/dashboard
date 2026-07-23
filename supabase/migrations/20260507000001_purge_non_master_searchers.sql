@@ -32,7 +32,7 @@ WHERE trim(nom) NOT IN (
   'Luceiro Capital',
   'Primrose Capital Partners',
   'Lexana Capital',
-  'Wild Lynx Capital',
+  'Wildlynx Capital, SL',
   'Pleamar Partners',
   'Relevian',
   'Konkordia',

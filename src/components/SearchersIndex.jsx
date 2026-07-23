@@ -46,8 +46,8 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   const { canEditSection } = useAuth();
   const { toast } = useToast();
   const canEdit = canEditSection("searchers");
-  const [searchLocal] = useState("");
-  const search = searchOverride !== undefined ? searchOverride : searchLocal;
+  const [nameSearch, setNameSearch] = useState("");
+  const globalSearch = searchOverride !== undefined ? searchOverride : "";
   const [subTab, setSubTab] = useState(subTabOverride ?? "tots");
   const showSubTabs = subTabOverride !== undefined;
   const [filters, setFilters] = useState({ tipus: "Tots", modalitat: "Tots", geo: "Tots", entrada: "Tots" });
@@ -255,9 +255,11 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   ), [searchers]);
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = globalSearch.toLowerCase().trim();
+    const nameQ = nameSearch.toLowerCase().trim();
     return rows.filter((row) => {
       if (subTab === "actius" && !isActiveSearcher(row)) return false;
+      if (nameQ && !String(row.nom ?? "").toLowerCase().includes(nameQ)) return false;
       if (q && !(
         row.nom?.toLowerCase().includes(q) ||
         `${row.searcher1 ?? ""} ${row.searcher2 ?? ""}`.toLowerCase().includes(q)
@@ -268,7 +270,20 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
       if (filters.entrada !== "Tots" && row.formEntrada !== filters.entrada) return false;
       return true;
     });
-  }, [filters, rows, search, subTab]);
+  }, [filters, globalSearch, nameSearch, rows, subTab]);
+
+  const filteredLegacyRows = useMemo(() => {
+    const q = globalSearch.toLowerCase().trim();
+    const nameQ = nameSearch.toLowerCase().trim();
+    return legacyRows.filter((row) => {
+      if (nameQ && !String(row.nom ?? "").toLowerCase().includes(nameQ)) return false;
+      if (q && !(
+        row.nom?.toLowerCase().includes(q) ||
+        `${row.searcher1 ?? ""} ${row.searcher2 ?? ""}`.toLowerCase().includes(q)
+      )) return false;
+      return true;
+    });
+  }, [globalSearch, legacyRows, nameSearch]);
 
   const sorted = useMemo(() => {
     return [...filtered].sort((a, b) => {
@@ -286,10 +301,12 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
   }, [filtered, sortDir, sortKey]);
 
   const transactionRows = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = globalSearch.toLowerCase().trim();
+    const nameQ = nameSearch.toLowerCase().trim();
     return (Array.isArray(rawCC) ? rawCC : [])
       .filter((row) => estSection(row?.est) === "SF" && row?.cat !== "Compromís" && !actualCompanyIds.has(row?.id))
       .filter((row) => belongsToTrackedSearcher(row))
+      .filter((row) => !nameQ || String(row?.fons ?? "").toLowerCase().includes(nameQ))
       .filter((row) => (
         !q ||
         String(row?.fons ?? "").toLowerCase().includes(q) ||
@@ -297,13 +314,13 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
         String(row?.cat ?? "").toLowerCase().includes(q)
       ))
       .sort((a, b) => String(b?.data ?? "").localeCompare(String(a?.data ?? "")));
-  }, [actualCompanyIds, rawCC, search, trackedSearcherIds, trackedSearcherNames]);
+  }, [actualCompanyIds, globalSearch, nameSearch, rawCC, trackedSearcherCoreTokens, trackedSearcherIds, trackedSearcherNames]);
 
   const commitmentRows = useMemo(
     () => (Array.isArray(rawCC) ? rawCC : [])
       .filter((row) => estSection(row?.est) === "SF" && row?.cat === "Compromís" && !actualCompanyIds.has(row?.id))
       .filter((row) => belongsToTrackedSearcher(row)),
-    [actualCompanyIds, rawCC, trackedSearcherIds, trackedSearcherNames]
+    [actualCompanyIds, rawCC, trackedSearcherCoreTokens, trackedSearcherIds, trackedSearcherNames]
   );
   const totalCommitment = useMemo(
     () => commitmentRows.reduce((sum, row) => sum + Number(row?.eur ?? 0), 0),
@@ -322,7 +339,20 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
     <div style={indexPageStyles.page(tc, inline)}>
       <div style={indexPageStyles.contentWrap}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, marginBottom: 16 }}>
-          <div />
+          <div style={{ display: "flex", alignItems: "center", gap: 8, flex: 1, minWidth: 220 }}>
+            <input
+              value={nameSearch}
+              onChange={(e) => setNameSearch(e.target.value)}
+              placeholder="Cerca per nom..."
+              aria-label="Cerca searchers per nom"
+              style={{ ...indexPageStyles.searchInput(tc), width: "min(360px, 100%)" }}
+            />
+            {nameSearch ? (
+              <button onClick={() => setNameSearch("")} style={indexPageStyles.clearButton(tc)}>
+                netejar
+              </button>
+            ) : null}
+          </div>
           {canEdit ? (
             <button
               onClick={() => setShowAddModal(true)}
@@ -429,7 +459,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
             </div>
           </div>
         ) : subTab === "legacy" ? (
-          legacyRows.length === 0 ? (
+          filteredLegacyRows.length === 0 ? (
             <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap searcher a Legacy</div>
           ) : (
             <div style={indexPageStyles.panel(tc)}>
@@ -446,7 +476,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
                     </tr>
                   </thead>
                   <tbody>
-                    {legacyRows.map((row, index) => (
+                    {filteredLegacyRows.map((row, index) => (
                       <tr key={row.id ?? row.nom} className="hoverable" style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
                         <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>
                           {row.nom}
