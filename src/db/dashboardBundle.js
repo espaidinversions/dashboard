@@ -14,7 +14,6 @@ import {
   rowToCompany,
   rowToDeal,
   rowToFundMeta,
-  rowToLiquidityAccount,
   rowToSearcher,
   searcherToRow,
   setSnapshotInferrer,
@@ -23,14 +22,13 @@ import {
 
 export async function loadAll() {
   if (!supabase) return null;
-  const [cc, fm, pl, co, sr, pe, la] = await Promise.all([
+  const [cc, fm, pl, co, sr, pe] = await Promise.all([
     fetchAllCapitalCallRows(),
     supabase.from("fund_meta").select("vehicle_id,fons,tvpi,irr,fi_end"),
     supabase.from("pipeline").select("id,name,amount,currency,geography,strategy,sector,status,canal,active,estimated_closing,manager").order("id"),
     supabase.from("portfolio_companies").select("entity_id,nom,tipus,segment,entrepreneurs,origen,geo,ticket,tvpi,rvpi_eur,dpi_eur,rev,ebitda,dfn,gross_ev,mult_entry,data_compr,mesos_operant,is_mock,quarters").order("nom"),
     supabase.from("searchers").select("id,nom,tipus,modalitat,geo,status_screening_code,status_screening,form_entrada,status_cerca_code,status_cerca,status_adquisicio_code,status_adquisicio,intro_per,searcher1,searcher2,companyia_adquirida,escola1,escola2,web,comentaris,ticket,tvpi,data_inici,database_intro_date,data_compr,mesos_cercant,equity_stake,is_mock,is_legacy,nif,label,irr,dpi").order("nom"),
     supabase.from("private_entities").select("id,kind,canonical_name,source_name,workbook_name,match_type,vehicle_est,nif,fiscal_name"),
-    supabase.from("liquidity_accounts").select("id,nom,banc,section,saldo,saldo_native,divisa,data").order("section").order("nom"),
   ]);
   if (cc.error) console.error("loadAll capital_calls failed:", cc.error);
   if (fm.error) console.error("loadAll fund_meta failed:", fm.error);
@@ -78,12 +76,7 @@ export async function loadAll() {
     const searchers = sr.data.map(rowToSearcher);
     result.searchers = mergeSearchersWithCapitalCalls(searchers, cc.data);
   }
-  // Liquidity is its own source of truth. A missing table (migration not yet
-  // applied) returns an error here, which degrades to an empty list.
-  if (la.error) console.warn("loadAll liquidity_accounts failed (table may be missing):", la.error.message);
-  result.liquidityAccounts = !la.error && Array.isArray(la.data) ? la.data.map(rowToLiquidityAccount) : [];
-
-  if (!result.rawCC && !result.fundMeta && !result.funds0 && !result.companies && !result.searchers && result.liquidityAccounts.length === 0) {
+  if (!result.rawCC && !result.fundMeta && !result.funds0 && !result.companies && !result.searchers) {
     return null;
   }
   return result;

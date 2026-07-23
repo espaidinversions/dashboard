@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { loadAll, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle, saveLiquidityAccounts } from "../../db.js";
+import { loadAll, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle, loadLiquidity } from "../../db.js";
 import { apiFetchJson } from "../../apiClient.js";
 import { useToast } from "../../toast.jsx";
 import { normalizePrivateWorkbookRows } from "../../data/alternativesModel.js";
@@ -9,6 +9,7 @@ import { mergeCapitalCallRows } from "../../utils.js";
 import { isActualCompany } from "../../data/privateCompanyModel.js";
 import { splitRealEstateRows } from "../../data/realEstateModel.js";
 import { convertAmountToEurOnDate } from "../../fx.js";
+import { buildLatestAccounts } from "../../data/liquidityModel.js";
 
 function sanitizeCapitalCallValues(values) {
   // Only pick known capital_calls columns — drop UI-only fields like nif, fiscal_name
@@ -114,7 +115,8 @@ export function useDashboardData() {
   const [companiesData, setCompaniesData] = useState([]);
   const [searchersData, setSearchersData] = useState([]);
   const [fundMeta, setFundMeta] = useState([]);
-  const [liquidityAccounts, setLiquidityAccounts] = useState([]);
+  const [liquidityRegistry, setLiquidityRegistry] = useState([]);
+  const [liquidityBalances, setLiquidityBalances] = useState([]);
   const [loadedAt,setLoadedAt]= useState(null);
   const [eurUsd,  setEurUsd]  = useState(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -181,13 +183,30 @@ export function useDashboardData() {
         if (Array.isArray(data.companies)) setCompaniesData(data.companies);
         if (Array.isArray(data.searchers)) setSearchersData(data.searchers);
         if (Array.isArray(data.fundMeta)) setFundMeta(data.fundMeta);
-        if (Array.isArray(data.liquidityAccounts)) setLiquidityAccounts(data.liquidityAccounts);
         setLoadedAt(now);
       })
       .catch(err => {
         console.error("Initial dashboard load failed:", err);
       })
       .finally(() => { if (!cancelled) setIsLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const reloadLiquidity = useCallback(async () => {
+    const { registry, balances } = await loadLiquidity();
+    setLiquidityRegistry(registry);
+    setLiquidityBalances(balances);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    loadLiquidity()
+      .then(({ registry, balances }) => {
+        if (cancelled) return;
+        setLiquidityRegistry(registry);
+        setLiquidityBalances(balances);
+      })
+      .catch((err) => console.error("Initial liquidity load failed:", err));
     return () => { cancelled = true; };
   }, []);
 
@@ -303,13 +322,6 @@ export function useDashboardData() {
         setCompaniesData(bundle.companies);
         if (bundle.searchers != null) setSearchersData(bundle.searchers);
         if (bundle.fundMeta != null) setFundMeta(bundle.fundMeta);
-        // Liquidity is its own source of truth — persisted separately from the
-        // dashboard bundle RPC, only when the Excel included a Liquiditat sheet.
-        if (Array.isArray(rows.liquidityAccounts)) {
-          const { error: laError } = await saveLiquidityAccounts(rows.liquidityAccounts);
-          if (laError) throw laError;
-          setLiquidityAccounts(rows.liquidityAccounts);
-        }
         clearExcluded?.();
       } else if (key === "cc") {
         const { error } = await saveCapitalCalls(rows);
@@ -342,6 +354,11 @@ export function useDashboardData() {
     }
   }, [dispatchRawCCUpdated]);
 
+  const liquidityAccounts = useMemo(
+    () => buildLatestAccounts(liquidityRegistry, liquidityBalances),
+    [liquidityRegistry, liquidityBalances],
+  );
+
   const TRANSACTIONS = useMemo(()=>rawCC.filter(r=>r.cat!=="Compromís"),[rawCC]);
   const COMPROMISOS  = useMemo(()=>rawCC.filter(r=>r.cat==="Compromís"),[rawCC]);
 
@@ -362,7 +379,7 @@ export function useDashboardData() {
     companiesData, setCompaniesData,
     searchersData, setSearchersData,
     fundMeta, setFundMeta,
-    liquidityAccounts, setLiquidityAccounts,
+    liquidityAccounts, liquidityRegistry, liquidityBalances, reloadLiquidity,
     loadedAt, setLoadedAt,
     isLoading,
     eurUsd,

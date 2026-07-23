@@ -14,7 +14,8 @@ import {
 } from "./publicMarkets/PublicMarketsShared.jsx";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
 import { canonicalPmCustodian, splitIbPositions } from "../data/pmClassification.js";
-import { loadPMOverrides, loadLiquidityAccounts } from "../db.js";
+import { loadPMOverrides, loadLiquidity } from "../db.js";
+import { buildLatestAccounts } from "../data/liquidityModel.js";
 import { usePmMonthly, applyManagerOverrides } from "./hooks/usePmMonthly.js";
 import { PublicMarketsSummarySection } from "./publicMarkets/PublicMarketsSummarySection.jsx";
 import { PublicMarketsTablesSection } from "./publicMarkets/PublicMarketsTablesSection.jsx";
@@ -111,8 +112,9 @@ export function PublicMarketsTab() {
   // Supabase liquidity_accounts table, they become the source of truth for PM's
   // liquidity. Until then, PM falls back to the generated PM_LIQUIDITY_POSITIONS.
   useEffect(() => {
-    loadLiquidityAccounts()
-      .then((accounts) => setTableLiquidity((accounts ?? []).filter((a) => a.section === "mercats-publics")))
+    loadLiquidity()
+      .then(({ registry, balances }) =>
+        setTableLiquidity(buildLatestAccounts(registry, balances).filter((a) => a.section === "mercats-publics")))
       .catch(console.error);
   }, []);
 
