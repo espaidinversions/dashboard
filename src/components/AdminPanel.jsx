@@ -10,6 +10,7 @@ import AdminEntities from "./admin/AdminEntities.jsx";
 import AdminPMOperations from "./admin/AdminPMOperations.jsx";
 import AdminSystem from "./admin/AdminSystem.jsx";
 import AdminPermissions from "./admin/AdminPermissions.jsx";
+import AdminLiquidity from "./admin/AdminLiquidity.jsx";
 
 const NAV_BASE = [
   { id: "users",       label: "Usuaris",      icon: "👥" },
@@ -18,6 +19,7 @@ const NAV_BASE = [
   { id: "data",        label: "Dades",        icon: "🗄️" },
   { id: "entities",    label: "Entitats",     icon: "🏢" },
   { id: "pm",          label: "PM Operacions",icon: "📈" },
+  { id: "liquidity",   label: "Liquiditat",   icon: "💰" },
   { id: "settings",    label: "Configuració", icon: "⚙️" },
 ];
 const NAV_SYSTEM = { id: "system", label: "Sistema", icon: "🔧" };
@@ -69,6 +71,7 @@ function AdminPanelInner() {
           {activeTab === "data"        && <AdminData />}
           {activeTab === "entities" && <AdminEntities />}
           {activeTab === "pm"       && <AdminPMOperations />}
+          {activeTab === "liquidity" && <AdminLiquidity />}
           {activeTab === "settings" && <AdminSettings />}
           {activeTab === "system"   && <AdminSystem />}
         </div>
