@@ -1,9 +1,11 @@
 # Plan — Real Estate summary page + cross-section Liquidity
 
 Date: 2026-07-22
-Status: PLAN ONLY (not implemented). To be executed in a new session.
+Status: IMPLEMENTED (2026-07-23). All 5 phases shipped to `master` and deployed.
+Commits: Phase 1 `90b7717` (RE Resum page) · Phase 2 `0e8220d` (Inici gating) · Phase 3 `8568dbe` (liquidity foundation) · Phase 4 `368e1a2` (Liquiditat in Alternatius/RE) · Phase 5 `7a99399` (Inici total card) + `a687b68` (PM liquidity migration).
+Verified 2026-07-23: `npm test` 175/175 pass · `npm run build` clean.
 Repo: `01. Dashboard` (turtle-capital-dashboard). Deploy = `git push origin master` → Vercel.
-Gate before every deploy: `npm run build` and `npm test` (163 tests must pass).
+Gate before every deploy: `npm run build` and `npm test` (now 175 tests must pass).
 
 ---
 
