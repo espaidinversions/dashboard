@@ -126,3 +126,59 @@ test("buildLiquidityByCurrency ignores non-finite saldos", () => {
   ]);
   assert.deepEqual(byCurrency, [{ divisa: "EUR", total: 1000 }]);
 });
+
+import { buildLatestAccounts, buildLiquidityTrend } from "../src/data/liquidityModel.js";
+
+const REG = [
+  { id: 1, nom: "ALT A", banc: "Caixa", section: "alternatives", divisa: "EUR" },
+  { id: 2, nom: "RE B", banc: "UBS", section: "real-estate", divisa: "USD" },
+  { id: 3, nom: "No history", banc: null, section: "mercats-publics", divisa: "EUR" },
+];
+const BAL = [
+  { id: 10, accountId: 1, data: "2026-04-30", saldo: 100, saldoNative: null },
+  { id: 11, accountId: 1, data: "2026-06-30", saldo: 150, saldoNative: null },
+  { id: 12, accountId: 2, data: "2026-05-31", saldo: 200, saldoNative: 220 },
+];
+
+test("buildLatestAccounts picks the max-date balance per account", () => {
+  const out = buildLatestAccounts(REG, BAL);
+  const a1 = out.find((a) => a.id === 1);
+  assert.equal(a1.saldo, 150);
+  assert.equal(a1.data, "2026-06-30");
+  assert.equal(a1.divisa, "EUR");
+  const a2 = out.find((a) => a.id === 2);
+  assert.equal(a2.saldo, 200);
+  assert.equal(a2.saldoNative, 220);
+});
+
+test("buildLatestAccounts yields zero/no-date for accounts with no balances", () => {
+  const a3 = buildLatestAccounts(REG, BAL).find((a) => a.id === 3);
+  assert.equal(a3.saldo, 0);
+  assert.equal(a3.saldoNative, null);
+  assert.equal(a3.data, null);
+});
+
+test("buildLatestAccounts returns the existing account shape and handles empty input", () => {
+  assert.deepEqual(buildLatestAccounts([], []), []);
+  assert.deepEqual(buildLatestAccounts(undefined, undefined), []);
+  const keys = Object.keys(buildLatestAccounts(REG, BAL)[0]).sort();
+  assert.deepEqual(keys, ["banc", "data", "divisa", "id", "nom", "saldo", "saldoNative", "section"]);
+});
+
+test("buildLiquidityTrend buckets by month, sorted, with carry-forward", () => {
+  const { months, series } = buildLiquidityTrend(REG, BAL);
+  assert.deepEqual(months, ["2026-04", "2026-05", "2026-06"]);
+  const alt = series.find((s) => s.section === "alternatives");
+  // 100 in Apr, carried to May, 150 in Jun
+  assert.deepEqual(alt.values, [100, 100, 150]);
+  const re = series.find((s) => s.section === "real-estate");
+  // nothing in Apr, 200 from May onward (carry-forward)
+  assert.deepEqual(re.values, [0, 200, 200]);
+  const pub = series.find((s) => s.section === "mercats-publics");
+  assert.deepEqual(pub.values, [0, 0, 0]);
+});
+
+test("buildLiquidityTrend returns empty structure for no balances", () => {
+  assert.deepEqual(buildLiquidityTrend(REG, []), { months: [], series: [] });
+  assert.deepEqual(buildLiquidityTrend(undefined, undefined), { months: [], series: [] });
+});
