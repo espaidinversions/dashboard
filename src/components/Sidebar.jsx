@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { TC_LIGHT } from "../theme.js";
-import { Briefcase, Building2, Search, Building, Home, TrendingUp, BookOpen, Users, DollarSign, Menu, ChevronLeft, LineChart, Wallet } from "lucide-react";
+import { Briefcase, Home, TrendingUp, BookOpen, Users, Menu, ChevronLeft, LineChart, Wallet } from "lucide-react";
 
 const SIDEBAR_W = 220;
 const RAIL_W    = 52;
@@ -12,11 +12,11 @@ const PORTFOLI_SECTIONS = [
   {
     id:"alt", label:"Alternatius", icon:Briefcase,
     children:[
-      {id:"alt-resum",      label:"Resum",       icon:LineChart},
-      {id:"fons",           label:"Fons",        icon:Building2},
-      {id:"searchers",      label:"Searchers",   icon:Search},
-      {id:"companies",      label:"Participades",icon:Building},
-      {id:"alt-cash-model", label:"Model",       icon:LineChart},
+      {id:"alt-resum",      label:"Resum"},
+      {id:"fons",           label:"Fons"},
+      {id:"searchers",      label:"Searchers"},
+      {id:"companies",      label:"Participades"},
+      {id:"alt-cash-model", label:"Model"},
     ],
   },
   {
@@ -50,9 +50,9 @@ const PORTFOLI_SECTIONS = [
 ];
 
 const TX_LEAVES = [
-  {id:"tx-alt", label:"Alternatius",    icon:DollarSign},
-  {id:"tx-re",  label:"Real Estate",    icon:DollarSign},
-  {id:"tx-mp",  label:"Mercats Públics", icon:DollarSign},
+  {id:"tx-alt", label:"Alternatius",    icon:Briefcase},
+  {id:"tx-re",  label:"Real Estate",    icon:Home},
+  {id:"tx-mp",  label:"Mercats Públics", icon:TrendingUp},
 ];
 
 const BOTTOM_ITEMS = [
@@ -95,6 +95,8 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
           background: active ? C.bgActive : "transparent",
           color: active ? "#fff" : C.text,
           fontSize:12, fontFamily:"inherit",
+          fontWeight: indent ? 400 : 600,
+          letterSpacing: indent ? "normal" : "0.01em",
           justifyContent: collapsed ? "center" : "flex-start",
           transition:"background 0.1s",
         }}
