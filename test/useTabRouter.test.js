@@ -7,6 +7,10 @@ test("normalizeNavState maps the home tab to the home nav item", () => {
   assert.equal(normalizeNavState({ tab: "home" }), "home");
 });
 
+test("normalizeNavState maps the liquidity tab to the liquidity nav item", () => {
+  assert.equal(normalizeNavState({ tab: "liquidity" }), "liquidity");
+});
+
 test("normalizeNavState still maps inversions/resum to alt-resum", () => {
   assert.equal(normalizeNavState({ tab: "inversions", inversionsSubTab: "resum" }), "alt-resum");
 });

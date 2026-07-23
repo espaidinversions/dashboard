@@ -4,6 +4,7 @@ import { usePersistedState } from "../../utils.js";
 
 export function normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublicsTab, activeNavItem }) {
   if (tab === "home") return "home";
+  if (tab === "liquidity") return "liquidity";
   if (tab === "real-estate") {
     if (realEstateTab === "resum") return "re-resum";
     if (realEstateTab === "altres-vehicles") return "re-altres";
@@ -53,6 +54,7 @@ export function useTabRouter() {
     setActiveNavItem(itemId);
     switch (itemId) {
       case "home":           setTab("home"); break;
+      case "liquidity":      setTab("liquidity"); break;
       case "alt-resum":      setTab("inversions"); setInversionsSubTab("resum"); break;
       case "fons":           setTab("inversions"); setInversionsSubTab("fons"); break;
       case "searchers":      setTab("searchers"); break;

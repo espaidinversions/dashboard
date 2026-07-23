@@ -1,7 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-import { buildLiquiditySummary } from "../src/data/liquidityModel.js";
+import {
+  buildLiquiditySummary,
+  buildLiquidityByBank,
+  buildLiquidityByCurrency,
+} from "../src/data/liquidityModel.js";
 
 const ACCOUNTS = [
   { id: 1, nom: "Compte ALT 1", section: "alternatives", saldo: 100000 },
@@ -51,4 +55,74 @@ test("buildLiquiditySummary ignores non-finite saldos", () => {
     { section: "alternatives", saldo: 1000 },
   ]);
   assert.equal(summary.total, 1000);
+});
+
+const BANK_ACCOUNTS = [
+  { id: 1, banc: "Caixa", section: "alternatives", saldo: 100000 },
+  { id: 2, banc: "Caixa", section: "real-estate", saldo: 50000 },
+  { id: 3, banc: "UBS", section: "mercats-publics", saldo: 200000 },
+  { id: 4, section: "alternatives", saldo: 5000 },
+];
+
+test("buildLiquidityByBank sums per bank and sorts by total descending", () => {
+  const byBank = buildLiquidityByBank(BANK_ACCOUNTS);
+  assert.deepEqual(byBank, [
+    { banc: "UBS", total: 200000 },
+    { banc: "Caixa", total: 150000 },
+    { banc: "—", total: 5000 },
+  ]);
+});
+
+test("buildLiquidityByBank groups falsy banc under the '—' label", () => {
+  const byBank = buildLiquidityByBank([
+    { banc: "", saldo: 1000 },
+    { banc: null, saldo: 2000 },
+  ]);
+  assert.deepEqual(byBank, [{ banc: "—", total: 3000 }]);
+});
+
+test("buildLiquidityByBank returns [] for empty and non-array input", () => {
+  assert.deepEqual(buildLiquidityByBank([]), []);
+  assert.deepEqual(buildLiquidityByBank(undefined), []);
+});
+
+test("buildLiquidityByBank ignores non-finite saldos", () => {
+  const byBank = buildLiquidityByBank([
+    { banc: "Caixa", saldo: "x" },
+    { banc: "Caixa", saldo: 1000 },
+  ]);
+  assert.deepEqual(byBank, [{ banc: "Caixa", total: 1000 }]);
+});
+
+const CURRENCY_ACCOUNTS = [
+  { id: 1, divisa: "EUR", saldo: 100000 },
+  { id: 2, divisa: "USD", saldo: 250000 },
+  { id: 3, divisa: "USD", saldo: 50000 },
+  { id: 4, saldo: 30000 },
+];
+
+test("buildLiquidityByCurrency sums EUR-equivalent per divisa, sorted descending", () => {
+  const byCurrency = buildLiquidityByCurrency(CURRENCY_ACCOUNTS);
+  assert.deepEqual(byCurrency, [
+    { divisa: "USD", total: 300000 },
+    { divisa: "EUR", total: 130000 },
+  ]);
+});
+
+test("buildLiquidityByCurrency defaults missing divisa to EUR", () => {
+  const byCurrency = buildLiquidityByCurrency([{ saldo: 5000 }]);
+  assert.deepEqual(byCurrency, [{ divisa: "EUR", total: 5000 }]);
+});
+
+test("buildLiquidityByCurrency returns [] for empty and non-array input", () => {
+  assert.deepEqual(buildLiquidityByCurrency([]), []);
+  assert.deepEqual(buildLiquidityByCurrency(null), []);
+});
+
+test("buildLiquidityByCurrency ignores non-finite saldos", () => {
+  const byCurrency = buildLiquidityByCurrency([
+    { divisa: "EUR", saldo: "x" },
+    { divisa: "EUR", saldo: 1000 },
+  ]);
+  assert.deepEqual(byCurrency, [{ divisa: "EUR", total: 1000 }]);
 });

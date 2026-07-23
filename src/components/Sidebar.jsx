@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { TC_LIGHT } from "../theme.js";
-import { Briefcase, Building2, Search, Building, Home, TrendingUp, BookOpen, Users, DollarSign, Menu, ChevronLeft, LineChart } from "lucide-react";
+import { Briefcase, Building2, Search, Building, Home, TrendingUp, BookOpen, Users, DollarSign, Menu, ChevronLeft, LineChart, Wallet } from "lucide-react";
 
 const SIDEBAR_W = 220;
 const RAIL_W    = 52;
@@ -244,6 +244,9 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
         {/* ── Portfoli group ── */}
         <GroupLabel label="Portfoli" />
         {PORTFOLI_SECTIONS.map(sec => <Section key={sec.id} sec={sec} />)}
+        {(isAdmin || (canAccessSection?.("liquidity") ?? false)) && (
+          <Leaf item={{ id: "liquidity", label: "Liquiditat", icon: Wallet }} />
+        )}
 
         {/* ── Transaccions group ── */}
         {TX_LEAVES.some(l => canAccessSection?.(l.id) ?? true) ? <GroupLabel label="Transaccions" /> : null}

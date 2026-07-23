@@ -14,6 +14,7 @@ import { buildLandingModel } from "../data/landingModel.js";
 import { AltCohortSection } from "./funds/AltCohortSection.jsx";
 import { RealEstateSummarySection } from "./realEstate/RealEstateSummarySection.jsx";
 import { LiquiditatSection } from "./shared/LiquiditatSection.jsx";
+import { LiquidityOverview } from "./liquidity/LiquidityOverview.jsx";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
 import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
@@ -358,6 +359,9 @@ function Dashboard() {
   });
 
   const currentPermissionId =
+    tab === "liquidity"
+      ? "liquidity"
+      :
     tab === "real-estate"
       ? (realEstateTab === "resum" ? "real-estate" : realEstateTab === "altres-vehicles" ? "re-altres" : "re-directe")
       : tab === "mercats-publics"
@@ -537,7 +541,7 @@ function Dashboard() {
           <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
-                {tab === "home" ? "Inici" : (tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re" || tab === "re-cash-model") ? "Real Estate" : tab === "cash-model" ? "Model Caixa" : "Mercats Privats"}
+                {tab === "home" ? "Inici" : tab === "liquidity" ? "Liquiditat" : (tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re" || tab === "re-cash-model") ? "Real Estate" : tab === "cash-model" ? "Model Caixa" : "Mercats Privats"}
               </div>
               {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
             </div>
@@ -767,6 +771,7 @@ function Dashboard() {
           {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" /></Suspense>}
           {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ est: "Fons Real Estate" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
           {tab === "tx-mp" && <Suspense fallback={null}><PMTransaccionsTab search={globalSearch} /></Suspense>}
+          {tab === "liquidity" && <LiquidityOverview accounts={d.liquidityAccounts} tc={tc} dark={dark} />}
         </main>
       </div>
 

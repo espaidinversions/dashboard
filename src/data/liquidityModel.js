@@ -29,3 +29,40 @@ export function buildLiquiditySummary(accounts, { section } = {}) {
 
   return { total, byAccount, bySection };
 }
+
+/**
+ * Groups liquidity by bank, summing EUR `saldo`. Accounts with a falsy `banc`
+ * fall under a stable "—" label.
+ * @param {Array} accounts
+ * @returns {Array<{ banc: string, total: number }>} sorted by total descending.
+ */
+export function buildLiquidityByBank(accounts) {
+  const all = Array.isArray(accounts) ? accounts : [];
+  const totals = new Map();
+  for (const account of all) {
+    const banc = account?.banc || "—";
+    totals.set(banc, (totals.get(banc) ?? 0) + toNumber(account?.saldo));
+  }
+  return [...totals.entries()]
+    .map(([banc, total]) => ({ banc, total }))
+    .sort((a, b) => b.total - a.total);
+}
+
+/**
+ * Groups liquidity by currency, summing the EUR-equivalent `saldo` per `divisa`
+ * (so USD-denominated cash is still expressed in EUR). Missing `divisa`
+ * defaults to "EUR".
+ * @param {Array} accounts
+ * @returns {Array<{ divisa: string, total: number }>} sorted by total descending.
+ */
+export function buildLiquidityByCurrency(accounts) {
+  const all = Array.isArray(accounts) ? accounts : [];
+  const totals = new Map();
+  for (const account of all) {
+    const divisa = account?.divisa || "EUR";
+    totals.set(divisa, (totals.get(divisa) ?? 0) + toNumber(account?.saldo));
+  }
+  return [...totals.entries()]
+    .map(([divisa, total]) => ({ divisa, total }))
+    .sort((a, b) => b.total - a.total);
+}
