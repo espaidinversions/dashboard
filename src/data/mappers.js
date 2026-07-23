@@ -305,3 +305,27 @@ export function rowToLiquidityAccount(row) {
     data: row.data ?? null,
   };
 }
+
+/** DB registry row (snake_case) → app account identity (camelCase). */
+export function rowToLiquidityRegistry(row) {
+  return {
+    id: row.id,
+    nom: row.nom ?? "",
+    banc: row.banc ?? null,
+    section: row.section,
+    divisa: row.divisa ?? "EUR",
+  };
+}
+
+/** DB balance row (snake_case) → app balance (camelCase). */
+export function rowToLiquidityBalance(row) {
+  const saldo = Number(row.saldo);
+  const native = row.saldo_native != null ? Number(row.saldo_native) : null;
+  return {
+    id: row.id,
+    accountId: row.account_id,
+    data: row.data ?? null,
+    saldo: Number.isFinite(saldo) ? saldo : 0,
+    saldoNative: native != null && Number.isFinite(native) ? native : null,
+  };
+}
