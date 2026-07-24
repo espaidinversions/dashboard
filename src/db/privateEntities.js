@@ -37,19 +37,6 @@ export async function updateEntityId(oldId, newId) {
   return { error };
 }
 
-export async function updateEntityNif(entityId, nif) {
-  if (!supabase) return { error: null };
-  const trimmed = String(nif ?? "").trim();
-  const { error } = await supabase.rpc("update_private_entity_nif", {
-    p_id: entityId,
-    p_nif: trimmed,
-  });
-  if (!error) {
-    logAudit("update", "private_entities", entityId, { nif: trimmed });
-  }
-  return { error };
-}
-
 export async function updateEntityVehicleEst(entityId, vehicleEst) {
   if (!supabase) return { error: null };
   const trimmed = String(vehicleEst ?? "").trim();

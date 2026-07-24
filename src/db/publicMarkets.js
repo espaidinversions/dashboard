@@ -2,6 +2,18 @@ import { logAudit, supabase } from "./_shared.js";
 
 const VALID_TIPUS = new Set(["RV", "RF"]);
 
+function warnLoadError(label, error) {
+  if (error) console.error(`[${label}]`, error);
+}
+
+async function selectRowsResult(label, table, orderColumn = null, orderOptions = undefined) {
+  if (!supabase) return { data: [], error: null };
+  let query = supabase.from(table).select("*");
+  if (orderColumn) query = query.order(orderColumn, orderOptions);
+  const { data, error } = await query;
+  return { data: data ?? [], error };
+}
+
 export async function loadPMOverrides() {
   if (!supabase) return null;
   const [tx, ter, meta] = await Promise.all([
@@ -36,11 +48,8 @@ export async function loadPMOverrides() {
   };
 }
 
-export async function loadPMTransactions() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from("pm_transactions").select("*").order("date", { ascending: false });
-  if (error) return [];
-  return data;
+export async function loadPMTransactionsResult() {
+  return selectRowsResult("loadPMTransactions", "pm_transactions", "date", { ascending: false });
 }
 
 export async function deletePMTransaction(id) {
@@ -50,25 +59,16 @@ export async function deletePMTransaction(id) {
   return { error };
 }
 
-export async function loadPMTerOverridesTable() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from("pm_ter_overrides").select("*").order("isin");
-  if (error) return [];
-  return data;
+export async function loadPMTerOverridesTableResult() {
+  return selectRowsResult("loadPMTerOverridesTable", "pm_ter_overrides", "isin");
 }
 
-export async function loadPMPositionMetaTable() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from("pm_position_meta").select("*").order("isin");
-  if (error) return [];
-  return data;
+export async function loadPMPositionMetaTableResult() {
+  return selectRowsResult("loadPMPositionMetaTable", "pm_position_meta", "isin");
 }
 
-export async function loadPMPositionOverridesTable() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from("pm_position_overrides").select("*").order("isin");
-  if (error) return [];
-  return data;
+export async function loadPMPositionOverridesTableResult() {
+  return selectRowsResult("loadPMPositionOverridesTable", "pm_position_overrides", "isin");
 }
 
 export async function upsertTransaction(tx) {
@@ -130,10 +130,13 @@ export async function loadPMPositionOverrides() {
   }]));
 }
 
+export async function loadPMMonthlySeriesResult() {
+  return selectRowsResult("loadPMMonthlySeries", "pm_monthly_series", "month");
+}
+
 export async function loadPMMonthlySeries() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from("pm_monthly_series").select("*").order("month");
-  if (error) return [];
+  const { data, error } = await loadPMMonthlySeriesResult();
+  warnLoadError("loadPMMonthlySeries", error);
   return data;
 }
 
@@ -162,10 +165,13 @@ export async function deletePMMonthlyRow(month) {
   return { error };
 }
 
+export async function loadPMManagerOverridesResult() {
+  return selectRowsResult("loadPMManagerOverrides", "pm_manager_overrides", "manager_id");
+}
+
 export async function loadPMManagerOverrides() {
-  if (!supabase) return [];
-  const { data, error } = await supabase.from("pm_manager_overrides").select("*").order("manager_id");
-  if (error) return [];
+  const { data, error } = await loadPMManagerOverridesResult();
+  warnLoadError("loadPMManagerOverrides", error);
   return data;
 }
 
@@ -197,4 +203,3 @@ export async function upsertPMPositionOverride(isin, fields) {
   if (!error) logAudit("update", "pm_position_overrides", isin, fields);
   return { error };
 }
-

@@ -34,12 +34,6 @@ export const AREA_COLORS = {
   ...MGR_COLORS,
 };
 
-const _cy = new Date().getFullYear();
-export const PERIODS = [
-  { field: `r${_cy - 2}`, label: String(_cy - 2) },
-  { field: `r${_cy - 1}`, label: String(_cy - 1) },
-  { field: "ytd", label: `YTD '${String(_cy).slice(2)}` },
-];
 
 
 export function weightedReturn(field, managerValueById, tipus = null, managers = PM_MANAGERS) {
@@ -164,4 +158,3 @@ export function pctFmt(v) {
   if (v == null) return "—";
   return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
 }
-

@@ -52,31 +52,3 @@ export async function upsertCompany(company) {
   const entityMap = await loadPrivateEntityMap();
   return { data: data ? rowToCompany(data, entityMap) : null, error };
 }
-
-export async function insertCompany(company) {
-  if (!supabase) return null;
-  const resolved = resolvePrivateEntity("company", company.nom, company.id ?? null);
-  const { error: entityError } = await upsertPrivateEntities([resolved]);
-  if (entityError) {
-    console.error(entityError);
-    return null;
-  }
-  const { data, error } = await supabase
-    .from("portfolio_companies")
-    .insert(companyToRow(company))
-    .select()
-    .single();
-  if (error) { console.error(error); return null; }
-  logAudit("insert", "portfolio_companies", resolved.id, { nom: data.nom });
-  const entityMap = await loadPrivateEntityMap();
-  return rowToCompany(data, entityMap);
-}
-
-export async function deleteCompany(id) {
-  if (!supabase) return { error: null };
-  const { data: old } = await supabase.from("portfolio_companies").select("*").eq("entity_id", id).single();
-  const { error } = await supabase.from("portfolio_companies").delete().eq("entity_id", id);
-  if (!error) logAudit("delete", "portfolio_companies", id, { old: old ?? null });
-  return { error };
-}
-

@@ -1,5 +1,5 @@
 /**
- * Parses turtle-fons-model.xlsx and exports src/data/turtleFonsModel.js.
+ * Parses turtle-fons-model.xlsx and exports src/generated/dashboard/turtleFonsModel.js.
  *
  * Excel layout (model sheet):
  *   Row 3  (0-idx): header — col 1 = empty, col 2 = "Capital compromés", col 3+ = years
@@ -20,7 +20,7 @@ import XLSX from "./lib/xlsx_compat.mjs";
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
 const INPUT  = path.join(ROOT, "turtle-fons-model.xlsx");
-const OUT_JS = path.join(ROOT, "src", "data", "turtleFonsModel.js");
+const OUT_JS = path.join(ROOT, "src", "generated", "dashboard", "turtleFonsModel.js");
 
 const wb = await XLSX.readFile(INPUT);
 const raw = XLSX.utils.sheet_to_json(wb.Sheets["model"], { header: 1, defval: null });

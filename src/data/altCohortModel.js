@@ -1,6 +1,6 @@
 import { xirr } from "../utils.js";
 import { estSection } from "./capitalCallStrategyModel.js";
-import { SF_STRATEGY_CERCA } from "./searchFundSnapshotModel.js";
+import { SF_STRATEGY_CERCA } from "./capitalCallStrategyConstants.js";
 import { makeFundRouteId, normalizeFundDetailRow } from "./fundDetailModel.js";
 
 // The four Alternatives strategies, in fixed display order. Matches the canonical

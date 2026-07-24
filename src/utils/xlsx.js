@@ -5,7 +5,7 @@
 //    first row = headers, empty cells = "", date cells = JS Date, blank rows skipped).
 
 async function loadExcelJS() {
-  const mod = await import("exceljs");
+  const mod = await import("exceljs/dist/exceljs.bare.min.js");
   return mod?.default ?? mod;
 }
 

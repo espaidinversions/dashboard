@@ -15,7 +15,8 @@
     "!scripts/out/**"
   ],
   "ignoreBinaries": [
-    "python"
+    "python",
+    "vercel"
   ],
   "ignoreExportsUsedInFile": true,
   "ignore": []

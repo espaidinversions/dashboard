@@ -5,7 +5,7 @@ import { fmtM, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, indexPageStyles, tableCardStyle } from "./SharedComponents.jsx";
 import { loadCapitalCalls, loadCompanies } from "../db.js";
 import { isActualCompany } from "../data/privateCompanyModel.js";
-import { SF_STRATEGY_ADQUISICIO, STRATEGY_PARTICIPADA_ALTRES } from "../data/searchFundSnapshotModel.js";
+import { SF_STRATEGY_ADQUISICIO, STRATEGY_PARTICIPADA_ALTRES } from "../data/capitalCallStrategyConstants.js";
 
 const TIPUS_CFG = {
   "SF": { color: "#28A029", bg: "#E8F8E8" },

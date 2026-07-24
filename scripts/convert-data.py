@@ -11,7 +11,7 @@ Input:
     data/pipeline.csv        → pipeline FY26 opportunities
 
 Output:
-    data/capital-calls.js    (auto-generated, do not edit manually)
+    src/generated/dashboard/capitalCalls.js (auto-generated, do not edit manually)
     data/pipeline.js         (auto-generated, do not edit manually)
 """
 
@@ -19,19 +19,22 @@ import csv, json, os, sys
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "data")
+GENERATED_DASHBOARD = os.path.join(os.path.dirname(BASE), "src", "generated", "dashboard")
 
 
 # ── Helpers ───────────────────────────────────────────────
 
 def read_csv(filename):
-    path = os.path.join(DATA, filename)
+    path = os.path.join(GENERATED_DASHBOARD, filename) if filename == "capitalCalls.js" else os.path.join(DATA, filename)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     if not os.path.exists(path):
         sys.exit(f"ERROR: {path} not found.")
     with open(path, encoding="utf-8", newline="") as f:
         return list(csv.DictReader(f))
 
 def write_js(filename, varname, rows, comment):
-    path = os.path.join(DATA, filename)
+    path = os.path.join(GENERATED_DASHBOARD, filename) if filename == "capitalCalls.js" else os.path.join(DATA, filename)
+    os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, "w", encoding="utf-8") as f:
         f.write(f"// AUTO-GENERATED — do not edit manually.\n")
         f.write(f"// Edit {comment} and run: python convert-data.py\n\n")
@@ -41,7 +44,7 @@ def write_js(filename, varname, rows, comment):
     print(f"  OK {filename} ({len(rows)} rows)")
 
 
-# ── capital-calls.csv → capital-calls.js ─────────────────
+# ── capital-calls.csv → capitalCalls.js ─────────────────
 
 def convert_capital_calls():
     rows = read_csv("capital-calls.csv")
@@ -63,7 +66,7 @@ def convert_capital_calls():
             })
         except (KeyError, ValueError) as e:
             sys.exit(f"ERROR in capital-calls.csv row {i+1}: {e}")
-    write_js("capital-calls.js", "RAW_CC", out, "data/capital-calls.csv")
+    write_js("capitalCalls.js", "RAW_CC", out, "data/capital-calls.csv")
 
 
 # ── pipeline.csv → pipeline.js ────────────────────────────

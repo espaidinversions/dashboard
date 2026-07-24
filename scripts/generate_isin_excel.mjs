@@ -18,9 +18,7 @@ const { PRIVATE_ENTITIES_WORKBOOK } = await import(
 const { PM_POSITIONS_RAW } = await import(
   pathToFileURL(path.join(root, "src/data/publicMarketsRaw.js")).href
 );
-const { PORTFOLIO_COMPANIES, ACTIVE_SEARCHERS } = await import(
-  pathToFileURL(path.join(root, "src/data/searchers.js")).href
-);
+
 
 // ── Matching logic (mirrors privateEntities.js) ────────────────────────────
 const STOPWORDS = new Set([
@@ -141,45 +139,28 @@ for (const [fons, meta] of fundMeta) {
   });
 }
 
-// ── Build companies list ──────────────────────────────────────────────────
-// PORTFOLIO_COMPANIES: acquired companies (SF + PE direct investments)
-// ACTIVE_SEARCHERS: active search fund vehicles still searching
-const companyRows = [];
-
-for (const c of PORTFOLIO_COMPANIES) {
-  if (c.isMock) continue;
-  const wb = resolveWorkbook(c.nom);
-  companyRows.push({
-    Nom: c.nom,
-    Tipus: c.tipus ?? "",
-    Origen: c.origen ?? "",
-    Segment: c.segment ?? "",
-    País: c.geo ?? "",
+// ── Build companies/search-fund list from current capital-call source ──────
+const companyRowsByName = new Map();
+for (const row of RAW_CC) {
+  const est = String(row.est ?? "").trim();
+  if (est !== "Search Fund - Cerca" && est !== "Search Fund - Participada" && est !== "Participada (Altres)") continue;
+  const name = String(row.fons ?? "").trim();
+  if (!name || companyRowsByName.has(name)) continue;
+  const wb = resolveWorkbook(name);
+  companyRowsByName.set(name, {
+    Nom: name,
+    Tipus: est,
+    Origen: row.vcpe ?? "",
+    Segment: "",
+    País: "",
     NIF: wb ? wb.id : "",
     ISIN: wb?.isin ?? "",
     "Nom Workbook": wb?.workbookName ?? "",
-    "Data compra": c.dataCompr ?? "",
+    "Primera inversió": wb?.firstInvestmentDate ?? "",
     Comentaris: "",
   });
 }
-
-// Active searcher vehicles (not yet acquired a company)
-for (const s of ACTIVE_SEARCHERS) {
-  if (s.isMock) continue;
-  const wb = resolveWorkbook(s.nom);
-  companyRows.push({
-    Nom: s.nom,
-    Tipus: "SF (cerca)",
-    Origen: "Search Capital",
-    Segment: "—",
-    País: s.geo ?? "",
-    NIF: wb ? wb.id : "",
-    ISIN: wb?.isin ?? "",
-    "Nom Workbook": wb?.workbookName ?? "",
-    "Data compra": s.dataCompr ?? "",
-    Comentaris: "",
-  });
-}
+const companyRows = [...companyRowsByName.values()];
 
 const compWithNif  = companyRows.filter(r => r.NIF);
 const compNoNif    = companyRows.filter(r => !r.NIF);

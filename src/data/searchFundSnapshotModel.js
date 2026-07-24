@@ -1,8 +1,15 @@
-import { normalizeSearcherName } from "./searcherModel.js";
+import { normalizeSearcherName } from "./searcherName.js";
+import {
+  SF_STRATEGY_ADQUISICIO,
+  SF_STRATEGY_CERCA,
+  STRATEGY_PARTICIPADA_ALTRES,
+} from "./capitalCallStrategyConstants.js";
 
-export const SF_STRATEGY_CERCA = "Search Fund - Cerca";
-export const SF_STRATEGY_ADQUISICIO = "Search Fund - Participada";
-export const STRATEGY_PARTICIPADA_ALTRES = "Participada (Altres)";
+export {
+  SF_STRATEGY_ADQUISICIO,
+  SF_STRATEGY_CERCA,
+  STRATEGY_PARTICIPADA_ALTRES,
+} from "./capitalCallStrategyConstants.js";
 
 /**
  * Build a strategy inferrer from live searcher and portfolio company data.

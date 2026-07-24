@@ -18,6 +18,15 @@ import { LiquidityOverview } from "./liquidity/LiquidityOverview.jsx";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
 import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
+import {
+  COMPANIES_SUBTABS,
+  SEARCHERS_SUBTABS,
+  dashboardHeaderTitle,
+  visiblePublicMarketsNav,
+  visibleRealEstateNav,
+  visibleSections,
+  visibleSupra,
+} from "./dashboardNavConfig.js";
 
 const CcTransactionModal  = lazy(() => import("./CcTransactionModal.jsx").then(m => ({ default: m.CcTransactionModal })));
 const DataLoader          = lazy(() => import("./DataLoader.jsx").then(m => ({ default: m.DataLoader })));
@@ -436,72 +445,10 @@ function Dashboard() {
     "Altres":         { color:tc.textLight, bg: tc.bgAlt },
   };
 
-  const SECTIONS_ALL = [
-    {id:"alternatives",   label:"Alternatius"},
-    {id:"real-estate",    label:"Real Estate"},
-    {id:"mercats-publics", label:"Mercats Públics"},
-  ];
-  const SUPRA_ALL = [
-    {id:"fons",       label:"Fons"},
-    {id:"searchers",  label:"Searchers"},
-    {id:"companies",  label:"Participades"},
-    {id:"inversions", label:"Totes les Posicions"},
-    {id:"cash-model", label:"Model Caixa"},
-  ];
-  const SECTIONS = useMemo(() => SECTIONS_ALL.filter(s => canAccessSection(s.id)), [canAccessSection]);
-  const SUPRA = useMemo(() => SUPRA_ALL.filter(s =>
-    s.id === "searchers" ? canAccessSection("alternatives") : canAccessSection(s.id)
-  ), [canAccessSection]);
-  const SEARCHERS_SUBTABS = useMemo(() => ([
-    { id: "resum", label: "Resum" },
-    { id: "tots", label: "Tots" },
-    { id: "actius", label: "Actius" },
-    { id: "legacy", label: "Legacy" },
-    { id: "transaccions", label: "Transaccions" },
-  ]), []);
-  const COMPANIES_SUBTABS = useMemo(() => ([
-    { id: "portfoli", label: "Portfoli" },
-    { id: "transaccions", label: "Transaccions" },
-  ]), []);
-  const REAL_ESTATE_NAV = useMemo(() => [
-    { id: "re-resum", tab: "resum", perm: "real-estate" },
-    { id: "re-directe", tab: "directe" },
-    { id: "re-altres", tab: "altres-vehicles" },
-    { id: "re-inversions", tab: "inversions" },
-  ].filter((item) => canAccessSection(item.perm ?? item.id)), [canAccessSection]);
-  const PUBLIC_MARKETS_NAV = useMemo(() => [
-    { id: "mp-resum", tab: "resum" },
-    { id: "mp-rv", tab: "rv" },
-    { id: "mp-rf", tab: "rf" },
-    { id: "mp-posicions", tab: "posicions" },
-    { id: "mp-transaccions", tab: "transaccions" },
-    { id: "mp-traçabilitat", tab: "traçabilitat" },
-  ].filter((item) => canAccessSection(item.id)), [canAccessSection]);
-
-  useEffect(() => {
-    if (tab !== "searchers") return;
-    if (!SEARCHERS_SUBTABS.some((item) => item.id === searchersSubTab)) setSearchersSubTab("tots");
-  }, [tab, searchersSubTab, SEARCHERS_SUBTABS]);
-
-  useEffect(() => {
-    if (tab !== "companies") return;
-    if (!COMPANIES_SUBTABS.some((item) => item.id === companiesSubTab)) setCompaniesSubTab("portfoli");
-  }, [tab, companiesSubTab, COMPANIES_SUBTABS]);
-
-  useEffect(() => {
-    if (tab === "txlog") { setTab("tx-alt"); setActiveNavItem("tx-alt"); }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  useEffect(() => {
-    if (tab === "searchers" && activeNavItem !== "searchers") setActiveNavItem("searchers");
-    if (tab === "companies" && activeNavItem !== "companies") setActiveNavItem("companies");
-    if (tab === "cash-model"     && activeNavItem !== "cash-model")     setActiveNavItem("cash-model");
-    if (tab === "alt-cash-model" && activeNavItem !== "alt-cash-model") setActiveNavItem("alt-cash-model");
-    if (tab === "re-cash-model"  && activeNavItem !== "re-cash-model")  setActiveNavItem("re-cash-model");
-    if (tab === "inversions" && activeNavItem !== "posicions") setActiveNavItem("posicions");
-    if (tab === "pipeline" && activeNavItem !== "fons") setActiveNavItem("fons");
-  }, [tab, activeNavItem, setActiveNavItem]);
-
+  const SECTIONS = useMemo(() => visibleSections(canAccessSection), [canAccessSection]);
+  const SUPRA = useMemo(() => visibleSupra(canAccessSection), [canAccessSection]);
+  const REAL_ESTATE_NAV = useMemo(() => visibleRealEstateNav(canAccessSection), [canAccessSection]);
+  const PUBLIC_MARKETS_NAV = useMemo(() => visiblePublicMarketsNav(canAccessSection), [canAccessSection]);
   const canEdit = canEditSection(currentPermissionId);
 
   // Inici (home) is visible only to admins and explicitly-granted users.
@@ -541,7 +488,7 @@ function Dashboard() {
           <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
               <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
-                {tab === "home" ? "Inici" : tab === "liquidity" ? "Liquiditat" : (tab === "mercats-publics" || tab === "tx-mp") ? "Mercats Públics" : (tab === "real-estate" || tab === "tx-re" || tab === "re-cash-model") ? "Real Estate" : tab === "cash-model" ? "Model Caixa" : "Mercats Privats"}
+                {dashboardHeaderTitle(tab)}
               </div>
               {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
             </div>
@@ -737,7 +684,7 @@ function Dashboard() {
             <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
               <div style={{ display: "flex", gap: 8, borderBottom: `1px solid ${tc.border}`, paddingBottom: 0 }}>
                 {REAL_ESTATE_NAV.map(item => (
-                  <button key={item.id} onClick={() => setRealEstateTab(item.tab)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: realEstateTab === item.tab ? `2px solid ${tc.navy}` : "2px solid transparent", color: realEstateTab === item.tab ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{item.tab === "resum" ? "Resum" : item.tab === "directe" ? "RE Directe" : item.tab === "altres-vehicles" ? "Vehicles Real Estate" : "Totes les Posicions"}</button>
+                  <button key={item.id} onClick={() => setRealEstateTab(item.tab)} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: realEstateTab === item.tab ? `2px solid ${tc.navy}` : "2px solid transparent", color: realEstateTab === item.tab ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>{item.label}</button>
                 ))}
               </div>
               {realEstateTab === "resum"

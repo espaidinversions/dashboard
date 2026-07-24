@@ -38,9 +38,6 @@ export function signed(value) {
   return value >= 0 ? `+${fmtK(value)}` : fmtK(value);
 }
 
-export function signedPct(value) {
-  return value >= 0 ? `+${value.toFixed(1)}%` : `${value.toFixed(1)}%`;
-}
 
 export function numberAtYear(values, year) {
   return Number(values?.[year] ?? values?.[String(year)] ?? 0) || 0;

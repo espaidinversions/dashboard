@@ -4,7 +4,7 @@
  * Usage:
  *   node scripts/turtle_fons_import_supabase.mjs [--dry-run]
  *
- * - Reads TURTLE_FONS_MODEL from src/data/turtleFonsModel.js
+ * - Reads TURTLE_FONS_MODEL from src/generated/dashboard/turtleFonsModel.js
  * - Fetches distinct fons→vehicle_id map from capital_calls table
  * - Inserts rows for years >= 2026 into prospective_cash_forecasts
  * - Uses replace_prospective_cash_forecasts RPC (atomic delete+insert)
@@ -51,7 +51,7 @@ const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 
 // ── Load turtle model ─────────────────────────────────────────────────────────
 const { TURTLE_FONS_MODEL } = await import(
-  pathToFileURL(path.join(ROOT, "src/data/turtleFonsModel.js")).href
+  pathToFileURL(path.join(ROOT, "src/generated/dashboard/turtleFonsModel.js")).href
 );
 const { years: allYears, funds } = TURTLE_FONS_MODEL;
 const prospectiveYears = allYears.filter(y => y >= 2026);

@@ -4,13 +4,13 @@ import { CAPITAL_CALL_TIPUS_OPTIONS as CAPITAL_CALL_TIPUS_MODEL_OPTIONS, CAPITAL
 const TC = TC_LIGHT;
 
 // ── Configs ───────────────────────────────────────────────
-export const VEHICLE_TIPUS_CFG = {
+const VEHICLE_TIPUS_CFG = {
   "Primari":     { color: TC.navy,      bg: "#E6EDF3" },
   "FoF":         { color: TC.greenDark, bg: "#E8F8E8" },
   "Secundari":   { color: TC.navyLight, bg: "#EAF0F6" },
   "Co-inversió": { color: "#0F766E",    bg: "#DFF7F3" },
 };
-export const VCPE_CFG = {
+const VCPE_CFG = {
   "PE": { color:TC.navy,      bg:"#E6EDF3" },
   "VC": { color:TC.green,     bg:"#E8F8E8" },
   "RE": { color:"#6A4C8A",    bg:"#F3EEF8" },
@@ -62,8 +62,8 @@ export const PIPELINE_CANAL_OPTIONS     = Object.keys(CANAL_CFG);
 export const SEARCHER_STATUS_OPTIONS    = Object.keys(SEARCHER_STATUS_CFG);
 export const SEARCHER_MODALITAT_OPTIONS = ["Solo", "Duo", "Trio", "Partnership"];
 export const SEARCHER_FORM_ENTRADA_OPTIONS = ["Search Capital", "Equity Gap"];
-export const COMPANY_TIPUS_OPTIONS      = ["SF", "PE"];
-export const COMPANY_ORIGEN_OPTIONS     = ["Search Capital", "Equity Gap", "Direct PE"];
+const COMPANY_TIPUS_OPTIONS      = ["SF", "PE"];
+const COMPANY_ORIGEN_OPTIONS     = ["Search Capital", "Equity Gap", "Direct PE"];
 export const CAPITAL_CALL_TIPUS_OPTIONS = CAPITAL_CALL_TIPUS_MODEL_OPTIONS;
 export { CAPITAL_CALL_TIPUS_GROUPED };
 
@@ -79,4 +79,3 @@ export const SBADGE= {"Fons primari":{bg:"#E8EFF5",color:TC.navy},"Coinversions"
 export const GBADGE= {EU:{bg:"#E8F4EE",color:TC.greenDark},US:{bg:"#E8EFF5",color:TC.navyDark},"EU/US":{bg:"#EAF0F6",color:TC.navyLight}};
 
 // ── Precompute ────────────────────────────────────────────
-

@@ -2,7 +2,7 @@ import {
   SF_STRATEGY_ADQUISICIO,
   SF_STRATEGY_CERCA,
   STRATEGY_PARTICIPADA_ALTRES,
-} from "./searchFundSnapshotModel.js";
+} from "./capitalCallStrategyConstants.js";
 
 /** Set by db.js once live searcher + company data is loaded. */
 let _snapshotInferrer = null;

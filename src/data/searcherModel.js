@@ -1,18 +1,8 @@
 import { estSection } from "./capitalCallStrategyModel.js";
+import { normalizeSearcherName } from "./searcherName.js";
+export { normalizeSearcherName } from "./searcherName.js";
 
 /** @typedef {import("./dashboardTypes.js").Searcher} Searcher */
-
-export function normalizeSearcherName(value) {
-  return String(value ?? "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[().,/-]/g, " ")
-    .replace(/\b(s\.?l\.?|srl|ltd|limited)\b/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 function buildSearchersCapitalCallMeta(capitalCallRows) {
   const rows = Array.isArray(capitalCallRows) ? capitalCallRows : [];
   const byId = new Map();

@@ -43,9 +43,6 @@ export function fmtSignedNative(n, divisa) {
   return `${value > 0 ? "+" : "-"} ${_fmtNativeAbs(Math.abs(value), d)}`;
 }
 
-export function fmtS(n) {
-  return fmtM(n);
-}
 
 /** Accepts "YYYY-MM" or "YYYY-MM-DD". */
 export function fmtMonth(s) {

@@ -24,19 +24,3 @@ export const FlagImg = ({ geo, size=22 }) => {
     />
   );
 };
-
-export const FlagSvgLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, geo }) => {
-  if (percent < 0.07) return null;
-  const R = Math.PI / 180;
-  const r = innerRadius + (outerRadius - innerRadius) * 0.58;
-  const x = cx + r * Math.cos(-midAngle * R);
-  const y = cy + r * Math.sin(-midAngle * R);
-  return (
-    <image
-      href={twemojiUrl(geo)}
-      x={x - 11} y={y - 11}
-      width={22} height={22}
-    />
-  );
-};
-
