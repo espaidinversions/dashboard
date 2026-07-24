@@ -20,7 +20,15 @@ import {
   supabase,
 } from "./_shared.js";
 
-export async function loadAll() {
+/**
+ * Fetch the raw dashboard rows from Supabase (one query per table, in parallel).
+ * Returns plain PostgREST rows — pure JSON, safe to cache in localStorage.
+ * A table that errors is returned as `null` so the mapper degrades gracefully
+ * (same behaviour as the previous inline error handling).
+ *
+ * @returns {Promise<{cc:object[]|null, fm:object[]|null, pl:object[]|null, co:object[]|null, sr:object[]|null, pe:object[]|null} | null>}
+ */
+export async function fetchRawDashboardRows() {
   if (!supabase) return null;
   const [cc, fm, pl, co, sr, pe] = await Promise.all([
     fetchAllCapitalCallRows(),
@@ -37,21 +45,45 @@ export async function loadAll() {
   if (sr.error) console.error("loadAll searchers failed:", sr.error);
   if (pe.error) console.error("loadAll private_entities failed:", pe.error);
 
-  const privateEntities = pe.error || !Array.isArray(pe.data) ? [] : pe.data;
+  return {
+    cc: cc.error || !Array.isArray(cc.data) ? null : cc.data,
+    fm: fm.error || !Array.isArray(fm.data) ? null : fm.data,
+    pl: pl.error || !Array.isArray(pl.data) ? null : pl.data,
+    co: co.error || !Array.isArray(co.data) ? null : co.data,
+    sr: sr.error || !Array.isArray(sr.data) ? null : sr.data,
+    pe: pe.error || !Array.isArray(pe.data) ? null : pe.data,
+  };
+}
+
+/**
+ * Map raw dashboard rows into the shape the UI consumes. Pure and synchronous:
+ * the same function maps both freshly-fetched rows and rows restored from the
+ * browser cache, so cached and live renders are identical.
+ *
+ * Note: sets the module-level snapshot inferrer as a side effect (needed before
+ * mapping capital-call strategies), mirroring the original loadAll().
+ *
+ * @param {{cc:object[]|null, fm:object[]|null, pl:object[]|null, co:object[]|null, sr:object[]|null, pe:object[]|null} | null} raw
+ */
+export function mapDashboardBundle(raw) {
+  if (!raw) return null;
+  const { cc, fm, pl, co, sr, pe } = raw;
+
+  const privateEntities = Array.isArray(pe) ? pe : [];
   const entityMap = new Map(privateEntities.map((row) => [row.id, row]));
-  const companies = !co.error && Array.isArray(co.data)
-    ? co.data.map((row) => rowToCompany(row, entityMap))
+  const companies = Array.isArray(co)
+    ? co.map((row) => rowToCompany(row, entityMap))
     : [];
-  const fallbackCompanies = !cc.error && Array.isArray(cc.data)
-    ? buildFallbackCompaniesFromCapitalCalls(cc.data, entityMap, companies)
+  const fallbackCompanies = Array.isArray(cc)
+    ? buildFallbackCompaniesFromCapitalCalls(cc, entityMap, companies)
     : [];
-  const livePipelineDeals = (pl.error || !Array.isArray(pl.data) ? [] : pl.data).map(rowToDeal);
+  const livePipelineDeals = (Array.isArray(pl) ? pl : []).map(rowToDeal);
 
   // Wire live data into the strategy inferrer before mapping capital calls
-  if (!sr.error && Array.isArray(sr.data) && !co.error && Array.isArray(co.data)) {
+  if (Array.isArray(sr) && Array.isArray(co)) {
     setSnapshotInferrer(buildSearchFundInferrer(
-      sr.data.map((r) => ({ nom: r.nom, statusScreening: r.status_screening })),
-      co.data.map((r) => ({ nom: r.nom, tipus: r.tipus })),
+      sr.map((r) => ({ nom: r.nom, statusScreening: r.status_screening })),
+      co.map((r) => ({ nom: r.nom, tipus: r.tipus })),
     ));
   }
 
@@ -68,18 +100,22 @@ export async function loadAll() {
       fiscalName: row.fiscal_name ?? null,
     })),
   };
-  if (!cc.error && Array.isArray(cc.data)) result.rawCC = cc.data.map((row) => rowToCapitalCall(row, entityMap));
-  if (!fm.error && Array.isArray(fm.data)) result.fundMeta = fm.data.map((row) => rowToFundMeta(row, entityMap));
-  if (!pl.error && Array.isArray(pl.data)) result.funds0 = mergePipelineDeals(livePipelineDeals);
-  if (!co.error && Array.isArray(co.data)) result.companies = [...companies, ...fallbackCompanies];
-  if (!sr.error && Array.isArray(sr.data)) {
-    const searchers = sr.data.map(rowToSearcher);
-    result.searchers = mergeSearchersWithCapitalCalls(searchers, cc.data);
+  if (Array.isArray(cc)) result.rawCC = cc.map((row) => rowToCapitalCall(row, entityMap));
+  if (Array.isArray(fm)) result.fundMeta = fm.map((row) => rowToFundMeta(row, entityMap));
+  if (Array.isArray(pl)) result.funds0 = mergePipelineDeals(livePipelineDeals);
+  if (Array.isArray(co)) result.companies = [...companies, ...fallbackCompanies];
+  if (Array.isArray(sr)) {
+    const searchers = sr.map(rowToSearcher);
+    result.searchers = mergeSearchersWithCapitalCalls(searchers, cc);
   }
   if (!result.rawCC && !result.fundMeta && !result.funds0 && !result.companies && !result.searchers) {
     return null;
   }
   return result;
+}
+
+export async function loadAll() {
+  return mapDashboardBundle(await fetchRawDashboardRows());
 }
 
 export async function saveDashboardBundle(bundle) {

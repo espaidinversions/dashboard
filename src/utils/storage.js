@@ -62,6 +62,7 @@ export async function exportMultiXLSX(sheets, filename) {
 const TC_LS_KEYS = [
   "tc_rawCC", "tc_fundMeta", "tc_portfolioCompanies", "tc_allSearchers",
   "tc_funds0", "tc_loadedAt",
+  "tc_cache_bundle_v1", "tc_cache_eurusd_v1",
   "ui_tab", "ui_excluded", "ui_navItem", "ui_sidebarCollapsed",
   "ui_alt_include_companies", "ui_alt_show_dpi",
   "ui_fFy", "ui_fVcpe", "ui_fEst", "ui_fCat", "ui_fTipus", "ui_txSearch",

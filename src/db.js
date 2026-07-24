@@ -1,5 +1,6 @@
 export * from "./db/prospectiveCash.js";
 export * from "./db/dashboardBundle.js";
+export * from "./db/dashboardCache.js";
 export * from "./db/capitalCalls.js";
 export * from "./db/liquidityAccounts.js";
 export * from "./db/companies.js";

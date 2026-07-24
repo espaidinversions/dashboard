@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { loadAll, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle, loadLiquidity } from "../../db.js";
+import { fetchRawDashboardRows, mapDashboardBundle, readDashboardCache, writeDashboardCache, readEurUsdCache, writeEurUsdCache, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle, loadLiquidity } from "../../db.js";
 import { apiFetchJson } from "../../apiClient.js";
 import { useToast } from "../../toast.jsx";
 import { normalizePrivateWorkbookRows } from "../../data/alternativesModel.js";
@@ -77,6 +77,10 @@ async function syncSearchersFromCapitalCalls(rows) {
   }
 }
 
+// Re-resolves capital-call rows whose FX rate was an ECB *estimate* for a date
+// that has now passed (a real published rate should exist). Returns the rows it
+// successfully updated, each with the recomputed FX fields, so the caller can
+// patch them into memory instead of refetching the whole capital_calls table.
 async function resolveEstimatedFxRates(rows) {
   const todayUtc = new Date().toISOString().slice(0, 10);
   const stale = rows.filter(
@@ -85,7 +89,7 @@ async function resolveEstimatedFxRates(rows) {
       row.fxSource.startsWith("ecb:estimated:") &&
       String(row.data ?? "").slice(0, 10) <= todayUtc,
   );
-  if (!stale.length) return false;
+  if (!stale.length) return [];
 
   const batch = stale.slice(0, 10);
   const results = await Promise.allSettled(
@@ -96,16 +100,32 @@ async function resolveEstimatedFxRates(rows) {
       );
       const { error } = await updateCapitalCall(row._rowId, payload);
       if (error) throw error;
+      return { _rowId: row._rowId, payload };
     }),
   );
 
+  const resolved = [];
   results.forEach((r, i) => {
     if (r.status === "rejected") {
       console.warn(`[resolveEstimatedFxRates] row ${batch[i]._rowId} failed:`, r.reason);
+    } else if (r.value) {
+      resolved.push(r.value);
     }
   });
 
-  return results.some((r) => r.status === "fulfilled");
+  return resolved;
+}
+
+// Immutably patches the FX fields of resolved rows into the current rawCC list,
+// keyed by _rowId. Avoids a second full capital_calls fetch after load.
+function applyResolvedFxRows(rows, resolved) {
+  if (!Array.isArray(rows) || !resolved.length) return rows;
+  const byId = new Map(resolved.map((r) => [r._rowId, r.payload]));
+  return rows.map((row) => {
+    const p = byId.get(row._rowId);
+    if (!p) return row;
+    return { ...row, eur: p.eur, amountNative: p.amountNative, fxRate: p.fxRate, fxSource: p.fxSource };
+  });
 }
 
 export function useDashboardData() {
@@ -154,41 +174,71 @@ export function useDashboardData() {
   }, []);
 
   useEffect(() => {
+    // The /api/eur-usd serverless function cold-starts (~2s on Vercel Hobby).
+    // Paint the cached rate instantly and only hit the network when the cached
+    // rate is missing or stale, so it never blocks the initial render.
+    const cached = readEurUsdCache();
+    if (cached) setEurUsd(cached.rate);
+    if (cached?.fresh) return;
+
+    let cancelled = false;
     apiFetchJson("/api/eur-usd")
-      .then(({ rate }) => setEurUsd(rate))
+      .then(({ rate }) => {
+        const value = Number(rate);
+        if (cancelled || !Number.isFinite(value) || value <= 0) return;
+        setEurUsd(value);
+        writeEurUsdCache(value);
+      })
       .catch((err) => console.warn("[eur-usd] rate fetch failed, using fallback:", err));
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    loadAll()
-      .then(data => {
-        if (!data || cancelled) return;
-        const now = new Date().toLocaleDateString("ca-ES");
-        if (Array.isArray(data.rawCC)) {
-          setRawCC(data.rawCC);
-          dispatchRawCCUpdated();
+
+    const applyBundle = (data) => {
+      if (!data || cancelled) return;
+      if (Array.isArray(data.rawCC)) {
+        setRawCC(data.rawCC);
+        dispatchRawCCUpdated();
+      }
+      if (Array.isArray(data.funds0)) setFunds0(data.funds0);
+      if (Array.isArray(data.companies)) setCompaniesData(data.companies);
+      if (Array.isArray(data.searchers)) setSearchersData(data.searchers);
+      if (Array.isArray(data.fundMeta)) setFundMeta(data.fundMeta);
+      setLoadedAt(new Date().toLocaleDateString("ca-ES"));
+    };
+
+    // 1) Stale-while-revalidate: paint the last cached bundle instantly so the
+    //    dashboard is usable immediately instead of blocking on the network.
+    const cached = readDashboardCache();
+    if (cached?.rows) {
+      applyBundle(mapDashboardBundle(cached.rows));
+      if (!cancelled) setIsLoading(false);
+    }
+
+    // 2) Revalidate against Supabase in the background and refresh the cache.
+    fetchRawDashboardRows()
+      .then((raw) => {
+        if (!raw || cancelled) return;
+        writeDashboardCache(raw);
+        const data = mapDashboardBundle(raw);
+        applyBundle(data);
+        // Resolve estimated FX rates without blocking; patch the affected rows
+        // in memory rather than refetching the whole capital_calls table.
+        if (data && Array.isArray(data.rawCC)) {
           resolveEstimatedFxRates(data.rawCC)
-            .then((anyResolved) => {
-              if (!anyResolved || cancelled) return;
-              return loadCapitalCalls({ skipCompanions: true }).then((fresh) => {
-                if (!fresh || cancelled) return;
-                setRawCC(fresh);
-                dispatchRawCCUpdated();
-              });
+            .then((resolvedRows) => {
+              if (!Array.isArray(resolvedRows) || !resolvedRows.length || cancelled) return;
+              setRawCC((prev) => applyResolvedFxRows(prev, resolvedRows));
+              dispatchRawCCUpdated();
             })
             .catch((err) => console.warn("[resolveEstimatedFxRates] unexpected error:", err));
         }
-        if (Array.isArray(data.funds0)) setFunds0(data.funds0);
-        if (Array.isArray(data.companies)) setCompaniesData(data.companies);
-        if (Array.isArray(data.searchers)) setSearchersData(data.searchers);
-        if (Array.isArray(data.fundMeta)) setFundMeta(data.fundMeta);
-        setLoadedAt(now);
       })
-      .catch(err => {
-        console.error("Initial dashboard load failed:", err);
-      })
+      .catch((err) => console.error("Initial dashboard load failed:", err))
       .finally(() => { if (!cancelled) setIsLoading(false); });
+
     return () => { cancelled = true; };
   }, []);
 
