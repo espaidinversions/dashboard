@@ -7,6 +7,7 @@ import { useTheme } from "../theme.js";
 import { usePersistedState, exportMultiXLSX, normalizeOptionValue, dedupeOptionValues } from "../utils.js";
 import { useAuth } from "../auth.jsx";
 import { ResumTab, LandingTab } from "./tabs/index.js";
+import { AssetAllocationTab } from "./tabs/AssetAllocationTab.jsx";
 import { Sidebar } from "./Sidebar.jsx";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohortModel.js";
@@ -739,6 +740,7 @@ function Dashboard() {
                   <button onClick={() => setInversionsSubTab("fons")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "fons" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "fons" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Portfoli</button>
                   <button onClick={() => setInversionsSubTab("pipeline")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "pipeline" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "pipeline" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Pipeline</button>
                   <button onClick={() => setInversionsSubTab("tx")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "tx" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "tx" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Transaccions</button>
+                  <button onClick={() => setInversionsSubTab("allocation")} style={{ padding: "10px 16px", border: "none", background: "none", borderBottom: inversionsSubTab === "allocation" ? `2px solid ${tc.navy}` : "2px solid transparent", color: inversionsSubTab === "allocation" ? tc.navy : tc.textLight, cursor: "pointer", fontSize: 13, fontWeight: 600 }}>Asset Allocation</button>
                 </div>
               )}
               <Suspense fallback={null}>
@@ -778,6 +780,8 @@ function Dashboard() {
                     </div>
                   : inversionsSubTab === "pipeline"
                     ? <PipelineFY26 initialFunds={d.funds0} eurUsd={d.eurUsd} onDealsChange={d.setFunds0} />
+                  : inversionsSubTab === "allocation"
+                    ? <AssetAllocationTab tc={tc} TRANSACTIONS={d.TRANSACTIONS} COMPROMISOS={d.COMPROMISOS} fundMeta={d.fundMeta} excluded={excluded} geoCfg={geoCfg} sectorCfg={sectorCfg} />
                     : <TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_all_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Totes les Transaccions" />}
               </Suspense>
             </div>

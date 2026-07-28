@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS fund_meta (
   irr           NUMERIC,
   fi_end        TEXT,
   geography     JSONB,
-  sector        JSONB
+  sector        JSONB,
+  strategy      JSONB
 );
 
 -- ── Pipeline ──────────────────────────────────────────────
@@ -341,10 +342,10 @@ BEGIN
     );
   END IF;
 
-  -- Carry import-managed fund_meta columns (fi_end/geography/sector) across the wipe.
+  -- Carry import-managed fund_meta columns (fi_end/geography/sector/strategy) across the wipe.
   IF p_fund_meta_rows IS NOT NULL THEN
     CREATE TEMP TABLE _fund_meta_carry ON COMMIT DROP AS
-      SELECT vehicle_id, fi_end, geography, sector FROM fund_meta;
+      SELECT vehicle_id, fi_end, geography, sector, strategy FROM fund_meta;
     DELETE FROM fund_meta;
   END IF;
   IF p_private_entities_rows IS NOT NULL THEN
@@ -366,7 +367,8 @@ BEGIN
     UPDATE fund_meta fm
        SET fi_end    = c.fi_end,
            geography = c.geography,
-           sector    = c.sector
+           sector    = c.sector,
+           strategy  = c.strategy
       FROM pg_temp._fund_meta_carry c
      WHERE c.vehicle_id = fm.vehicle_id;
   END IF;

@@ -185,6 +185,8 @@ export function rowToFundMeta(row, entityMap) {
     fiEnd: row.fi_end ?? null,
     geography: row.geography ?? null,
     sector: row.sector ?? null,
+    strategy: row.strategy ?? null,
+    committedOverride: row.committed_override ?? null,
   };
 }
 
