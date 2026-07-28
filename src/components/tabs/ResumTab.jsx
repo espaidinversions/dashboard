@@ -8,10 +8,14 @@ export function ResumTab({
   byFy = [],
   byEst = [],
   estCfg = {},
+  byGeo = [],
+  bySector = [],
+  geoCfg = {},
+  sectorCfg = {},
 }) {
   return (
     <>
-      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 22px", marginBottom: 18, boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
+      <div className="surface-card" style={{ padding: "20px 22px", marginBottom: 18 }}>
         <SectionHeader title="Capital Cridat vs. Retornat per Any Fiscal" tc={tc} />
         {(() => {
           const t = ecTheme(tc);
@@ -41,11 +45,13 @@ export function ResumTab({
           return <ReactECharts option={option} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;
         })()}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 16, marginBottom: 18 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 18 }}>
         {[
           { title: "Capital Cridat per Tipus de Vehicle", data: byEst, colorFn: n => estCfg[n]?.color || tc.navy },
-        ].map((ch, i) => (
-          <div key={i} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px 22px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
+          { title: "Capital Cridat per Sector", data: bySector, colorFn: n => sectorCfg[n]?.color || tc.navy },
+          { title: "Capital Cridat per Geografia", data: byGeo, colorFn: n => geoCfg[n]?.color || tc.navy },
+        ].filter(ch => ch.data && ch.data.length).map((ch, i) => (
+          <div key={i} className="surface-card" style={{ padding: "18px 22px" }}>
             <SectionHeader title={ch.title} tc={tc} />
             {(() => {
               const t = ecTheme(tc);

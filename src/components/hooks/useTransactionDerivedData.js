@@ -26,6 +26,7 @@ export function useTransactionDerivedData({
   sortFons,
   sortFonsDir,
   ccChartF,
+  fundMeta,
 }) {
   const baseTx = useMemo(
     () => TRANSACTIONS.filter((r) => !excluded.has(r.fons) && estSection(r.est) === "ALT"),
@@ -146,6 +147,49 @@ export function useTransactionDerivedData({
     }));
   }, [filtered]);
 
+  // fons (normalized) → { geography, sector } allocation weight maps, sourced
+  // from fund_meta (populated from the Matrius sheet of the Allocation Excel).
+  const allocByFons = useMemo(() => {
+    const norm = (s) =>
+      String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim()
+        .normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const m = new Map();
+    (fundMeta || []).forEach((fm) => {
+      if (fm?.fons && (fm.geography || fm.sector)) {
+        m.set(norm(fm.fons), { geography: fm.geography || null, sector: fm.sector || null });
+      }
+    });
+    return m;
+  }, [fundMeta]);
+
+  // Distribute each Capital Call's EUR across the dimension's weight map for its
+  // fund, then aggregate. Unmatched capital is bucketed as "Sense classificar"
+  // so the donut total still reconciles to total called. Reacts to all filters
+  // because it operates on `filtered` (same as byEst).
+  const buildWeighted = (dimKey) => {
+    const norm = (s) =>
+      String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim()
+        .normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const acc = {};
+    let unclassified = 0;
+    filtered
+      .filter((r) => r.cat === "Capital Call" && r.eur)
+      .forEach((r) => {
+        const weights = allocByFons.get(norm(r.fons))?.[dimKey];
+        if (!weights) { unclassified += r.eur; return; }
+        for (const [k, frac] of Object.entries(weights)) acc[k] = (acc[k] || 0) + r.eur * frac;
+      });
+    if (unclassified > 0.5) acc["Sense classificar"] = (acc["Sense classificar"] || 0) + unclassified;
+    const tot = Object.values(acc).reduce((s, v) => s + v, 0);
+    if (tot <= 0) return [];
+    return Object.entries(acc)
+      .map(([name, value]) => ({ name, value: +value.toFixed(0), pct: ((value / tot) * 100).toFixed(1) }))
+      .sort((a, b) => b.value - a.value);
+  };
+
+  const byGeo = useMemo(() => buildWeighted("geography"), [filtered, allocByFons]);
+  const bySector = useMemo(() => buildWeighted("sector"), [filtered, allocByFons]);
+
   const FONS_MAP2 = useMemo(() => {
     const m = {};
     baseCompr.forEach((r) => {
@@ -223,6 +267,8 @@ export function useTransactionDerivedData({
     byFy,
     byMes,
     byEst,
+    byGeo,
+    bySector,
     FONS_MAP2,
     fonsFiltered,
   };

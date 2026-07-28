@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, lazy, Suspense } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from "react";
 import {
   CAPITAL_CALL_TIPUS_OPTIONS,
   CAPITAL_CALL_TIPUS_GROUPED,
@@ -18,6 +18,7 @@ import { LiquidityOverview } from "./liquidity/LiquidityOverview.jsx";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
 import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
+import { Search, X } from "lucide-react";
 import {
   COMPANIES_SUBTABS,
   SEARCHERS_SUBTABS,
@@ -99,6 +100,18 @@ function CapitalCallModals({
   );
 }
 
+function isKeyboardEditableTarget(target) {
+  if (!target || typeof target !== "object") return false;
+  const tagName = target.tagName?.toLowerCase();
+  return (
+    target.isContentEditable ||
+    tagName === "input" ||
+    tagName === "textarea" ||
+    tagName === "select" ||
+    Boolean(target.closest?.("[contenteditable='true']"))
+  );
+}
+
 function Dashboard() {
   const { tc, dark } = useTheme();
   const { isAdmin, canAccessSection, canEditSection, canAccessAny } = useAuth();
@@ -126,6 +139,7 @@ function Dashboard() {
   const [excluded, setExcluded]= usePersistedState("ui_excluded", new Set(), { isSet: true });
   const [showLoader, setShowLoader] = useState(false);
   const [globalSearch, setGlobalSearch] = useState("");
+  const globalSearchRef = useRef(null);
   const [sidebarCollapsed, setSidebarCollapsed] = usePersistedState("ui_sidebarCollapsed", false);
   const [includeCompanies, setIncludeCompanies] = usePersistedState("ui_alt_include_companies", false);
   const [matrixMetric, setMatrixMetric] = usePersistedState("ui_alt_matrix_metric", "tvpi");
@@ -348,6 +362,8 @@ function Dashboard() {
     altAllCompr,
     byFy,
     byEst,
+    byGeo,
+    bySector,
   } = useTransactionDerivedData({
     TRANSACTIONS: d.TRANSACTIONS,
     COMPROMISOS: d.COMPROMISOS,
@@ -365,6 +381,7 @@ function Dashboard() {
     sortFons,
     sortFonsDir,
     ccChartF,
+    fundMeta: d.fundMeta,
   });
 
   const currentPermissionId =
@@ -437,6 +454,27 @@ function Dashboard() {
     "Participada (Altres)": { color:"#7A5A00", bg: dark ? "#1A1200" : "#FFF5D6" },
     "Fons Real Estate": { color:tc.purple||"#9B7CC8", bg: dark ? "#20163A" : "#F3EEF8" },
   };
+  const geoCfg = {
+    "Nord America":   { color: tc.navy },
+    "Nord d'Europa":  { color: tc.green },
+    "Sud d'Europa":   { color: "#C9822E" },
+    "Asia":           { color: "#7A5AA6" },
+    "LatAm":          { color: "#2E9C8E" },
+    "Sense classificar": { color: tc.textLight },
+  };
+  const sectorCfg = {
+    "Tecnologia":                    { color: tc.navy },
+    "Consum":                        { color: "#C9822E" },
+    "Salut":                         { color: "#3AA76D" },
+    "Industrials / Materials":       { color: "#6B7280" },
+    "Energy":                        { color: "#E0A93B" },
+    "Telecoms":                      { color: "#7A5AA6" },
+    "Finance":                       { color: "#2E6FB0" },
+    "Food & Agriculture":            { color: "#8FA31E" },
+    "Serveis":                       { color: "#2E9C8E" },
+    "Real Estate & Infraestructure": { color: tc.purple || "#9B7CC8" },
+    "Sense classificar":             { color: tc.textLight },
+  };
   const catCfg = {
     "Capital Call":   { color:tc.navy,      bg: dark ? "#112030" : "#E6EDF3" },
     "Distribució":    { color:tc.green,     bg: dark ? "#0A2010" : "#E8F8E8" },
@@ -467,6 +505,78 @@ function Dashboard() {
     if (target) handleNavigate(target.item);
   }, [tab, canAccessInici, canAccessSection, handleNavigate]);
 
+
+  const keyboardNavItems = useMemo(() => {
+    const candidates = [
+      canAccessInici ? { id: "home", label: "Inici" } : null,
+      canAccessSection("fons") ? { id: "alt-resum", label: "Alternatius" } : null,
+      canAccessSection("fons") ? { id: "fons", label: "Fons" } : null,
+      canAccessSection("alternatives") ? { id: "searchers", label: "Searchers" } : null,
+      canAccessSection("companies") ? { id: "companies", label: "Participades" } : null,
+      canAccessSection("cash-model") ? { id: "alt-cash-model", label: "Model Caixa" } : null,
+      canAccessSection("real-estate") ? { id: "re-resum", label: "Real Estate" } : null,
+      canAccessSection("re-altres") ? { id: "re-altres", label: "Vehicles RE" } : null,
+      canAccessSection("mercats-publics") ? { id: "mp-resum", label: "Mercats Publics" } : null,
+      canAccessSection("mp-rv") ? { id: "mp-rv", label: "Renda Variable" } : null,
+      canAccessSection("mp-rf") ? { id: "mp-rf", label: "Renda Fixa" } : null,
+      canAccessSection("mp-posicions") ? { id: "mp-posicions", label: "Posicions MP" } : null,
+      canAccessSection("mp-transaccions") ? { id: "mp-transaccions", label: "Transaccions MP" } : null,
+      canAccessSection("tx-alt") ? { id: "tx-alt", label: "Tx Alternatius" } : null,
+      canAccessSection("tx-re") ? { id: "tx-re", label: "Tx RE" } : null,
+      canAccessSection("tx-mp") ? { id: "tx-mp", label: "Tx MP" } : null,
+      (isAdmin || canAccessSection("liquidity")) ? { id: "liquidity", label: "Liquiditat" } : null,
+    ].filter(Boolean);
+    const seen = new Set();
+    return candidates.filter((item) => {
+      if (seen.has(item.id)) return false;
+      seen.add(item.id);
+      return true;
+    });
+  }, [canAccessInici, canAccessSection, isAdmin]);
+
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.defaultPrevented) return;
+
+      const key = event.key.toLowerCase();
+      const isShortcutModifier = event.ctrlKey || event.metaKey;
+
+      if (key === "escape" && document.activeElement === globalSearchRef.current) {
+        globalSearchRef.current?.blur();
+        event.preventDefault();
+        return;
+      }
+
+      if (isKeyboardEditableTarget(event.target)) return;
+
+      if (key === "/" && !isShortcutModifier && !event.altKey) {
+        event.preventDefault();
+        globalSearchRef.current?.focus();
+        globalSearchRef.current?.select();
+        return;
+      }
+
+      if (event.altKey || isShortcutModifier) return;
+
+      if (key === "[" || key === "]") {
+        if (!keyboardNavItems.length) return;
+        event.preventDefault();
+        const currentIndex = keyboardNavItems.findIndex((item) => item.id === activeNavItem);
+        const direction = key === "]" ? 1 : -1;
+        const nextIndex = currentIndex >= 0
+          ? (currentIndex + direction + keyboardNavItems.length) % keyboardNavItems.length
+          : (direction === 1 ? 0 : keyboardNavItems.length - 1);
+        handleNavigate(keyboardNavItems[nextIndex].id);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeNavItem, handleNavigate, keyboardNavItems]);
+
   return (
     <CapitalCallModalProvider defaultVehicleCurrency={defaultVehicleCurrency}>
       <div className={`dashboard-wrapper ${dark ? "dark-theme" : "light-theme"}`} style={{ display: "flex", minHeight: "100vh", background: tc.bg }}>
@@ -478,6 +588,8 @@ function Dashboard() {
           isAdmin={isAdmin}
           canAccessSection={canAccessSection}
           canAccessAny={canAccessAny}
+          tc={tc}
+          dark={dark}
           sections={SECTIONS}
           realEstateNav={REAL_ESTATE_NAV}
           publicMarketsNav={PUBLIC_MARKETS_NAV}
@@ -485,19 +597,23 @@ function Dashboard() {
         />
 
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column" }}>
-          <header style={{ height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", padding: "0 24px", background: tc.card, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-              <div style={{ fontSize: 18, fontWeight: 700, color: tc.navy, letterSpacing: "-0.02em" }}>
-                {dashboardHeaderTitle(tab)}
+          <header className="app-topbar" style={{ minHeight: 72, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, padding: "10px 28px", background: `color-mix(in oklch, ${tc.card} 88%, transparent)`, borderBottom: `1px solid ${tc.border}`, position: "sticky", top: 0, zIndex: 100 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 16, minWidth: 0 }}>
+              <div style={{ width: 3, height: 38, borderRadius: 2, background: tc.brass, flexShrink: 0 }} />
+              <div style={{ minWidth: 0 }}>
+                <div className="app-title-kicker">Vista</div>
+                <div className="app-title-main" style={{ overflowWrap: "anywhere" }}>
+                  {dashboardHeaderTitle(tab)}
+                </div>
               </div>
-              {globalSearch.trim() && <div style={{ background: tc.bgAlt, padding: "4px 12px", borderRadius: 20, fontSize: 12, color: tc.textMid }}>🔍 {globalSearch}</div>}
+              {globalSearch.trim() && <div style={{ background: tc.bgAlt, border: `1px solid ${tc.border}`, padding: "5px 10px", borderRadius: 6, fontSize: 12, color: tc.textMid, maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{globalSearch}</div>}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-              <div style={{ position: "relative", width: 280 }}>
-                <input value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} placeholder="Cerca global..." style={{ width: "100%", padding: "8px 12px 8px 36px", borderRadius: 8, border: `1.5px solid ${tc.border}`, background: tc.bg, color: tc.text, fontSize: 13, outline: "none", transition: "all 0.2s" }} />
-                <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", opacity: 0.4 }}>🔍</span>
-                {globalSearch && <button onClick={() => setGlobalSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 14, opacity: 0.5 }}>✕</button>}
+              <div style={{ position: "relative", width: 310, maxWidth: "min(38vw, 310px)" }}>
+                <Search size={15} strokeWidth={1.8} style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: tc.textLight, pointerEvents: "none" }} />
+                <input ref={globalSearchRef} aria-keyshortcuts="/" className="app-search" value={globalSearch} onChange={e => setGlobalSearch(e.target.value)} placeholder="Cerca global" style={{ width: "100%", padding: "9px 34px 9px 36px", borderRadius: 7, border: `1px solid ${tc.border}`, background: tc.card, color: tc.text, fontSize: 13, outline: "none", transition: "border-color 160ms var(--ease-out), box-shadow 160ms var(--ease-out), background 160ms var(--ease-out)" }} />
+                {globalSearch && <button aria-label="Neteja cerca" onClick={() => setGlobalSearch("")} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "transparent", border: "none", cursor: "pointer", color: tc.textLight, padding: 4, display: "inline-flex" }}><X size={14} strokeWidth={2} /></button>}
               </div>
             </div>
           </header>
@@ -511,7 +627,7 @@ function Dashboard() {
             <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
           </div>
         )}
-        <main id="dashboard-content" style={{ flex: 1, padding: "24px 32px" }}>
+        <main id="dashboard-content" className="app-main" style={{ flex: 1, padding: "28px 34px" }}>
           {tab === "home" && !canAccessInici && SECTIONS.length === 0 && (
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, padding: "80px 24px", color: tc.textLight, textAlign: "center" }}>
               <div style={{ fontSize: 16, fontWeight: 700, color: tc.text }}>No tens accés a cap secció</div>
@@ -531,13 +647,13 @@ function Dashboard() {
                 <div style={{ display: "flex", flexDirection: "column", gap: 28, marginTop: 32 }}>
                   {canAccessSection("alternatives") && (
                     <section>
-                      <h2 style={{ fontSize: 18, fontWeight: 700, color: tc.navy, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Alternatius</h2>
-                      <ResumTab tc={tc} byFy={byFy} byEst={byEst} estCfg={estCfg} />
+                      <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: tc.navyDark, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Alternatius</h2>
+                      <ResumTab tc={tc} byFy={byFy} byEst={byEst} estCfg={estCfg} byGeo={byGeo} bySector={bySector} geoCfg={geoCfg} sectorCfg={sectorCfg} />
                     </section>
                   )}
                   {canAccessSection("real-estate") && (
                     <section>
-                      <h2 style={{ fontSize: 18, fontWeight: 700, color: tc.navy, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Real Estate</h2>
+                      <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: tc.navyDark, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Real Estate</h2>
                       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "28px 24px", color: tc.textLight, fontSize: 13, textAlign: "center", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
                         Els gràfics de Real Estate estaran disponibles quan hi hagi dades de la cartera.
                       </div>
@@ -545,13 +661,13 @@ function Dashboard() {
                   )}
                   {canAccessSection("mercats-publics") && (
                     <section>
-                      <h2 style={{ fontSize: 18, fontWeight: 700, color: tc.navy, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Mercats Públics</h2>
+                      <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: tc.navyDark, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Mercats Públics</h2>
                       <Suspense fallback={null}><PublicMarketsTab /></Suspense>
                     </section>
                   )}
                   {d.liquidityAccounts.length > 0 && (
                     <section>
-                      <h2 style={{ fontSize: 18, fontWeight: 700, color: tc.navy, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Liquiditat</h2>
+                      <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: tc.navyDark, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Liquiditat</h2>
                       <LiquiditatSection accounts={d.liquidityAccounts} tc={tc} title="Liquiditat total" />
                     </section>
                   )}
@@ -566,6 +682,10 @@ function Dashboard() {
               byFy={byFy}
               byEst={byEst}
               estCfg={estCfg}
+              byGeo={byGeo}
+              bySector={bySector}
+              geoCfg={geoCfg}
+              sectorCfg={sectorCfg}
             />
           )}
 
@@ -715,8 +835,8 @@ function Dashboard() {
             </Suspense>
           )}
 
-          {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" /></Suspense>}
-          {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ est: "Fons Real Estate" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" /></Suspense>}
+          {tab === "tx-alt" && <Suspense fallback={null}><TxSection tx={altAllTx} compr={altAllCompr} scopeToggle scopeStorageKey="ui_tx_alt_scope" defaultScope="vehicles" search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{}} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Alternatius)" addShortcutScope="alt" /></Suspense>}
+          {tab === "tx-re" && <Suspense fallback={null}><TxSection tx={d.reTx} compr={d.reCompr} search={globalSearch} catCfg={catCfg} estCfg={estCfg} tc={tc} dark={dark} canEdit={canEdit} addDefaults={{ est: "Fons Real Estate" }} onDelete={r => d.handleCCDelete(r._rowId)} onQuickUpdate={handleTxQuickUpdate} title="Registre de Transaccions (Real Estate)" addShortcutScope="re" /></Suspense>}
           {tab === "tx-mp" && <Suspense fallback={null}><PMTransaccionsTab search={globalSearch} /></Suspense>}
           {tab === "liquidity" && <LiquidityOverview accounts={d.liquidityAccounts} registry={d.liquidityRegistry} balances={d.liquidityBalances} reloadLiquidity={d.reloadLiquidity} canManage={canEditSection("liquidity")} tc={tc} dark={dark} />}
         </main>
@@ -753,3 +873,4 @@ function Dashboard() {
 
 export { Dashboard };
 export default Dashboard;
+

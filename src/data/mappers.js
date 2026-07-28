@@ -183,6 +183,8 @@ export function rowToFundMeta(row, entityMap) {
     tvpi: row.tvpi,
     irr: row.irr ?? null,
     fiEnd: row.fi_end ?? null,
+    geography: row.geography ?? null,
+    sector: row.sector ?? null,
   };
 }
 
