@@ -364,6 +364,7 @@ function Dashboard() {
     byEst,
     byGeo,
     bySector,
+    bySectorFy,
   } = useTransactionDerivedData({
     TRANSACTIONS: d.TRANSACTIONS,
     COMPROMISOS: d.COMPROMISOS,
@@ -648,7 +649,7 @@ function Dashboard() {
                   {canAccessSection("alternatives") && (
                     <section>
                       <h2 style={{ fontFamily: "var(--font-display)", fontSize: 24, fontWeight: 400, color: tc.navyDark, margin: "0 0 12px", letterSpacing: "-0.01em" }}>Alternatius</h2>
-                      <ResumTab tc={tc} byFy={byFy} byEst={byEst} estCfg={estCfg} byGeo={byGeo} bySector={bySector} geoCfg={geoCfg} sectorCfg={sectorCfg} />
+                      <ResumTab tc={tc} byFy={byFy} byEst={byEst} estCfg={estCfg} byGeo={byGeo} bySector={bySector} bySectorFy={bySectorFy} geoCfg={geoCfg} sectorCfg={sectorCfg} />
                     </section>
                   )}
                   {canAccessSection("real-estate") && (
@@ -684,6 +685,7 @@ function Dashboard() {
               estCfg={estCfg}
               byGeo={byGeo}
               bySector={bySector}
+              bySectorFy={bySectorFy}
               geoCfg={geoCfg}
               sectorCfg={sectorCfg}
             />

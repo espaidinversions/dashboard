@@ -166,13 +166,13 @@ export function useTransactionDerivedData({
   // fund, then aggregate. Unmatched capital is bucketed as "Sense classificar"
   // so the donut total still reconciles to total called. Reacts to all filters
   // because it operates on `filtered` (same as byEst).
-  const buildWeighted = (dimKey) => {
+  const accumulateWeighted = (rows, dimKey) => {
     const norm = (s) =>
       String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim()
         .normalize("NFD").replace(/[̀-ͯ]/g, "");
     const acc = {};
     let unclassified = 0;
-    filtered
+    rows
       .filter((r) => r.cat === "Capital Call" && r.eur)
       .forEach((r) => {
         const weights = allocByFons.get(norm(r.fons))?.[dimKey];
@@ -180,6 +180,11 @@ export function useTransactionDerivedData({
         for (const [k, frac] of Object.entries(weights)) acc[k] = (acc[k] || 0) + r.eur * frac;
       });
     if (unclassified > 0.5) acc["Sense classificar"] = (acc["Sense classificar"] || 0) + unclassified;
+    return acc;
+  };
+
+  // Present a name→eur accumulator as a sorted donut dataset (value + %).
+  const toDonut = (acc) => {
     const tot = Object.values(acc).reduce((s, v) => s + v, 0);
     if (tot <= 0) return [];
     return Object.entries(acc)
@@ -187,8 +192,38 @@ export function useTransactionDerivedData({
       .sort((a, b) => b.value - a.value);
   };
 
-  const byGeo = useMemo(() => buildWeighted("geography"), [filtered, allocByFons]);
-  const bySector = useMemo(() => buildWeighted("sector"), [filtered, allocByFons]);
+  const byGeo = useMemo(() => toDonut(accumulateWeighted(filtered, "geography")), [filtered, allocByFons]);
+  const bySector = useMemo(() => toDonut(accumulateWeighted(filtered, "sector")), [filtered, allocByFons]);
+
+  // Per-FY sector mix of called capital (100%-stacked). Mirrors byFy: operates on
+  // `filtered`, so it reacts to all active filters (FY/strategy/tipus/search).
+  // Chart-ready shape: { fys, sectors (ordered by total desc), pct: {sector:[]}, eur: {sector:[]} }
+  // where each FY column of `pct` sums to 100.
+  const bySectorFy = useMemo(() => {
+    const perFy = FY_LIST
+      .map((fy) => {
+        const acc = accumulateWeighted(filtered.filter((r) => r.fy === fy), "sector");
+        const tot = Object.values(acc).reduce((s, v) => s + v, 0);
+        return { fy: fy.replace("FY ", ""), acc, tot };
+      })
+      .filter((d) => d.tot > 0);
+    if (!perFy.length) return { fys: [], sectors: [], pct: {}, eur: {} };
+
+    const totals = {};
+    perFy.forEach((d) => {
+      for (const [k, v] of Object.entries(d.acc)) totals[k] = (totals[k] || 0) + v;
+    });
+    const sectors = Object.keys(totals).sort((a, b) => totals[b] - totals[a]);
+
+    const fys = perFy.map((d) => d.fy);
+    const pct = {};
+    const eur = {};
+    sectors.forEach((s) => {
+      pct[s] = perFy.map((d) => +(((d.acc[s] || 0) / d.tot) * 100).toFixed(2));
+      eur[s] = perFy.map((d) => +(d.acc[s] || 0).toFixed(0));
+    });
+    return { fys, sectors, pct, eur };
+  }, [filtered, allocByFons]);
 
   const FONS_MAP2 = useMemo(() => {
     const m = {};
@@ -269,6 +304,7 @@ export function useTransactionDerivedData({
     byEst,
     byGeo,
     bySector,
+    bySectorFy,
     FONS_MAP2,
     fonsFiltered,
   };

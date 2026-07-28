@@ -10,6 +10,7 @@ export function ResumTab({
   estCfg = {},
   byGeo = [],
   bySector = [],
+  bySectorFy = { fys: [], sectors: [], pct: {}, eur: {} },
   geoCfg = {},
   sectorCfg = {},
 }) {
@@ -72,6 +73,57 @@ export function ResumTab({
           </div>
         ))}
       </div>
+      {bySectorFy.fys?.length > 0 && bySectorFy.sectors?.length > 0 && (
+        <div className="surface-card" style={{ padding: "20px 22px", marginBottom: 18 }}>
+          <SectionHeader title="Mix de Sector per Any Fiscal" tc={tc} />
+          {(() => {
+            const t = ecTheme(tc);
+            const { fys, sectors, pct, eur } = bySectorFy;
+            const option = {
+              grid: { top: 8, right: 8, bottom: 40, left: 0, containLabel: true },
+              tooltip: {
+                ...t.tooltip,
+                trigger: "axis",
+                axisPointer: { type: "shadow" },
+                formatter: (ps) => {
+                  const i = ps[0].dataIndex;
+                  const lines = ps
+                    .filter(p => p.value > 0)
+                    .sort((a, b) => b.value - a.value)
+                    .map(p => `${p.marker}${p.seriesName}: ${(+p.value).toFixed(1)}% (${fmtS(eur[p.seriesName]?.[i] || 0)})`);
+                  return `<strong>FY ${fys[i]}</strong><br/>${lines.join("<br/>")}`;
+                },
+              },
+              legend: { bottom: 0, type: "scroll", textStyle: { fontSize: 10, color: tc.textLight } },
+              xAxis: {
+                type: "category",
+                data: fys,
+                axisLabel: { ...t.axisLabel, fontSize: 12 },
+                axisLine: t.axisLine,
+                axisTick: t.axisTick,
+              },
+              yAxis: {
+                type: "value",
+                max: 100,
+                axisLabel: { ...t.axisLabel, formatter: v => v + "%" },
+                splitLine: t.splitLine,
+                axisLine: t.axisLine,
+                axisTick: t.axisTick,
+              },
+              series: sectors.map((s) => ({
+                name: s,
+                type: "bar",
+                stack: "sector",
+                data: pct[s],
+                itemStyle: { color: sectorCfg[s]?.color || tc.navy },
+                barMaxWidth: 40,
+                emphasis: { focus: "series" },
+              })),
+            };
+            return <ReactECharts option={option} style={{ width: "100%", height: 300 }} opts={{ renderer: "canvas" }} />;
+          })()}
+        </div>
+      )}
     </>
   );
 }
