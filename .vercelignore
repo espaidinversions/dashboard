@@ -9,6 +9,11 @@ dist/
 .test-artifacts/
 scripts/out/
 raw-data/
+.env*
+.claude/
+.codex/
+HANDOFF-*.md
+
 
 # Local working documents / exports
 Mercats Públics/
