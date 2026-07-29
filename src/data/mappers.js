@@ -170,6 +170,107 @@ export function fundMetaToRow(row) {
   };
 }
 
+// The fund_meta columns rowToFundMeta() consumes. The dashboard bundle SELECT
+// (src/db/dashboardBundle.js) must fetch exactly these — a column left out is
+// silently mapped to null (how the strategy "Tipus fons" bar went blank and the
+// committed_override allocation basis was ignored). Guarded by
+// test/dashboardBundle.test.js. Keep in sync when adding a field below.
+export const FUND_META_SELECT_COLUMNS = [
+  "vehicle_id",
+  "fons",
+  "tvpi",
+  "irr",
+  "fi_end",
+  "geography",
+  "sector",
+  "strategy",
+  "committed_override",
+];
+
+// Column lists for the other explicit dashboard-bundle SELECTs
+// (src/db/dashboardBundle.js). Same contract as FUND_META_SELECT_COLUMNS: each
+// must fetch every column its mapper reads, or the field silently maps to null.
+// Sibling loaders (pipeline.js/searchers.js/companies.js) use select("*"), so
+// only the bundle SELECTs are drift-prone. Guarded by test/dashboardBundle.test.js.
+
+// pipeline → rowToDeal
+export const PIPELINE_SELECT_COLUMNS = [
+  "id",
+  "name",
+  "amount",
+  "currency",
+  "geography",
+  "strategy",
+  "sector",
+  "status",
+  "canal",
+  "active",
+  "estimated_closing",
+  "manager",
+];
+
+// portfolio_companies → rowToCompany (r.id is a defensive fallback for
+// entity_id and intentionally not fetched; every other read is listed here)
+export const PORTFOLIO_COMPANY_SELECT_COLUMNS = [
+  "entity_id",
+  "nom",
+  "tipus",
+  "segment",
+  "entrepreneurs",
+  "origen",
+  "geo",
+  "ticket",
+  "tvpi",
+  "rvpi_eur",
+  "dpi_eur",
+  "rev",
+  "ebitda",
+  "dfn",
+  "gross_ev",
+  "mult_entry",
+  "data_compr",
+  "mesos_operant",
+  "is_mock",
+  "quarters",
+];
+
+// searchers → rowToSearcher
+export const SEARCHER_SELECT_COLUMNS = [
+  "id",
+  "nom",
+  "tipus",
+  "modalitat",
+  "geo",
+  "status_screening_code",
+  "status_screening",
+  "form_entrada",
+  "status_cerca_code",
+  "status_cerca",
+  "status_adquisicio_code",
+  "status_adquisicio",
+  "intro_per",
+  "searcher1",
+  "searcher2",
+  "companyia_adquirida",
+  "escola1",
+  "escola2",
+  "web",
+  "comentaris",
+  "ticket",
+  "tvpi",
+  "data_inici",
+  "database_intro_date",
+  "data_compr",
+  "mesos_cercant",
+  "equity_stake",
+  "is_mock",
+  "is_legacy",
+  "nif",
+  "label",
+  "irr",
+  "dpi",
+];
+
 /**
  * @param {object} row
  * @param {Map<string, object>} entityMap

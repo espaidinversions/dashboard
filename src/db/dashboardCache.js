@@ -16,7 +16,9 @@ const EURUSD_KEY = "tc_cache_eurusd_v1";
 
 // Bump when the raw-row shape or mapping changes in a way that makes old cache
 // entries produce wrong output. A mismatch is treated as a cache miss.
-const CACHE_VERSION = 1;
+// v2: fund_meta rows now include `strategy` and `committed_override`; v1 caches
+// lack them and would render blank allocation bars / ignore committed overrides.
+const CACHE_VERSION = 2;
 
 /**
  * @returns {{ rows: object, savedAt: number } | null}

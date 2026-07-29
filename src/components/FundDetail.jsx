@@ -6,6 +6,7 @@ import { EST_CFG } from "../config.js";
 import { ThemeProvider, useTheme } from "../theme.js";
 import { fmtM, fmtSignedM, fmtSignedNative, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, Logo, KpiCard, AddRowModal, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
+import { FundClassificationCard } from "./funds/FundClassificationCard.jsx";
 import { loadCapitalCalls, loadFundMeta, updateCapitalCall } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
 import { CAPITAL_CALL_TIPUS_OPTIONS, CAPITAL_CALL_TIPUS_GROUPED, DISTRIBUCIONS_SET, inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
@@ -42,7 +43,7 @@ function FundDetailInner() {
   const txs = detail?.txs ?? [];
 
   // Destructure with ?? {} so these are safe before detail loads
-  const { fundName, fundId, section, est, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, irrFund, txLog, recallablePool } = detail ?? {};
+  const { fundName, fundId, section, est, geography, sector, strategy, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, irrFund, txLog, recallablePool } = detail ?? {};
 
   const filteredTxLog = useMemo(() => (txLog ?? []).filter((r) => {
     if (txFilters.data && !String(r.data ?? "").includes(txFilters.data)) return false;
@@ -129,6 +130,9 @@ function FundDetailInner() {
       </div>
 
       <div style={{ padding: "24px 32px", display: "flex", flexDirection: "column", gap: 24 }}>
+        {/* Classification: vehicle class + geography / vertical / fund-type mix */}
+        <FundClassificationCard tc={tc} est={est} geography={geography} sector={sector} strategy={strategy} />
+
         {/* KPI cards */}
         <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
           <KpiCard label="Compromís"      value={compromis ? fmtM(compromis) : "—"} tc={tc} hero />

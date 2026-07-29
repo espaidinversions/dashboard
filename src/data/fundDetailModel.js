@@ -115,6 +115,12 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
   const meta = (Array.isArray(fundMeta) ? fundMeta : []).find(
     (row) => (fundId && row.id === fundId) || row.fons === fundName,
   );
+  // Classification weight maps (jsonb): fraction of the vehicle split across
+  // each dimension. geography/sector/strategy feed the one-pager's Classificació
+  // card; `est` is the categorical vehicle class shown as a badge.
+  const geography = meta?.geography ?? null;
+  const sector = meta?.sector ?? null;
+  const strategy = meta?.strategy ?? null;
   const tvpiFund = meta?.tvpi ?? null;
   const dpiFund = calls > 0 ? dist / calls : 0;
   const rvpiFund = tvpiFund != null ? tvpiFund - dpiFund : null;
@@ -131,6 +137,9 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
     fundId,
     section,
     est,
+    geography,
+    sector,
+    strategy,
     compromis,
     calls,
     dist,
