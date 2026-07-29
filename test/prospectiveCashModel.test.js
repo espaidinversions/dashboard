@@ -33,6 +33,17 @@ describe("forecastRowsToEditorData", () => {
     assert.equal(vehicleIds["Fund A"], "V001");
     assert.equal(vehicleIds["Fund B"], "V002");
   });
+  it("maps Roberto Pictet shorthand rows to canonical fund names", () => {
+    const { editorData, vehicleIds } = forecastRowsToEditorData([
+      { vehicle_id: "LUX0000004", fons: "Pictet MRV", flow_type: "dist", year: 2026, amount: 225000 },
+      { vehicle_id: "LUX0000005", fons: "Pictet MR VI", flow_type: "calls", year: 2026, amount: 300000 },
+    ]);
+
+    assert.equal(editorData.funds["Pictet Monte Rosa V"].model_dist[2026], 225000);
+    assert.equal(editorData.funds["Pictet Monte Rosa VI"].model_calls[2026], 300000);
+    assert.equal(vehicleIds["Pictet Monte Rosa V"], "LUX0000004");
+    assert.equal(vehicleIds["Pictet Monte Rosa VI"], "LUX0000005");
+  });
 
   it("derives years from min to max+3", () => {
     const { editorData } = forecastRowsToEditorData(ROWS);

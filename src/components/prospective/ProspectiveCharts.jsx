@@ -79,15 +79,18 @@ function fundDeviationChartOption({ rows, mode, tc, metric = "eur" }) {
     .map((row) => {
       const devEur = mode === "calls" ? row.rc - row.mc : mode === "dist" ? row.rd - row.md : (row.rd - row.rc) - (row.md - row.mc);
       const modelBase = mode === "calls" ? row.mc : mode === "dist" ? row.md : row.mc + row.md;
-      const value = metric === "pct" && modelBase !== 0 ? (devEur / Math.abs(modelBase)) * 100 : devEur;
+      if (metric === "pct" && !modelBase) return null;
+      const rawValue = metric === "pct" ? (devEur / Math.abs(modelBase)) * 100 : devEur;
+      const value = metric === "pct" ? Math.round(rawValue * 10) / 10 : Math.round(rawValue);
       return { fund: row.fund, value, devEur };
     })
+    .filter(Boolean)
     .filter((row) => Math.abs(row.devEur) > 100)
     .sort((a, b) => Math.abs(b.devEur) - Math.abs(a.devEur))
     .slice(0, 25)
     .reverse();
-  const fmtAxis = metric === "pct" ? (v) => `${v.toFixed(0)}%` : (v) => fmtK(v, 0);
-  const fmtTip = metric === "pct" ? (v) => `${v.toFixed(1)}%` : fmtK;
+  const fmtAxis = metric === "pct" ? (v) => `${Number(v).toFixed(0)}%` : (v) => fmtK(v, 0);
+  const fmtTip = metric === "pct" ? (v) => `${Number(v).toFixed(1)}%` : (v) => fmtK(v, 0);
   return {
     grid: { top: 8, right: 14, bottom: 34, left: 210, containLabel: false },
     tooltip: { ...t.tooltip, trigger: "axis", axisPointer: { type: "shadow" }, valueFormatter: fmtTip },
