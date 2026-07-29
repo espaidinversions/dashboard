@@ -128,6 +128,21 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
   // up-to-date residual value / RVPI and can't go stale). Fall back to the
   // stored fund_meta.irr only when there aren't enough flows to compute one.
   const irrFund = computeFundIrrFromRows(txs, tvpiFund) ?? meta?.irr ?? null;
+  // Underlying fund-type composition: how this vehicle's called capital splits
+  // across the raw deal-type est (Fons de Fons / Primari / Secundari /
+  // Coinversió …), independent of the vehicle's own class. Amount-weighted by
+  // capital called; drives the one-pager Classificació "Al·locació" bar.
+  const underlyingAccum = {};
+  for (const row of txs) {
+    if (row.cat !== "Capital Call") continue;
+    const key = row.estRaw ?? row.est;
+    if (!key) continue;
+    underlyingAccum[key] = (underlyingAccum[key] ?? 0) + Math.abs(Number(row.eur) || 0);
+  }
+  const underlyingMix = Object.values(underlyingAccum).reduce((s, v) => s + v, 0) > 0
+    ? underlyingAccum
+    : null;
+
   const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
 
   return {
@@ -140,6 +155,7 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
     geography,
     sector,
     strategy,
+    underlyingMix,
     compromis,
     calls,
     dist,

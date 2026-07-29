@@ -133,6 +133,10 @@ export function rowToCapitalCall(row, entityMap) {
   const tipus = normalizeCapitalCallTipus(row.tipus);
   const eur = normalizeCapitalCallSignedAmount(tipus, row.eur);
   const estOverride = entity?.vehicle_est ?? null;
+  // Underlying deal-type est (before the vehicle_est override) — kept alongside
+  // the display `est` so the fund one-pager can show a vehicle's fund-type
+  // composition (e.g. a FoF's coinvestment %). See buildFundDetailSnapshot.
+  const estRaw = normalizeCapitalCallStrategy(row.est, null, { fons: row.fons }) ?? "Fons Primari";
   return {
     _rowId: row.id,
     id: entityId ?? undefined,
@@ -143,7 +147,8 @@ export function rowToCapitalCall(row, entityMap) {
     mes,
     any: year,
     fy,
-    est: estOverride ?? (normalizeCapitalCallStrategy(row.est, null, { fons: row.fons }) ?? "Fons Primari"),
+    est: estOverride ?? estRaw,
+    estRaw,
     eur,
     divisa: row.divisa,
     comentaris: row.comentaris ?? null,

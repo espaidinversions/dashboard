@@ -37,6 +37,15 @@ const STRATEGY_COLOR = {
   "Real Estate & Infraestructure": "#6B7280",
 };
 
+// Fund-type est composition (underlying deal-type mix). Distinct hues so this
+// bar doesn't read as the same dimension as the strategy "Tipus fons" bar.
+const FUND_TYPE_COLOR = {
+  "Fons de Fons": "#1E3A5F",
+  "Fons Primari": "#2E6FB0",
+  "Fons Secundari": "#C9822E",
+  "Fons de Coinversió": "#3AA76D",
+};
+
 // Deterministic fallback for keys not in the palette above.
 const FALLBACK = ["#1E3A5F", "#2E6FB0", "#3AA76D", "#C9822E", "#7A5AA6", "#2E9C8E", "#8FA31E", "#6B7280"];
 
@@ -98,8 +107,9 @@ function DistributionRow({ label, segments, tc }) {
  * (est) as a badge, plus geography / vertical / fund-type weight maps rendered
  * as 100%-stacked mini bars with a legend.
  */
-export function FundClassificationCard({ tc, est, geography, sector, strategy }) {
+export function FundClassificationCard({ tc, est, geography, sector, strategy, fundTypeMix }) {
   const rows = [
+    { label: "Al·locació", segments: toSegments(fundTypeMix, FUND_TYPE_COLOR, tc) },
     { label: "Geografia", segments: toSegments(geography, geoColor(tc), tc) },
     { label: "Vertical", segments: toSegments(sector, sectorColor(tc), tc) },
     { label: "Tipus fons", segments: toSegments(strategy, STRATEGY_COLOR, tc) },
