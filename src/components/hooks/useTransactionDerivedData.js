@@ -86,6 +86,27 @@ export function useTransactionDerivedData({
     return dat;
   }, [baseTx, fFy, fEst, fTipus, txSearch, globalSearch, section]);
 
+  const filteredCompr = useMemo(() => {
+    let dat = baseCompr;
+    if (fFy !== "Tots") dat = dat.filter((r) => r.fy === fFy);
+    if (fEst !== "Tots") dat = dat.filter((r) => r.est === fEst);
+    if (fTipus !== "Tots") dat = dat.filter((r) => r.tipus === fTipus);
+    if (txSearch.trim()) {
+      const q = txSearch.trim().toLowerCase();
+      dat = dat.filter(
+        (r) =>
+          (r.fons || "").toLowerCase().includes(q) ||
+          (r.tipus || "").toLowerCase().includes(q) ||
+          (r.cat || "").toLowerCase().includes(q),
+      );
+    }
+    if (section === "alternatives" && globalSearch.trim()) {
+      const q = globalSearch.trim().toLowerCase();
+      dat = dat.filter((r) => (r.fons || "").toLowerCase().includes(q));
+    }
+    return dat;
+  }, [baseCompr, fFy, fEst, fTipus, txSearch, globalSearch, section]);
+
   const fCalls = useMemo(
     () => filtered.filter((r) => r.cat === "Capital Call").reduce((s, r) => s + r.eur, 0),
     [filtered],
@@ -132,21 +153,6 @@ export function useTransactionDerivedData({
     return Object.values(m).sort((a, b) => a.mes.localeCompare(b.mes));
   }, [filtered, fFy]);
 
-  const byEst = useMemo(() => {
-    const m = {};
-    filtered
-      .filter((r) => r.cat === "Capital Call" && r.est)
-      .forEach((r) => {
-        m[r.est] = (m[r.est] || 0) + r.eur;
-      });
-    const tot = Object.values(m).reduce((s, v) => s + v, 0);
-    return Object.entries(m).map(([name, value]) => ({
-      name,
-      value: +value.toFixed(0),
-      pct: ((value / tot) * 100).toFixed(1),
-    }));
-  }, [filtered]);
-
   // fons (normalized) → { geography, sector } allocation weight maps, sourced
   // from fund_meta (populated from the Matrius sheet of the Allocation Excel).
   const allocByFons = useMemo(() => {
@@ -162,22 +168,48 @@ export function useTransactionDerivedData({
     return m;
   }, [fundMeta]);
 
-  // Distribute each Capital Call's EUR across the dimension's weight map for its
-  // fund, then aggregate. Unmatched capital is bucketed as "Sense classificar"
-  // so the donut total still reconciles to total called. Reacts to all filters
-  // because it operates on `filtered` (same as byEst).
-  const accumulateWeighted = (rows, dimKey) => {
+  const returnedRows = useMemo(
+    () => filtered.filter((r) => r.cat === "Distribució" || r.cat === "Retorn Capital"),
+    [filtered],
+  );
+
+  const chartRowsByMetric = useMemo(() => ({
+    committed: filteredCompr.filter((r) => r.cat === "Compromís"),
+    called: filtered.filter((r) => r.cat === "Capital Call"),
+    returned: returnedRows,
+  }), [filteredCompr, filtered, returnedRows]);
+
+  const amountForMetric = (row, metric) => {
+    if (metric === "returned") return Math.abs(Number(row.eur) || 0);
+    return Number(row.eur) || 0;
+  };
+
+  const accumulateByEst = (rows, metric) => {
+    const acc = {};
+    rows
+      .filter((r) => r.est)
+      .forEach((r) => {
+        acc[r.est] = (acc[r.est] || 0) + amountForMetric(r, metric);
+      });
+    return acc;
+  };
+
+  // Distribute each metric's EUR across the dimension's weight map for its fund,
+  // then aggregate. Unmatched capital is bucketed as "Sense classificar" so the
+  // donut total still reconciles to the selected metric total.
+  const accumulateWeighted = (rows, dimKey, metric) => {
     const norm = (s) =>
       String(s ?? "").toLowerCase().replace(/\s+/g, " ").trim()
         .normalize("NFD").replace(/[̀-ͯ]/g, "");
     const acc = {};
     let unclassified = 0;
     rows
-      .filter((r) => r.cat === "Capital Call" && r.eur)
+      .filter((r) => amountForMetric(r, metric))
       .forEach((r) => {
+        const amount = amountForMetric(r, metric);
         const weights = allocByFons.get(norm(r.fons))?.[dimKey];
-        if (!weights) { unclassified += r.eur; return; }
-        for (const [k, frac] of Object.entries(weights)) acc[k] = (acc[k] || 0) + r.eur * frac;
+        if (!weights) { unclassified += amount; return; }
+        for (const [k, frac] of Object.entries(weights)) acc[k] = (acc[k] || 0) + amount * frac;
       });
     if (unclassified > 0.5) acc["Sense classificar"] = (acc["Sense classificar"] || 0) + unclassified;
     return acc;
@@ -192,17 +224,10 @@ export function useTransactionDerivedData({
       .sort((a, b) => b.value - a.value);
   };
 
-  const byGeo = useMemo(() => toDonut(accumulateWeighted(filtered, "geography")), [filtered, allocByFons]);
-  const bySector = useMemo(() => toDonut(accumulateWeighted(filtered, "sector")), [filtered, allocByFons]);
-
-  // Per-FY sector mix of called capital (100%-stacked). Mirrors byFy: operates on
-  // `filtered`, so it reacts to all active filters (FY/strategy/tipus/search).
-  // Chart-ready shape: { fys, sectors (ordered by total desc), pct: {sector:[]}, eur: {sector:[]} }
-  // where each FY column of `pct` sums to 100.
-  const bySectorFy = useMemo(() => {
+  const buildSectorFy = (rows, metric) => {
     const perFy = FY_LIST
       .map((fy) => {
-        const acc = accumulateWeighted(filtered.filter((r) => r.fy === fy), "sector");
+        const acc = accumulateWeighted(rows.filter((r) => r.fy === fy), "sector", metric);
         const tot = Object.values(acc).reduce((s, v) => s + v, 0);
         return { fy: fy.replace("FY ", ""), acc, tot };
       })
@@ -223,7 +248,26 @@ export function useTransactionDerivedData({
       eur[s] = perFy.map((d) => +(d.acc[s] || 0).toFixed(0));
     });
     return { fys, sectors, pct, eur };
-  }, [filtered, allocByFons]);
+  };
+
+  const allocationBreakdowns = useMemo(() => {
+    const out = {};
+    for (const metric of ["committed", "called", "returned"]) {
+      const rows = chartRowsByMetric[metric] || [];
+      out[metric] = {
+        byEst: toDonut(accumulateByEst(rows, metric)),
+        byGeo: toDonut(accumulateWeighted(rows, "geography", metric)),
+        bySector: toDonut(accumulateWeighted(rows, "sector", metric)),
+        bySectorFy: buildSectorFy(rows, metric),
+      };
+    }
+    return out;
+  }, [chartRowsByMetric, allocByFons]);
+
+  const byEst = allocationBreakdowns.called.byEst;
+  const byGeo = allocationBreakdowns.called.byGeo;
+  const bySector = allocationBreakdowns.called.bySector;
+  const bySectorFy = allocationBreakdowns.called.bySectorFy;
 
   const FONS_MAP2 = useMemo(() => {
     const m = {};
@@ -297,6 +341,7 @@ export function useTransactionDerivedData({
     altAllTx,
     altAllCompr,
     filtered,
+    filteredCompr,
     fCalls,
     fDist,
     byFy,
@@ -305,6 +350,7 @@ export function useTransactionDerivedData({
     byGeo,
     bySector,
     bySectorFy,
+    allocationBreakdowns,
     FONS_MAP2,
     fonsFiltered,
   };

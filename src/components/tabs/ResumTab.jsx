@@ -1,3 +1,4 @@
+import { useState } from "react";
 import ReactECharts from "../../ReactECharts.jsx";
 import { ecTheme } from "../../echartsTheme.js";
 import { TC_LIGHT } from "../../theme.js";
@@ -11,9 +12,45 @@ export function ResumTab({
   byGeo = [],
   bySector = [],
   bySectorFy = { fys: [], sectors: [], pct: {}, eur: {} },
+  allocationBreakdowns = null,
   geoCfg = {},
   sectorCfg = {},
 }) {
+  const [allocationMetric, setAllocationMetric] = useState("called");
+  const fallbackBreakdowns = {
+    called: { byEst, byGeo, bySector, bySectorFy },
+  };
+  const metricBreakdowns = allocationBreakdowns ?? fallbackBreakdowns;
+  const selected = metricBreakdowns[allocationMetric] ?? fallbackBreakdowns.called;
+  const metricLabel = METRIC_LABELS[allocationMetric] ?? METRIC_LABELS.called;
+  const metricToggle = (
+    <div style={{ display: "inline-flex", border: `1px solid ${tc.border}`, borderRadius: 8, overflow: "hidden", background: tc.bg }}>
+      {METRIC_OPTIONS.map((option, i) => {
+        const active = allocationMetric === option.key;
+        return (
+          <button
+            key={option.key}
+            onClick={() => setAllocationMetric(option.key)}
+            style={{
+              border: "none",
+              borderRight: i < METRIC_OPTIONS.length - 1 ? `1px solid ${tc.border}` : "none",
+              background: active ? tc.navy : "transparent",
+              color: active ? "#fff" : tc.textMid,
+              padding: "5px 11px",
+              fontSize: 12,
+              fontWeight: active ? 700 : 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {option.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+
   return (
     <>
       <div className="surface-card" style={{ padding: "20px 22px", marginBottom: 18 }}>
@@ -46,14 +83,16 @@ export function ResumTab({
           return <ReactECharts option={option} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;
         })()}
       </div>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: 18 }}>
-        {[
-          { title: "Capital Cridat per Tipus de Vehicle", data: byEst, colorFn: n => estCfg[n]?.color || tc.navy },
-          { title: "Capital Cridat per Sector", data: bySector, colorFn: n => sectorCfg[n]?.color || tc.navy },
-          { title: "Capital Cridat per Geografia", data: byGeo, colorFn: n => geoCfg[n]?.color || tc.navy },
-        ].filter(ch => ch.data && ch.data.length).map((ch, i) => (
-          <div key={i} className="surface-card" style={{ padding: "18px 22px" }}>
-            <SectionHeader title={ch.title} tc={tc} />
+      <div className="surface-card" style={{ padding: "18px 22px", marginBottom: 18 }}>
+        <SectionHeader title="Distribució per mètrica" tc={tc} action={metricToggle} />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+          {[
+            { title: `${metricLabel} per Tipus de Vehicle`, data: selected.byEst, colorFn: n => estCfg[n]?.color || tc.navy },
+            { title: `${metricLabel} per Sector`, data: selected.bySector, colorFn: n => sectorCfg[n]?.color || tc.navy },
+            { title: `${metricLabel} per Geografia`, data: selected.byGeo, colorFn: n => geoCfg[n]?.color || tc.navy },
+          ].filter(ch => ch.data && ch.data.length).map((ch, i) => (
+            <div key={i} style={{ minWidth: 0 }}>
+              <SectionHeader title={ch.title} tc={tc} />
             {(() => {
               const t = ecTheme(tc);
               const option = {
@@ -70,15 +109,16 @@ export function ResumTab({
               };
               return <ReactECharts option={option} style={{ width: "100%", height: 220 }} opts={{ renderer: "canvas" }} />;
             })()}
-          </div>
-        ))}
+            </div>
+          ))}
+        </div>
       </div>
-      {bySectorFy.fys?.length > 0 && bySectorFy.sectors?.length > 0 && (
+      {selected.bySectorFy?.fys?.length > 0 && selected.bySectorFy?.sectors?.length > 0 && (
         <div className="surface-card" style={{ padding: "20px 22px", marginBottom: 18 }}>
-          <SectionHeader title="Mix de Sector per Any Fiscal" tc={tc} />
+          <SectionHeader title={`Mix de Sector per Any Fiscal · ${metricLabel}`} tc={tc} action={metricToggle} />
           {(() => {
             const t = ecTheme(tc);
-            const { fys, sectors, pct, eur } = bySectorFy;
+            const { fys, sectors, pct, eur } = selected.bySectorFy;
             const option = {
               grid: { top: 8, right: 8, bottom: 40, left: 0, containLabel: true },
               tooltip: {
@@ -127,6 +167,18 @@ export function ResumTab({
     </>
   );
 }
+
+const METRIC_OPTIONS = [
+  { key: "committed", label: "Compromès" },
+  { key: "called", label: "Cridat" },
+  { key: "returned", label: "Retornat" },
+];
+
+const METRIC_LABELS = {
+  committed: "Capital Compromès",
+  called: "Capital Cridat",
+  returned: "Capital Retornat",
+};
 
 function fmtS(n) {
   const a = Math.abs(n);
