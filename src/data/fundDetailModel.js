@@ -86,6 +86,19 @@ export function computeFundMetricsByName(rawCC, fundMeta) {
   return result;
 }
 
+function hasPositiveWeights(map) {
+  if (!map || typeof map !== "object") return false;
+  return Object.values(map).some((value) => Number(value) > 0);
+}
+
+function isSingleRealEstateBucket(map) {
+  if (!map || typeof map !== "object") return false;
+  const positiveKeys = Object.entries(map)
+    .filter(([, value]) => Number(value) > 0)
+    .map(([key]) => key);
+  return positiveKeys.length === 1 && positiveKeys[0] === "Fons Real Estate";
+}
+
 export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
   const txs = findFundRowsByRouteId(rawCC, routeId).map(normalizeFundDetailRow);
   if (txs.length === 0) return null;
@@ -139,9 +152,12 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
     if (!key) continue;
     underlyingAccum[key] = (underlyingAccum[key] ?? 0) + Math.abs(Number(row.eur) || 0);
   }
-  const underlyingMix = Object.values(underlyingAccum).reduce((s, v) => s + v, 0) > 0
+  const rawUnderlyingMix = Object.values(underlyingAccum).reduce((s, v) => s + v, 0) > 0
     ? underlyingAccum
     : null;
+  const underlyingMix = section === "RE" && isSingleRealEstateBucket(rawUnderlyingMix) && hasPositiveWeights(strategy)
+    ? strategy
+    : rawUnderlyingMix;
 
   const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
 

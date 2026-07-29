@@ -761,6 +761,17 @@ function Dashboard() {
                         dark={dark}
                         canEdit={false}
                       />
+                      <ResumTab
+                        tc={tc}
+                        byFy={byFy}
+                        byEst={byEst}
+                        estCfg={estCfg}
+                        byGeo={byGeo}
+                        bySector={bySector}
+                        bySectorFy={bySectorFy}
+                        geoCfg={geoCfg}
+                        sectorCfg={sectorCfg}
+                      />
                       <AltCohortSection
                         tc={tc}
                         matrix={altCohortMatrix}

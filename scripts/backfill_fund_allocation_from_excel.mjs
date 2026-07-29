@@ -35,15 +35,18 @@ function loadEnv(filePath) {
       .map((l) => {
         const i = l.indexOf("=");
         const key = l.slice(0, i).trim();
-        const val = l.slice(i + 1).trim().replace(/\r$/, "").replace(/^["']|["']$/g, "");
+        const val = l.slice(i + 1).trim().replace(/\r$/, "").replace(/^["']|["']$/g, "").replace(/\\n$/, "");
         return [key, val];
       }),
   );
 }
 
-const env = loadEnv(path.join(__dirname, "../.env.local"));
+const envFile = process.env.ALLOCATION_ENV_FILE
+  ? path.resolve(process.cwd(), process.env.ALLOCATION_ENV_FILE)
+  : path.join(__dirname, "../.env.local");
+const env = loadEnv(envFile);
 if (!env.VITE_SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
-  console.error("Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env.local");
+  console.error(`Missing VITE_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in ${envFile}`);
   process.exit(1);
 }
 
@@ -52,6 +55,7 @@ const supabase = createClient(env.VITE_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_K
 });
 
 const dryRun = process.argv.includes("--dry-run");
+
 
 // ── column layout in the Matrius sheet (0-based, header:1) ────────────────────
 const GEO_COLS = [
@@ -170,7 +174,16 @@ if (metaErr) { console.error("Failed to load fund_meta:", metaErr.message); proc
 console.log(`Loaded ${metaRows.length} fund_meta rows`);
 
 // ── match and plan updates ────────────────────────────────────────────────────
-const sameMap = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
+function stableJson(value) {
+  if (value == null) return "null";
+  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
+  if (typeof value === "object") {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${stableJson(value[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+const sameMap = (a, b) => stableJson(a ?? null) === stableJson(b ?? null);
 
 const updates = [];
 const metaUnmatched = [];
@@ -210,19 +223,19 @@ if (dryRun) {
   console.log("\nSample (first 3 updates):");
   updates.slice(0, 3).forEach((u) => console.log(`  ${u.fons}`, JSON.stringify({ geography: u.geography, sector: u.sector, strategy: u.strategy })));
   console.log("\nDry run — no changes written.");
-  process.exit(0);
+} else if (updates.length === 0) {
+  console.log("\nNothing to update.");
+} else {
+  let ok = 0;
+  for (const { vehicle_id, geography, sector, strategy } of updates) {
+    const { error } = await supabase
+      .from("fund_meta")
+      .update({ geography, sector, strategy })
+      .eq("vehicle_id", vehicle_id);
+    if (error) { console.error(`Failed updating vehicle_id=${vehicle_id}:`, error.message); process.exit(1); }
+    ok++;
+  }
+  console.log(`\nUpdated ${ok} fund_meta rows.`);
 }
 
-if (updates.length === 0) { console.log("\nNothing to update."); process.exit(0); }
-
-let ok = 0;
-for (const { vehicle_id, geography, sector, strategy } of updates) {
-  const { error } = await supabase
-    .from("fund_meta")
-    .update({ geography, sector, strategy })
-    .eq("vehicle_id", vehicle_id);
-  if (error) { console.error(`Failed updating vehicle_id=${vehicle_id}:`, error.message); process.exit(1); }
-  ok++;
-}
-console.log(`\nUpdated ${ok} fund_meta rows.`);
-process.exit(0);
+supabase.realtime?.disconnect?.();

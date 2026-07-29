@@ -62,3 +62,39 @@ test("buildFundDetailSnapshot normalizes transaction concepts for fund pages", (
   assert.equal(detail.txLog[0].eur, -250);
   assert.equal(detail.txLog[1].eur, 1000);
 });
+test("buildFundDetailSnapshot preserves ALT underlying deal-type allocation", () => {
+  const rawCC = [
+    { id: "ALT1", est: "Fons de Fons", estRaw: "Fons de Coinversió", fons: "FoF With CoInvest", tipus: "Aportació", cat: "Capital Call", eur: 40, data: "2025-01-31" },
+    { id: "ALT1", est: "Fons de Fons", estRaw: "Fons de Fons", fons: "FoF With CoInvest", tipus: "Aportació", cat: "Capital Call", eur: 60, data: "2025-02-28" },
+    { id: "ALT1", est: "Fons de Fons", fons: "FoF With CoInvest", tipus: "Compromís", cat: "Compromís", eur: 100, data: "2025-01-01" },
+  ];
+
+  const detail = buildFundDetailSnapshot(rawCC, [], "ALT1");
+
+  assert.deepEqual(detail.underlyingMix, {
+    "Fons de Coinversió": 40,
+    "Fons de Fons": 60,
+  });
+});
+
+test("buildFundDetailSnapshot uses fund_meta strategy for Real Estate allocation", () => {
+  const rawCC = [
+    { id: "RE1", est: "Fons Real Estate", estRaw: "Fons Real Estate", fons: "Meridia RE", tipus: "Aportació", cat: "Capital Call", eur: 25000, data: "2025-07-31" },
+    { id: "RE1", est: "Fons Real Estate", estRaw: "Fons Real Estate", fons: "Meridia RE", tipus: "Compromís", cat: "Compromís", eur: 100000, data: "2025-01-31" },
+  ];
+  const fundMeta = [{
+    id: "RE1",
+    fons: "Meridia RE",
+    geography: { "Sud d'Europa": 1 },
+    sector: { "Real Estate & Infraestructure": 1 },
+    strategy: { "Real Estate & Infraestructure": 1 },
+  }];
+
+  const detail = buildFundDetailSnapshot(rawCC, fundMeta, "RE1");
+
+  assert.equal(detail.section, "RE");
+  assert.deepEqual(detail.geography, { "Sud d'Europa": 1 });
+  assert.deepEqual(detail.sector, { "Real Estate & Infraestructure": 1 });
+  assert.deepEqual(detail.strategy, { "Real Estate & Infraestructure": 1 });
+  assert.deepEqual(detail.underlyingMix, { "Real Estate & Infraestructure": 1 });
+});
