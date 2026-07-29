@@ -291,8 +291,20 @@ export function TxSection({
     };
   };
 
+  const cardsGrid = (
+    <div className="grid-4" style={{ gap: 12 }}>
+      {cards.map((card) => (
+        <div key={card.label} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 18px", borderTop: `3px solid ${card.accent}`, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
+          <div style={{ fontSize: 11, letterSpacing: "0.06em", color: tc.textLight, textTransform: "uppercase", marginBottom: 4, fontWeight: 600 }}>{card.label}</div>
+          <div style={{ fontSize: 20, fontWeight: 700, color: card.accent, fontFamily: "'DM Mono',monospace" }}>{card.value}</div>
+          {card.sub ? <div style={{ fontSize: 11, color: tc.textLight, marginTop: 2 }}>{card.sub}</div> : null}
+        </div>
+      ))}
+    </div>
+  );
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      {summaryOnly ? cardsGrid : null}
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
           <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>
@@ -363,15 +375,8 @@ export function TxSection({
         })()}
       </div>
 
-      <div className="grid-4" style={{ gap: 12 }}>
-        {cards.map((card) => (
-          <div key={card.label} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 18px", borderTop: `3px solid ${card.accent}`, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
-            <div style={{ fontSize: 11, letterSpacing: "0.06em", color: tc.textLight, textTransform: "uppercase", marginBottom: 4, fontWeight: 600 }}>{card.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: card.accent, fontFamily: "'DM Mono',monospace" }}>{card.value}</div>
-            {card.sub ? <div style={{ fontSize: 11, color: tc.textLight, marginTop: 2 }}>{card.sub}</div> : null}
-          </div>
-        ))}
-      </div>
+      {!summaryOnly ? cardsGrid : null}
+
 
       {!summaryOnly && (
       <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
@@ -451,6 +456,7 @@ export function TxSection({
               {pagedRows.map((row, index) => {
                 const isIn = row.eur > 0;
                 return (
+
                   <tr key={row._rowId ?? `${row.fons}-${row.data}-${index}`} style={{ borderBottom: `1px solid ${tc.bgAlt}`, background: index % 2 === 0 ? tc.card : tc.bgAlt }}>
                     <td style={{ padding: "8px 10px", fontSize: 11, color: tc.textMid, whiteSpace: "nowrap" }}>{row.data}</td>
                     <td style={{ padding: "8px 10px", fontWeight: 600, color: tc.text, fontSize: 12, maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={row.fons}>

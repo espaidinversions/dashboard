@@ -53,7 +53,7 @@ export function ResumTab({
 
   return (
     <>
-      <div className="surface-card" style={{ padding: "20px 22px", marginBottom: 18 }}>
+      <div className="surface-card" style={{ padding: "20px 22px", marginBottom: 18, background: "#fff" }}>
         <SectionHeader title="Capital Cridat vs. Retornat per Any Fiscal" tc={tc} />
         {(() => {
           const t = ecTheme(tc);
