@@ -44,7 +44,7 @@ const ProspectiveCashTab  = lazy(() => import("./ProspectiveCashTab.jsx").then(m
 const HoldingsTable       = lazy(() => import("./HoldingsTable.jsx").then(m => ({ default: m.HoldingsTable })));
 const PMTipusTab          = lazy(() => import("./PMTipusTab.jsx").then(m => ({ default: m.PMTipusTab })));
 const PMTransaccionsTab   = lazy(() => import("./PMTransaccionsTab.jsx").then(m => ({ default: m.PMTransaccionsTab })));
-const PMTraçabilitatTab   = lazy(() => import("./PMTraçabilitatTab.jsx").then(m => ({ default: m.PMTraçabilitatTab })));
+const PMTraçabilitatTab   = lazy(() => import("./PMTracabilitatTab.jsx").then(m => ({ default: m.PMTraçabilitatTab })));
 const PmLandingCard       = lazy(() => import("./tabs/PmLandingCard.jsx"));
 
 function CapitalCallModals({
