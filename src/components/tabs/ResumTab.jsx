@@ -83,15 +83,15 @@ export function ResumTab({
           return <ReactECharts option={option} style={{ width: "100%", height: 280 }} opts={{ renderer: "canvas" }} />;
         })()}
       </div>
-      <div className="surface-card" style={{ padding: "18px 22px", marginBottom: 18 }}>
+      <div className="surface-card" style={{ padding: "20px 22px", marginBottom: 18, background: "#fff" }}>
         <SectionHeader title="Distribució per mètrica" tc={tc} action={metricToggle} />
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16, marginBottom: selected.bySectorFy?.fys?.length > 0 ? 22 : 0 }}>
           {[
             { title: `${metricLabel} per Tipus de Vehicle`, data: selected.byEst, colorFn: n => estCfg[n]?.color || tc.navy },
             { title: `${metricLabel} per Sector`, data: selected.bySector, colorFn: n => sectorCfg[n]?.color || tc.navy },
             { title: `${metricLabel} per Geografia`, data: selected.byGeo, colorFn: n => geoCfg[n]?.color || tc.navy },
           ].filter(ch => ch.data && ch.data.length).map((ch, i) => (
-            <div key={i} style={{ minWidth: 0 }}>
+            <div key={i} style={{ minWidth: 0, background: "#fff" }}>
               <SectionHeader title={ch.title} tc={tc} />
             {(() => {
               const t = ecTheme(tc);
@@ -112,58 +112,58 @@ export function ResumTab({
             </div>
           ))}
         </div>
-      </div>
-      {selected.bySectorFy?.fys?.length > 0 && selected.bySectorFy?.sectors?.length > 0 && (
-        <div className="surface-card" style={{ padding: "20px 22px", marginBottom: 18 }}>
-          <SectionHeader title={`Mix de Sector per Any Fiscal · ${metricLabel}`} tc={tc} action={metricToggle} />
-          {(() => {
-            const t = ecTheme(tc);
-            const { fys, sectors, pct, eur } = selected.bySectorFy;
-            const option = {
-              grid: { top: 8, right: 8, bottom: 40, left: 0, containLabel: true },
-              tooltip: {
-                ...t.tooltip,
-                trigger: "axis",
-                axisPointer: { type: "shadow" },
-                formatter: (ps) => {
-                  const i = ps[0].dataIndex;
-                  const lines = ps
-                    .filter(p => p.value > 0)
-                    .sort((a, b) => b.value - a.value)
-                    .map(p => `${p.marker}${p.seriesName}: ${(+p.value).toFixed(1)}% (${fmtS(eur[p.seriesName]?.[i] || 0)})`);
-                  return `<strong>FY ${fys[i]}</strong><br/>${lines.join("<br/>")}`;
+        {selected.bySectorFy?.fys?.length > 0 && selected.bySectorFy?.sectors?.length > 0 && (
+          <div style={{ background: "#fff" }}>
+            <SectionHeader title={`Mix de Sector per Any Fiscal · ${metricLabel}`} tc={tc} />
+            {(() => {
+              const t = ecTheme(tc);
+              const { fys, sectors, pct, eur } = selected.bySectorFy;
+              const option = {
+                grid: { top: 8, right: 8, bottom: 40, left: 0, containLabel: true },
+                tooltip: {
+                  ...t.tooltip,
+                  trigger: "axis",
+                  axisPointer: { type: "shadow" },
+                  formatter: (ps) => {
+                    const i = ps[0].dataIndex;
+                    const lines = ps
+                      .filter(p => p.value > 0)
+                      .sort((a, b) => b.value - a.value)
+                      .map(p => `${p.marker}${p.seriesName}: ${(+p.value).toFixed(1)}% (${fmtS(eur[p.seriesName]?.[i] || 0)})`);
+                    return `<strong>FY ${fys[i]}</strong><br/>${lines.join("<br/>")}`;
+                  },
                 },
-              },
-              legend: { bottom: 0, type: "scroll", textStyle: { fontSize: 10, color: tc.textLight } },
-              xAxis: {
-                type: "category",
-                data: fys,
-                axisLabel: { ...t.axisLabel, fontSize: 12 },
-                axisLine: t.axisLine,
-                axisTick: t.axisTick,
-              },
-              yAxis: {
-                type: "value",
-                max: 100,
-                axisLabel: { ...t.axisLabel, formatter: v => v + "%" },
-                splitLine: t.splitLine,
-                axisLine: t.axisLine,
-                axisTick: t.axisTick,
-              },
-              series: sectors.map((s) => ({
-                name: s,
-                type: "bar",
-                stack: "sector",
-                data: pct[s],
-                itemStyle: { color: sectorCfg[s]?.color || tc.navy },
-                barMaxWidth: 40,
-                emphasis: { focus: "series" },
-              })),
-            };
-            return <ReactECharts option={option} style={{ width: "100%", height: 300 }} opts={{ renderer: "canvas" }} />;
-          })()}
-        </div>
-      )}
+                legend: { bottom: 0, type: "scroll", textStyle: { fontSize: 10, color: tc.textLight } },
+                xAxis: {
+                  type: "category",
+                  data: fys,
+                  axisLabel: { ...t.axisLabel, fontSize: 12 },
+                  axisLine: t.axisLine,
+                  axisTick: t.axisTick,
+                },
+                yAxis: {
+                  type: "value",
+                  max: 100,
+                  axisLabel: { ...t.axisLabel, formatter: v => v + "%" },
+                  splitLine: t.splitLine,
+                  axisLine: t.axisLine,
+                  axisTick: t.axisTick,
+                },
+                series: sectors.map((s) => ({
+                  name: s,
+                  type: "bar",
+                  stack: "sector",
+                  data: pct[s],
+                  itemStyle: { color: sectorCfg[s]?.color || tc.navy },
+                  barMaxWidth: 40,
+                  emphasis: { focus: "series" },
+                })),
+              };
+              return <ReactECharts option={option} style={{ width: "100%", height: 300 }} opts={{ renderer: "canvas" }} />;
+            })()}
+          </div>
+        )}
+      </div>
     </>
   );
 }
