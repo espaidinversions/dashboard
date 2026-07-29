@@ -52,10 +52,6 @@ export function writeDashboardCache(rows) {
   }
 }
 
-export function clearDashboardCache() {
-  try { localStorage.removeItem(BUNDLE_KEY); } catch { /* ignore */ }
-  try { localStorage.removeItem(EURUSD_KEY); } catch { /* ignore */ }
-}
 
 // ── EUR/USD rate cache ────────────────────────────────────────────────
 // The /api/eur-usd endpoint is a Vercel serverless function that cold-starts
