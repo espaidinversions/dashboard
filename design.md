@@ -6,9 +6,16 @@
 ## Identity
 
 **Product:** Turtle Capital Dashboard — private investment management  
-**Mood:** Institutional  
-**Genre:** Modern-minimal — Swiss editorial meets financial press  
-**Voice:** Dense typographic hierarchy, ruled dividers, tabular data front and center
+**Mood:** Warm private-bank editorial  
+**Genre:** Editorial — quality printed financial report (FT / Monocle register)  
+**Voice:** Dense typographic hierarchy, ruled dividers, tabular data front and center — now on a warm ivory canvas with a brass accent thread and bolder Newsreader section headers
+
+**Semantic colour split (the spine of the system):**
+
+- **Navy** — structure, headings, KPI values
+- **Brass** — the editorial UI accent thread: section markers, hairline rules, topbar accent, active tab underline, KPI accent bars, focus ring, wordmark
+- **Green** — gains / positive data only (brand icon anchor)
+- **Clay** — losses / negative data only
 
 ## Typography
 
@@ -32,26 +39,27 @@
 
 ## Color System
 
-OKLCH palette anchored on **navy hue 245°** and **green hue 145°**.
+Warm OKLCH palette: **ivory paper hue 88°**, **navy structure hue 252°**, **brass accent hue 82°**, **green gains hue 148°**, **clay losses hue 40°**.
 
 ### Light mode
 
 | Token | OKLCH | Role |
 |-------|-------|------|
-| `--color-paper` | `oklch(97% 0.008 245)` | Page background |
-| `--color-paper-2` | `oklch(94% 0.012 245)` | Alt / hover background |
-| `--color-surface` | `oklch(100% 0 0)` | Cards, panels |
-| `--color-rule` | `oklch(87% 0.018 245)` | Dividers, borders |
-| `--color-ink` | `oklch(22% 0.06 245)` | Primary text |
-| `--color-ink-2` | `oklch(38% 0.07 245)` | Secondary text |
-| `--color-ink-3` | `oklch(55% 0.06 245)` | Muted / tertiary |
-| `--color-accent` | `oklch(35% 0.10 245)` | Navy — brand primary |
-| `--color-vivid` | `oklch(60% 0.19 145)` | Green — brand secondary, active states |
-| `--color-danger` | `oklch(42% 0.18 27)` | Red — negative values, errors |
-| `--color-warn` | `oklch(62% 0.16 60)` | Orange — warnings |
-| `--color-focus` | `oklch(60% 0.19 145)` | Focus ring |
+| `--color-paper` | `oklch(97.2% 0.011 88)` | Warm ivory page background |
+| `--color-paper-2` | `oklch(94.6% 0.015 86)` | Alt / hover background |
+| `--color-surface` | `oklch(99.2% 0.006 88)` | Warm near-white cards, panels |
+| `--color-rule` | `oklch(87.5% 0.016 84)` | Warm dividers, borders |
+| `--color-ink` | `oklch(24% 0.020 256)` | Primary text (charcoal-navy) |
+| `--color-ink-2` | `oklch(40% 0.024 252)` | Secondary text |
+| `--color-ink-3` | `oklch(56% 0.020 250)` | Muted / tertiary |
+| `--color-accent` | `oklch(38% 0.092 252)` | Navy — structure, headings, KPI values |
+| `--color-brass` | `oklch(63% 0.098 82)` | Brass — editorial UI accent thread |
+| `--color-vivid` | `oklch(59% 0.175 148)` | Green — gains / positive data |
+| `--color-danger` | `oklch(52% 0.145 40)` | Clay — losses / negative values |
+| `--color-warn` | `oklch(66% 0.125 66)` | Amber — warnings |
+| `--color-focus` | `oklch(59% 0.100 80)` | Brass focus ring |
 
-Dark mode tokens defined in `src/index.css` `[data-theme="dark"]`.
+Brass has three steps (`--color-brass` / `-hi` / `-lo`) mirrored in `theme.js` as `tc.brass` / `tc.brassLight` / `tc.brassDark`. Brass is a large-text / rule / decoration colour — never body text. Dark mode tokens defined in `src/index.css` `[data-theme="dark"]` (deep navy-charcoal canvas, brass thread preserved).
 
 ### Sidebar
 

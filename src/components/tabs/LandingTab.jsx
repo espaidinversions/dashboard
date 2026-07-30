@@ -14,7 +14,7 @@ function HeadlineStrip({ headline, tc }) {
         { label: "# posicions", value: String(headline.nPosicions) },
       ];
   return (
-    <div style={{ display: "flex", gap: 16, flexWrap: "wrap", marginBottom: 24 }}>
+    <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
       {items.map((it, i) => (
         <KpiCard key={it.label} tc={tc} hero={i === 0} label={it.label} value={it.value} />
       ))}
@@ -41,10 +41,22 @@ function CashflowCard({ card, tc, onNavigate }) {
 
 export function LandingTab({ model, tc, onNavigate, pmCard, chartSections }) {
   return (
-    <div>
-      <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, color: tc.navy, margin: "0 0 20px" }}>Inici</h1>
-      <HeadlineStrip headline={model.headline} tc={tc} />
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 16 }}>
+    <div className="tab-panel" style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+      <section className="surface-card" style={{ padding: "22px 24px 24px", position: "relative", overflow: "hidden" }}>
+        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 4, background: tc.green }} />
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 20, marginBottom: 18, flexWrap: "wrap" }}>
+          <div style={{ minWidth: 260 }}>
+            <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.11em", fontWeight: 750, marginBottom: 6 }}>Inici</div>
+            <h1 style={{ fontFamily: "var(--font-display)", fontSize: 34, lineHeight: 1.05, fontWeight: 350, color: tc.navyDark, margin: 0 }}>Cartera consolidada</h1>
+          </div>
+          <div style={{ color: tc.textLight, fontSize: 13, maxWidth: 360, lineHeight: 1.45 }}>
+            Vista resum de capital, retorns i exposició per secció.
+          </div>
+        </div>
+        <HeadlineStrip headline={model.headline} tc={tc} />
+      </section>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 14 }}>
         {model.cards
           .filter((c) => c.kind === "cashflow")
           .map((c) => <CashflowCard key={c.sectionId} card={c} tc={tc} onNavigate={onNavigate} />)}

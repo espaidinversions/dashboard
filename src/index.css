@@ -1,6 +1,9 @@
-/* Hallmark · mood: Institutional · genre: modern-minimal · theme: swiss-editorial
+/* Hallmark · genre: editorial · macrostructure: Workbench · design-system: design.md · designed-as-app
+ * mood: Warm private-bank editorial · theme: warm-editorial (ivory paper · brass accent thread)
  * fonts: Newsreader (display) · IBM Plex Sans (body/UI) · IBM Plex Mono (data)
- * palette: OKLCH anchored navy hue 245 · green hue 145
+ * palette: OKLCH · ivory paper hue 88 · navy structure hue 252 · brass accent hue 82 · green gains 148 · clay losses 40
+ * semantic split: navy = structure/headings · brass = UI accent thread · green = gains · clay = losses
+ * pre-emit critique: P5 H5 E4 S5 R4 V5
  */
 
 /* ── Global resets & polish ─────────────────────────────── */
@@ -58,25 +61,28 @@ table { border-collapse: collapse; }
   --radius-lg:  6px;
   --radius-xl:  8px;
 
-  /* OKLCH color system — light mode */
-  --color-paper:     oklch(97% 0.008 245);
-  --color-paper-2:   oklch(94% 0.012 245);
-  --color-paper-3:   oklch(91% 0.015 245);
-  --color-surface:   oklch(100% 0 0);
-  --color-rule:      oklch(87% 0.018 245);
-  --color-rule-mid:  oklch(78% 0.022 245);
-  --color-ink:       oklch(22% 0.06 245);
-  --color-ink-2:     oklch(38% 0.07 245);
-  --color-ink-3:     oklch(55% 0.06 245);
-  --color-accent:    oklch(35% 0.10 245);
-  --color-accent-hi: oklch(45% 0.12 245);
-  --color-accent-lo: oklch(93% 0.015 245);
-  --color-vivid:     oklch(60% 0.19 145);
-  --color-vivid-lo:  oklch(95% 0.04 145);
-  --color-danger:    oklch(42% 0.18 27);
-  --color-danger-lo: oklch(96% 0.03 27);
-  --color-warn:      oklch(62% 0.16 60);
-  --color-focus:     oklch(60% 0.19 145);
+  /* OKLCH color system — light mode · warm private-bank editorial */
+  --color-paper:     oklch(97.2% 0.011 88);   /* warm ivory page */
+  --color-paper-2:   oklch(94.6% 0.015 86);   /* alt / hover */
+  --color-paper-3:   oklch(91.8% 0.019 84);   /* deeper warm band */
+  --color-surface:   oklch(99.2% 0.006 88);   /* warm near-white card */
+  --color-rule:      oklch(87.5% 0.016 84);   /* warm hairline */
+  --color-rule-mid:  oklch(79% 0.021 82);
+  --color-ink:       oklch(24% 0.020 256);    /* deep charcoal-navy */
+  --color-ink-2:     oklch(40% 0.024 252);
+  --color-ink-3:     oklch(56% 0.020 250);
+  --color-accent:    oklch(38% 0.092 252);    /* navy — structure / headings */
+  --color-accent-hi: oklch(47% 0.110 252);
+  --color-accent-lo: oklch(92.5% 0.020 250);
+  --color-brass:     oklch(63% 0.098 82);     /* brass — editorial UI accent thread */
+  --color-brass-hi:  oklch(70% 0.108 82);
+  --color-brass-lo:  oklch(93.5% 0.035 84);
+  --color-vivid:     oklch(59% 0.175 148);    /* green — gains / positive */
+  --color-vivid-lo:  oklch(94.5% 0.045 148);
+  --color-danger:    oklch(52% 0.145 40);     /* clay — losses / negative */
+  --color-danger-lo: oklch(94.5% 0.035 44);
+  --color-warn:      oklch(66% 0.125 66);
+  --color-focus:     oklch(59% 0.100 80);     /* brass focus ring */
 
   /* Focus ring */
   --focus-color: var(--color-focus);
@@ -92,29 +98,34 @@ table { border-collapse: collapse; }
   --color-text-light: var(--color-ink-3);
   --color-navy:       var(--color-accent);
   --color-green:      var(--color-vivid);
+  --color-gold:       var(--color-brass);
   --color-red:        var(--color-danger);
   --color-orange:     var(--color-warn);
 }
 
 [data-theme="dark"] {
-  --color-paper:     oklch(14% 0.04 245);
-  --color-paper-2:   oklch(18% 0.05 245);
-  --color-paper-3:   oklch(22% 0.06 245);
-  --color-surface:   oklch(19% 0.05 245);
-  --color-rule:      oklch(26% 0.06 245);
-  --color-rule-mid:  oklch(32% 0.07 245);
-  --color-ink:       oklch(88% 0.03 245);
-  --color-ink-2:     oklch(65% 0.06 245);
-  --color-ink-3:     oklch(46% 0.06 245);
-  --color-accent:    oklch(68% 0.10 245);
-  --color-accent-hi: oklch(75% 0.11 245);
-  --color-accent-lo: oklch(22% 0.06 245);
-  --color-vivid:     oklch(65% 0.19 145);
-  --color-vivid-lo:  oklch(20% 0.05 145);
-  --color-danger:    oklch(65% 0.18 27);
-  --color-danger-lo: oklch(18% 0.04 27);
-  --color-warn:      oklch(70% 0.14 60);
-  --color-focus:     oklch(65% 0.19 145);
+  /* warm editorial night — deep navy-charcoal canvas, brass thread survives */
+  --color-paper:     oklch(17% 0.018 258);
+  --color-paper-2:   oklch(21% 0.022 256);
+  --color-paper-3:   oklch(25% 0.026 254);
+  --color-surface:   oklch(22% 0.022 256);
+  --color-rule:      oklch(30% 0.026 254);
+  --color-rule-mid:  oklch(38% 0.030 252);
+  --color-ink:       oklch(91% 0.014 84);     /* warm off-white */
+  --color-ink-2:     oklch(70% 0.020 82);
+  --color-ink-3:     oklch(52% 0.022 250);
+  --color-accent:    oklch(74% 0.100 250);    /* lifted navy-blue */
+  --color-accent-hi: oklch(81% 0.110 250);
+  --color-accent-lo: oklch(26% 0.030 252);
+  --color-brass:     oklch(76% 0.110 82);     /* brass accent thread */
+  --color-brass-hi:  oklch(83% 0.120 82);
+  --color-brass-lo:  oklch(28% 0.040 80);
+  --color-vivid:     oklch(67% 0.180 148);
+  --color-vivid-lo:  oklch(24% 0.050 148);
+  --color-danger:    oklch(64% 0.150 42);
+  --color-danger-lo: oklch(24% 0.040 40);
+  --color-warn:      oklch(72% 0.130 68);
+  --color-focus:     oklch(76% 0.110 82);
 }
 
 body {
@@ -341,7 +352,7 @@ button:active {
 }
 
 .nav-tab-item--active {
-  border-bottom-color: var(--color-green);
+  border-bottom-color: var(--color-brass);
   font-weight: 600;
   color: var(--color-navy);
 }
@@ -419,4 +430,168 @@ button:active {
   button:active {
     transform: none;
   }
+}
+
+/* ── 2026 workbench refresh: tactile institutional chrome ───── */
+.dashboard-wrapper {
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--color-paper) 84%, white 16%) 0%, var(--color-paper) 46%),
+    repeating-linear-gradient(90deg, transparent 0 39px, color-mix(in oklch, var(--color-brass) 14%, transparent) 39px 40px);
+}
+
+.app-topbar {
+  backdrop-filter: saturate(1.06) blur(14px);
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--color-brass) 34%, transparent),
+    0 1px 0 1px color-mix(in oklch, var(--color-rule) 70%, transparent),
+    0 10px 28px rgba(52, 38, 16, 0.06);
+}
+
+.app-title-kicker {
+  font-size: 10px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--color-brass);
+  font-weight: 700;
+  margin-bottom: 5px;
+}
+
+.app-title-main {
+  font-family: var(--font-display);
+  font-size: 27px;
+  line-height: 1.02;
+  color: var(--color-accent);
+  font-weight: 400;
+  letter-spacing: -0.005em;
+}
+
+.app-search {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.55), 0 1px 2px rgba(15,23,42,0.04);
+}
+
+.app-search:focus {
+  border-color: var(--color-brass) !important;
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--color-brass) 22%, transparent), 0 10px 22px rgba(52,38,16,0.08);
+}
+
+.app-main {
+  background: transparent;
+}
+
+.card-hover {
+  will-change: transform, box-shadow;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .card-hover:hover {
+    box-shadow: 0 12px 30px rgba(52, 38, 16, 0.13), 0 20px 48px rgba(52, 38, 16, 0.09) !important;
+    transform: translateY(-2px);
+  }
+}
+
+.kpi-card {
+  isolation: isolate;
+}
+
+.kpi-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255,255,255,0.46), transparent 48%);
+  opacity: 0.5;
+  z-index: -1;
+}
+
+.kpi-card--hero::after {
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.12), transparent 52%),
+    repeating-linear-gradient(90deg, transparent 0 23px, rgba(255,255,255,0.035) 23px 24px);
+  opacity: 1;
+}
+
+.sidebar-shell {
+  box-shadow: 8px 0 28px rgba(8, 22, 34, 0.16);
+}
+
+.sidebar-wordmark-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  border-radius: var(--radius-md);
+  background: linear-gradient(150deg, rgba(201, 162, 78, 0.22), rgba(138, 107, 40, 0.14));
+  color: #D8B96A;
+  border: 1px solid rgba(201, 162, 78, 0.42);
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.sidebar-nav-button {
+  position: relative;
+}
+
+.sidebar-nav-button::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 140ms var(--ease-out), transform 140ms var(--ease-out);
+}
+
+.sidebar-nav-button.is-active::after {
+  opacity: 0.48;
+  transform: scale(1);
+}
+
+.surface-card {
+  position: relative;
+  background: var(--color-surface);
+  border: 1px solid var(--color-rule);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 1px 2px rgba(52,38,16,0.05), 0 10px 26px rgba(52,38,16,0.06);
+}
+
+/* Editorial brass hairline crowning each surface panel */
+.surface-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: var(--radius-xl);
+  right: var(--radius-xl);
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    color-mix(in oklch, var(--color-brass) 55%, transparent) 18%,
+    color-mix(in oklch, var(--color-brass) 55%, transparent) 82%,
+    transparent);
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.section-title-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-4);
+}
+
+.section-title-row h2,
+.section-title-row h1 {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .app-title-kicker { display: none; }
+  .app-title-main { font-size: 21px; }
 }

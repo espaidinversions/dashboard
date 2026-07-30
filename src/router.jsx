@@ -1,6 +1,7 @@
 import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
+import { GlobalKeyboardShortcuts } from "./components/GlobalKeyboardShortcuts.jsx";
 import { useAuth } from "./auth.jsx";
 
 const Dashboard = lazy(() => import("./components/Dashboard.jsx"));
@@ -61,6 +62,7 @@ function RequireAnySection({ children, sections, fallback = "/" }) {
 export default function AppRoutes() {
   return (
     <ErrorBoundary>
+      <GlobalKeyboardShortcuts />
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
@@ -81,3 +83,4 @@ export default function AppRoutes() {
     </ErrorBoundary>
   );
 }
+

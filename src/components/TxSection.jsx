@@ -35,6 +35,7 @@ export function TxSection({
   vehiclesLabel = "Vehicles", // label for the "vehicles" scope button
   scope: scopeProp, // optional controlled scope ("all" | "vehicles" | "companies")
   onScopeChange, // optional setter for controlled scope
+  addShortcutScope = null,
 }) {
   const { openAddModal, openEditModal } = useCapitalCallModal();
   const [sort, setSort] = useState({ k: "data", d: "desc" });
@@ -249,6 +250,16 @@ export function TxSection({
       sub: netFlow >= 0 ? "saldo positiu" : "pendent",
     },
   ];
+
+  useEffect(() => {
+    if (!addShortcutScope || !canEdit || summaryOnly) return undefined;
+    const handleAddShortcut = (event) => {
+      if (event.detail?.scope !== addShortcutScope) return;
+      openAddModal(addDefaults ?? {});
+    };
+    window.addEventListener("tc:add-transaction", handleAddShortcut);
+    return () => window.removeEventListener("tc:add-transaction", handleAddShortcut);
+  }, [addDefaults, addShortcutScope, canEdit, openAddModal, summaryOnly]);
 
   const toggleSort = (k) => {
     setSort((prev) => prev.k === k ? { k, d: prev.d === "desc" ? "asc" : "desc" } : { k, d: "desc" });
@@ -533,3 +544,4 @@ export function TxSection({
     </div>
   );
 }
+

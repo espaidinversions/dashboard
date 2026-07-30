@@ -70,12 +70,12 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
     setExpanded(p => { const n=new Set(p); n.has(id)?n.delete(id):n.add(id); return n; });
 
   const C = {
-    bg:           dark ? "#0E1B27" : "#1C3650",
-    bgHover:      dark ? "#142030" : "#22425F",
-    bgActive:     dark ? "#1A2E42" : "#0F2A44",
+    bg:           dark ? "#0B1722" : "#18324C",
+    bgHover:      dark ? "#132234" : "#223F5B",
+    bgActive:     dark ? "#192D42" : "#0E2942",
     text:         "rgba(255,255,255,0.80)",
-    textFade:     "rgba(255,255,255,0.36)",
-    groupLabel:   "rgba(255,255,255,0.28)",
+    textFade:     "rgba(255,255,255,0.42)",
+    groupLabel:   "rgba(255,255,255,0.34)",
     border:       "rgba(255,255,255,0.07)",
     activeBorder: "#3DC83E",
   };
@@ -85,6 +85,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
     const active = activeId === item.id;
     return (
       <button
+        className={`sidebar-nav-button ${active ? "is-active" : ""}`}
         onClick={() => onNavigate(item.id)}
         title={collapsed ? item.label : undefined}
         style={{
@@ -92,18 +93,18 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
           width:"100%", border:"none", cursor:"pointer",
           borderLeft:`3px solid ${active ? C.activeBorder : "transparent"}`,
           padding: collapsed ? "9px 0" : indent ? "8px 16px 8px 32px" : "9px 14px",
-          background: active ? C.bgActive : "transparent",
+          background: active ? `linear-gradient(90deg, ${C.bgActive} 0%, rgba(255,255,255,0.035) 100%)` : "transparent",
           color: active ? "#fff" : C.text,
           fontSize:12, fontFamily:"inherit",
-          fontWeight: indent ? 400 : 600,
+          fontWeight: active ? 700 : indent ? 450 : 650,
           letterSpacing: indent ? "normal" : "0.01em",
           justifyContent: collapsed ? "center" : "flex-start",
-          transition:"background 0.1s",
+          transition:"background 140ms var(--ease-out), color 140ms var(--ease-out)",
         }}
         onMouseEnter={e => { if(!active) e.currentTarget.style.background=C.bgHover; }}
         onMouseLeave={e => { if(!active) e.currentTarget.style.background="transparent"; }}
       >
-        {item.icon && (() => { const Icon = item.icon; return <Icon size={16} strokeWidth={1.75} color={active ? tc.green : tc.textLight} style={{flexShrink:0}} />; })()}
+        {item.icon && (() => { const Icon = item.icon; return <Icon size={16} strokeWidth={1.75} color={active ? C.activeBorder : C.textFade} style={{flexShrink:0}} />; })()}
         {!collapsed && <span style={{whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.label}</span>}
       </button>
     );
@@ -140,6 +141,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
       >
         {/* section header */}
         <button
+          className={`sidebar-nav-button ${childActive ? "is-active" : ""}`}
           onClick={() => collapsed ? onNavigate(visibleChildren[0].id) : toggleSec(sec.id)}
           title={collapsed ? sec.label : undefined}
           style={{
@@ -149,14 +151,14 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
             padding: collapsed ? "10px 0" : "9px 14px",
             background:"transparent",
             color: childActive ? "#fff" : C.text,
-            fontSize:12, fontFamily:"inherit", fontWeight:600,
+            fontSize:12, fontFamily:"inherit", fontWeight: childActive ? 750 : 650,
             justifyContent: collapsed ? "center" : "flex-start",
-            transition:"background 0.1s",
+            transition:"background 140ms var(--ease-out), color 140ms var(--ease-out)",
           }}
           onMouseEnter={e => { e.currentTarget.style.background=C.bgHover; }}
           onMouseLeave={e => { e.currentTarget.style.background="transparent"; }}
         >
-          {(() => { const Icon = sec.icon; return <Icon size={16} strokeWidth={1.75} color={childActive ? tc.green : tc.textLight} style={{flexShrink:0}} />; })()}
+          {(() => { const Icon = sec.icon; return <Icon size={16} strokeWidth={1.75} color={childActive ? C.activeBorder : C.textFade} style={{flexShrink:0}} />; })()}
           {!collapsed && (
             <>
               <span style={{flex:1,letterSpacing:"0.01em"}}>{sec.label}</span>
@@ -186,7 +188,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
                 onClick={() => { onNavigate(c.id); setPopover(null); }}
                 style={{
                   display:"block", width:"100%", textAlign:"left",
-                  background: activeId===c.id ? C.bgActive : "transparent",
+                  background: activeId===c.id ? `linear-gradient(90deg, ${C.bgActive} 0%, rgba(255,255,255,0.035) 100%)` : "transparent",
                   border:"none",
                   borderLeft:`3px solid ${activeId===c.id ? C.activeBorder : "transparent"}`,
                   padding:"8px 16px", cursor:"pointer",
@@ -214,23 +216,31 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
   }
 
   return (
-    <div style={{
+    <div className="sidebar-shell" style={{
       width: collapsed ? RAIL_W : SIDEBAR_W,
       height:"100vh", background:C.bg,
       position:"sticky", top:0, alignSelf:"flex-start",
       display:"flex", flexDirection:"column",
-      transition:"width 0.2s ease", flexShrink:0, overflowX:"hidden",
+      transition:"width 180ms var(--ease-out)", flexShrink:0, overflowX:"hidden",
       borderRight:`1px solid ${C.border}`,
     }}>
       {/* header */}
       <div style={{
-        height:44, display:"flex", alignItems:"center",
+        height:58, display:"flex", alignItems:"center",
         padding: collapsed ? "0" : "0 14px",
         justifyContent: collapsed ? "center" : "space-between",
-        borderBottom:`1px solid ${C.border}`, flexShrink:0,
+        borderBottom:`1px solid ${C.border}`, flexShrink:0, background:"linear-gradient(180deg, rgba(255,255,255,0.04), transparent)",
       }}>
-        {!collapsed && <span style={{color:"#fff",fontWeight:700,fontSize:13,letterSpacing:"0.05em",whiteSpace:"nowrap"}}>Turtle Capital</span>}
-        <button onClick={onToggle} style={{background:"none",border:"none",cursor:"pointer",color:C.text,padding:6,lineHeight:1,flexShrink:0,display:"flex",alignItems:"center"}}>
+        {!collapsed && (
+          <div style={{ display:"flex", alignItems:"center", gap:9, minWidth:0 }}>
+            <span className="sidebar-wordmark-mark">TC</span>
+            <div style={{ display:"flex", flexDirection:"column", gap:1, minWidth:0 }}>
+              <span style={{color:"#fff",fontWeight:750,fontSize:13,whiteSpace:"nowrap"}}>Turtle Capital</span>
+              <span style={{color:C.textFade,fontSize:10,fontWeight:650,textTransform:"uppercase",letterSpacing:"0.12em",whiteSpace:"nowrap"}}>Portfolio OS</span>
+            </div>
+          </div>
+        )}
+        <button onClick={onToggle} style={{background:"rgba(255,255,255,0.05)",border:`1px solid ${C.border}`,borderRadius:4,cursor:"pointer",color:C.text,padding:6,lineHeight:1,flexShrink:0,display:"flex",alignItems:"center"}}>
           {collapsed ? <Menu size={16} strokeWidth={1.75} /> : <ChevronLeft size={16} strokeWidth={1.75} />}
         </button>
       </div>
@@ -267,7 +277,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
               color:C.text, textDecoration:"none",
               fontSize:12, fontFamily:"inherit",
               justifyContent: collapsed ? "center" : "flex-start",
-              transition:"background 0.1s",
+              transition:"background 140ms var(--ease-out), color 140ms var(--ease-out)",
             }}
             onMouseEnter={e => { e.currentTarget.style.background=C.bgHover; }}
             onMouseLeave={e => { e.currentTarget.style.background="transparent"; }}

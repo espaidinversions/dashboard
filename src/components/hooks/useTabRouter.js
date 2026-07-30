@@ -1,7 +1,32 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { usePersistedState } from "../../utils.js";
 
+const DASHBOARD_NAV_TARGETS = new Set([
+  "home",
+  "liquidity",
+  "alt-resum",
+  "fons",
+  "searchers",
+  "companies",
+  "cash-model",
+  "alt-cash-model",
+  "re-cash-model",
+  "posicions",
+  "re-resum",
+  "re-directe",
+  "re-altres",
+  "re-inversions",
+  "mp-resum",
+  "mp-rv",
+  "mp-rf",
+  "mp-posicions",
+  "mp-transaccions",
+  "mp-traçabilitat",
+  "tx-alt",
+  "tx-re",
+  "tx-mp",
+]);
 export function normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublicsTab, activeNavItem }) {
   if (tab === "home") return "home";
   if (tab === "liquidity") return "liquidity";
@@ -38,6 +63,7 @@ export function useTabRouter() {
     setSearchParams(params => {
       const next = new URLSearchParams(params);
       next.set("tab", newTab);
+      next.delete("nav");
       return next;
     }, { replace: true });
   }, [setSearchParams]);
@@ -80,6 +106,20 @@ export function useTabRouter() {
     }
   }, [setActiveNavItem, setCompaniesSubTab, setInversionsSubTab, setMercatsPublicsTab, setRealEstateTab, setTab]);
 
+
+  useEffect(() => {
+    const navTarget = searchParams.get("nav");
+    if (!navTarget) return;
+    if (DASHBOARD_NAV_TARGETS.has(navTarget)) {
+      handleNavigate(navTarget);
+      return;
+    }
+    setSearchParams(params => {
+      const next = new URLSearchParams(params);
+      next.delete("nav");
+      return next;
+    }, { replace: true });
+  }, [handleNavigate, searchParams, setSearchParams]);
   const derivedNavItem = useMemo(() => {
     const next = normalizeNavState({ tab, inversionsSubTab, realEstateTab, mercatsPublicsTab, activeNavItem });
     return next ?? activeNavItem;
@@ -97,3 +137,4 @@ export function useTabRouter() {
     handleNavigate,
   };
 }
+
