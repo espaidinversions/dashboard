@@ -57,6 +57,16 @@ export function colorFor(tc, color) {
   return tc.textLight;
 }
 
+// Deviation (real - model) coloring. Green/red as good/bad only makes sense for
+// distributions (more distributed than modeled = genuinely good). For calls and
+// net cash flow a positive deviation can mean *less capital was called than planned*
+// (i.e. behind on deployment), so good/bad framing is misleading — use a neutral
+// directional tone instead: navy = above model, amber = below model.
+export function devColor(tc, diff, mode) {
+  if (mode === "dist") return diff >= 0 ? tc.green : tc.red;
+  return diff >= 0 ? tc.navy : tc.warning;
+}
+
 export function periodColor(tc, year) {
   const period = periodOf(year);
   if (period === "closed") return tc.green;

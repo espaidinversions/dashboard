@@ -4,6 +4,7 @@ import {
   pct,
   signed,
   colorFor,
+  devColor,
   selectStyle,
   buttonStyle,
 } from "./prospective/prospectiveUtils.js";
@@ -145,7 +146,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], fundMeta = [], forceS
                 <Kpi tc={tc} label="Pendent de cridar" value={fmtK(capitalSummary.pending)} color={capitalSummary.pending > 0 ? tc.warning : tc.textLight} />
                 <Kpi tc={tc} label="% utilitzat" value={capitalSummary.utilPct == null ? "--" : `${capitalSummary.utilPct.toFixed(1)}%`} color={capitalSummary.utilPct != null && capitalSummary.utilPct >= 98 ? tc.warning : tc.textMid} sub={capitalSummary.utilPct != null ? `${entityText.plural} amb calls visibles` : undefined} />
                 <Kpi tc={tc} label="Net CF real" value={signed(kpis.netReal)} color={kpis.netReal >= 0 ? tc.green : tc.red} sub="Dist - Calls" />
-                <Kpi tc={tc} label="Desviacio" value={signed(kpis.diff)} color={kpis.diff >= 0 ? tc.green : tc.red} sub={`${pct(kpis.realTotal, kpis.modelTotal)} vs model`} />
+                <Kpi tc={tc} label="Desviacio" value={signed(kpis.diff)} color={devColor(tc, kpis.diff, mode)} sub={`${pct(kpis.realTotal, kpis.modelTotal)} vs model`} />
                 <Kpi tc={tc} label={`Real ${text.model}`} value={fmtK(kpis.realTotal)} color={mode === "dist" ? tc.green : tc.navy} />
                 <Kpi tc={tc} label={`Model ${text.model}`} value={fmtK(kpis.modelTotal)} muted />
                 <Kpi tc={tc} label="Cobertura model" value={coverage.pct == null ? "--" : `${coverage.pct.toFixed(0)}%`} color={tc.navy} sub={`${coverage.modeled}/${coverage.total} ${entityText.plural}`} />
@@ -167,7 +168,7 @@ export function ProspectiveCashTab({ rawCapitalCalls = [], fundMeta = [], forceS
                         <div style={{ fontSize: 11, fontWeight: 750, color: colorFor(tc, period.color) }}>{period.label}</div>
                         <div style={{ fontSize: 10, color: tc.textLight }}>Model {fmtK(period.model, 0)} | Real {fmtK(period.real, 0)}</div>
                       </div>
-                      <div style={{ fontSize: 11, fontWeight: 800, color: period.diff >= 0 ? tc.green : tc.red }} title={pct(period.real, period.model)}>
+                      <div style={{ fontSize: 11, fontWeight: 800, color: devColor(tc, period.diff, mode) }} title={pct(period.real, period.model)}>
                         {signed(period.diff)}
                       </div>
                     </div>
