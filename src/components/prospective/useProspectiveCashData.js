@@ -40,6 +40,7 @@ export function useProspectiveCashData({ rawCapitalCalls = [], fundMeta = [], fo
   const [fetchError, setFetchError] = useState(null);
   const [saveError, setSaveError] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const filters = useProspectiveCashFilters({ forceScope });
   const {
     entityScope,
@@ -283,7 +284,7 @@ export function useProspectiveCashData({ rawCapitalCalls = [], fundMeta = [], fo
       if (row.type === "calls") { bucket.mc += row.model; bucket.rc += row.real; }
       else { bucket.md += row.model; bucket.rd += row.real; }
     }
-    return PERIODS.map((period) => {
+    return PROSPECTIVE_CASH_PERIODS.map((period) => {
       const value = modeValue(totals[period.id], mode);
       return { ...period, ...value, diff: value.real - value.model };
     });
@@ -458,4 +459,7 @@ export function useProspectiveCashData({ rawCapitalCalls = [], fundMeta = [], fo
     entityMetaByName,
   };
 }
+
+
+
 

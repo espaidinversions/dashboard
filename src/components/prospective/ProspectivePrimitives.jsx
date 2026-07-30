@@ -1,4 +1,4 @@
-import { colorFor, tdStyle } from "./prospectiveUtils.js";
+import { colorFor, periodBg, tdStyle } from "./prospectiveUtils.js";
 
 export function Kpi({ tc, label, value, color, sub, muted }) {
   return (
@@ -125,3 +125,4 @@ function fmtC(value) {
   if (a >= 1e3) return `${(n / 1e3).toFixed(0)}K€`;
   return `${n.toFixed(0)}€`;
 }
+
