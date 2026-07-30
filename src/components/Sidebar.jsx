@@ -233,7 +233,7 @@ export function Sidebar({ collapsed, onToggle, activeItem, activeNavItem, onNavi
       }}>
         {!collapsed && (
           <div style={{ display:"flex", alignItems:"center", gap:9, minWidth:0 }}>
-            <span className="sidebar-wordmark-mark">TC</span>
+            <img src="/logo-turtle.svg" alt="Turtle Capital" width={26} height={26} style={{flexShrink:0, display:"block"}} />
             <div style={{ display:"flex", flexDirection:"column", gap:1, minWidth:0 }}>
               <span style={{color:"#fff",fontWeight:750,fontSize:13,whiteSpace:"nowrap"}}>Turtle Capital</span>
               <span style={{color:C.textFade,fontSize:10,fontWeight:650,textTransform:"uppercase",letterSpacing:"0.12em",whiteSpace:"nowrap"}}>Portfolio OS</span>
