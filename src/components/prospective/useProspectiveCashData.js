@@ -33,6 +33,7 @@ function resolveForecastEditorData(rows) {
 
 export function useProspectiveCashData({ rawCapitalCalls = [], fundMeta = [], forceScope } = {}) {
   const [editorData, setEditorData] = useState({ years: [], funds: {} });
+  const [committedOverrides, setCommittedOverrides] = useState({});
   const [vehicleIds, setVehicleIds] = useState({});
   const fetchedRef = useRef({ years: [], funds: {} });
   const [loading, setLoading] = useState(true);
