@@ -30,13 +30,6 @@ if (!SUPABASE_URL || !SERVICE_ROLE_KEY) {
 const DRY_RUN = process.argv.includes("--dry-run");
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
-// Helper to subtract one calendar day — noon UTC anchor avoids DST/timezone shifts
-function subtractOneCalendarDay(isoDate) {
-  const d = new Date(isoDate + "T12:00:00Z");
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d.toISOString().slice(0, 10);
-}
-
 // Fetch ECB USD/EUR rate for a specific date
 async function fetchEcbUsdEur(dateStr) {
   const url = `https://data-api.ecb.europa.eu/service/data/EXR/D.USD.EUR.SP00.A?endPeriod=${encodeURIComponent(dateStr)}&lastNObservations=1&format=csvdata`;
@@ -102,7 +95,8 @@ async function main() {
 
   for (let i = 0; i < foundRows.length; i++) {
     const row = foundRows[i];
-    const rateDate = subtractOneCalendarDay(String(row.data).slice(0, 10));
+    // T-0: ECB fixing observed on the transaction date itself (the day's close).
+    const rateDate = String(row.data).slice(0, 10);
 
     let rate;
     let observedAt;

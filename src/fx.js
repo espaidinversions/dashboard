@@ -54,11 +54,14 @@ export async function convertAmountToEurOnDate({ amount, currency, date }, fetch
   const todayUtc = new Date().toISOString().slice(0, 10);
   const isFuture = date > todayUtc;
 
-  // T-1 semantics: use the ECB rate from the business day BEFORE the transaction date.
-  // For future dates, use yesterday's rate (latest available).
-  // ECB's lastNObservations=1 skips weekends/holidays automatically.
+  // T-0 semantics: use the ECB reference rate observed ON the transaction date —
+  // the day's ~16:15 CET fixing, i.e. the close of day X (not the prior day's).
+  // ECB's endPeriod + lastNObservations=1 returns the latest observation on or
+  // before this date, so weekends, holidays, and an as-yet-unpublished same-day
+  // fixing all fall back to the most recent available rate automatically.
+  // For future dates, cap at today (the latest rate that can exist).
   // Works for any ECB-tracked currency (USD, SEK, GBP, etc.).
-  const rateDate = subtractOneCalendarDay(isFuture ? todayUtc : date);
+  const rateDate = isFuture ? todayUtc : date;
   const { rate: fxRate, observedAt } = await getEcbRateWithObservedAt(rateDate, divisa, "EUR", fetcher);
 
   return {
