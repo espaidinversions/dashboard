@@ -1,21 +1,20 @@
 import { useMemo, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import ReactECharts from "../ReactECharts.jsx";
-import { ecTheme } from "../echartsTheme.js";
 import { fmtM, fmtSignedM, fmtSignedNative, usePersistedState } from "../utils.js";
 import { makeVehicleDetailPath } from "../data/privateRoutes.js";
-import { estSection, isCompanyEst } from "../data/capitalCallStrategyModel.js";
-import { normalizeCapitalCallTipus, DISTRIBUCIONS_SET } from "../data/capitalCallTipusModel.js";
+import { estSection } from "../data/capitalCallStrategyModel.js";
+import { DISTRIBUCIONS_SET } from "../data/capitalCallTipusModel.js";
 import { Badge, DeleteRowButton } from "./SharedComponents.jsx";
 import { useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
-
-const PM_TX_MONTHS_SHORT = ["","Gen","Feb","Mar","Abr","Mai","Jun","Jul","Ago","Set","Oct","Nov","Des"];
-
-// Legacy non-cash rows that should not distort "committed vs called" KPIs.
-const EXCLUDED_KPI_TIPUS = new Set([
-  "Transferència Participacions",
-  "Conversió Participacions",
-]);
+import {
+  isCompanyRow,
+  isExcludedKpiRow,
+  isAportacio,
+  computeCanonicalEstByNif,
+  buildTxChartData,
+} from "../data/txSectionModel.js";
+import { TxSectionKpiCards } from "./TxSectionKpiCards.jsx";
+import { TxSectionFlowChart } from "./TxSectionFlowChart.jsx";
 
 export function TxSection({
   tx,
@@ -49,11 +48,6 @@ export function TxSection({
   const [page, setPage] = useState(0);
   const TX_PP = 25;
 
-  // Classify by the resolved "Tipus de Vehicle" (est): fons → vehicles,
-  // participades / search funds → companies. This follows vehicle_est rather
-  // than the legacy PE/VC vehicle_tipus.
-  const isCompanyRow = (row) => isCompanyEst(row?.est);
-
   const scopedTx = useMemo(() => {
     if (!scopeToggle || scope === "all") return tx;
     if (scope === "companies") return tx.filter(isCompanyRow);
@@ -68,57 +62,7 @@ export function TxSection({
 
   const allRows = useMemo(() => [...scopedTx, ...scopedCompr], [scopedTx, scopedCompr]);
 
-  // Enforce a single "Tipus de Vehicle" per NIF (= row.id) in the transaction register.
-  // Search Funds can legitimately change phase (cerca vs participada), so skip SF.
-  const canonicalEstByNif = useMemo(() => {
-    const countsById = new Map(); // id -> Map(est -> count)
-    const lastSeenById = new Map(); // id -> { est, data }
-
-    for (const row of allRows) {
-      const est = String(row?.est ?? "").trim();
-      if (!est) continue;
-      // Search Funds legitimately change phase (cerca vs participada), so leave
-      // their est untouched. Unclassified rows are skipped too. Everything else
-      // (fons, real estate, participades) is canonicalized to one est per NIF.
-      const section = estSection(est);
-      if (section === "SF" || section == null) continue;
-      const id = String(row?.id ?? "").trim();
-      if (!id) continue;
-
-      if (!countsById.has(id)) countsById.set(id, new Map());
-      const estCounts = countsById.get(id);
-      estCounts.set(est, (estCounts.get(est) ?? 0) + 1);
-
-      const data = String(row?.data ?? "").slice(0, 10);
-      const prev = lastSeenById.get(id);
-      if (!prev || (data && data >= prev.data)) {
-        lastSeenById.set(id, { est, data: data || "" });
-      }
-    }
-
-    const canonical = new Map();
-    for (const [id, estCounts] of countsById.entries()) {
-      let best = null;
-      let bestCount = -1;
-      for (const [est, count] of estCounts.entries()) {
-        if (count > bestCount) { best = est; bestCount = count; }
-      }
-      // Tie-breaker: if counts are equal across strategies, prefer the most recent transaction's est.
-      const last = lastSeenById.get(id);
-      if (last && last.est) {
-        let bestIsTied = false;
-        if (best != null) {
-          const bestValue = estCounts.get(best) ?? 0;
-          for (const [est, count] of estCounts.entries()) {
-            if (est !== best && count === bestValue) { bestIsTied = true; break; }
-          }
-        }
-        if (bestIsTied) best = last.est;
-      }
-      if (best) canonical.set(id, best);
-    }
-    return canonical;
-  }, [allRows]);
+  const canonicalEstByNif = useMemo(() => computeCanonicalEstByNif(allRows), [allRows]);
 
   const yearOptions = useMemo(() => {
     const years = new Set(allRows.map((r) => String(r.data ?? "").slice(0, 4)).filter((y) => /^\d{4}$/.test(y)));
@@ -184,8 +128,6 @@ export function TxSection({
   const currentPage = Math.min(page, pageCount - 1);
   const pagedRows = sorted.slice(currentPage * TX_PP, (currentPage + 1) * TX_PP);
 
-  const isExcludedKpiRow = (row) => EXCLUDED_KPI_TIPUS.has(normalizeCapitalCallTipus(row?.tipus));
-  const isAportacio = (row) => normalizeCapitalCallTipus(row?.tipus) === "Aportació";
   const totalCompr = visibleCompr
     .filter((row) => !isExcludedKpiRow(row))
     .reduce((sum, row) => sum + (row.eur || 0), 0);
@@ -203,26 +145,7 @@ export function TxSection({
   const netFlow = totalPaidBack - totalCalls;
   const totalUncalled = Math.max(0, totalCompr - totalCalls);
   const calledPct = totalCompr > 0 ? (totalCalls / totalCompr) * 100 : null;
-  const chartData = useMemo(() => {
-    const map = new Map();
-    visibleTx.forEach((row) => {
-      const month = String(row?.data ?? "").slice(0, 7);
-      const match = month.match(/^(\d{4})-(\d{2})$/);
-      if (!match) return;
-      if (!map.has(month)) {
-        map.set(month, {
-          label: `${PM_TX_MONTHS_SHORT[Number(match[2])]} '${match[1].slice(2)}`,
-          CapitalCalls: 0,
-          Retorns: 0,
-        });
-      }
-      const entry = map.get(month);
-      // Strict category accounting: Compromis is not a cash flow and must not be counted as a call.
-      if (row.cat === "Capital Call" && isAportacio(row) && !isExcludedKpiRow(row)) entry.CapitalCalls += Math.abs(row.eur ?? 0);
-      if (row.cat === "Distribució" || row.cat === "Retorn Capital") entry.Retorns += Math.abs(row.eur ?? 0);
-    });
-    return [...map.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([, value]) => value);
-  }, [visibleTx]);
+  const chartData = useMemo(() => buildTxChartData(visibleTx), [visibleTx]);
   const cards = [
     ...(totalCompr > 0 ? [{
       label: "Compromís",
@@ -288,103 +211,18 @@ export function TxSection({
     borderBottom: `2px solid ${tc.border}`,
   };
 
-  const scopeBtnStyle = (id) => {
-    const active = scope === id;
-    return {
-      border: `1px solid ${tc.border}`,
-      background: active ? tc.navy : "transparent",
-      color: active ? "#fff" : tc.textMid,
-      padding: "6px 10px",
-      fontSize: 12,
-      fontWeight: active ? 700 : 600,
-      cursor: "pointer",
-      fontFamily: "inherit",
-    };
-  };
-
-  const cardsGrid = (
-    <div className="grid-4" style={{ gap: 12 }}>
-      {cards.map((card) => (
-        <div key={card.label} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 18px", borderTop: `3px solid ${card.accent}`, boxShadow: "0 2px 8px rgba(0,0,0,.06)" }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.06em", color: tc.textLight, textTransform: "uppercase", marginBottom: 4, fontWeight: 600 }}>{card.label}</div>
-          <div style={{ fontSize: 20, fontWeight: 700, color: card.accent, fontFamily: "'DM Mono',monospace" }}>{card.value}</div>
-          {card.sub ? <div style={{ fontSize: 11, color: tc.textLight, marginTop: 2 }}>{card.sub}</div> : null}
-        </div>
-      ))}
-    </div>
-  );
+  const cardsGrid = <TxSectionKpiCards cards={cards} tc={tc} />;
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
       {summaryOnly ? cardsGrid : null}
-      <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "18px 20px", boxShadow: "0 2px 8px rgba(0,0,0,.08)" }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, marginBottom: 14, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 11, letterSpacing: "0.13em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600 }}>
-            Flux Mensual · Mercats Privats
-          </div>
-          {scopeToggle ? (
-            <div style={{ display: "inline-flex", border: `1px solid ${tc.border}`, borderRadius: 8, overflow: "hidden", background: tc.bg }}>
-              <button onClick={() => setScope("all")} style={{ ...scopeBtnStyle("all"), borderRight: `1px solid ${tc.border}` }}>All</button>
-              <button onClick={() => setScope("vehicles")} style={{ ...scopeBtnStyle("vehicles"), borderRight: `1px solid ${tc.border}` }}>{vehiclesLabel}</button>
-              <button onClick={() => setScope("companies")} style={scopeBtnStyle("companies")}>Companies</button>
-            </div>
-          ) : null}
-        </div>
-        {chartData.length === 0 ? (
-          <div style={{ padding: "24px 0 8px", textAlign: "center", color: tc.textLight, fontSize: 13 }}>Cap transacció</div>
-        ) : (() => {
-          const t = ecTheme(tc);
-          const option = {
-            grid: { top: 8, right: 8, bottom: 56, left: 0, containLabel: true },
-            tooltip: {
-              ...t.tooltip,
-              trigger: "axis",
-              axisPointer: { type: "shadow" },
-              formatter: (params) => {
-                const label = params[0]?.axisValue ?? "";
-                let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
-                params.forEach((point) => {
-                  if (!point.value) return;
-                  html += `<div>${point.marker}${point.seriesName}: ${fmtM(point.value)}</div>`;
-                });
-                return html;
-              },
-            },
-            legend: { bottom: 0, textStyle: { fontSize: 10, color: tc.textLight } },
-            xAxis: {
-              type: "category",
-              data: chartData.map((row) => row.label),
-              axisLabel: { fontSize: 9, color: tc.textLight, rotate: -40 },
-              axisLine: { show: false },
-              axisTick: { show: false },
-            },
-            yAxis: {
-              type: "value",
-              axisLabel: { fontSize: 10, color: tc.textLight, formatter: (value) => fmtM(value) },
-              splitLine: { lineStyle: { color: tc.border } },
-              axisLine: { show: false },
-              axisTick: { show: false },
-            },
-            series: [
-              {
-                name: "Capital Calls",
-                type: "bar",
-                data: chartData.map((row) => row.CapitalCalls ?? null),
-                itemStyle: { color: tc.navy, borderRadius: [4, 4, 0, 0] },
-                barMaxWidth: 28,
-                barGap: "10%",
-              },
-              {
-                name: "Retorns",
-                type: "bar",
-                data: chartData.map((row) => row.Retorns ?? null),
-                itemStyle: { color: tc.green, borderRadius: [4, 4, 0, 0] },
-                barMaxWidth: 28,
-              },
-            ],
-          };
-          return <ReactECharts option={option} style={{ width: "100%", height: 220 }} opts={{ renderer: "canvas" }} />;
-        })()}
-      </div>
+      <TxSectionFlowChart
+        tc={tc}
+        chartData={chartData}
+        scopeToggle={scopeToggle}
+        scope={scope}
+        setScope={setScope}
+        vehiclesLabel={vehiclesLabel}
+      />
 
       {!summaryOnly ? cardsGrid : null}
 
