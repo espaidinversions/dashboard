@@ -1,21 +1,23 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useTheme } from "../theme.js";
-import { calcMesos, parseSearchersCSV, usePersistedState } from "../utils.js";
+import { calcMesos, usePersistedState } from "../utils.js";
 import { GEO_NAME } from "../config.js";
 import { AddRowModal } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
-import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies, loadCapitalCalls } from "../db.js";
+import { loadSearchers, loadCompanies, loadCapitalCalls } from "../db.js";
 import { useToast } from "../toast.jsx";
-import { apiFetchJson } from "../apiClient.js";
 import { isSfBackedCompany } from "../data/privateCompanyModel.js";
-import { enrichSearchersWithCapitalCalls, isActiveSearcher } from "../data/searcherModel.js";
-import { SEARCHER_FORM_ENTRADA_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_STATUS_OPTIONS } from "../config.js";
-import { searcherKey, splitSearcherNames, splitSchoolNames, toggleActiveFilter } from "../data/searcherFormatting.js";
+import { enrichSearchersWithCapitalCalls } from "../data/searcherModel.js";
+import { toggleActiveFilter } from "../data/searcherFormatting.js";
 import { SankeySection } from "./searchers/SankeySection.jsx";
 import { ActiveSearchersTable } from "./searchers/ActiveSearchersTable.jsx";
 import { LegacyTable } from "./searchers/LegacyTable.jsx";
 import { HistoricTable } from "./searchers/HistoricTable.jsx";
-import { downloadSingleSheetXlsx, readWorkbookFromArrayBuffer, sheetToRows } from "../utils/xlsx.js";
+import { getActiveSortValue, getHistoricSortValue } from "../data/searchersTabHelpers.js";
+import { makeHandleCSV, makeExportNifExcel, makeHandleNifImport } from "./searchers/searchersTabIO.js";
+import { makeSaveSearcherField, makeHandleAddSearcher, makeHandleDeleteSearcher } from "./searchers/searchersTabMutations.js";
+import { SearchersDataLoadBar } from "./searchers/SearchersDataLoadBar.jsx";
+import { SEARCHER_ADD_MODAL_FIELDS } from "./searchers/searchersAddModalFields.js";
 
 // ── main component ─────────────────────────────────────────
 export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
@@ -117,21 +119,6 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const totalSearchers  = activeRows.reduce((sum, row) => sum + (row.ticket ?? 0), 0);
   const soloCount       = activeRows.filter(r => r.modalitat === "Solo").length;
   const duoCount        = activeRows.filter(r => r.modalitat !== "Solo").length;
-
-  const getActiveSortValue = (row, key) => {
-    if (key === "stage") return row.stageOrder ?? 0;
-    if (key === "geo") return GEO_NAME[row.geo] || row.geo || "";
-    if (key === "formEntrada") return row.formEntrada ?? "";
-    if (key === "ticket") return row.ticket ?? 0;
-    if (key === "investmentYear") return row.investmentYear ?? 0;
-    if (key === "mesosCercant") return row.mesosCercant ?? 0;
-    if (key === "equityStake") return row.equityStake ?? 0;
-    if (key === "dataCompr") return row.derivedDataCompr ?? "";
-    if (key === "irr") return row.irr ?? -Infinity;
-    if (key === "dpi") return row.dpi ?? -Infinity;
-    if (key === "companiaAdquirida") return row.companiaAdquirida ?? "";
-    return row[key] ?? "";
-  };
 
   const displayedSearchers = useMemo(() => {
     let list = activeRows;
@@ -237,13 +224,6 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   const isLegacyView  = subTab === "legacy";
 
   // ── Historic table ─────────────────────────────────────────
-  const getHistoricSortValue = (row, key) => {
-    if (key === "geo") return GEO_NAME[row.geo] || row.geo || "";
-    if (key === "stageLabel") return row.stageOrder ?? 0;
-    if (key === "investmentYear") return row.investmentYear ?? 0;
-    return row[key] ?? "";
-  };
-
   const filteredHistoric = useMemo(() => {
     let d = [...enrichedSearchers];
     if (histFilter.status !== "Tots") d = d.filter(r => r.statusScreening === histFilter.status);
@@ -262,99 +242,11 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
 
   const sortHist = k => setHistSort(p => ({ k, d: p.k === k && p.d === "asc" ? "desc" : "asc" }));
 
-  const handleCSV = e => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        const rows = parseSearchersCSV(ev.target.result);
-        if (rows.length) {
-          const mapped = rows.map(r => ({
-            nom: r.nom, tipus: r.tipus, modalitat: r.modalitat, geo: r.geo,
-            statusScreening: r.statusScreening, formEntrada: r.formEntrada,
-            introPer: r.introPer, searcher1: r.searcher1 || "", searcher2: r.searcher2 || "",
-            escola1: r.escola1 || "", escola2: r.escola2 || "",
-          }));
-          const { error } = await saveSearchers(mapped);
-          if (error) {
-            toast({ message: "Error carregant searchers: " + error.message, type: "error" });
-            return;
-          }
-          const refreshed = await loadSearchers();
-          setHistoricData(refreshed ?? mapped);
-        }
-      } catch {
-        toast({ message: "No s'ha pogut llegir el CSV.", type: "error" });
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = "";
-  };
+  const handleCSV = makeHandleCSV({ toast, setHistoricData });
 
-  const isMockNif = (nif) => !nif || String(nif).startsWith("MOCKNIF:");
+  const exportNifExcel = makeExportNifExcel({ toast, historicData });
 
-  const exportNifExcel = async () => {
-    const rows = historicData.filter(r => isMockNif(r.nif));
-    if (!rows.length) {
-      toast({ message: "Tots els searchers ja tenen NIF real." });
-      return;
-    }
-    const data = rows.map(r => ({
-      id: r.id ?? "", nom: r.nom ?? "", nif_actual: r.nif ?? "", nif_nou: "",
-      status: r.statusScreening ?? "", entrada: r.formEntrada ?? "",
-      geo: r.geo ?? "", ticket: r.ticket ?? "",
-    }));
-    await downloadSingleSheetXlsx({
-      sheetName: "NIFs",
-      filename: `searchers_nif_${new Date().toISOString().slice(0, 10)}.xlsx`,
-      columns: [
-        { header: "id",         key: "id",         width: 10 },
-        { header: "nom",        key: "nom",        width: 40 },
-        { header: "nif_actual", key: "nif_actual", width: 30 },
-        { header: "nif_nou",    key: "nif_nou",    width: 20 },
-        { header: "status",     key: "status",     width: 30 },
-        { header: "entrada",    key: "entrada",    width: 16 },
-        { header: "geo",        key: "geo",        width: 6  },
-        { header: "ticket",     key: "ticket",     width: 10 },
-      ],
-      rows: data,
-    });
-    toast({ message: `${rows.length} searchers exportats.` });
-  };
-
-  const handleNifImport = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        const { XLSX, wb } = await readWorkbookFromArrayBuffer(ev.target.result);
-        const rows = sheetToRows(XLSX, wb, wb.SheetNames?.[0]) ?? [];
-        const updates = rows.filter(r => String(r.nif_nou ?? "").trim());
-        if (!updates.length) {
-          toast({ message: "Cap NIF nou trobat a la columna nif_nou." });
-          return;
-        }
-        let ok = 0, fail = 0;
-        for (const row of updates) {
-          const id = Number(row.id);
-          const newNif = String(row.nif_nou).trim();
-          const target = historicData.find(s => s.id === id);
-          if (!target) { fail++; continue; }
-          const { error } = await upsertSearcher({ ...target, nif: newNif });
-          if (error) { fail++; } else { ok++; }
-        }
-        const refreshed = await loadSearchers();
-        if (Array.isArray(refreshed)) setHistoricData(refreshed);
-        toast({ message: `NIFs actualitzats: ${ok} ok${fail ? `, ${fail} errors` : ""}.`, type: fail ? "error" : "success" });
-      } catch (err) {
-        toast({ message: "Error important NIFs: " + err.message, type: "error" });
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    e.target.value = "";
-  };
+  const handleNifImport = makeHandleNifImport({ toast, historicData, setHistoricData });
 
   const reloadSearchers = async () => {
     const refreshed = await loadSearchers();
@@ -367,123 +259,26 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
   };
 
   // ── Handlers for historic table ───────────────────────────
-  const saveSearcherField = async (target, field, value) => {
-    const targetKey = searcherKey(target);
-    const targetIndex = historicData.findIndex((searcher) => {
-      const candidateKey = searcherKey(searcher);
-      return targetKey != null ? candidateKey === targetKey : searcher.nom === target.nom;
-    });
-    if (targetIndex === -1) return;
-    const fieldPatch = field === "searchers"
-      ? splitSearcherNames(value)
-      : field === "schools"
-        ? splitSchoolNames(value)
-        : field === "status"
-          ? { statusScreening: value }
-          : { [field]: value };
-    const updated = historicData.map((searcher, index) => (
-      index === targetIndex ? { ...searcher, ...fieldPatch } : searcher
-    ));
-    setHistoricData(updated);
-    const searcher = updated[targetIndex];
-    if (searcher) {
-      const { data, error } = await upsertSearcher(searcher);
-      if (error) {
-        toast({ message: "Error desant canvis: " + error.message, type: "error" });
-        return;
-      }
-      if (data) {
-        setHistoricData((current) => current.map((row, index) => (
-          index === targetIndex ? data : row
-        )));
-      }
-    }
-  };
+  const saveSearcherField = makeSaveSearcherField({ toast, historicData, setHistoricData });
 
-  const handleAddSearcher = async (values, setError) => {
-    const nom = values.nom?.trim();
-    if (!nom) { setError("El nom és obligatori"); return; }
-    if (historicData.some(s => String(s.nom ?? "").trim().toLowerCase() === nom.toLowerCase())) {
-      setError("Ja existeix un searcher amb aquest nom");
-      return;
-    }
-    const searcher = {
-      nom, tipus: values.tipus || null, modalitat: values.modalitat || null,
-      geo: values.geo || null, statusScreening: values.statusScreening || null,
-      formEntrada: values.formEntrada || null, introPer: null,
-      searcher1: null, searcher2: null, escola1: null, escola2: null,
-      ticket: parseFloat(values.ticket) || null,
-      dataInici: values.dataInici || null, dataCompr: null, mesosCercant: null,
-      equityStake: parseFloat(values.equityStake) || null, isMock: false,
-      nif: values.nif?.trim() || null,
-    };
-    let inserted = null;
-    try {
-      const response = await apiFetchJson("/api/searchers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(searcher),
-      });
-      inserted = response?.data ?? null;
-    } catch (error) {
-      setError(error?.message || "Error en crear el searcher");
-      return;
-    }
-    if (!inserted) { setError("Error en crear el searcher"); return; }
-    const refreshed = await loadSearchers();
-    setHistoricData(Array.isArray(refreshed) ? refreshed : [inserted, ...historicData]);
-    setShowAddModal(false);
-    toast({ message: `Searcher creat: ${nom}` });
-  };
+  const handleAddSearcher = makeHandleAddSearcher({ toast, historicData, setHistoricData, setShowAddModal });
 
-  const handleDeleteSearcher = async (target) => {
-    if (target?.id) {
-      try {
-        await apiFetchJson(`/api/searchers?id=${encodeURIComponent(target.id)}`, { method: "DELETE" });
-      } catch (error) {
-        toast({ message: "Error eliminant searcher: " + (error?.message || "error desconegut"), type: "error" });
-        return;
-      }
-    }
-    const targetKey = searcherKey(target);
-    setHistoricData(historicData.filter((searcher) => (
-      targetKey != null ? searcherKey(searcher) !== targetKey : searcher.nom !== target.nom
-    )));
-    toast({ message: "Searcher eliminat." });
-  };
+  const handleDeleteSearcher = makeHandleDeleteSearcher({ toast, historicData, setHistoricData });
 
   return (
     <div style={{ padding: "0 0 40px" }}>
 
       {/* ── Data load bar ── */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 8, marginBottom: 14 }}>
-        <span style={{ fontSize: 11, color: TC.textLight }}>
-          {historicData.length} searchers a base de dades
-          {historicData.filter(r => isMockNif(r.nif)).length > 0 && (
-            <span style={{ marginLeft: 6, color: "#B01F17", fontWeight: 600 }}>
-              · {historicData.filter(r => isMockNif(r.nif)).length} sense NIF real
-            </span>
-          )}
-        </span>
-        <button onClick={reloadSearchers}
-          style={{ background: "transparent", border: `1px solid ${TC.border}`, borderRadius: 6, padding: "5px 11px", cursor: "pointer", fontSize: 11, color: TC.textMid, fontFamily: "inherit" }}>
-          Recarregar DB
-        </button>
-        <button onClick={exportNifExcel}
-          style={{ background: "transparent", border: `1px solid ${TC.border}`, borderRadius: 6, padding: "5px 11px", cursor: "pointer", fontSize: 11, color: TC.textMid, fontFamily: "inherit" }}>
-          ↓ Exportar NIFs
-        </button>
-        <input ref={nifXlsRef} type="file" accept=".xlsx,.xls" style={{ display: "none" }} onChange={handleNifImport} />
-        <button onClick={() => nifXlsRef.current?.click()}
-          style={{ background: "transparent", border: `1px solid ${TC.border}`, borderRadius: 6, padding: "5px 11px", cursor: "pointer", fontSize: 11, color: TC.textMid, fontFamily: "inherit" }}>
-          ↑ Importar NIFs
-        </button>
-        <input ref={csvRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleCSV} />
-        <button onClick={() => csvRef.current?.click()}
-          style={{ background: TC.navy, color: "#fff", border: "none", borderRadius: 6, padding: "6px 14px", cursor: "pointer", fontSize: 11, fontFamily: "inherit" }}>
-          ↑ Importar CSV
-        </button>
-      </div>
+      <SearchersDataLoadBar
+        TC={TC}
+        historicData={historicData}
+        reloadSearchers={reloadSearchers}
+        exportNifExcel={exportNifExcel}
+        handleNifImport={handleNifImport}
+        handleCSV={handleCSV}
+        nifXlsRef={nifXlsRef}
+        csvRef={csvRef}
+      />
 
       {/* ── Summary view: KPIs + Sankey + Geography ── */}
       {isSummaryView && (
@@ -570,18 +365,7 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
       {showAddModal && (
         <AddRowModal
           title="Nou searcher"
-          fields={[
-            { key: "nom", label: "Nom", type: "text", placeholder: "Nom del searcher" },
-            { key: "nif", label: "NIF", type: "text", placeholder: "B12345678" },
-            { key: "tipus", label: "Tipus", type: "select", options: ["", "Tradicional", "Self-funded"] },
-            { key: "modalitat", label: "Modalitat", type: "select", options: ["", ...SEARCHER_MODALITAT_OPTIONS] },
-            { key: "geo", label: "Geografia", type: "select", options: ["", ...Object.keys(GEO_NAME).sort()] },
-            { key: "statusScreening", label: "Status", type: "select", options: ["", ...SEARCHER_STATUS_OPTIONS] },
-            { key: "formEntrada", label: "Entrada", type: "select", options: ["", ...SEARCHER_FORM_ENTRADA_OPTIONS] },
-            { key: "dataInici", label: "Data inici", type: "date" },
-            { key: "ticket", label: "Ticket (€)", type: "number" },
-            { key: "equityStake", label: "Equity stake (%)", type: "number" },
-          ]}
+          fields={SEARCHER_ADD_MODAL_FIELDS}
           onSave={handleAddSearcher}
           onClose={() => setShowAddModal(false)}
         />
