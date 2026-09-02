@@ -76,6 +76,57 @@ function getPriceOn(isin, dateStr) {
   return best?.close ?? null;
 }
 
+// ── FX: convert non-EUR prices to EUR ─────────────────────────────────────────
+//
+// Price CSVs are in each instrument's listing currency, but every bucket total
+// is in EUR. FX series live in Mercats Públics/fx/<PAIR>.csv (date,pair,close,
+// source) where close = quote-currency units per 1 EUR (e.g. EURUSD = USD/EUR).
+// Generate them with: python scripts/fetch_fx.py
+
+const FX_DIR = join(ROOT, "Mercats Públics", "fx");
+const _fxCache = new Map();
+const _fxMissing = new Set();
+
+function loadFxFile(pair) {
+  const path = join(FX_DIR, `${pair}.csv`);
+  if (!existsSync(path)) return null;
+  return readFileSync(path, "utf8")
+    .split("\n")
+    .slice(1)
+    .filter(Boolean)
+    .map(line => {
+      const cols = line.split(",");
+      // CSV columns: date, pair, close, source  (close is index 2)
+      return { date: cols[0]?.trim().slice(0, 10), close: parseFloat(cols[2]) };
+    })
+    .filter(r => r.date && !isNaN(r.close))
+    .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function getFxOn(pair, dateStr) {
+  if (!_fxCache.has(pair)) _fxCache.set(pair, loadFxFile(pair) ?? []);
+  const rows = _fxCache.get(pair);
+  let best = null;
+  for (const r of rows) {
+    if (r.date <= dateStr) best = r;
+    else break;
+  }
+  return best?.close ?? null;
+}
+
+// Convert an amount in the instrument's native currency to EUR on dateStr.
+// Returns { eur, ok } — ok=false means conversion was required but unavailable.
+function toEur(amount, divisa, dateStr) {
+  const cur = String(divisa ?? "EUR").trim().toUpperCase();
+  if (!cur || cur === "EUR") return { eur: amount, ok: true };
+  const rate = getFxOn(`EUR${cur}`, dateStr); // quote units per 1 EUR
+  if (rate == null || !(rate > 0)) {
+    _fxMissing.add(cur);
+    return { eur: amount, ok: false };
+  }
+  return { eur: amount / rate, ok: true };
+}
+
 // ── ETF detection (mirrors PublicMarketsShared.jsx isEtfPosition) ─────────────
 
 function isEtf(pos) {
@@ -145,7 +196,15 @@ for (const pos of ACTIVE) {
     continue;
   }
 
-  buckets[bucket] += pos.unitats * price;
+  const nativeValue = pos.unitats * price;
+  const { eur, ok } = toEur(nativeValue, pos.divisa, dateStr);
+  // If a non-EUR position has no FX rate, fall back to its EUR valorMercat
+  // rather than adding a native-currency amount into the EUR bucket.
+  buckets[bucket] += ok ? eur : (pos.valorMercat ?? 0);
+}
+
+if (_fxMissing.size) {
+  process.stderr.write(`\nWARN: no FX series for ${[..._fxMissing].join(", ")} — used EUR valorMercat fallback for those positions. Run: python scripts/fetch_fx.py\n`);
 }
 
 if (missing.length) {

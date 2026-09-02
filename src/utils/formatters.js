@@ -148,11 +148,11 @@ export function tvpiBg(t) {
   return "#E8F8E8";
 }
 
-export function calcMesos(iso) {
-  if (!iso) return 0;
+export function calcMesos(iso, { fallback = 0 } = {}) {
+  if (!iso) return fallback;
   const today = new Date();
   const d = parseLocalDate(iso);
-  if (!d) return 0;
+  if (!d) return fallback;
   return Math.max(0, (today.getFullYear() - d.getFullYear()) * 12 + (today.getMonth() - d.getMonth()));
 }
 

@@ -20,25 +20,13 @@ function txDateKey(t) {
   return t?.date ?? "";
 }
 
-function sumTxValue(txs, kind) {
-  return txs
-    .filter(t => t.action === kind)
-    .reduce((sum, t) => sum + (t.valueEur ?? 0), 0);
-}
-
-function sumTxUnits(txs, kind) {
-  return txs
-    .filter(t => t.action === kind)
-    .reduce((sum, t) => sum + (t.units ?? 0), 0);
-}
-
 /**
  * @returns {Map<string, PMClosedTransactionSummary>}
  */
-export function buildClosedTransactionSummaryByIsinCustodian() {
+export function buildClosedTransactionSummaryByIsinCustodian(transactions = PM_TRANSACTIONS) {
   const byKey = new Map();
 
-  [...PM_TRANSACTIONS]
+  [...transactions]
     .filter(t => t?.isin)
     .sort((a, b) => txDateKey(a).localeCompare(txDateKey(b)))
     .forEach(t => {
@@ -65,20 +53,46 @@ export function buildClosedTransactionSummaryByIsinCustodian() {
   byKey.forEach((cur, key) => {
     const buyTxs = cur.txs.filter(t => t.action === "buy" && t.date);
     const firstBuy = cur.firstBuy ?? buyTxs[0] ?? cur.firstTx ?? null;
-    const costEur = sumTxValue(cur.txs, "buy");
-    const unitats = sumTxUnits(cur.txs, "buy");
-    const valorMercat = sumTxValue(cur.txs, "sell");
+
+    // Realized P&L matched by units using the average-cost method, walking the
+    // transactions in date order. This gives the correct realized return even
+    // for positions with layered buys/sells — a plain Σsells − Σbuys is only
+    // valid for a single-buy / single-full-sell line.
+    let openUnits = 0;        // units still held as we walk the ledger
+    let openCost = 0;         // cost basis of the units still held
+    let buyUnitsTotal = 0;    // gross units ever bought (for display)
+    let buyCostTotal = 0;     // gross cost ever invested (for avg buy price)
+    let sellProceeds = 0;     // Σ proceeds from sells
+    let sellCostMatched = 0;  // cost basis of the sold units (realized denominator)
+    for (const t of cur.txs) {
+      const u = t.units ?? 0;
+      const v = t.valueEur ?? 0;
+      if (t.action === "buy") {
+        openUnits += u;
+        openCost += v;
+        buyUnitsTotal += u;
+        buyCostTotal += v;
+      } else if (t.action === "sell") {
+        const avgCost = openUnits > 0 ? openCost / openUnits : 0;
+        const matchedCost = avgCost * u;
+        sellProceeds += v;
+        sellCostMatched += matchedCost;
+        openUnits -= u;
+        openCost -= matchedCost;
+        if (openUnits < 1e-9) { openUnits = 0; openCost = 0; } // clamp rounding drift
+      }
+    }
 
     summary.set(key, {
       gestor: firstBuy?.gestor ?? firstBuy?.custodian ?? cur.firstTx?.gestor ?? null,
       custodian: firstBuy?.custodian ?? cur.firstTx?.custodian ?? null,
       divisa: "EUR",
       dataCompra: firstBuy?.date ?? null,
-      costEur: costEur || null,
-      unitats: unitats || null,
-      costInici: costEur && unitats ? costEur / unitats : null,
-      valorMercat: valorMercat || null,
-      rendInici: costEur ? ((valorMercat - costEur) / costEur) * 100 : null,
+      costEur: sellCostMatched || buyCostTotal || null,
+      unitats: buyUnitsTotal || null,
+      costInici: buyCostTotal && buyUnitsTotal ? buyCostTotal / buyUnitsTotal : null,
+      valorMercat: sellProceeds || null,
+      rendInici: sellCostMatched > 0 ? ((sellProceeds - sellCostMatched) / sellCostMatched) * 100 : null,
       endDate: cur.lastSell?.date ?? cur.lastTx?.date ?? null,
     });
   });
@@ -93,10 +107,21 @@ export function buildClosedTransactionSummaryByIsinCustodian() {
  */
 export function enrichClosedPosition(p, summaryByIsin) {
   const summary = summaryByIsin.get(summaryKey(p?.isin, p?.custodian)) ?? {};
+  // Hand-entered workbook (PM_CLOSED) values are AUTHORITATIVE. The transaction
+  // summary only fills fields the workbook left blank — it must never overwrite
+  // an authoritative figure (previously `...summary` after `...p` did exactly that).
+  const fill = (key) => p?.[key] ?? summary[key] ?? null;
   return {
-    ...p,
     ...summary,
-    custodian: p.custodian ?? summary.custodian ?? null,
-    endDate: p.endDate ?? summary.endDate ?? null,
+    ...p,
+    gestor: fill("gestor"),
+    custodian: fill("custodian"),
+    dataCompra: fill("dataCompra"),
+    costEur: fill("costEur"),
+    unitats: fill("unitats"),
+    costInici: fill("costInici"),
+    valorMercat: fill("valorMercat"),
+    rendInici: fill("rendInici"),
+    endDate: fill("endDate"),
   };
 }

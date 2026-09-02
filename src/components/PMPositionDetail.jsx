@@ -13,6 +13,7 @@ import { ALL_PRICE_SERIES } from "../data/allPrices.js";
 import { buildClosedTransactionSummaryByIsinCustodian, enrichClosedPosition } from "../data/pmClosedUtils.js";
 import { findActivePositionByRouteId, findClosedPositionByRouteId, makeIsinCustodianKey } from "../data/pmPositionRouting.js";
 import { KpiCard, SectionHeader } from "./SharedComponents.jsx";
+import { rendPct } from "../data/pmReturns.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
@@ -67,21 +68,9 @@ function PMPositionDetail() {
     return () => { cancelled = true; };
   }, [isin]);
 
-  if (!p) {
-    return (
-      <div style={{ padding: "60px 32px", textAlign: "center" }}>
-        <div style={{ fontSize: 14, color: tc.textLight, marginBottom: 16 }}>Posició no trobada</div>
-        <button onClick={() => navigate(-1)}
-          style={{ background: tc.navy, color: "#fff", border: "none", borderRadius: 6,
-                   padding: "8px 20px", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
-          ← Tornar
-        </button>
-      </div>
-    );
-  }
-
-  // Apply financial overrides (pm_position_overrides) on top of static data — mirrors HoldingsTable merge
-  if (posOverride) {
+  // Apply financial overrides (pm_position_overrides) before any hook reads p —
+  // mirrors the HoldingsTable merge.
+  if (posOverride && p) {
     const merged = { ...p };
     if (posOverride.valorMercat != null) merged.valorMercat = posOverride.valorMercat;
     if (posOverride.rendInici   != null) merged.rendInici   = posOverride.rendInici;
@@ -90,26 +79,14 @@ function PMPositionDetail() {
     p = merged;
   }
 
-  // Apply overrides on top of static data
-  const displayNom      = metaOverride.nom      ?? p.nom;
-  const displayGestor   = metaOverride.gestor   ?? p.gestor;
-  const displayCustodian = metaOverride.custodian ?? p.custodian;
+  const isAbelFont = (metaOverride.gestor ?? p?.gestor) === "Abel Font";
+  const ter        = terOverride ?? PM_TER[isin] ?? p?.costAnual ?? 0;
 
-  const isAbelFont  = displayGestor === "Abel Font";
-  const pnl         = p.costEur != null ? (p.valorMercat ?? 0) - p.costEur : null;
-  const pnlColor    = pnl == null ? tc.textLight : pnl > 0 ? tc.green : pnl < 0 ? tc.red : tc.textLight;
-
-  const yh          = yearsHeld(p.dataCompra, isClosed && p.any ? `${p.any}-12-31` : undefined);
-  const ter         = terOverride ?? PM_TER[isin] ?? p.costAnual ?? 0;
-  const netInici    = p.rendInici != null
-    ? (isAbelFont ? p.rendInici - ter * yh : p.rendInici)
-    : null;
-
-  const costPct = p.costEur != null && p.valorMercat > 0
-    ? Math.min(p.costEur / p.valorMercat * 100, 100) : p.costEur != null ? 100 : 0;
-  const gainPct = Math.max(100 - costPct, 0);
-
+  // Hooks below MUST run on every render (Rules of Hooks): keep them above the
+  // not-found guard and make each null-safe. Returning early before these would
+  // change the hook count between renders and crash the view.
   const returnData = useMemo(() => {
+    if (!p) return [];
     const endYear = new Date().getFullYear();
     const YEARS = Array.from({ length: endYear - 2019 + 1 }, (_, i) => ({
       label: String(2019 + i),
@@ -117,23 +94,24 @@ function PMPositionDetail() {
     }));
     return YEARS
       .filter(y => p[y.field] != null)
-      .map(y => ({
-        year:  y.label,
-        brut:  p[y.field],
-        net:   isAbelFont ? p[y.field] - ter : null,
-      }));
-  }, [p, isAbelFont]);
+      .map(y => {
+        // brut is normalized to percent form; net subtracts annual TER (also %).
+        const brut = rendPct(p, y.field);
+        return { year: y.label, brut, net: isAbelFont && brut != null ? brut - ter : null };
+      });
+  }, [p, isAbelFont, ter]);
 
-  const positionTxs = useMemo(
-    () => PM_TRANSACTIONS.filter(t => {
+  const positionTxs = useMemo(() => {
+    if (!isin) return [];
+    return PM_TRANSACTIONS.filter(t => {
       if (t.isin !== isin) return false;
       if (!positionKey) return true;
       return makeIsinCustodianKey(t.isin, t.custodian) === positionKey;
-    }),
-    [isin, positionKey]
-  );
+    });
+  }, [isin, positionKey]);
 
   const positionValues = useMemo(() => {
+    if (!isin) return [];
     const custodianData = PM_VALUES[isin] ?? (isClosed ? PM_CLOSED_VALUES[isin] : null);
     if (!custodianData) return [];
     const monthMap = new Map();
@@ -148,6 +126,32 @@ function PMPositionDetail() {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([month, value]) => ({ date: month, value }));
   }, [isin, isClosed, positionKey]);
+
+  if (!p) {
+    return (
+      <div style={{ padding: "60px 32px", textAlign: "center" }}>
+        <div style={{ fontSize: 14, color: tc.textLight, marginBottom: 16 }}>Posició no trobada</div>
+        <button onClick={() => navigate(-1)}
+          style={{ background: tc.navy, color: "#fff", border: "none", borderRadius: 6,
+                   padding: "8px 20px", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
+          ← Tornar
+        </button>
+      </div>
+    );
+  }
+
+  // Overrides already applied above; compute the remaining display-only values.
+  const displayNom       = metaOverride.nom       ?? p.nom;
+  const displayCustodian = metaOverride.custodian ?? p.custodian;
+  const pnl         = p.costEur != null ? (p.valorMercat ?? 0) - p.costEur : null;
+  const pnlColor    = pnl == null ? tc.textLight : pnl > 0 ? tc.green : pnl < 0 ? tc.red : tc.textLight;
+  const yh          = yearsHeld(p.dataCompra, isClosed && p.any ? `${p.any}-12-31` : undefined);
+  const netInici    = p.rendInici != null
+    ? (isAbelFont ? p.rendInici - ter * yh : p.rendInici)
+    : null;
+  const costPct = p.costEur != null && p.valorMercat > 0
+    ? Math.min(p.costEur / p.valorMercat * 100, 100) : p.costEur != null ? 100 : 0;
+  const gainPct = Math.max(100 - costPct, 0);
 
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card        = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };

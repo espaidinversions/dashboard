@@ -94,7 +94,9 @@ export function PMTransaccionsTab({ search = "" }) {
   const cards = [
     { label: "Compres",    value: fmtM(totalBuys),  accent: tc.navy  },
     { label: "Vendes",     value: fmtM(totalSells), accent: tc.green },
-    { label: "Balanç Net", value: `${netFlow >= 0 ? "+" : ""}${fmtM(netFlow)}`, accent: netFlow >= 0 ? tc.navyLight : tc.green },
+    // Net flow is informational (net cash invested vs divested), not a gain/loss —
+    // use a neutral accent rather than colouring net selling green.
+    { label: "Balanç Net", value: `${netFlow >= 0 ? "+" : ""}${fmtM(netFlow)}`, accent: tc.navyLight },
   ];
 
   const chartData = useMemo(() => {

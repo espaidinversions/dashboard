@@ -84,68 +84,19 @@ export function isEtfPosition(pos) {
   return isEtfPositionData(pos);
 }
 
-export function computeWeightedTer(positions) {
-  const withTer = (positions ?? []).filter(p => p.costAnual != null);
-  if (withTer.length === 0) return null;
-  const totalVal = withTer.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
-  if (totalVal === 0) return null;
-  return withTer.reduce((s, p) => s + (p.costAnual ?? 0) * (p.valorMercat ?? 0), 0) / totalVal;
-}
-
-export function computePositionWeightedYtd(positions) {
-  const _cy = new Date().getFullYear();
-  const field = `rend${_cy}`;
-  const withYtd = (positions ?? []).filter(p => p[field] != null);
-  if (withYtd.length === 0) return null;
-  const totalVal = withYtd.reduce((s, p) => s + (p.valorMercat ?? 0), 0);
-  if (totalVal === 0) return null;
-  return withYtd.reduce((s, p) => s + (p[field] ?? 0) * (p.valorMercat ?? 0), 0) / totalVal;
-}
-
-export function computeLastPriceDateForPositions(positions, pmValues) {
-  let last = null;
-  for (const pos of (positions ?? [])) {
-    if (!pos.isin) continue;
-    const byCustodian = pmValues?.[pos.isin];
-    if (!byCustodian || typeof byCustodian !== "object") continue;
-    for (const series of Object.values(byCustodian)) {
-      if (!Array.isArray(series)) continue;
-      for (let i = series.length - 1; i >= 0; i--) {
-        const entry = series[i];
-        const date = entry?.date;
-        if (date && Number.isFinite(Number(entry?.value))) {
-          if (!last || date > last) last = date;
-          break;
-        }
-      }
-    }
-  }
-  return last;
-}
-
-const _MONTH_ABBR_CA = ["gen", "feb", "mar", "abr", "mai", "jun", "jul", "ago", "set", "oct", "nov", "des"];
-
-export function mtmStaleness(lastYYYYMM) {
-  if (!lastYYYYMM) return { label: "N/D", color: "#8A9BAC", days: null };
-  const [y, m] = lastYYYYMM.split("-").map(Number);
-  const endOfMonth = new Date(y, m, 0);
-  const today = new Date();
-  const days = Math.floor((today - endOfMonth) / 86400000);
-  const label = `${_MONTH_ABBR_CA[m - 1]}. '${String(y).slice(2)}`;
-  const color = days <= 15 ? "#28A029" : days <= 30 ? "#E8A020" : "#B52020";
-  return { label, color, days };
-}
-
 export function KpiCard({ label, value, sub, tc = TC_LIGHT, valueColor, hero = false }) {
   return <_KpiCard label={label} value={value} sub={sub} tc={tc} valueColor={valueColor} hero={hero} />;
 }
 
+// Returns within ±this magnitude (percent) render as neutral, not green/red.
+const PCT_CHIP_NEUTRAL = 0.05;
+
 export function PctChip({ v, tc = TC_LIGHT }) {
-  if (v == null) return <span style={{ fontSize: 11, color: tc.textLight }}>—</span>;
-  const pos = v > 0.005;
-  const neg = v < -0.005;
+  if (v == null) return <span style={{ fontSize: 11, color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
+  const pos = v > PCT_CHIP_NEUTRAL;
+  const neg = v < -PCT_CHIP_NEUTRAL;
   const color = pos ? tc.green : neg ? tc.red : tc.textLight;
-  const bg = pos ? "#E8F8E8" : neg ? "#FDECEA" : tc.bgAlt;
+  const bg = pos ? (tc.green + "20") : neg ? (tc.red + "18") : "transparent";
   return (
     <span style={{ fontSize: 11, fontWeight: 700, color, background: bg, borderRadius: 4, padding: "1px 6px", fontFamily: "'DM Mono',monospace" }}>
       {pos ? "+" : ""}
@@ -158,3 +109,4 @@ export function pctFmt(v) {
   if (v == null) return "—";
   return `${v >= 0 ? "+" : ""}${v.toFixed(2)}%`;
 }
+
