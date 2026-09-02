@@ -2,14 +2,13 @@ import { useEffect, useMemo, useState, useRef } from "react";
 import { useTheme } from "../theme.js";
 import { calcMesos, parseSearchersCSV, usePersistedState } from "../utils.js";
 import { GEO_NAME } from "../config.js";
-import { estSection } from "../data/capitalCallStrategyModel.js";
 import { AddRowModal } from "./SharedComponents.jsx";
 import { useAuth } from "../auth.jsx";
 import { upsertSearcher, saveSearchers, loadSearchers, loadCompanies, loadCapitalCalls } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { apiFetchJson } from "../apiClient.js";
 import { isSfBackedCompany } from "../data/privateCompanyModel.js";
-import { normalizeSearcherName, describeSearcherStage } from "../data/searcherModel.js";
+import { enrichSearchersWithCapitalCalls, isActiveSearcher } from "../data/searcherModel.js";
 import { SEARCHER_FORM_ENTRADA_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_STATUS_OPTIONS } from "../config.js";
 import { searcherKey, splitSearcherNames, splitSchoolNames, toggleActiveFilter } from "../data/searcherFormatting.js";
 import { SankeySection } from "./searchers/SankeySection.jsx";
@@ -70,61 +69,10 @@ export function SearchersTab({ search = "", subTab = "tots", rawCC = [] }) {
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Keyed by private_entity NIF (= row.id in rawCC = vehicle_id)
-  const capitalCallsByNif = useMemo(() => {
-    const map = new Map();
-    (Array.isArray(capitalCalls) ? capitalCalls : []).forEach((row) => {
-      if (estSection(row?.est) !== "SF" || !row?.id) return;
-      const date = String(row?.data ?? "").slice(0, 10);
-      if (!date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
-      const current = map.get(row.id) ?? { firstCommitmentDate: null, firstCommitmentEur: null };
-      if (row?.eur > 0 && ["Compromís", "Capital Call"].includes(row?.cat) && (!current.firstCommitmentDate || date < current.firstCommitmentDate)) {
-        current.firstCommitmentDate = date;
-        if (current.firstCommitmentEur == null && row.eur != null) current.firstCommitmentEur = row.eur;
-      }
-      map.set(row.id, current);
-    });
-    return map;
-  }, [capitalCalls]);
-
-  // Fallback: keyed by normalised fund name for searchers without NIF set
-  const capitalCallsBySearcher = useMemo(() => {
-    const map = new Map();
-    (Array.isArray(capitalCalls) ? capitalCalls : []).forEach((row) => {
-      if (estSection(row?.est) !== "SF") return;
-      const key = normalizeSearcherName(row?.fons);
-      const date = String(row?.data ?? "").slice(0, 10);
-      if (!key || !date.match(/^\d{4}-\d{2}-\d{2}$/)) return;
-      const current = map.get(key) ?? { firstCommitmentDate: null, firstCommitmentEur: null };
-      if (row?.eur > 0 && ["Compromís", "Capital Call"].includes(row?.cat) && (!current.firstCommitmentDate || date < current.firstCommitmentDate)) {
-        current.firstCommitmentDate = date;
-        if (current.firstCommitmentEur == null && row.eur != null) current.firstCommitmentEur = row.eur;
-      }
-      map.set(key, current);
-    });
-    return map;
-  }, [capitalCalls]);
-
-  const enrichedSearchers = useMemo(() => (
-    historicData.map((row) => {
-      const searchers = [row.searcher1, row.searcher2].filter(Boolean).join(" / ");
-      const stage = describeSearcherStage(row);
-      const ccMeta = (row.nif && capitalCallsByNif.get(row.nif)) || capitalCallsBySearcher.get(normalizeSearcherName(row.nom));
-      const derivedDataCompr = ccMeta?.firstCommitmentDate ?? row.dataCompr ?? null;
-      const derivedTicket = ccMeta?.firstCommitmentEur ?? row.ticket ?? null;
-      const investmentYear = derivedDataCompr ? Number(derivedDataCompr.slice(0, 4)) : null;
-      return {
-        ...row,
-        ticket: derivedTicket,
-        searchers,
-        derivedDataCompr,
-        investmentYear,
-        stageLabel: stage.label,
-        stageOrder: stage.order,
-        mesosCercant: derivedDataCompr ? calcMesos(derivedDataCompr) : row.mesosCercant ?? null,
-      };
-    })
-  ), [capitalCallsByNif, capitalCallsBySearcher, historicData]);
+  const enrichedSearchers = useMemo(
+    () => enrichSearchersWithCapitalCalls(historicData, capitalCalls, { calcMonths: calcMesos }),
+    [capitalCalls, historicData]
+  );
 
   const activeRows = useMemo(() => {
     const seen = new Set();
