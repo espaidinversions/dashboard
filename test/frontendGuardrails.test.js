@@ -35,10 +35,14 @@ test("filter-bearing index tables keep the table (and its column filters) mounte
   // so the user could no longer see or clear the filter that emptied the list — the
   // table appeared to "disappear". The empty state must live inside <tbody> as a
   // colSpan row so the header and filters stay visible.
-  const tableIndexes = ["FundsIndex.jsx", "CompaniesIndex.jsx", "SearchersIndex.jsx"];
+  const tableIndexes = [
+    { name: "FundsIndex.jsx", path: join(SRC_ROOT, "components", "FundsIndex.jsx") },
+    { name: "CompaniesIndex.jsx", path: join(SRC_ROOT, "components", "CompaniesIndex.jsx") },
+    { name: "SearchersIndex.jsx", path: join(SRC_ROOT, "components", "searchers", "SearchersIndexTables.jsx") },
+  ];
   const offenders = [];
-  for (const name of tableIndexes) {
-    const source = readFileSync(join(SRC_ROOT, "components", name), "utf-8");
+  for (const { name, path } of tableIndexes) {
+    const source = readFileSync(path, "utf-8");
     if (source.includes("Cap resultat</div>")) offenders.push(`${name}: standalone <div> empty state`);
     if (!/colSpan=\{[^}]*\}[^>]*>Cap resultat<\/td>/.test(source)) {
       offenders.push(`${name}: missing in-table colSpan empty row`);
@@ -48,6 +52,24 @@ test("filter-bearing index tables keep the table (and its column filters) mounte
   assert.deepEqual(offenders, []);
 });
 
+
+
+
+test("prospective primitives import every utility used by YearCell", () => {
+  const source = readFileSync(join(SRC_ROOT, "components", "prospective", "ProspectivePrimitives.jsx"), "utf-8");
+  assert.match(source, /import \{[^}]*\bperiodBg\b[^}]*\} from "\.\/prospectiveUtils\.js";/);
+  assert.match(source, /background: periodBg\(tc, year, total\)/);
+});
+test("prospective cash hook does not reference component-local period aliases", () => {
+  const source = readFileSync(join(SRC_ROOT, "components", "prospective", "useProspectiveCashData.js"), "utf-8");
+  assert.equal(/\bPERIODS\b/.test(source), false);
+  assert.match(source, /PROSPECTIVE_CASH_PERIODS\.map/);
+});
+test("prospective cash hook declares and returns local editor state", () => {
+  const source = readFileSync(join(SRC_ROOT, "components", "prospective", "useProspectiveCashData.js"), "utf-8");
+  assert.match(source, /const \[committedOverrides,\s*setCommittedOverrides\] = useState\(\{\}\);/);
+  assert.match(source, /return \{[\s\S]*\bcommittedOverrides,/);
+});
 test("frontend source contains no obvious secret or service-role tokens", () => {
   const secretPatterns = [
     /SUPABASE_SERVICE_ROLE_KEY/,
@@ -66,3 +88,8 @@ test("frontend source contains no obvious secret or service-role tokens", () => 
 
   assert.deepEqual(offenders, []);
 });
+
+
+
+
+

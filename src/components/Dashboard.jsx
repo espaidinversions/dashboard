@@ -12,6 +12,8 @@ import { Sidebar } from "./Sidebar.jsx";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohortModel.js";
 import { buildLandingModel } from "../data/landingModel.js";
+import { buildDashboardExportSheets } from "../data/dashboardExportModel.js";
+import { buildDashboardPaletteConfig } from "../data/dashboardPalettes.js";
 import { AltCohortSection } from "./funds/AltCohortSection.jsx";
 import { RealEstateSummarySection } from "./realEstate/RealEstateSummarySection.jsx";
 import { LiquiditatSection } from "./shared/LiquiditatSection.jsx";
@@ -258,88 +260,13 @@ function Dashboard() {
   const exportAll = useCallback(async () => {
     setExporting(true);
     try {
-    const companies = d.companiesData;
-    const searchers = d.searchersData;
-    const pipeline  = d.funds0;
-    const cc        = d.rawCC;
-    const fundMeta  = d.fundMeta;
-    const fmtN = v => v != null ? +(v / 1e6).toFixed(3) : "";
-
-    await exportMultiXLSX([
-      {
-        name: "Capital Calls",
-        rows: cc.map(r => ({
-          "Fons": r.fons, "Tipus": r.tipus, "Categoria": r.cat,
-          "Data": r.data, "Mes": r.mes, "Any": r.any, "FY": r.fy,
-          "Estructura": r.est, "Import (€)": r.eur, "Divisa": r.divisa,
-          "Import Divisa": r.amountNative ?? "",
-          "FX BCE": r.fxRate ?? "",
-          "Font FX": r.fxSource ?? "",
-          "Comentaris": r.comentaris ?? "",
-        })),
-      },
-      {
-        name: "Fund Meta",
-        rows: fundMeta.map(r => ({
-          "Fons": r.fons,
-          "TVPI": r.tvpi ?? "",
-        })),
-      },
-      {
-        name: "Pipeline",
-        rows: pipeline.map(r => ({
-          "ID": r.id, "Nom": r.name, "Import": r.amount, "Divisa": r.currency,
-          "Geo": r.geography, "Estratègia": r.strategy, "Sector": r.sector,
-          "Status": r.status, "Canal": r.canal, "Actiu": r.active ? "1" : "0",
-        })),
-      },
-      {
-        name: "Participades",
-        rows: companies.map(c => ({
-          "Nom": c.nom, "Tipus": c.tipus, "Segment": c.segment || "",
-          "Entrepreneurs": c.entrepreneurs || "", "Origen": c.origen || "", "Geo": c.geo || "",
-          "Ticket (€M)": c.ticket ? +(c.ticket / 1e6).toFixed(3) : "",
-          "TVPI": c.tvpi ?? "", "Ingressos (€M)": c.rev ? +(c.rev / 1e6).toFixed(3) : "",
-          "EBITDA (€M)": c.ebitda ? +(c.ebitda / 1e6).toFixed(3) : "",
-          "Data Compromís": c.dataCompr || "", "Mesos Operant": c.mesosOperant ?? "",
-        })),
-      },
-      (() => {
-        const KPI_FIELDS = [
-          ["Ingressos (€M)",       "rev"],
-          ["Ing. Pressupost (€M)", "revBudget"],
-          ["EBITDA (€M)",          "ebitda"],
-          ["EBITDA Pres. (€M)",    "ebitdaBudget"],
-          ["Deute Net (€M)",       "dfn"],
-          ["DFN Pres. (€M)",       "dfnBudget"],
-        ];
-        const allQs = [...new Set(companies.flatMap(c => (c.quarters || []).map(q => q.q)))]
-          .sort((a, b) => {
-            const [, qa, ya] = a.match(/Q(\d) (\d+)/) || [, "0", "0"];
-            const [, qb, yb] = b.match(/Q(\d) (\d+)/) || [, "0", "0"];
-            return (+ya * 4 + +qa) - (+yb * 4 + +qb);
-          });
-        const rows = companies.map(c => {
-          const byQ = Object.fromEntries((c.quarters || []).map(q => [q.q, q]));
-          const row = { "Nom": c.nom };
-          allQs.forEach(q => {
-            const data = byQ[q] || {};
-            KPI_FIELDS.forEach(([label, key]) => { row[`${q} | ${label}`] = fmtN(data[key] ?? null); });
-          });
-          return row;
-        });
-        return { name: "KPIs Trimestral", rows };
-      })(),
-      {
-        name: "Searchers",
-        rows: searchers.map(r => ({
-          "Nom": r.nom || "", "Status": r.statusScreening || "",
-          "Forma Entrada": r.formEntrada || "", "Geo": r.geo || "",
-          "Ticket (€M)": r.ticket ? +(r.ticket / 1e6).toFixed(3) : "",
-          "Data Inici": r.dataInici || "", "Modalitat": r.modalitat || "",
-        })),
-      },
-    ], "TurtleCapital_Data");
+      await exportMultiXLSX(buildDashboardExportSheets({
+        companies: d.companiesData,
+        searchers: d.searchersData,
+        pipeline: d.funds0,
+        cc: d.rawCC,
+        fundMeta: d.fundMeta,
+      }), "TurtleCapital_Data");
     } finally { setExporting(false); }
   }, [d.companiesData, d.searchersData, d.funds0, d.rawCC, d.fundMeta]);
 
@@ -446,46 +373,10 @@ function Dashboard() {
   }), [altAllTx, altAllCompr, d.reTx, d.reCompr, canAccessSection, pmSummary]);
 
 
-
-  const estCfg = {
-    "Fons Primari": { color:tc.navy, bg: dark ? "#112030" : "#E6EDF3" },
-    "Fons Secundari": { color:tc.navyLight, bg: dark ? "#15263A" : "#EAF0F6" },
-    "Fons de Fons": { color:tc.greenDark, bg: dark ? "#0A2010" : "#E8F8E8" },
-    "Fons de Coinversió": { color:"#0F766E", bg: dark ? "#0B1F1D" : "#DFF7F3" },
-    "Search Fund - Cerca": { color:"#2563A8", bg: dark ? "#0A1828" : "#DDEAF8" },
-    "Search Fund - Participada": { color:"#1D4ED8", bg: dark ? "#101B3D" : "#E0E7FF" },
-    "Participada (Altres)": { color:"#7A5A00", bg: dark ? "#1A1200" : "#FFF5D6" },
-    "Fons Real Estate": { color:tc.purple||"#9B7CC8", bg: dark ? "#20163A" : "#F3EEF8" },
-  };
-  const geoCfg = {
-    "Nord America":   { color: tc.navy },
-    "Nord d'Europa":  { color: tc.green },
-    "Sud d'Europa":   { color: "#C9822E" },
-    "Asia":           { color: "#7A5AA6" },
-    "LatAm":          { color: "#2E9C8E" },
-    "Sense classificar": { color: tc.textLight },
-  };
-  const sectorCfg = {
-    "Tecnologia":                    { color: tc.navy },
-    "Consum":                        { color: "#C9822E" },
-    "Salut":                         { color: "#3AA76D" },
-    "Industrials / Materials":       { color: "#6B7280" },
-    "Energy":                        { color: "#E0A93B" },
-    "Telecoms":                      { color: "#7A5AA6" },
-    "Finance":                       { color: "#2E6FB0" },
-    "Food & Agriculture":            { color: "#8FA31E" },
-    "Serveis":                       { color: "#2E9C8E" },
-    "Real Estate & Infraestructure": { color: tc.purple || "#9B7CC8" },
-    "Sense classificar":             { color: tc.textLight },
-  };
-  const catCfg = {
-    "Capital Call":   { color:tc.navy,      bg: dark ? "#112030" : "#E6EDF3" },
-    "Distribució":    { color:tc.green,     bg: dark ? "#0A2010" : "#E8F8E8" },
-    "Retorn Capital": { color:tc.greenDark, bg: dark ? "#0A2010" : "#D6EAD6" },
-    "Compromís":      { color:tc.navyLight, bg: dark ? "#112030" : "#E6EDF3" },
-    "Altres":         { color:tc.textLight, bg: tc.bgAlt },
-  };
-
+  const { estCfg, geoCfg, sectorCfg, catCfg } = useMemo(
+    () => buildDashboardPaletteConfig(tc, dark),
+    [tc, dark]
+  );
   const SECTIONS = useMemo(() => visibleSections(canAccessSection), [canAccessSection]);
   const SUPRA = useMemo(() => visibleSupra(canAccessSection), [canAccessSection]);
   const REAL_ESTATE_NAV = useMemo(() => visibleRealEstateNav(canAccessSection), [canAccessSection]);

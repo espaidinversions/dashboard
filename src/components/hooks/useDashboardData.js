@@ -2,131 +2,12 @@ import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { fetchRawDashboardRows, mapDashboardBundle, readDashboardCache, writeDashboardCache, readEurUsdCache, writeEurUsdCache, insertCapitalCall, updateCapitalCall, deleteCapitalCall, loadCapitalCalls, saveCapitalCalls, savePipeline, saveCompanies, saveSearchers, saveFundMeta, saveDashboardBundle, loadLiquidity } from "../../db.js";
 import { apiFetchJson } from "../../apiClient.js";
 import { useToast } from "../../toast.jsx";
-import { normalizePrivateWorkbookRows } from "../../data/alternativesModel.js";
-import { inferCapitalCallCategoryFromTipus, normalizeCapitalCallSignedAmount, normalizeCapitalCallTipus } from "../../data/capitalCallTipusModel.js";
-import { normalizeCapitalCallStrategy, estSection } from "../../data/capitalCallStrategyModel.js";
-import { mergeCapitalCallRows } from "../../utils.js";
+import { estSection } from "../../data/capitalCallStrategyModel.js";
 import { isActualCompany } from "../../data/privateCompanyModel.js";
 import { splitRealEstateRows } from "../../data/realEstateModel.js";
-import { convertAmountToEurOnDate } from "../../fx.js";
 import { buildLatestAccounts } from "../../data/liquidityModel.js";
+import { applyResolvedFxRows, buildXlsxDashboardBundle, prepareCapitalCallPayload, resolveEstimatedFxRates, syncSearchersFromCapitalCalls } from "./dashboardDataWorkflows.js";
 
-function sanitizeCapitalCallValues(values) {
-  // Only pick known capital_calls columns — drop UI-only fields like nif, fiscal_name
-  const {
-    fons, tipus, cat, est, divisa, comentaris,
-    data, eur, amountNative, fxRate, fxSource,
-    recallable, non_recallable, from_recallable,
-  } = values ?? {};
-  return {
-    fons: String(fons ?? "").trim(),
-    tipus: normalizeCapitalCallTipus(tipus),
-    cat: cat ?? null,
-    est: est ?? null,
-    divisa: divisa || "EUR",
-    comentaris: String(comentaris ?? "").trim() || null,
-    data,
-    eur,
-    amountNative,
-    fxRate,
-    fxSource,
-    recallable,
-    non_recallable,
-    from_recallable,
-  };
-}
-
-async function prepareCapitalCallPayload(values) {
-  const sanitized = sanitizeCapitalCallValues(values);
-  const rawAmount = normalizeCapitalCallSignedAmount(sanitized.tipus, parseFloat(values?.eur));
-  if (!Number.isFinite(rawAmount)) {
-    throw new Error("Import no vàlid");
-  }
-
-  const date = String(sanitized.data ?? "").slice(0, 10);
-  if (!date) {
-    throw new Error("Data obligatòria");
-  }
-
-  const conversion = await convertAmountToEurOnDate({
-    amount: rawAmount,
-    currency: sanitized.divisa,
-    date,
-  });
-
-  return {
-    ...sanitized,
-    eur: conversion.eur,
-    amountNative: conversion.amountNative,
-    fxRate: conversion.fxRate,
-    fxSource: conversion.fxSource,
-  };
-}
-
-async function syncSearchersFromCapitalCalls(rows) {
-  const sfRows = Array.isArray(rows) ? rows.filter((row) => estSection(row?.est) === "SF") : [];
-  if (!sfRows.length) return;
-  try {
-    await apiFetchJson("/api/searchers?action=sync-capital-calls", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ rows: sfRows }),
-    });
-  } catch (error) {
-    console.error("Searchers sync failed:", error);
-  }
-}
-
-// Re-resolves capital-call rows whose FX rate was an ECB *estimate* for a date
-// that has now passed (a real published rate should exist). Returns the rows it
-// successfully updated, each with the recomputed FX fields, so the caller can
-// patch them into memory instead of refetching the whole capital_calls table.
-async function resolveEstimatedFxRates(rows) {
-  const todayUtc = new Date().toISOString().slice(0, 10);
-  const stale = rows.filter(
-    (row) =>
-      typeof row.fxSource === "string" &&
-      row.fxSource.startsWith("ecb:estimated:") &&
-      String(row.data ?? "").slice(0, 10) <= todayUtc,
-  );
-  if (!stale.length) return [];
-
-  const batch = stale.slice(0, 10);
-  const results = await Promise.allSettled(
-    batch.map(async (row) => {
-      const payload = await prepareCapitalCallPayload(
-        { ...row, eur: row.amountNative },
-        null,
-      );
-      const { error } = await updateCapitalCall(row._rowId, payload);
-      if (error) throw error;
-      return { _rowId: row._rowId, payload };
-    }),
-  );
-
-  const resolved = [];
-  results.forEach((r, i) => {
-    if (r.status === "rejected") {
-      console.warn(`[resolveEstimatedFxRates] row ${batch[i]._rowId} failed:`, r.reason);
-    } else if (r.value) {
-      resolved.push(r.value);
-    }
-  });
-
-  return resolved;
-}
-
-// Immutably patches the FX fields of resolved rows into the current rawCC list,
-// keyed by _rowId. Avoids a second full capital_calls fetch after load.
-function applyResolvedFxRows(rows, resolved) {
-  if (!Array.isArray(rows) || !resolved.length) return rows;
-  const byId = new Map(resolved.map((r) => [r._rowId, r.payload]));
-  return rows.map((row) => {
-    const p = byId.get(row._rowId);
-    if (!p) return row;
-    return { ...row, eur: p.eur, amountNative: p.amountNative, fxRate: p.fxRate, fxSource: p.fxSource };
-  });
-}
 
 export function useDashboardData() {
   const { toast } = useToast();
@@ -326,41 +207,12 @@ export function useDashboardData() {
     const now = new Date().toLocaleDateString("ca-ES");
     try {
       if (key === "xlsx") {
-        const byNom = rows.kpiTrimestral;
-        const existingCompanies = rows.companies || companiesDataRef.current;
-        const mergedCompanies = existingCompanies.map(c => {
-          const qs = byNom.get(c.nom);
-          return qs ? { ...c, quarters: qs } : c;
+        const bundle = buildXlsxDashboardBundle({
+          rows,
+          currentRawCC: rawCCRef.current,
+          currentSearchers: searchersDataRef.current,
+          currentCompanies: companiesDataRef.current,
         });
-        const baseSearchers = rows.searchers || searchersDataRef.current;
-        const normalizedCcRows = Array.isArray(rows.cc)
-          ? rows.cc.map((row) => {
-              const tipus = normalizeCapitalCallTipus(row.tipus);
-              const eur = normalizeCapitalCallSignedAmount(tipus, row.eur);
-              return {
-                ...row,
-                tipus,
-                eur,
-                cat: row.cat ?? inferCapitalCallCategoryFromTipus(tipus, eur),
-                est: normalizeCapitalCallStrategy(row.est, null, row),
-              };
-            })
-          : null;
-        const baseRawCC = normalizedCcRows ?? rawCCRef.current;
-        const hasCapitalCallsSheet = Array.isArray(rows.cc);
-        const searchFundTx = hasCapitalCallsSheet
-          ? []
-          : normalizePrivateWorkbookRows(rows.ccSearchFunds || [], baseSearchers, mergedCompanies);
-        const mergedRawCC = hasCapitalCallsSheet
-          ? normalizedCcRows
-          : (searchFundTx.length ? mergeCapitalCallRows(baseRawCC, searchFundTx) : null);
-        const bundle = {
-          rawCC: mergedRawCC,
-          funds0: rows.pl ?? null,
-          companies: mergedCompanies,
-          searchers: rows.searchers ?? null,
-          fundMeta: rows.fundMeta ?? null,
-        };
         const { error } = await saveDashboardBundle(bundle);
         if (error) throw error;
         if (bundle.rawCC != null) {
