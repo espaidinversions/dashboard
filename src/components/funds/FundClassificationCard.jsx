@@ -1,32 +1,7 @@
 import { EST_CFG } from "../../config.js";
+import { buildGeoColorMap, buildSectorColorMap } from "../../data/dashboardPalettes.js";
 import { Badge, SectionHeader } from "../SharedComponents.jsx";
 
-// Color maps mirror the dashboard palette (Dashboard.jsx geoCfg/sectorCfg and
-// AssetAllocationTab STRATEGY_CFG) so a vehicle's one-pager reads consistently
-// with the Resum donuts and Asset Allocation view.
-function geoColor(tc) {
-  return {
-    "Nord America": tc.navy,
-    "Nord d'Europa": tc.green,
-    "Sud d'Europa": "#C9822E",
-    "Asia": "#7A5AA6",
-    "LatAm": "#2E9C8E",
-  };
-}
-function sectorColor(tc) {
-  return {
-    "Tecnologia": tc.navy,
-    "Consum": "#C9822E",
-    "Salut": "#3AA76D",
-    "Industrials / Materials": "#6B7280",
-    "Energy": "#E0A93B",
-    "Telecoms": "#7A5AA6",
-    "Finance": "#2E6FB0",
-    "Food & Agriculture": "#8FA31E",
-    "Serveis": "#2E9C8E",
-    "Real Estate & Infraestructure": tc.purple || "#9B7CC8",
-  };
-}
 const STRATEGY_COLOR = {
   "Small Buyout": "#1E3A5F",
   "Mid Buyout": "#2E6FB0",
@@ -107,17 +82,28 @@ function DistributionRow({ label, segments, tc }) {
  * (est) as a badge, plus geography / vertical / fund-type weight maps rendered
  * as 100%-stacked mini bars with a legend.
  */
-export function FundClassificationCard({ tc, est, geography, sector, strategy, fundTypeMix }) {
+export function FundClassificationCard({ tc, est, geography, sector, strategy, fundTypeMix, onEdit }) {
   const rows = [
     { label: "Al·locació", segments: toSegments(fundTypeMix, FUND_TYPE_COLOR, tc) },
-    { label: "Geografia", segments: toSegments(geography, geoColor(tc), tc) },
-    { label: "Vertical", segments: toSegments(sector, sectorColor(tc), tc) },
+    { label: "Geografia", segments: toSegments(geography, buildGeoColorMap(tc), tc) },
+    { label: "Vertical", segments: toSegments(sector, buildSectorColorMap(tc), tc) },
     { label: "Tipus fons", segments: toSegments(strategy, STRATEGY_COLOR, tc) },
   ];
 
   return (
     <div style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px" }}>
-      <SectionHeader title="Classificació" tc={tc} />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <SectionHeader title="Classificació" tc={tc} />
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            style={{ background: "transparent", border: `1px solid ${tc.border}`, borderRadius: 6, cursor: "pointer", color: tc.textMid, fontSize: 12, padding: "4px 10px", fontFamily: "inherit" }}
+          >
+            Edita
+          </button>
+        )}
+      </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
         <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
           <div style={{ width: 96, flexShrink: 0, fontSize: 11, fontWeight: 600, letterSpacing: "0.06em", textTransform: "uppercase", color: tc.textLight }}>

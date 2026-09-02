@@ -134,6 +134,9 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
   const geography = meta?.geography ?? null;
   const sector = meta?.sector ?? null;
   const strategy = meta?.strategy ?? null;
+  // Manually-curated fund-type allocation (fund_meta.allocation). Null when never
+  // set — the card then falls back to the transaction-derived underlying mix.
+  const allocation = meta?.allocation ?? null;
   const tvpiFund = meta?.tvpi ?? null;
   const dpiFund = calls > 0 ? dist / calls : 0;
   const rvpiFund = tvpiFund != null ? tvpiFund - dpiFund : null;
@@ -155,9 +158,11 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
   const rawUnderlyingMix = Object.values(underlyingAccum).reduce((s, v) => s + v, 0) > 0
     ? underlyingAccum
     : null;
-  const underlyingMix = section === "RE" && isSingleRealEstateBucket(rawUnderlyingMix) && hasPositiveWeights(strategy)
+  const derivedMix = section === "RE" && isSingleRealEstateBucket(rawUnderlyingMix) && hasPositiveWeights(strategy)
     ? strategy
     : rawUnderlyingMix;
+  // A manually-curated allocation map overrides the derived mix when present.
+  const underlyingMix = hasPositiveWeights(allocation) ? allocation : derivedMix;
 
   const txLog = [...txs].sort((a, b) => b.data.localeCompare(a.data));
 
@@ -171,6 +176,7 @@ export function buildFundDetailSnapshot(rawCC, fundMeta, routeId) {
     geography,
     sector,
     strategy,
+    allocation,
     underlyingMix,
     compromis,
     calls,

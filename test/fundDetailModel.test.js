@@ -77,6 +77,21 @@ test("buildFundDetailSnapshot preserves ALT underlying deal-type allocation", ()
   });
 });
 
+test("buildFundDetailSnapshot: stored allocation overrides the derived underlying mix", () => {
+  const rawCC = [
+    { id: "ALT1", est: "Fons de Fons", estRaw: "Fons de Coinversió", fons: "FoF With CoInvest", tipus: "Aportació", cat: "Capital Call", eur: 40, data: "2025-01-31" },
+    { id: "ALT1", est: "Fons de Fons", estRaw: "Fons de Fons", fons: "FoF With CoInvest", tipus: "Aportació", cat: "Capital Call", eur: 60, data: "2025-02-28" },
+    { id: "ALT1", est: "Fons de Fons", fons: "FoF With CoInvest", tipus: "Compromís", cat: "Compromís", eur: 100, data: "2025-01-01" },
+  ];
+  const fundMeta = [{ id: "ALT1", fons: "FoF With CoInvest", allocation: { "Fons de Fons": 1 } }];
+
+  const detail = buildFundDetailSnapshot(rawCC, fundMeta, "ALT1");
+
+  assert.deepEqual(detail.allocation, { "Fons de Fons": 1 });
+  // The manual allocation map wins over the 40/60 transaction-derived mix.
+  assert.deepEqual(detail.underlyingMix, { "Fons de Fons": 1 });
+});
+
 test("buildFundDetailSnapshot uses fund_meta strategy for Real Estate allocation", () => {
   const rawCC = [
     { id: "RE1", est: "Fons Real Estate", estRaw: "Fons Real Estate", fons: "Meridia RE", tipus: "Aportació", cat: "Capital Call", eur: 25000, data: "2025-07-31" },
