@@ -1,6 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabase.js";
-import { apiUrl } from "./apiClient.js";
 import { clearTurtleCapitalLS } from "./utils.js";
 import {
   ACCESS_SUPERUSER,
@@ -61,7 +60,7 @@ export function AuthProvider({ children }) {
   // Load per-user section permissions after session is ready.
   // Store the raw API response; the access map is derived from it + current role in useMemo below.
   const fetchPermissions = useCallback((token) => {
-    fetch(apiUrl("/api/admin/user-permissions"), {
+    fetch("/api/admin/user-permissions", {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.ok ? r.json() : null)
@@ -119,7 +118,7 @@ export function AuthProvider({ children }) {
   };
   const resendConfirmation = (email) => supabase.auth.resend({ type: "signup", email });
   const resetPassword = (email) => supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.origin + import.meta.env.BASE_URL + "reset-password",
+    redirectTo: window.location.origin + "/reset-password",
   });
 
   const clearRecovery = () => setIsRecovery(false);

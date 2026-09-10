@@ -22,12 +22,6 @@ function manualChunks(id) {
 }
 
 export default defineConfig({
-  // Served under the /dashboard/ path. In production the app is reverse-proxied
-  // at espaidinversions.com/dashboard (the WordPress/Apache root forwards
-  // /dashboard/* to this Vercel deployment). Setting base makes every asset and
-  // router URL resolve under that prefix, so browser requests route back through
-  // the proxy instead of hitting the bare WordPress root.
-  base: "/dashboard/",
   plugins: [react()],
   build: {
     // ExcelJS is intentionally lazy-loaded only for workbook import/export flows.
