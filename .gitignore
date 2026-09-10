@@ -64,3 +64,5 @@ __pycache__/
 data/prospective model cash.html
 
 .env*.local
+
+.vercel
