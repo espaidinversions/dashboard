@@ -1,5 +1,23 @@
 import { supabase } from "./supabase.js";
 
+// The app is served under import.meta.env.BASE_URL ("/dashboard/" in production,
+// "/" in dev). API calls are written as absolute "/api/..." paths; prefix them
+// with the base so they resolve under the same path the reverse proxy forwards
+// (espaidinversions.com/dashboard/api/* -> Vercel), not the bare WordPress root.
+const API_PREFIX = import.meta.env.BASE_URL.replace(/\/$/, "");
+
+/**
+ * Resolve an absolute-from-root "/api/..." path to the app's base path.
+ * Non-/api inputs (or non-string inputs like Request) pass through unchanged.
+ * @param {string | Request} input
+ * @returns {string | Request}
+ */
+export function apiUrl(input) {
+  return typeof input === "string" && input.startsWith("/api/")
+    ? `${API_PREFIX}${input}`
+    : input;
+}
+
 async function getAccessToken() {
   if (!supabase) return null;
   const { data, error } = await supabase.auth.getSession();
@@ -14,7 +32,7 @@ async function apiFetch(input, init = {}, { auth = "required" } = {}) {
     if (!token) throw new Error("Authentication required");
     headers.set("Authorization", `Bearer ${token}`);
   }
-  return fetch(input, { ...init, headers });
+  return fetch(apiUrl(input), { ...init, headers });
 }
 
 export async function apiFetchJson(input, init = {}, options = {}) {
