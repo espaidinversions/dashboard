@@ -2,16 +2,21 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "framework": "vite",
+  "redirects": [
+    { "source": "/", "destination": "/dashboard/", "permanent": false }
+  ],
   "rewrites": [
-    { "source": "/api/auth-settings", "destination": "/api/app?route=auth-settings" },
-    { "source": "/api/board", "destination": "/api/app?route=board" },
-    { "source": "/api/data-version", "destination": "/api/app?route=data-version" },
-    { "source": "/api/eur-usd", "destination": "/api/app?route=eur-usd" },
-    { "source": "/api/fx-rate", "destination": "/api/app?route=fx-rate" },
-    { "source": "/api/searchers", "destination": "/api/app?route=searchers" },
-    { "source": "/api/(.*)", "destination": "/api/$1" },
-    { "source": "/assets/(.*)", "destination": "/assets/$1" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/dashboard/api/auth-settings", "destination": "/api/app?route=auth-settings" },
+    { "source": "/dashboard/api/board", "destination": "/api/app?route=board" },
+    { "source": "/dashboard/api/data-version", "destination": "/api/app?route=data-version" },
+    { "source": "/dashboard/api/eur-usd", "destination": "/api/app?route=eur-usd" },
+    { "source": "/dashboard/api/fx-rate", "destination": "/api/app?route=fx-rate" },
+    { "source": "/dashboard/api/searchers", "destination": "/api/app?route=searchers" },
+    { "source": "/dashboard/api/(.*)", "destination": "/api/$1" },
+    { "source": "/dashboard/assets/(.*)", "destination": "/assets/$1" },
+    { "source": "/dashboard/(favicon.svg|favicon-16.png|favicon-32.png|favicon-48.png|apple-touch-icon.png|logo-turtle.svg|logo.jpg|board.html)", "destination": "/$1" },
+    { "source": "/dashboard", "destination": "/index.html" },
+    { "source": "/dashboard/(.*)", "destination": "/index.html" }
   ],
   "headers": [
     {
