@@ -6,7 +6,7 @@ import { AuthProvider } from "./auth.jsx";
 import { ToastProvider } from "./toast.jsx";
 
 createRoot(document.getElementById("root")).render(
-  <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || "/"}>
+  <BrowserRouter>
     <AuthProvider>
       <ToastProvider>
         <AppRoutes />
