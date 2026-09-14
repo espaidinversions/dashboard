@@ -29,9 +29,12 @@ export function fmtSignedM(n) {
   return `${value > 0 ? "+" : "-"} ${fmtM(Math.abs(value))}`;
 }
 
+const _CURRENCY_SYMBOLS = { USD: "$", GBP: "£" };
+
 function _fmtNativeAbs(n, divisa) {
   const grouped = _groupDots(n);
-  return divisa === "USD" ? `${grouped}$` : `${grouped} ${divisa}`;
+  const symbol = _CURRENCY_SYMBOLS[divisa];
+  return symbol ? `${grouped}${symbol}` : `${grouped} ${divisa}`;
 }
 
 export function fmtSignedNative(n, divisa) {
