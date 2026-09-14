@@ -447,7 +447,7 @@ export function FundsIndexInner({ inline = false, searchOverride, vcpeTypes, exc
               </div>
               {[
                 { label: "Tipus de Vehicle", key: "est", options: CAPITAL_CALL_STRATEGY_OPTIONS },
-                { label: "Divisa", key: "divisa", options: ["EUR", "USD"] },
+                { label: "Divisa", key: "divisa", options: ["EUR", "USD", "SEK", "GBP"] },
               ].map(f => (
                 <div key={f.key}>
                   <div style={{ fontSize: 11, color: tc.textLight, marginBottom: 3, textTransform: "uppercase", letterSpacing: "0.05em" }}>{f.label}</div>

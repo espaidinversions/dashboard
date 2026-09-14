@@ -275,7 +275,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, 
                 {label:"Nom",key:"name",type:"input"},
                 {label:"Gestor",key:"manager",type:"input"},
                 {label:"M€/$",key:"amount",type:"input",it:"number"},
-                {label:"Moneda",key:"currency",type:"sel",opts:["EUR","USD"]},
+                {label:"Moneda",key:"currency",type:"sel",opts:["EUR","USD","SEK","GBP"]},
                 {label:"Geo",key:"geography",type:"sel",opts:["EU","US","EU/US"]},
                 {label:"Estratègia",key:"strategy",type:"sel",opts:["Fons primari","Coinversions","Fons secundaris","Fons de fons"]},
                 {label:"Sector",key:"sector",type:"sel",opts:sectorOptions},
@@ -338,7 +338,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, 
                   </td>
                   <td style={{padding:"9px 10px",fontFamily:"monospace",fontWeight:700,color:TC.navy,whiteSpace:"nowrap"}}>
                     {cur==="EUR"?`€${(toEUR(f.amount,f.currency)??0).toFixed(2)}M`:`$${(toUSD(f.amount,f.currency)??0).toFixed(2)}M`}
-                    <span style={{fontSize:10,color:TC.textLight,marginLeft:4,fontFamily:"inherit",fontWeight:400}}>({f.currency==="EUR"?"€":"$"}{f.amount}M)</span>
+                    <span style={{fontSize:10,color:TC.textLight,marginLeft:4,fontFamily:"inherit",fontWeight:400}}>({({EUR:"€",USD:"$",GBP:"£"})[f.currency]??f.currency+" "}{f.amount}M)</span>
                   </td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:4,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:4,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>

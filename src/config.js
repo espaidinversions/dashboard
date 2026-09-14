@@ -55,6 +55,8 @@ export { CAPITAL_CALL_TIPUS_GROUPED };
 // ── Data imports ─────────────────────────────────────────
 
 export const EUR_USD = 1.08;
+export const EUR_GBP = 0.85;
+export const EUR_SEK = 11.5;
 export const SCOL  = {"Fons primari":TC.navy,"Coinversions":TC.green,"Fons secundaris":TC.navyLight,"Fons de fons":TC.greenDark};
 export const GCOL  = {EU:TC.green,US:TC.navy,"EU/US":TC.navyLight};
 export const SECCOL= {Software:TC.navy,Generalista:TC.green,"B2B Services":TC.greenDark,Healthcare:TC.purple,"Software / B2B":TC.greenLight};

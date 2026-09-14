@@ -24,7 +24,7 @@ import { normalizeSearcherName } from "../src/data/searcherModel.js";
 const CANVAS_FILE = join(process.cwd(), "Dashboard.canvas");
 const SRC_DATA = join(process.cwd(), "src", "data");
 
-let rateCache = { rate: null, fetchedAt: 0 };
+let rateCache = { rate: null, gbp: null, sek: null, fetchedAt: 0 };
 const RATE_TTL = 60 * 60 * 1000;
 
 function parseCsvLine(line) {
@@ -122,18 +122,20 @@ async function handleEurUsd(req, res) {
   if (!user) return res.status(401).json({ error: "Unauthorized" });
 
   if (Date.now() - rateCache.fetchedAt < RATE_TTL && rateCache.rate) {
-    return res.json({ rate: rateCache.rate, source: "cache" });
+    return res.json({ rate: rateCache.rate, gbp: rateCache.gbp, sek: rateCache.sek, source: "cache" });
   }
   try {
-    const response = await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD");
+    const response = await fetch("https://api.frankfurter.app/latest?from=EUR&to=USD,GBP,SEK");
     const data = await response.json();
     rateCache = {
       rate: toFiniteNumber(data?.rates?.USD, { allowNull: false, min: 0.1, max: 10 }),
+      gbp: toFiniteNumber(data?.rates?.GBP, { allowNull: false, min: 0.1, max: 10 }),
+      sek: toFiniteNumber(data?.rates?.SEK, { allowNull: false, min: 1, max: 100 }),
       fetchedAt: Date.now(),
     };
-    return res.json({ rate: rateCache.rate, source: "live" });
+    return res.json({ rate: rateCache.rate, gbp: rateCache.gbp, sek: rateCache.sek, source: "live" });
   } catch {
-    return res.json({ rate: 1.08, source: "fallback" });
+    return res.json({ rate: 1.08, gbp: 0.85, sek: 11.5, source: "fallback" });
   }
 }
 
