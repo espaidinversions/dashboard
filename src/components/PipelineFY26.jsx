@@ -1,8 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import ReactECharts from "../ReactECharts.jsx";
 import { ecTheme } from "../echartsTheme.js";
-import { fmtM, usePersistedState, readStoredJSON } from "../utils.js";
-import { downloadSingleSheetXlsx } from "../utils/xlsx.js";
+import { usePersistedState, readStoredJSON } from "../utils.js";
 import { useTheme } from "../theme.js";
 import { STATUS_CFG, CANAL_CFG, GCOL, SCOL, SECCOL, STCOL, CCOL, SBADGE, GBADGE, PIPELINE_STATUS_OPTIONS, PIPELINE_CANAL_OPTIONS } from "../config.js";
 import { EmptyState, EditableCell, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
@@ -10,29 +9,9 @@ import { useAuth } from "../auth.jsx";
 import { insertPipelineDeal, deletePipelineDeal, upsertPipelineDeal, loadPipelineDeals } from "../db.js";
 import { useToast } from "../toast.jsx";
 import { useCurrency } from "./hooks/useCurrency.js";
-import { normalizeCapitalCallStrategy } from "../data/capitalCallStrategyModel.js";
-
-const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-function genMonthOpts(months = 36) {
-  const now = new Date();
-  const opts = [""];
-  for (let i = 0; i < months; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    opts.push(`${MON[d.getMonth()]} ${d.getFullYear()}`);
-  }
-  return opts;
-}
-const MONTHS_OPTS = genMonthOpts(36);
-
-function normalizePipelineStrategy(value) {
-  // Reuse the canonical strategy normalizer, but map to the pipeline's labels.
-  const canonical = normalizeCapitalCallStrategy(value, "PE", null);
-  if (canonical === "Fons Primari") return "Fons primari";
-  if (canonical === "Fons Secundari") return "Fons secundaris";
-  if (canonical === "Fons de Fons") return "Fons de fons";
-  if (canonical === "Fons de Coinversió") return "Coinversions";
-  return String(value ?? "").trim() || "";
-}
+import { MONTHS_OPTS, normalizePipelineStrategy } from "../data/pipelineModel.js";
+import { exportPipelineExcel } from "./pipeline/pipelineExport.js";
+import { buildPipelinePieOption, buildPipelineSectorBarOption } from "./pipeline/pipelineChartOptions.js";
 
 // ══════════════════════════════════════════════════════════
 export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, chartsOnly = false }) {
@@ -210,83 +189,12 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, 
         style={{ width: "100%", height: 165 }}
         opts={{ renderer: "canvas" }}
         onEvents={chartsOnly ? undefined : { click: params => params?.name && clickChart(type, params.name) }}
-        option={{
-          tooltip: {
-            ...t.tooltip,
-            trigger: "item",
-            formatter: p => `<b>${p.name}</b><br/>${fmtM(p.value)} · ${p.percent.toFixed(1)}%`,
-          },
-          legend: { show: false },
-          graphic: [{
-            type: "group",
-            left: "center",
-            top: "middle",
-            children: [
-              { type: "text", style: { text: fmtM(data.reduce((s, r) => s + r.value, 0)), x: 0, y: -7, textAlign: "center", fill: TC.navy, fontSize: 12, fontWeight: 700, fontFamily: "'DM Mono',monospace" } },
-              { type: "text", style: { text: "Total", x: 0, y: 9, textAlign: "center", fill: TC.textLight, fontSize: 9 } },
-            ],
-          }],
-          series: [{
-            type: "pie",
-            radius: ["46%", "72%"],
-            center: ["50%", "50%"],
-            labelLine: { show: false },
-            label: {
-              show: true,
-              formatter: p => (p.percent >= 6 ? `${p.name} ${p.percent.toFixed(0)}%` : ""),
-              color: TC.textMid,
-              fontSize: 10,
-            },
-            data: data.map(e => ({
-              name: e.name,
-              value: e.value,
-              itemStyle: {
-                color: colors[e.name] || TC.navyLight,
-                opacity: isHl(type, e.name) ? 1 : 0.3,
-                borderColor: chartF?.type === type && chartF?.value === e.name ? "#fff" : "transparent",
-                borderWidth: 2,
-              },
-            })),
-          }],
-        }}
+        option={buildPipelinePieOption({ data, colors, type, t, TC, chartF, isHl })}
       />
     </div>
   );
 
-  const exportExcel = async () => {
-    await downloadSingleSheetXlsx({
-      sheetName: "Pipeline FY26",
-      filename: `Pipeline_FY26_${new Date().toISOString().slice(0,10)}.xlsx`,
-      columns: [
-        { header: "Nom",              key: "nom",       width: 28 },
-        { header: "Gestor",           key: "gestor",    width: 20 },
-        { header: "Compromís (orig)", key: "compOrig",  width: 14 },
-        { header: "Moneda",           key: "moneda",    width: 9  },
-        { header: "Compromís (€M)",   key: "compEur",   width: 15 },
-        { header: "Compromís ($M)",   key: "compUsd",   width: 15 },
-        { header: "Geografia",        key: "geo",       width: 10 },
-        { header: "Estratègia",       key: "estrategia",width: 18 },
-        { header: "Sector",           key: "sector",    width: 18 },
-        { header: "Status",           key: "status",    width: 14 },
-        { header: "Canal",            key: "canal",     width: 18 },
-        { header: "Tancament Est.",   key: "tancament", width: 16 },
-      ],
-      rows: funds.map((f) => ({
-        nom:        f.name,
-        gestor:     f.manager || "",
-        compOrig:   f.amount,
-        moneda:     f.currency,
-        compEur:    +toEUR(amt(f), f.currency).toFixed(3),
-        compUsd:    +toUSD(amt(f), f.currency).toFixed(3),
-        geo:        f.geography,
-        estrategia: f.strategy,
-        sector:     f.sector,
-        status:     f.status,
-        canal:      f.canal,
-        tancament:  f.estimatedClosing || "",
-      })),
-    });
-  };
+  const exportExcel = () => exportPipelineExcel({ funds, toEUR, toUSD, amt });
 
   return (
     <div>
@@ -332,41 +240,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, 
             style={{ width: "100%", height: 165 }}
             opts={{ renderer: "canvas" }}
             onEvents={chartsOnly ? undefined : { click: params => params?.name && clickChart("sec", params.name) }}
-            option={{
-              grid: { top: 8, right: 14, bottom: 8, left: 0, containLabel: true },
-              tooltip: {
-                ...t.tooltip,
-                trigger: "axis",
-                axisPointer: { type: "shadow" },
-                formatter: params => {
-                  const p = params?.[0];
-                  if (!p) return "";
-                  return `<b>${p.name}</b><br/>${fmtM(p.value)}`;
-                },
-              },
-              xAxis: {
-                type: "value",
-                axisLabel: { ...t.axisLabel, fontSize: 10 },
-                splitLine: { show: false },
-                axisLine: t.axisLine,
-                axisTick: t.axisTick,
-              },
-              yAxis: {
-                type: "category",
-                data: bySec.map(d => d.name),
-                axisLabel: { ...t.axisLabel, fontSize: 10 },
-                axisLine: t.axisLine,
-                axisTick: t.axisTick,
-              },
-              series: [{
-                type: "bar",
-                data: bySec.map(d => ({
-                  value: d.value,
-                  itemStyle: { color: SECCOL[d.name] || TC.navy, opacity: isHl("sec", d.name) ? 1 : 0.3, borderRadius: [0, 4, 4, 0] },
-                })),
-                barMaxWidth: 22,
-              }],
-            }}
+            option={buildPipelineSectorBarOption({ bySec, t, TC, SECCOL, isHl })}
           />
         </div>
       </div>
@@ -401,7 +275,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, 
                 {label:"Nom",key:"name",type:"input"},
                 {label:"Gestor",key:"manager",type:"input"},
                 {label:"M€/$",key:"amount",type:"input",it:"number"},
-                {label:"Moneda",key:"currency",type:"sel",opts:["EUR","USD"]},
+                {label:"Moneda",key:"currency",type:"sel",opts:["EUR","USD","SEK","GBP"]},
                 {label:"Geo",key:"geography",type:"sel",opts:["EU","US","EU/US"]},
                 {label:"Estratègia",key:"strategy",type:"sel",opts:["Fons primari","Coinversions","Fons secundaris","Fons de fons"]},
                 {label:"Sector",key:"sector",type:"sel",opts:sectorOptions},
@@ -464,7 +338,7 @@ export function PipelineFY26({ initialFunds = [], eurUsd = null, onDealsChange, 
                   </td>
                   <td style={{padding:"9px 10px",fontFamily:"monospace",fontWeight:700,color:TC.navy,whiteSpace:"nowrap"}}>
                     {cur==="EUR"?`€${(toEUR(f.amount,f.currency)??0).toFixed(2)}M`:`$${(toUSD(f.amount,f.currency)??0).toFixed(2)}M`}
-                    <span style={{fontSize:10,color:TC.textLight,marginLeft:4,fontFamily:"inherit",fontWeight:400}}>({f.currency==="EUR"?"€":"$"}{f.amount}M)</span>
+                    <span style={{fontSize:10,color:TC.textLight,marginLeft:4,fontFamily:"inherit",fontWeight:400}}>({({EUR:"€",USD:"$",GBP:"£"})[f.currency]??f.currency+" "}{f.amount}M)</span>
                   </td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:GBADGE[f.geography]?.bg||TC.bgAlt,color:GBADGE[f.geography]?.color||TC.navy,borderRadius:4,padding:"2px 7px",fontWeight:700}}>{f.geography}</span></td>
                   <td style={{padding:"9px 10px"}}><span style={{fontSize:11,background:SBADGE[f.strategy]?.bg||TC.bgAlt,color:SBADGE[f.strategy]?.color||TC.navy,borderRadius:4,padding:"2px 7px",fontWeight:600}}>{f.strategy}</span></td>

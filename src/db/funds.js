@@ -58,6 +58,49 @@ export async function upsertFundMetaFiEnd(fund, fiEnd) {
   return { error };
 }
 
+/**
+ * Persist a vehicle's full Classificació from the fund one-pager editor:
+ * the categorical class (→ private_entities.vehicle_est) and the four weight
+ * maps (→ fund_meta.allocation/geography/sector/strategy jsonb). Each map is a
+ * fraction map summing to 1.0, or null to clear that dimension.
+ *
+ * The fund_meta upsert lists only the columns it owns, so on an existing row
+ * ON CONFLICT touches just those columns and leaves tvpi/irr/fi_end/
+ * committed_override intact (PostgREST upsert semantics).
+ *
+ * @param {string | { id?: string, fons?: string, nom?: string }} fund
+ * @param {{ vehicleEst?: string | null, allocation?: object | null, geography?: object | null, sector?: object | null, strategy?: object | null }} classification
+ */
+export async function saveFundClassification(fund, classification) {
+  if (!supabase) return { error: null };
+  const {
+    vehicleEst = null,
+    allocation = null,
+    geography = null,
+    sector = null,
+    strategy = null,
+  } = classification ?? {};
+  const name = typeof fund === "string" ? fund : fund?.fons ?? fund?.nom ?? "";
+  const id = typeof fund === "string" ? null : fund?.id ?? null;
+
+  // vehicle_est is the single source of truth for the vehicle class; store it on
+  // the private entity (mirrors insertFund).
+  const resolved = { ...resolvePrivateEntity("vehicle", name, id), vehicleEst };
+  const { error: entityError } = await upsertPrivateEntities([resolved]);
+  if (entityError) return { error: entityError };
+
+  const { error } = await supabase
+    .from("fund_meta")
+    .upsert(
+      { vehicle_id: resolved.id, fons: resolved.canonicalName, allocation, geography, sector, strategy },
+      { onConflict: "vehicle_id" },
+    );
+  if (!error) {
+    logAudit("update", "fund_meta", resolved.id, { fons: resolved.canonicalName, vehicleEst });
+  }
+  return { error };
+}
+
 export async function insertFund(fons, est, compromisEur, divisa, options = {}) {
   if (!supabase) return null;
   const normalizedEst = normalizeCapitalCallStrategy(est, null, { fons }) ?? "Fons Primari";

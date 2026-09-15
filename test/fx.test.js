@@ -90,3 +90,25 @@ test("convertAmountToEurOnDate: SEK future date uses estimated tag", async () =>
   assert.equal(result.amountNative, 115000);
   assert.match(result.fxSource, /^ecb:estimated:/);
 });
+
+// GBP mock rate: D.GBP.EUR.SP00.A returns GBP per EUR (e.g., ~0.85 means 1 EUR = 0.85 GBP)
+const MOCK_GBP_RATE = 0.85;
+const mockGbpFetcher = async (_url) => ({ rate: MOCK_GBP_RATE, observedAt: MOCK_OBSERVED_AT, source: "ecb" });
+
+test("convertAmountToEurOnDate: GBP past date uses same-day (T-0) ECB rate", async () => {
+  let capturedUrl = null;
+  const capturingFetcher = async (url) => { capturedUrl = url; return { rate: MOCK_GBP_RATE, observedAt: MOCK_OBSERVED_AT, source: "ecb" }; };
+  const result = await convertAmountToEurOnDate({ amount: 8500, currency: "GBP", date: "2025-03-10" }, capturingFetcher);
+  assert.equal(result.eur, Math.round(8500 / MOCK_GBP_RATE * 100) / 100);
+  assert.equal(result.amountNative, 8500);
+  assert.equal(result.fxRate, MOCK_GBP_RATE);
+  assert.equal(result.fxSource, `ecb:${MOCK_OBSERVED_AT}`);
+  assert.ok(capturedUrl.includes("GBP"), `Expected GBP in URL, got: ${capturedUrl}`);
+  assert.ok(capturedUrl.includes("2025-03-10"), `Expected T-0 date in URL, got: ${capturedUrl}`);
+});
+
+test("convertAmountToEurOnDate: GBP future date uses estimated tag", async () => {
+  const result = await convertAmountToEurOnDate({ amount: 8500, currency: "GBP", date: "2099-12-31" }, mockGbpFetcher);
+  assert.equal(result.amountNative, 8500);
+  assert.match(result.fxSource, /^ecb:estimated:/);
+});

@@ -27,6 +27,7 @@ const REQUIRED_FUND_META_COLUMNS = [
   "geography",
   "sector",
   "strategy",
+  "allocation",
   "committed_override",
 ];
 
@@ -49,6 +50,7 @@ test("rowToFundMeta surfaces the classification maps + committed_override", () =
     geography: { "Nord America": 1 },
     sector: { "Tecnologia": 1 },
     strategy: { "Mid Buyout": 0.6, "Growth": 0.4 },
+    allocation: { "Fons de Fons": 1 },
     committed_override: 5_000_000,
   };
 
@@ -57,6 +59,7 @@ test("rowToFundMeta surfaces the classification maps + committed_override", () =
   assert.deepEqual(mapped.geography, { "Nord America": 1 });
   assert.deepEqual(mapped.sector, { "Tecnologia": 1 });
   assert.deepEqual(mapped.strategy, { "Mid Buyout": 0.6, "Growth": 0.4 });
+  assert.deepEqual(mapped.allocation, { "Fons de Fons": 1 });
   assert.equal(mapped.committedOverride, 5_000_000);
 });
 

@@ -47,6 +47,7 @@ ROOT          = Path(__file__).parent.parent
 PRICES_DIR    = ROOT / "Mercats Públics" / "prices"
 FUND_DIR      = ROOT / "Mercats Públics" / "fund_prices"
 WAM_DIR       = ROOT / "Mercats Públics" / "wam_prices"
+FX_DIR        = ROOT / "Mercats Públics" / "fx"
 OUT_CSV       = ROOT / "Mercats Públics" / "portfolio_value.csv"
 PM_RAW_WORKBOOK = ROOT / "src" / "generated" / "publicMarkets" / "publicMarketsRawWorkbook.js"
 PM_VALUES_JS  = ROOT / "src" / "generated" / "publicMarkets" / "portfolioValues.js"
@@ -54,6 +55,41 @@ PRICE_BRIDGES_JSON = ROOT / "raw-data" / "price-bridges.json"
 SERIES_START = date(2019, 1, 1)
 LATEST_TOTAL_TOLERANCE = 0.01
 T = TypeVar("T")
+
+_fx_missing: set[str] = set()
+
+
+@lru_cache(maxsize=None)
+def load_fx_series(pair: str) -> "pd.Series | None":
+    """Load a EUR-base FX series (quote-currency units per 1 EUR), e.g. EURUSD."""
+    p = FX_DIR / f"{pair}.csv"
+    if not p.exists():
+        return None
+    df = pd.read_csv(p, parse_dates=["date"])
+    if "close" not in df.columns:
+        return None
+    return df.dropna(subset=["close"]).set_index("date")["close"].sort_index()
+
+
+def to_eur_factor(divisa: "str | None", ts: pd.Timestamp) -> "float | None":
+    """Multiplier to convert a native-currency amount to EUR on `ts`.
+
+    Returns 1.0 for EUR, 1/rate for a known EUR-base pair, or None when the FX
+    series is unavailable (the caller then degrades gracefully and the missing
+    currency is reported once).
+    """
+    cur = str(divisa or "EUR").strip().upper()
+    if not cur or cur == "EUR":
+        return 1.0
+    fx = load_fx_series(f"EUR{cur}")
+    rate = fx.asof(ts) if fx is not None and len(fx.index) else None
+    if rate is None or pd.isna(rate) or rate == 0:
+        if cur not in _fx_missing:
+            _fx_missing.add(cur)
+            print(f"  WARN: no FX series EUR{cur} — {cur} positions not converted to EUR. "
+                  f"Run: python scripts/fetch_fx.py")
+        return None
+    return 1.0 / float(rate)
 
 
 def parse_date(val) -> date | None:
@@ -327,6 +363,8 @@ def build_snapshot_value_rows(
             current_price = float(nav.iloc[-1])
             if pd.isna(current_price) or current_price == 0:
                 current_price = None
+            divisa = pos.get("divisa")
+            latest_factor = to_eur_factor(divisa, pd.Timestamp(nav.index.max())) or 1.0
             series_end = global_end or nav.index.max().date()
             for bucket in iter_biweekly_buckets(biweekly_bucket(start_date), biweekly_bucket(series_end)):
                 if bucket < start_date:
@@ -336,10 +374,16 @@ def build_snapshot_value_rows(
                     price = nav.iloc[0]
                 if price is None or current_price in (None, 0):
                     continue
+                # Convert native-currency prices to EUR before taking the ratio —
+                # a same-currency ratio would omit intra-period EUR/FX drift for
+                # multi-year non-EUR holdings.
+                factor = to_eur_factor(divisa, pd.Timestamp(bucket)) or 1.0
+                price_eur = float(price) * factor
+                current_price_eur = current_price * latest_factor
                 if current_value > 0:
-                    value_eur = current_value * (float(price) / current_price)
+                    value_eur = current_value * (price_eur / current_price_eur)
                 else:
-                    value_eur = units * float(price)
+                    value_eur = units * price_eur
                 rows.append({
                     "date": bucket,
                     "isin": isin,

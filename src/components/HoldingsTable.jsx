@@ -8,6 +8,7 @@ import { fmtM } from "../utils.js";
 import { useAuth } from "../auth.jsx";
 import { loadPMPositionOverrides, upsertPMPositionOverride } from "../db.js";
 import { useToast } from "../toast.jsx";
+import { rendPct } from "../data/pmReturns.js";
 
 const PM_ACTIVE = PM_MODEL.holdings.active;
 
@@ -315,6 +316,9 @@ export function HoldingsTable({ assetClass = "all", title = "Posicions" } = {}) 
               const isRV   = p.tipus === "RV";
               const typColor = isRV ? "#2B5070" : "#7A6000";
               const typBg    = isRV ? "#E6EDF3" : "#FFF8E1";
+              // Normalize mixed percent/decimal return conventions for display + edit.
+              const ytdPct  = rendPct(p, ytdKey);
+              const prevPct = rendPct(p, prevKey);
               return (
                 <tr key={p.id} className="hoverable" style={{ background: bg, borderBottom: `1px solid ${tc.border}` }}>
                   <td style={{ padding: "6px 10px", fontWeight: 500 }}>
@@ -374,11 +378,11 @@ export function HoldingsTable({ assetClass = "all", title = "Posicions" } = {}) 
 
                   {/* Editable: YTD (current year) */}
                   <EditableCell
-                    value={p[ytdKey]}
+                    value={ytdPct}
                     canEdit={canEdit && !p._aggregate && !!p.isin}
                     onSave={v => handleSave(p.isin, ytdKey, v)}
                     renderValue={() => {
-                      const v = p[ytdKey];
+                      const v = ytdPct;
                       if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
                       const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
                       const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";
@@ -392,11 +396,11 @@ export function HoldingsTable({ assetClass = "all", title = "Posicions" } = {}) 
 
                   {/* Editable: previous year */}
                   <EditableCell
-                    value={p[prevKey]}
+                    value={prevPct}
                     canEdit={canEdit && !p._aggregate && !!p.isin}
                     onSave={v => handleSave(p.isin, prevKey, v)}
                     renderValue={() => {
-                      const v = p[prevKey];
+                      const v = prevPct;
                       if (v == null) return <span style={{ color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
                       const color = v > 0 ? tc.green : v < 0 ? tc.red : tc.textLight;
                       const bg2   = v > 0 ? (tc.green + "18") : v < 0 ? (tc.red + "15") : "transparent";

@@ -1,22 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useTheme } from "../theme.js";
-import { fmtM, fmtSignedM, fmtSignedNative, formatIsoDateDMY } from "../utils.js";
+import { calcMesos, fmtM, fmtSignedM, fmtSignedNative, formatIsoDateDMY } from "../utils.js";
 import { loadSearchers, loadCapitalCalls } from "../db.js";
 import { apiFetchJson } from "../apiClient.js";
 import { FlagImg } from "./SharedComponents.jsx";
 import { SEARCHER_STATUS_CFG, GEO_NAME } from "../config.js";
-import { normalizeSearcherName } from "../data/searcherModel.js";
-import { estSection } from "../data/capitalCallStrategyModel.js";
+import { matchSearcherCapitalCall } from "../data/searcherModel.js";
 import { useAuth } from "../auth.jsx";
 
-function calcMesos(dateIso) {
-  if (!dateIso) return null;
-  const start = new Date(dateIso);
-  if (Number.isNaN(start.getTime())) return null;
-  const now = new Date();
-  return Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()));
-}
 
 export default function SearcherDetail() {
   const { id } = useParams();
@@ -37,21 +29,9 @@ export default function SearcherDetail() {
       setSearcher(found ?? null);
 
       if (found) {
-        const normName = normalizeSearcherName(found.nom);
-        const nif = String(found.nif ?? "").trim();
-        // Also match by stripping just the core token (handles "Aeqor Partners" vs "Aeqor SRL")
-        const coreToken = normName.split(" ")[0];
         const ccAll = Array.isArray(cc) ? cc : [];
         const rows = ccAll
-          .filter(r => estSection(r.est) === "SF" && r.cat !== "Compromís")
-          .filter(r => {
-            const rNorm = normalizeSearcherName(r.fons);
-            if (nif && String(r.id ?? "").trim() === nif) return true;
-            if (rNorm === normName) return true;
-            // Fallback: single-token core match (e.g. "aeqor" in both "Aeqor Partners" and "Aeqor SRL")
-            if (coreToken && coreToken.length >= 4 && rNorm.split(" ")[0] === coreToken) return true;
-            return false;
-          })
+          .filter(r => r.cat !== "Compromís" && matchSearcherCapitalCall(r, found))
           .sort((a, b) => String(b.data ?? "").localeCompare(String(a.data ?? "")));
         setTxRows(rows);
       }
@@ -82,7 +62,7 @@ export default function SearcherDetail() {
   if (!searcher) return <div style={{ padding: 48, textAlign: "center", color: tc.textLight }}>Searcher no trobat.</div>;
 
   const statusCfg = SEARCHER_STATUS_CFG[searcher.statusScreening] ?? { bg: tc.bgAlt, color: tc.textMid };
-  const mesos = searcher.mesosCercant ?? calcMesos(searcher.dataCompr);
+  const mesos = searcher.mesosCercant ?? calcMesos(searcher.dataCompr, { fallback: null });
   const totalCalls = txRows.filter(r => r.cat === "Capital Call").reduce((s, r) => s + Math.abs(Number(r.eur ?? 0)), 0);
   const totalDist = txRows.filter(r => r.cat === "Distribució" || r.cat === "Retorn Capital").reduce((s, r) => s + Math.abs(Number(r.eur ?? 0)), 0);
 

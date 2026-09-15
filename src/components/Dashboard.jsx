@@ -1,10 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef, lazy, Suspense } from "react";
-import {
-  CAPITAL_CALL_TIPUS_OPTIONS,
-  CAPITAL_CALL_TIPUS_GROUPED,
-} from "../config.js";
 import { useTheme } from "../theme.js";
-import { usePersistedState, exportMultiXLSX, normalizeOptionValue, dedupeOptionValues } from "../utils.js";
+import { usePersistedState } from "../utils.js";
 import { useAuth } from "../auth.jsx";
 import { ResumTab, LandingTab } from "./tabs/index.js";
 import { AssetAllocationTab } from "./tabs/AssetAllocationTab.jsx";
@@ -12,13 +8,19 @@ import { Sidebar } from "./Sidebar.jsx";
 import { useDashboardData } from "./hooks/useDashboardData.js";
 import { buildAltCohortMatrix, buildCompanyCohortMatrix } from "../data/altCohortModel.js";
 import { buildLandingModel } from "../data/landingModel.js";
+import { buildDashboardPaletteConfig } from "../data/dashboardPalettes.js";
+import { CapitalCallModals } from "./CapitalCallModals.jsx";
+import { resolveSection, resolvePermissionId } from "../data/dashboardPermissionId.js";
+import { useCapitalCallOptions } from "./hooks/useCapitalCallOptions.js";
+import { useDashboardExports } from "./hooks/useDashboardExports.js";
+import { useDashboardKeyboardNav } from "./hooks/useDashboardKeyboardNav.js";
 import { AltCohortSection } from "./funds/AltCohortSection.jsx";
 import { RealEstateSummarySection } from "./realEstate/RealEstateSummarySection.jsx";
 import { LiquiditatSection } from "./shared/LiquiditatSection.jsx";
 import { LiquidityOverview } from "./liquidity/LiquidityOverview.jsx";
 import { useTransactionDerivedData } from "./hooks/useTransactionDerivedData.js";
 import { useTabRouter } from "./hooks/useTabRouter.js";
-import { CapitalCallModalProvider, useCapitalCallModal } from "./contexts/CapitalCallModalContext.jsx";
+import { CapitalCallModalProvider } from "./contexts/CapitalCallModalContext.jsx";
 import { Search, X } from "lucide-react";
 import {
   COMPANIES_SUBTABS,
@@ -30,7 +32,6 @@ import {
   visibleSupra,
 } from "./dashboardNavConfig.js";
 
-const CcTransactionModal  = lazy(() => import("./CcTransactionModal.jsx").then(m => ({ default: m.CcTransactionModal })));
 const DataLoader          = lazy(() => import("./DataLoader.jsx").then(m => ({ default: m.DataLoader })));
 const PipelineFY26        = lazy(() => import("./PipelineFY26.jsx").then(m => ({ default: m.PipelineFY26 })));
 const MensualTab          = lazy(() => import("./MensualTab.jsx").then(m => ({ default: m.MensualTab })));
@@ -46,72 +47,6 @@ const PMTipusTab          = lazy(() => import("./PMTipusTab.jsx").then(m => ({ d
 const PMTransaccionsTab   = lazy(() => import("./PMTransaccionsTab.jsx").then(m => ({ default: m.PMTransaccionsTab })));
 const PMTraçabilitatTab   = lazy(() => import("./PMTracabilitatTab.jsx").then(m => ({ default: m.PMTraçabilitatTab })));
 const PmLandingCard       = lazy(() => import("./tabs/PmLandingCard.jsx"));
-
-function CapitalCallModals({
-  ccNameOptions,
-  ccTipusOptions,
-  amountInputStyle,
-  defaultVehicleCurrency,
-  recallablePoolByFund,
-  uncalledByFund,
-  onInsert,
-  onUpdate,
-}) {
-  const {
-    ccAddModalFons,
-    ccAddModalDefaults,
-    ccEditModalRow,
-    closeAddModal,
-    closeEditModal,
-  } = useCapitalCallModal();
-
-  return (
-    <Suspense fallback={null}>
-      {ccAddModalFons !== null && (
-        <CcTransactionModal
-          addFons={ccAddModalFons}
-          addDefaults={ccAddModalDefaults}
-          ccNameOptions={ccNameOptions}
-          ccTipusOptions={ccTipusOptions}
-          amountInputStyle={amountInputStyle}
-          defaultVehicleCurrency={defaultVehicleCurrency}
-          recallablePoolByFund={recallablePoolByFund}
-          uncalledByFund={uncalledByFund}
-          onInsert={onInsert}
-          onUpdate={onUpdate}
-          onClose={closeAddModal}
-        />
-      )}
-
-      {ccEditModalRow && (
-        <CcTransactionModal
-          editRow={ccEditModalRow}
-          ccNameOptions={ccNameOptions}
-          ccTipusOptions={ccTipusOptions}
-          amountInputStyle={amountInputStyle}
-          defaultVehicleCurrency={defaultVehicleCurrency}
-          recallablePoolByFund={recallablePoolByFund}
-          uncalledByFund={uncalledByFund}
-          onInsert={onInsert}
-          onUpdate={onUpdate}
-          onClose={closeEditModal}
-        />
-      )}
-    </Suspense>
-  );
-}
-
-function isKeyboardEditableTarget(target) {
-  if (!target || typeof target !== "object") return false;
-  const tagName = target.tagName?.toLowerCase();
-  return (
-    target.isContentEditable ||
-    tagName === "input" ||
-    tagName === "textarea" ||
-    tagName === "select" ||
-    Boolean(target.closest?.("[contenteditable='true']"))
-  );
-}
 
 function Dashboard() {
   const { tc, dark } = useTheme();
@@ -159,70 +94,19 @@ function Dashboard() {
     [d.rawCC, d.fundMeta, d.actualCompanyIds]
   );
 
-  const ccNameOptions = useMemo(() => dedupeOptionValues([
-    ...d.rawCC.map((row) => row.fons),
-    ...d.companiesData.map((row) => row.nom),
-    ...d.searchersData.map((row) => row.nom),
-  ]), [d.companiesData, d.rawCC, d.searchersData]);
-  const ccTipusOptions = useMemo(() => {
-    const known = new Set(CAPITAL_CALL_TIPUS_OPTIONS.map(v => String(v).trim().toLowerCase()));
-    const extras = [...new Set(d.rawCC.map(r => r.tipus).filter(Boolean))]
-      .filter(v => !known.has(String(v).trim().toLowerCase()));
-    return extras.length > 0 ? [...CAPITAL_CALL_TIPUS_GROUPED, ...extras] : CAPITAL_CALL_TIPUS_GROUPED;
-  }, [d.rawCC]);
-  const vehicleCurrencyMap = useMemo(() => {
-    const map = new Map();
-    d.rawCC.forEach((row) => {
-      const key = normalizeOptionValue(row?.fons);
-      const currency = String(row?.divisa ?? "").trim();
-      if (key && currency && !map.has(key)) map.set(key, currency);
-    });
-    return map;
-  }, [d.rawCC]);
-  const recallablePoolByFund = useMemo(() => {
-    const map = {};
-    for (const r of d.rawCC) {
-      const fund = r.fons;
-      if (!fund) continue;
-      if (!map[fund]) map[fund] = 0;
-      if (r.cat === "Distribució" && r.recallable) {
-        map[fund] += Number(r.recallable);
-      }
-      if (r.cat === "Capital Call" && r.from_recallable) {
-        map[fund] -= Number(r.from_recallable);
-      }
-    }
-    for (const k of Object.keys(map)) {
-      map[k] = Math.round(map[k] * 100) / 100;
-    }
-    return map;
-  }, [d.rawCC]);
-  const uncalledByFund = useMemo(() => {
-    const map = {};
-    for (const r of d.rawCC) {
-      const fund = r.fons;
-      if (!fund) continue;
-      if (!map[fund]) map[fund] = { compromis: 0, calls: 0 };
-      if (r.cat === "Compromís") map[fund].compromis += Number(r.eur);
-      if (r.cat === "Capital Call") map[fund].calls += Number(r.eur);
-    }
-    return Object.fromEntries(
-      Object.entries(map).map(([k, v]) => [k, Math.max(0, Math.round((v.compromis - v.calls) * 100) / 100)])
-    );
-  }, [d.rawCC]);
-  const defaultVehicleCurrency = useCallback((vehicleName) => {
-    const key = normalizeOptionValue(vehicleName);
-    return vehicleCurrencyMap.get(key) ?? "EUR";
-  }, [vehicleCurrencyMap]);
-  const amountInputStyle = useCallback((values) => {
-    const raw = String(values?.eur ?? "").trim();
-    if (!raw) return null;
-    const amount = Number(raw);
-    if (Number.isNaN(amount) || amount === 0) return null;
-    return amount < 0
-      ? { background: "#FDECEC", borderColor: "#E5B7B7", color: "#8F1D1D" }
-      : { background: "#ECF8EE", borderColor: "#B7DEBD", color: tc.text };
-  }, [tc.text]);
+  const {
+    ccNameOptions,
+    ccTipusOptions,
+    recallablePoolByFund,
+    uncalledByFund,
+    defaultVehicleCurrency,
+    amountInputStyle,
+  } = useCapitalCallOptions({
+    rawCC: d.rawCC,
+    companiesData: d.companiesData,
+    searchersData: d.searchersData,
+    textColor: tc.text,
+  });
 
   const handleTxQuickUpdate = useCallback(async (row, fields) => {
     let errorMessage = null;
@@ -237,111 +121,13 @@ function Dashboard() {
 
   // navigation handled by useTabRouter()
 
-  const [exporting, setExporting] = useState(false);
-
-  const exportPDF = useCallback(() => { window.print(); }, []);
-
-  const exportPNG = useCallback(async () => {
-    const el = document.getElementById("dashboard-content");
-    if (!el) return;
-    setExporting(true);
-    try {
-      const { default: html2canvas } = await import("html2canvas");
-      const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: null });
-      const a = document.createElement("a");
-      a.href = canvas.toDataURL("image/png");
-      a.download = `dashboard-${new Date().toISOString().slice(0,10)}.png`;
-      a.click();
-    } finally { setExporting(false); }
-  }, []);
-
-  const exportAll = useCallback(async () => {
-    setExporting(true);
-    try {
-    const companies = d.companiesData;
-    const searchers = d.searchersData;
-    const pipeline  = d.funds0;
-    const cc        = d.rawCC;
-    const fundMeta  = d.fundMeta;
-    const fmtN = v => v != null ? +(v / 1e6).toFixed(3) : "";
-
-    await exportMultiXLSX([
-      {
-        name: "Capital Calls",
-        rows: cc.map(r => ({
-          "Fons": r.fons, "Tipus": r.tipus, "Categoria": r.cat,
-          "Data": r.data, "Mes": r.mes, "Any": r.any, "FY": r.fy,
-          "Estructura": r.est, "Import (€)": r.eur, "Divisa": r.divisa,
-          "Import Divisa": r.amountNative ?? "",
-          "FX BCE": r.fxRate ?? "",
-          "Font FX": r.fxSource ?? "",
-          "Comentaris": r.comentaris ?? "",
-        })),
-      },
-      {
-        name: "Fund Meta",
-        rows: fundMeta.map(r => ({
-          "Fons": r.fons,
-          "TVPI": r.tvpi ?? "",
-        })),
-      },
-      {
-        name: "Pipeline",
-        rows: pipeline.map(r => ({
-          "ID": r.id, "Nom": r.name, "Import": r.amount, "Divisa": r.currency,
-          "Geo": r.geography, "Estratègia": r.strategy, "Sector": r.sector,
-          "Status": r.status, "Canal": r.canal, "Actiu": r.active ? "1" : "0",
-        })),
-      },
-      {
-        name: "Participades",
-        rows: companies.map(c => ({
-          "Nom": c.nom, "Tipus": c.tipus, "Segment": c.segment || "",
-          "Entrepreneurs": c.entrepreneurs || "", "Origen": c.origen || "", "Geo": c.geo || "",
-          "Ticket (€M)": c.ticket ? +(c.ticket / 1e6).toFixed(3) : "",
-          "TVPI": c.tvpi ?? "", "Ingressos (€M)": c.rev ? +(c.rev / 1e6).toFixed(3) : "",
-          "EBITDA (€M)": c.ebitda ? +(c.ebitda / 1e6).toFixed(3) : "",
-          "Data Compromís": c.dataCompr || "", "Mesos Operant": c.mesosOperant ?? "",
-        })),
-      },
-      (() => {
-        const KPI_FIELDS = [
-          ["Ingressos (€M)",       "rev"],
-          ["Ing. Pressupost (€M)", "revBudget"],
-          ["EBITDA (€M)",          "ebitda"],
-          ["EBITDA Pres. (€M)",    "ebitdaBudget"],
-          ["Deute Net (€M)",       "dfn"],
-          ["DFN Pres. (€M)",       "dfnBudget"],
-        ];
-        const allQs = [...new Set(companies.flatMap(c => (c.quarters || []).map(q => q.q)))]
-          .sort((a, b) => {
-            const [, qa, ya] = a.match(/Q(\d) (\d+)/) || [, "0", "0"];
-            const [, qb, yb] = b.match(/Q(\d) (\d+)/) || [, "0", "0"];
-            return (+ya * 4 + +qa) - (+yb * 4 + +qb);
-          });
-        const rows = companies.map(c => {
-          const byQ = Object.fromEntries((c.quarters || []).map(q => [q.q, q]));
-          const row = { "Nom": c.nom };
-          allQs.forEach(q => {
-            const data = byQ[q] || {};
-            KPI_FIELDS.forEach(([label, key]) => { row[`${q} | ${label}`] = fmtN(data[key] ?? null); });
-          });
-          return row;
-        });
-        return { name: "KPIs Trimestral", rows };
-      })(),
-      {
-        name: "Searchers",
-        rows: searchers.map(r => ({
-          "Nom": r.nom || "", "Status": r.statusScreening || "",
-          "Forma Entrada": r.formEntrada || "", "Geo": r.geo || "",
-          "Ticket (€M)": r.ticket ? +(r.ticket / 1e6).toFixed(3) : "",
-          "Data Inici": r.dataInici || "", "Modalitat": r.modalitat || "",
-        })),
-      },
-    ], "TurtleCapital_Data");
-    } finally { setExporting(false); }
-  }, [d.companiesData, d.searchersData, d.funds0, d.rawCC, d.fundMeta]);
+  const { exporting, exportPDF, exportPNG, exportAll } = useDashboardExports({
+    companiesData: d.companiesData,
+    searchersData: d.searchersData,
+    funds0: d.funds0,
+    rawCC: d.rawCC,
+    fundMeta: d.fundMeta,
+  });
 
   const [fFy] = usePersistedState("ui_fFy",  "Tots");
   const [fEst] = usePersistedState("ui_fEst",  "Tots");
@@ -351,12 +137,7 @@ function Dashboard() {
   const [sortFonsDir] = usePersistedState("ui_sortFonsDir", "desc");
   const [ccChartF] = useState(null);
 
-  const section = tab==="mercats-publics" ? "mercats-publics"
-              : tab==="real-estate"     ? "real-estate"
-              : tab==="re-cash-model"   ? "real-estate"
-              : tab==="tx-alt"          ? "txlog"
-              : tab==="tx-re"           ? "real-estate"
-              : "alternatives";
+  const section = resolveSection(tab);
 
   const {
     altAllTx,
@@ -387,40 +168,7 @@ function Dashboard() {
     fundMeta: d.fundMeta,
   });
 
-  const currentPermissionId =
-    tab === "liquidity"
-      ? "liquidity"
-      :
-    tab === "real-estate"
-      ? (realEstateTab === "resum" ? "real-estate" : realEstateTab === "altres-vehicles" ? "re-altres" : "re-directe")
-      : tab === "mercats-publics"
-        ? (
-          mercatsPublicsTab === "transaccions" && activeNavItem === "tx-mp" ? "tx-mp"
-          :
-          mercatsPublicsTab === "rv" ? "mp-rv"
-          : mercatsPublicsTab === "rf" ? "mp-rf"
-          : mercatsPublicsTab === "posicions" ? "mp-posicions"
-          : mercatsPublicsTab === "transaccions" ? "mp-transaccions"
-          : mercatsPublicsTab === "traçabilitat" ? "mp-traçabilitat"
-          : "mp-resum"
-        )
-        : tab === "tx-re"
-          ? "tx-re"
-          : tab === "tx-alt"
-          ? "tx-alt"
-          : tab === "searchers"
-            ? "alternatives"
-            : tab === "cash-model"
-              ? "cash-model"
-              : tab === "alt-cash-model"
-              ? "cash-model"
-              : tab === "re-cash-model"
-              ? "cash-model"
-              : tab === "companies"
-              ? "companies"
-              : tab === "inversions"
-                ? "inversions"
-                : "fons";
+  const currentPermissionId = resolvePermissionId({ tab, realEstateTab, mercatsPublicsTab, activeNavItem });
 
 
 
@@ -446,46 +194,10 @@ function Dashboard() {
   }), [altAllTx, altAllCompr, d.reTx, d.reCompr, canAccessSection, pmSummary]);
 
 
-
-  const estCfg = {
-    "Fons Primari": { color:tc.navy, bg: dark ? "#112030" : "#E6EDF3" },
-    "Fons Secundari": { color:tc.navyLight, bg: dark ? "#15263A" : "#EAF0F6" },
-    "Fons de Fons": { color:tc.greenDark, bg: dark ? "#0A2010" : "#E8F8E8" },
-    "Fons de Coinversió": { color:"#0F766E", bg: dark ? "#0B1F1D" : "#DFF7F3" },
-    "Search Fund - Cerca": { color:"#2563A8", bg: dark ? "#0A1828" : "#DDEAF8" },
-    "Search Fund - Participada": { color:"#1D4ED8", bg: dark ? "#101B3D" : "#E0E7FF" },
-    "Participada (Altres)": { color:"#7A5A00", bg: dark ? "#1A1200" : "#FFF5D6" },
-    "Fons Real Estate": { color:tc.purple||"#9B7CC8", bg: dark ? "#20163A" : "#F3EEF8" },
-  };
-  const geoCfg = {
-    "Nord America":   { color: tc.navy },
-    "Nord d'Europa":  { color: tc.green },
-    "Sud d'Europa":   { color: "#C9822E" },
-    "Asia":           { color: "#7A5AA6" },
-    "LatAm":          { color: "#2E9C8E" },
-    "Sense classificar": { color: tc.textLight },
-  };
-  const sectorCfg = {
-    "Tecnologia":                    { color: tc.navy },
-    "Consum":                        { color: "#C9822E" },
-    "Salut":                         { color: "#3AA76D" },
-    "Industrials / Materials":       { color: "#6B7280" },
-    "Energy":                        { color: "#E0A93B" },
-    "Telecoms":                      { color: "#7A5AA6" },
-    "Finance":                       { color: "#2E6FB0" },
-    "Food & Agriculture":            { color: "#8FA31E" },
-    "Serveis":                       { color: "#2E9C8E" },
-    "Real Estate & Infraestructure": { color: tc.purple || "#9B7CC8" },
-    "Sense classificar":             { color: tc.textLight },
-  };
-  const catCfg = {
-    "Capital Call":   { color:tc.navy,      bg: dark ? "#112030" : "#E6EDF3" },
-    "Distribució":    { color:tc.green,     bg: dark ? "#0A2010" : "#E8F8E8" },
-    "Retorn Capital": { color:tc.greenDark, bg: dark ? "#0A2010" : "#D6EAD6" },
-    "Compromís":      { color:tc.navyLight, bg: dark ? "#112030" : "#E6EDF3" },
-    "Altres":         { color:tc.textLight, bg: tc.bgAlt },
-  };
-
+  const { estCfg, geoCfg, sectorCfg, catCfg } = useMemo(
+    () => buildDashboardPaletteConfig(tc, dark),
+    [tc, dark]
+  );
   const SECTIONS = useMemo(() => visibleSections(canAccessSection), [canAccessSection]);
   const SUPRA = useMemo(() => visibleSupra(canAccessSection), [canAccessSection]);
   const REAL_ESTATE_NAV = useMemo(() => visibleRealEstateNav(canAccessSection), [canAccessSection]);
@@ -509,76 +221,14 @@ function Dashboard() {
   }, [tab, canAccessInici, canAccessSection, handleNavigate]);
 
 
-  const keyboardNavItems = useMemo(() => {
-    const candidates = [
-      canAccessInici ? { id: "home", label: "Inici" } : null,
-      canAccessSection("fons") ? { id: "alt-resum", label: "Alternatius" } : null,
-      canAccessSection("fons") ? { id: "fons", label: "Fons" } : null,
-      canAccessSection("alternatives") ? { id: "searchers", label: "Searchers" } : null,
-      canAccessSection("companies") ? { id: "companies", label: "Participades" } : null,
-      canAccessSection("cash-model") ? { id: "alt-cash-model", label: "Model Caixa" } : null,
-      canAccessSection("real-estate") ? { id: "re-resum", label: "Real Estate" } : null,
-      canAccessSection("re-altres") ? { id: "re-altres", label: "Vehicles RE" } : null,
-      canAccessSection("mercats-publics") ? { id: "mp-resum", label: "Mercats Publics" } : null,
-      canAccessSection("mp-rv") ? { id: "mp-rv", label: "Renda Variable" } : null,
-      canAccessSection("mp-rf") ? { id: "mp-rf", label: "Renda Fixa" } : null,
-      canAccessSection("mp-posicions") ? { id: "mp-posicions", label: "Posicions MP" } : null,
-      canAccessSection("mp-transaccions") ? { id: "mp-transaccions", label: "Transaccions MP" } : null,
-      canAccessSection("tx-alt") ? { id: "tx-alt", label: "Tx Alternatius" } : null,
-      canAccessSection("tx-re") ? { id: "tx-re", label: "Tx RE" } : null,
-      canAccessSection("tx-mp") ? { id: "tx-mp", label: "Tx MP" } : null,
-      (isAdmin || canAccessSection("liquidity")) ? { id: "liquidity", label: "Liquiditat" } : null,
-    ].filter(Boolean);
-    const seen = new Set();
-    return candidates.filter((item) => {
-      if (seen.has(item.id)) return false;
-      seen.add(item.id);
-      return true;
-    });
-  }, [canAccessInici, canAccessSection, isAdmin]);
-
-
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      if (event.defaultPrevented) return;
-
-      const key = event.key.toLowerCase();
-      const isShortcutModifier = event.ctrlKey || event.metaKey;
-
-      if (key === "escape" && document.activeElement === globalSearchRef.current) {
-        globalSearchRef.current?.blur();
-        event.preventDefault();
-        return;
-      }
-
-      if (isKeyboardEditableTarget(event.target)) return;
-
-      if (key === "/" && !isShortcutModifier && !event.altKey) {
-        event.preventDefault();
-        globalSearchRef.current?.focus();
-        globalSearchRef.current?.select();
-        return;
-      }
-
-      if (event.altKey || isShortcutModifier) return;
-
-      if (key === "[" || key === "]") {
-        if (!keyboardNavItems.length) return;
-        event.preventDefault();
-        const currentIndex = keyboardNavItems.findIndex((item) => item.id === activeNavItem);
-        const direction = key === "]" ? 1 : -1;
-        const nextIndex = currentIndex >= 0
-          ? (currentIndex + direction + keyboardNavItems.length) % keyboardNavItems.length
-          : (direction === 1 ? 0 : keyboardNavItems.length - 1);
-        handleNavigate(keyboardNavItems[nextIndex].id);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [activeNavItem, handleNavigate, keyboardNavItems]);
+  useDashboardKeyboardNav({
+    canAccessInici,
+    canAccessSection,
+    isAdmin,
+    activeNavItem,
+    handleNavigate,
+    globalSearchRef,
+  });
 
   return (
     <CapitalCallModalProvider defaultVehicleCurrency={defaultVehicleCurrency}>

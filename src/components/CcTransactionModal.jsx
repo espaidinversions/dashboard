@@ -67,7 +67,7 @@ export function CcTransactionModal({
     },
     { key: "data", label: "Data", type: "date", defaultValue: isEdit ? editRow.data : new Date().toISOString().slice(0, 10) },
     {
-      key: "divisa", label: "Divisa", type: "select", options: ["EUR", "USD", "SEK"],
+      key: "divisa", label: "Divisa", type: "select", options: ["EUR", "USD", "SEK", "GBP"],
       defaultValue: isEdit ? editRow.divisa : (addDefaults?.divisa ?? defaultVehicleCurrency(addFons)),
     },
     {

@@ -2,6 +2,7 @@
 /** @typedef {import("./publicMarketsTypes.js").PMValuesByIsin} PMValuesByIsin */
 /** @typedef {import("./publicMarketsTypes.js").PMValuePoint} PMValuePoint */
 import { canonicalPmCustodian } from "./pmClassification.js";
+import { normalizeIsin } from "./pmIdentity.js";
 
 const VALID_TIPUS = new Set(["RV", "RF"]);
 
@@ -39,9 +40,9 @@ function buildPositionLookup(positions = []) {
   const byKey = new Map();
   const byIsin = new Map();
   (positions ?? []).forEach(position => {
-    if (!position?.isin) return;
-    const isin = String(position.isin).trim();
-    const custodian = String(position.custodian ?? "").trim();
+    const isin = normalizeIsin(position?.isin);
+    if (!isin) return;
+    const custodian = canonicalPmCustodian(position.custodian);
     byKey.set(`${isin}||${custodian}`, position);
     if (!byIsin.has(isin)) byIsin.set(isin, position);
   });
@@ -63,35 +64,42 @@ export function summarizeLatestPmValues(
   const byManager = {};
   const byType = {};
   let total = 0;
-  let unmappedTotal = 0;
+  // Two independent reconciliation dimensions — they must NOT share an
+  // accumulator (a position can be unrouted by manager AND by type, which would
+  // otherwise double-count its value).
+  let unmappedByManager = 0;
+  let unmappedByType = 0;
 
-  Object.entries(nestedValues ?? {}).forEach(([isin, byCustodian]) => {
-    Object.entries(byCustodian ?? {}).forEach(([custodian, series]) => {
+  Object.entries(nestedValues ?? {}).forEach(([rawIsin, byCustodian]) => {
+    const isin = normalizeIsin(rawIsin);
+    Object.entries(byCustodian ?? {}).forEach(([rawCustodian, series]) => {
       const latest = latestSeriesValue(series);
       if (latest == null) return;
 
       total += latest;
 
-      const meta =
-        byKey.get(`${isin}||${String(custodian ?? "").trim()}`) ??
-        byIsin.get(isin) ??
-        { isin, custodian };
+      const custodian = canonicalPmCustodian(rawCustodian);
+      const exact = byKey.get(`${isin}||${custodian}`);
+      const isinMeta = byIsin.get(isin);
+      // Fall back to any position with the same ISIN for tipus/nom, but keep
+      // THIS series' custodian so value routes to the correct manager/bank.
+      const meta = exact ?? (isinMeta ? { ...isinMeta, custodian } : { isin, custodian });
 
       const manager = managerRouter(meta, isin);
       if (manager) byManager[manager] = (byManager[manager] ?? 0) + latest;
-      else unmappedTotal += latest;
+      else unmappedByManager += latest;
 
       const tipus = String(meta?.tipus ?? "").trim();
       if (VALID_TIPUS.has(tipus)) byType[tipus] = (byType[tipus] ?? 0) + latest;
-      else if (tipus) unmappedTotal += latest;
+      else unmappedByType += latest;
     });
   });
 
   if (typeof import.meta.env !== "undefined" && import.meta.env.DEV) {
     const classified = (byType.RV ?? 0) + (byType.RF ?? 0);
-    const gap = total - classified - unmappedTotal;
+    const gap = total - classified - unmappedByType;
     if (Math.abs(gap) > 1) {
-      console.warn(`[PM] byType gap: ${gap.toFixed(0)}€ unaccounted (total=${total.toFixed(0)}, RV=${(byType.RV ?? 0).toFixed(0)}, RF=${(byType.RF ?? 0).toFixed(0)}, unmapped=${unmappedTotal.toFixed(0)})`);
+      console.warn(`[PM] byType gap: ${gap.toFixed(0)}€ unaccounted (total=${total.toFixed(0)}, RV=${(byType.RV ?? 0).toFixed(0)}, RF=${(byType.RF ?? 0).toFixed(0)}, unmappedByType=${unmappedByType.toFixed(0)})`);
     }
   }
 
@@ -99,7 +107,10 @@ export function summarizeLatestPmValues(
     total,
     byManager,
     byType,
-    unmappedTotal,
+    unmappedByManager,
+    unmappedByType,
+    // Backwards-compatible alias — the classification (byType) gap.
+    unmappedTotal: unmappedByType,
   };
 }
 

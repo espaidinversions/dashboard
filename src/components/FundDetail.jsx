@@ -7,7 +7,8 @@ import { ThemeProvider, useTheme } from "../theme.js";
 import { fmtM, fmtSignedM, fmtSignedNative, formatMultiple, multipleColor } from "../utils.js";
 import { Badge, Logo, KpiCard, AddRowModal, SectionHeader, tableCardStyle } from "./SharedComponents.jsx";
 import { FundClassificationCard } from "./funds/FundClassificationCard.jsx";
-import { loadCapitalCalls, loadFundMeta, updateCapitalCall } from "../db.js";
+import { FundClassificationEditModal } from "./funds/FundClassificationEditModal.jsx";
+import { loadCapitalCalls, loadFundMeta, updateCapitalCall, saveFundClassification } from "../db.js";
 import { buildFundDetailSnapshot } from "../data/fundDetailModel.js";
 import { CAPITAL_CALL_TIPUS_OPTIONS, CAPITAL_CALL_TIPUS_GROUPED, DISTRIBUCIONS_SET, inferCapitalCallCategoryFromTipus } from "../data/capitalCallTipusModel.js";
 import { useAuth } from "../auth.jsx";
@@ -24,6 +25,7 @@ function FundDetailInner() {
   const [txFilters, setTxFilters] = useState({ data: "", tipus: "Tots", import: "" });
   const [chartView, setChartView] = useState("annual");
   const [editingRow, setEditingRow] = useState(null);
+  const [editingClassification, setEditingClassification] = useState(false);
 
   // 2. All useEffect / useMemo calls — hoisted unconditionally before any return
   useEffect(() => {
@@ -43,7 +45,7 @@ function FundDetailInner() {
   const txs = detail?.txs ?? [];
 
   // Destructure with ?? {} so these are safe before detail loads
-  const { fundName, fundId, section, est, geography, sector, strategy, underlyingMix, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, irrFund, txLog, recallablePool } = detail ?? {};
+  const { fundName, fundId, section, est, geography, sector, strategy, allocation, underlyingMix, compromis, calls, dist, net, utilPct, tvpiFund, dpiFund, rvpiFund, irrFund, txLog, recallablePool } = detail ?? {};
 
   const filteredTxLog = useMemo(() => (txLog ?? []).filter((r) => {
     if (txFilters.data && !String(r.data ?? "").includes(txFilters.data)) return false;
@@ -232,7 +234,33 @@ function FundDetailInner() {
         </div>
 
         {/* Classification: vehicle class + underlying fund-type mix + geography / vertical / strategy */}
-        <FundClassificationCard tc={tc} est={est} geography={geography} sector={sector} strategy={strategy} fundTypeMix={underlyingMix} />
+        <FundClassificationCard
+          tc={tc}
+          est={est}
+          geography={geography}
+          sector={sector}
+          strategy={strategy}
+          fundTypeMix={underlyingMix}
+          onEdit={canEdit ? () => setEditingClassification(true) : undefined}
+        />
+        {editingClassification && (
+          <FundClassificationEditModal
+            initial={{ vehicleEst: est, allocation, geography, sector, strategy }}
+            onClose={() => setEditingClassification(false)}
+            onSave={async (payload, setError) => {
+              const { error } = await saveFundClassification({ id: fundId, fons: fundName }, payload);
+              if (error) {
+                console.error("saveFundClassification failed:", error);
+                setError("No s'ha pogut desar la classificació. Torna-ho a provar.");
+                return;
+              }
+              const [freshCC, freshMeta] = await Promise.all([loadCapitalCalls(), loadFundMeta()]);
+              if (Array.isArray(freshCC)) { setRawCC(freshCC); window.dispatchEvent(new CustomEvent("tc-rawcc-updated")); }
+              if (Array.isArray(freshMeta)) setFundMeta(freshMeta);
+              setEditingClassification(false);
+            }}
+          />
+        )}
 
         {/* Transaction log */}
         <div style={{ ...tableCardStyle(tc), overflowX: "auto" }}>

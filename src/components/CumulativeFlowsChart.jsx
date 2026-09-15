@@ -84,7 +84,9 @@ export function CumulativeFlowsChart({
 
     // Rank ISINs by total invested (for groupBy="position")
     const isinTotals = {};
-    buys.forEach(t => { isinTotals[t.isin] = (isinTotals[t.isin] ?? 0) + t.valueEur; });
+    // Use _flowValue (estimated when valueEur is missing) so buys without a
+    // recorded valueEur are not dropped to NaN and mis-ranked into "altres".
+    buys.forEach(t => { isinTotals[t.isin] = (isinTotals[t.isin] ?? 0) + t._flowValue; });
     const topIsins = Object.entries(isinTotals)
       .sort((a, b) => b[1] - a[1])
       .slice(0, topN)

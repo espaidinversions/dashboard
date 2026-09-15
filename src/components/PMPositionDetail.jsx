@@ -1,18 +1,22 @@
 import { useMemo, useState, useEffect } from "react";
-import ReactECharts from "../ReactECharts.jsx";
-import { ecTheme } from "../echartsTheme.js";
 import { useParams, useNavigate } from "react-router-dom";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
-import { TC_LIGHT, useTheme } from "../theme.js";
+import { useTheme } from "../theme.js";
 import { fmtM, yearsHeld, cagr } from "../utils.js";
 import { PM_TER } from "../generated/publicMarkets/pmTer.js";
-import { loadPMOverrides, loadPMPositionOverrides, upsertPositionMeta, upsertTerOverride } from "../db.js";
+import { loadPMOverrides, loadPMPositionOverrides } from "../db.js";
 import { CumulativeFlowsChart } from "./CumulativeFlowsChart.jsx";
 import { PriceHistoryChart } from "./PriceHistoryChart.jsx";
 import { ALL_PRICE_SERIES } from "../data/allPrices.js";
 import { buildClosedTransactionSummaryByIsinCustodian, enrichClosedPosition } from "../data/pmClosedUtils.js";
 import { findActivePositionByRouteId, findClosedPositionByRouteId, makeIsinCustodianKey } from "../data/pmPositionRouting.js";
 import { KpiCard, SectionHeader } from "./SharedComponents.jsx";
+import { rendPct } from "../data/pmReturns.js";
+import { PositionTxHistory } from "./publicMarkets/PositionTxHistory.jsx";
+import { PositionMetaEditor } from "./publicMarkets/PositionMetaEditor.jsx";
+import { PositionAnnualReturnsChart } from "./publicMarkets/PositionAnnualReturnsChart.jsx";
+import { PositionCostBreakdown } from "./publicMarkets/PositionCostBreakdown.jsx";
+import { PositionSinceInception } from "./publicMarkets/PositionSinceInception.jsx";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 const PM_CLOSED = PM_MODEL.holdings.closed;
@@ -23,15 +27,6 @@ const PM_POSITION_ID_ALIASES = PM_MODEL.metadata.positionIdAliases;
 
 const ISIN_RE = /([A-Z]{2}[A-Z0-9]{10})/;
 const cleanIsin = raw => (ISIN_RE.exec(String(raw ?? "").toUpperCase())?.[1]) ?? raw;
-
-function InfoRow({ label, value, tc = TC_LIGHT }) {
-  return (
-    <tr>
-      <td style={{ padding: "6px 0", color: tc.textLight, fontSize: 11, paddingRight: 24, textTransform: "uppercase", letterSpacing: "0.06em", fontWeight: 600 }}>{label}</td>
-      <td style={{ padding: "6px 0", fontSize: 12, fontFamily: "'DM Mono',monospace" }}>{value ?? "—"}</td>
-    </tr>
-  );
-}
 
 function PMPositionDetail() {
   const { id } = useParams();
@@ -67,21 +62,9 @@ function PMPositionDetail() {
     return () => { cancelled = true; };
   }, [isin]);
 
-  if (!p) {
-    return (
-      <div style={{ padding: "60px 32px", textAlign: "center" }}>
-        <div style={{ fontSize: 14, color: tc.textLight, marginBottom: 16 }}>Posició no trobada</div>
-        <button onClick={() => navigate(-1)}
-          style={{ background: tc.navy, color: "#fff", border: "none", borderRadius: 6,
-                   padding: "8px 20px", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
-          ← Tornar
-        </button>
-      </div>
-    );
-  }
-
-  // Apply financial overrides (pm_position_overrides) on top of static data — mirrors HoldingsTable merge
-  if (posOverride) {
+  // Apply financial overrides (pm_position_overrides) before any hook reads p —
+  // mirrors the HoldingsTable merge.
+  if (posOverride && p) {
     const merged = { ...p };
     if (posOverride.valorMercat != null) merged.valorMercat = posOverride.valorMercat;
     if (posOverride.rendInici   != null) merged.rendInici   = posOverride.rendInici;
@@ -90,26 +73,14 @@ function PMPositionDetail() {
     p = merged;
   }
 
-  // Apply overrides on top of static data
-  const displayNom      = metaOverride.nom      ?? p.nom;
-  const displayGestor   = metaOverride.gestor   ?? p.gestor;
-  const displayCustodian = metaOverride.custodian ?? p.custodian;
+  const isAbelFont = (metaOverride.gestor ?? p?.gestor) === "Abel Font";
+  const ter        = terOverride ?? PM_TER[isin] ?? p?.costAnual ?? 0;
 
-  const isAbelFont  = displayGestor === "Abel Font";
-  const pnl         = p.costEur != null ? (p.valorMercat ?? 0) - p.costEur : null;
-  const pnlColor    = pnl == null ? tc.textLight : pnl > 0 ? tc.green : pnl < 0 ? tc.red : tc.textLight;
-
-  const yh          = yearsHeld(p.dataCompra, isClosed && p.any ? `${p.any}-12-31` : undefined);
-  const ter         = terOverride ?? PM_TER[isin] ?? p.costAnual ?? 0;
-  const netInici    = p.rendInici != null
-    ? (isAbelFont ? p.rendInici - ter * yh : p.rendInici)
-    : null;
-
-  const costPct = p.costEur != null && p.valorMercat > 0
-    ? Math.min(p.costEur / p.valorMercat * 100, 100) : p.costEur != null ? 100 : 0;
-  const gainPct = Math.max(100 - costPct, 0);
-
+  // Hooks below MUST run on every render (Rules of Hooks): keep them above the
+  // not-found guard and make each null-safe. Returning early before these would
+  // change the hook count between renders and crash the view.
   const returnData = useMemo(() => {
+    if (!p) return [];
     const endYear = new Date().getFullYear();
     const YEARS = Array.from({ length: endYear - 2019 + 1 }, (_, i) => ({
       label: String(2019 + i),
@@ -117,23 +88,24 @@ function PMPositionDetail() {
     }));
     return YEARS
       .filter(y => p[y.field] != null)
-      .map(y => ({
-        year:  y.label,
-        brut:  p[y.field],
-        net:   isAbelFont ? p[y.field] - ter : null,
-      }));
-  }, [p, isAbelFont]);
+      .map(y => {
+        // brut is normalized to percent form; net subtracts annual TER (also %).
+        const brut = rendPct(p, y.field);
+        return { year: y.label, brut, net: isAbelFont && brut != null ? brut - ter : null };
+      });
+  }, [p, isAbelFont, ter]);
 
-  const positionTxs = useMemo(
-    () => PM_TRANSACTIONS.filter(t => {
+  const positionTxs = useMemo(() => {
+    if (!isin) return [];
+    return PM_TRANSACTIONS.filter(t => {
       if (t.isin !== isin) return false;
       if (!positionKey) return true;
       return makeIsinCustodianKey(t.isin, t.custodian) === positionKey;
-    }),
-    [isin, positionKey]
-  );
+    });
+  }, [isin, positionKey]);
 
   const positionValues = useMemo(() => {
+    if (!isin) return [];
     const custodianData = PM_VALUES[isin] ?? (isClosed ? PM_CLOSED_VALUES[isin] : null);
     if (!custodianData) return [];
     const monthMap = new Map();
@@ -149,6 +121,32 @@ function PMPositionDetail() {
       .map(([month, value]) => ({ date: month, value }));
   }, [isin, isClosed, positionKey]);
 
+  if (!p) {
+    return (
+      <div style={{ padding: "60px 32px", textAlign: "center" }}>
+        <div style={{ fontSize: 14, color: tc.textLight, marginBottom: 16 }}>Posició no trobada</div>
+        <button onClick={() => navigate(-1)}
+          style={{ background: tc.navy, color: "#fff", border: "none", borderRadius: 6,
+                   padding: "8px 20px", cursor: "pointer", fontFamily: "inherit", fontSize: 13 }}>
+          ← Tornar
+        </button>
+      </div>
+    );
+  }
+
+  // Overrides already applied above; compute the remaining display-only values.
+  const displayNom       = metaOverride.nom       ?? p.nom;
+  const displayCustodian = metaOverride.custodian ?? p.custodian;
+  const pnl         = p.costEur != null ? (p.valorMercat ?? 0) - p.costEur : null;
+  const pnlColor    = pnl == null ? tc.textLight : pnl > 0 ? tc.green : pnl < 0 ? tc.red : tc.textLight;
+  const yh          = yearsHeld(p.dataCompra, isClosed && p.any ? `${p.any}-12-31` : undefined);
+  const netInici    = p.rendInici != null
+    ? (isAbelFont ? p.rendInici - ter * yh : p.rendInici)
+    : null;
+  const costPct = p.costEur != null && p.valorMercat > 0
+    ? Math.min(p.costEur / p.valorMercat * 100, 100) : p.costEur != null ? 100 : 0;
+  const gainPct = Math.max(100 - costPct, 0);
+
   const secLabel    = { fontSize: 10, letterSpacing: "0.09em", textTransform: "uppercase", color: tc.textLight, fontWeight: 600, marginBottom: 12 };
   const card        = { background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "20px 24px", boxShadow: "0 2px 8px rgba(0,0,0,.06)" };
 
@@ -160,7 +158,6 @@ function PMPositionDetail() {
   const cagrNet  = isAbelFont ? cagr(netInici, yh) : null;
   const cagrBrutColor = cagrBrut == null ? tc.textLight : cagrBrut > 0 ? tc.green : tc.red;
   const cagrNetColor  = cagrNet  == null ? tc.textLight : cagrNet  > 0 ? tc.green : tc.red;
-  const t = ecTheme(tc);
 
   return (
     <div style={{ padding: "28px 32px 60px", maxWidth: 960, margin: "0 auto", display: "flex", flexDirection: "column", gap: 20 }}>
@@ -287,165 +284,25 @@ function PMPositionDetail() {
             <span><span style={{ color: (pnl ?? 0) >= 0 ? tc.green : tc.red }}>■</span> {(pnl ?? 0) >= 0 ? "Guany" : "Pèrdua"} {gainPct.toFixed(1)}% · <span style={{ fontFamily: "'DM Mono',monospace" }}>{pnl != null ? fmtM(Math.abs(pnl)) : "—"}</span></span>
           </div>
 
-          {returnData.length > 0 && (
-            <>
-              <SectionHeader title={`Rendiments anuals${isAbelFont ? " · brut vs net TER" : ""}`} tc={tc} />
-              <ReactECharts
-                style={{ width: "100%", height: 200 }}
-                opts={{ renderer: "canvas" }}
-                option={{
-                  grid: { top: 4, right: 16, bottom: 4, left: 0, containLabel: true },
-                  tooltip: {
-                    ...t.tooltip,
-                    trigger: "axis",
-                    formatter: params => {
-                      const label = params[0]?.axisValue ?? "";
-                      let html = `<div style="font-weight:600;margin-bottom:4px">${label}</div>`;
-                      params.forEach(p => {
-                        if (p.value == null) return;
-                        html += `<div>${p.marker}${p.seriesName === "brut" ? "Brut" : "Net TER"}: ${(p.value >= 0 ? "+" : "") + p.value.toFixed(2)}%</div>`;
-                      });
-                      return html;
-                    },
-                  },
-                  xAxis: {
-                    type: "category",
-                    data: returnData.map(d => d.year),
-                    axisLabel: { ...t.axisLabel, fontSize: 10 },
-                    axisLine: t.axisLine,
-                    axisTick: t.axisTick,
-                  },
-                  yAxis: {
-                    type: "value",
-                    axisLabel: { ...t.axisLabel, formatter: v => `${v >= 0 ? "+" : ""}${v.toFixed(1)}%` },
-                    splitLine: t.splitLine,
-                    axisLine: t.axisLine,
-                    axisTick: t.axisTick,
-                  },
-                  series: [
-                    {
-                      name: "brut",
-                      type: "line",
-                      data: returnData.map(d => d.brut),
-                      lineStyle: { color: tc.navy, width: 2 },
-                      itemStyle: { color: tc.navy },
-                      symbol: "circle",
-                      symbolSize: 6,
-                      connectNulls: true,
-                    },
-                    ...(isAbelFont ? [{
-                      name: "net",
-                      type: "line",
-                      data: returnData.map(d => d.net),
-                      lineStyle: { color: tc.green, width: 2 },
-                      itemStyle: { color: tc.green },
-                      symbol: "circle",
-                      symbolSize: 6,
-                      connectNulls: true,
-                    }] : []),
-                    {
-                      name: "_zero",
-                      type: "line",
-                      data: returnData.map(() => 0),
-                      symbol: "none",
-                      silent: true,
-                      lineStyle: { opacity: 0 },
-                      markLine: {
-                        symbol: "none",
-                        data: [{ yAxis: 0 }],
-                        lineStyle: { color: tc.border, width: 1 },
-                        label: { show: false },
-                      },
-                    },
-                  ],
-                }}
-              />
-            </>
-          )}
+          <PositionAnnualReturnsChart returnData={returnData} isAbelFont={isAbelFont} tc={tc} />
         </div>
 
         {/* RIGHT: IRR + cost breakdown */}
         <div style={{ flex: "0 0 260px", display: "flex", flexDirection: "column", gap: 16 }}>
 
           {/* Since-inception returns: TWR + CAGR (MWR) */}
-          <div style={card}>
-            <SectionHeader title="Des d'inici" tc={tc} />
-
-            {/* TWR row */}
-            <div style={{ display: "flex", gap: 16, marginBottom: 16 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
-                  TWR {isAbelFont ? "brut" : "total"}
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 700, color: rendIniciColor, fontFamily: "'DM Mono',monospace", letterSpacing: "-0.02em" }}>
-                  {p.rendInici != null ? (p.rendInici >= 0 ? "+" : "") + p.rendInici.toFixed(2) + "%" : "—"}
-                </div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 4 }}>
-                  MWR / CAGR
-                </div>
-                <div style={{ fontSize: 26, fontWeight: 700, color: cagrBrutColor, fontFamily: "'DM Mono',monospace", letterSpacing: "-0.02em" }}>
-                  {cagrBrut != null ? (cagrBrut >= 0 ? "+" : "") + cagrBrut.toFixed(2) + "%" : "—"}
-                </div>
-              </div>
-            </div>
-            <div style={{ fontSize: 10, color: tc.textLight, marginBottom: isAbelFont && netInici != null ? 12 : 0 }}>
-              {yh.toFixed(1)} anys · TWR acumulat vs CAGR anualitzat
-            </div>
-
-            {/* Net row (Abel Font only) */}
-            {isAbelFont && netInici != null && (
-              <div style={{ borderTop: `1px solid ${tc.border}`, paddingTop: 12, marginTop: 4 }}>
-                <div style={{ fontSize: 10, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 8 }}>Net TER estimat</div>
-                <div style={{ display: "flex", gap: 16 }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 2 }}>TWR net</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: netIniciColor, fontFamily: "'DM Mono',monospace" }}>
-                      {(netInici >= 0 ? "+" : "") + netInici.toFixed(2) + "%"}
-                    </div>
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 10, color: tc.textLight, marginBottom: 2 }}>CAGR net</div>
-                    <div style={{ fontSize: 20, fontWeight: 700, color: cagrNetColor, fontFamily: "'DM Mono',monospace" }}>
-                      {cagrNet != null ? (cagrNet >= 0 ? "+" : "") + cagrNet.toFixed(2) + "%" : "—"}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ fontSize: 10, color: tc.textLight, marginTop: 4 }}>
-                  Brut − {ter.toFixed(2)}% TER × {yh.toFixed(1)} anys
-                </div>
-              </div>
-            )}
-          </div>
+          <PositionSinceInception
+            p={p} ter={ter} yh={yh} netInici={netInici} isAbelFont={isAbelFont}
+            rendIniciColor={rendIniciColor} netIniciColor={netIniciColor}
+            cagrBrut={cagrBrut} cagrNet={cagrNet} cagrBrutColor={cagrBrutColor} cagrNetColor={cagrNetColor}
+            tc={tc} card={card}
+          />
 
           {/* Cost breakdown */}
-          <div style={{ ...card, flex: 1 }}>
-            <SectionHeader title="Detall de cost" tc={tc} />
-            <table>
-              <tbody>
-                <InfoRow label="Unitats"           value={p.unitats != null ? p.unitats.toLocaleString("ca-ES") : null} tc={tc} />
-                <InfoRow label="Preu d'entrada"    value={p.costInici != null ? p.costInici.toFixed(4) : null} tc={tc} />
-                <InfoRow label="Cost total"        value={p.costEur != null ? fmtM(p.costEur) : null} tc={tc} />
-                <InfoRow label="TER anual"
-                  value={ter > 0 ? (
-                    <span>{ter.toFixed(2)}%{terOverride != null && <span title="TER manual (override)" style={{ fontSize: 8, fontWeight: 700, background: "#FFF3E0", color: "#E65100", borderRadius: 4, padding: "1px 4px", marginLeft: 5 }}>OV</span>}</span>
-                  ) : null}
-                  tc={tc} />
-                <InfoRow label="Cost anual"
-                  value={ter > 0 && p.costEur != null
-                    ? fmtM(p.costEur * ter / 100) + "/any" : null}
-                  tc={tc} />
-                <InfoRow label="Data compra"       value={p.dataCompra} tc={tc} />
-                {isClosed && p.any && <InfoRow label="Any tancament" value={String(p.any)} tc={tc} />}
-              </tbody>
-            </table>
-            {isAbelFont && (
-              <div style={{ fontSize: 10, color: tc.textLight, marginTop: 12, fontStyle: "italic" }}>
-                Gestió externa — el TER reflecteix el cost de gestió del vehicle.
-              </div>
-            )}
-          </div>
+          <PositionCostBreakdown
+            p={p} ter={ter} terOverride={terOverride} isAbelFont={isAbelFont}
+            isClosed={isClosed} tc={tc} card={card}
+          />
 
         </div>
       </div>
@@ -463,184 +320,3 @@ function PMPositionDetail() {
 }
 
 export default PMPositionDetail;
-
-function PositionTxHistory({ txs: scopedTxs = [], tc = TC_LIGHT, card }) {
-  const [sortDesc, setSortDesc] = useState(true);
-  const txs = useMemo(() => {
-    return [...scopedTxs].sort((a, b) => {
-      const cmp = (a.date ?? "").localeCompare(b.date ?? "");
-      return sortDesc ? -cmp : cmp;
-    });
-  }, [scopedTxs, sortDesc]);
-
-  return (
-    <div style={card}>
-      <SectionHeader
-        title="Moviments"
-        tc={tc}
-        action={txs.length > 0 ? (
-          <button onClick={() => setSortDesc(d => !d)} style={{
-            padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
-            border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textLight,
-          }}>{sortDesc ? "↓ Més recent" : "↑ Més antic"}</button>
-        ) : undefined}
-      />
-      {txs.length === 0 && (
-        <div style={{ fontSize: 12, color: tc.textLight, fontStyle: "italic" }}>Sense moviments registrats.</div>
-      )}
-      {txs.length > 0 && <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
-        <thead>
-          <tr>
-            {["Data", "Acció", "Units", "NAV", "Valor", "Custodi"].map(h => (
-              <th key={h} style={{
-                padding: "5px 10px", fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase",
-                color: tc.textLight, fontWeight: 600, borderBottom: `2px solid ${tc.border}`,
-                textAlign: h === "Custodi" ? "left" : "right", whiteSpace: "nowrap",
-              }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {txs.map(t => {
-            const isBuy = t.action === "buy";
-            return (
-              <tr key={t.id} style={{ borderBottom: `1px solid ${tc.border}` }}>
-                <td style={{ padding: "5px 10px", fontFamily: "'DM Mono',monospace", fontSize: 11, color: tc.textLight, textAlign: "right", whiteSpace: "nowrap" }}>{t.date}</td>
-                <td style={{ padding: "5px 10px", textAlign: "right" }}>
-                  <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 4,
-                    background: isBuy ? "#E8F8E8" : "#FDECEA",
-                    color:      isBuy ? "#1C6B1D" : "#C62828", fontWeight: 600 }}>
-                    {isBuy ? "Compra" : "Venda"}
-                  </span>
-                </td>
-                <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{t.units != null ? t.units.toLocaleString("ca-ES", { maximumFractionDigits: 0 }) : "—"}</td>
-                <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontSize: 11 }}>{t.nav != null ? t.nav.toFixed(2) : "—"}</td>
-                <td style={{ padding: "5px 10px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>{t.valueEur != null ? fmtM(t.valueEur) : "—"}</td>
-                <td style={{ padding: "5px 10px", fontSize: 11, color: tc.textLight }}>{t.custodian}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>}
-    </div>
-  );
-}
-
-// ── Position metadata editor ──────────────────────────────────
-const CUSTODIAN_OPTIONS = ["CaixaBank", "Bankinter", "Interactive Brokers", "JPMorgan", "UBS", "Abel Font", "WAM", "Andbank", "Altre"];
-
-function PositionMetaEditor({ p, isin, tc = TC_LIGHT, card, metaOverride, terOverride, onSaveMeta, onSaveTer }) {
-  const [open, setOpen] = useState(false);
-  const [form, setForm] = useState(null);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState(null);
-  const [saved, setSaved] = useState(false);
-
-  const startEdit = () => {
-    setForm({
-      nom:      metaOverride.nom      ?? p.nom      ?? "",
-      gestor:   metaOverride.gestor   ?? p.gestor   ?? "",
-      custodian: metaOverride.custodian ?? p.custodian ?? "CaixaBank",
-      ter:      String(terOverride ?? p.costAnual ?? ""),
-    });
-    setOpen(true);
-    setError(null);
-    setSaved(false);
-  };
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
-  const handleSave = async () => {
-    setSaving(true);
-    setError(null);
-    const metaFields = {};
-    if (form.nom      !== (p.nom      ?? "")) metaFields.nom      = form.nom || null;
-    if (form.gestor   !== (p.gestor   ?? "")) metaFields.gestor   = form.gestor || null;
-    if (form.custodian !== (p.custodian ?? "")) metaFields.custodian = form.custodian || null;
-
-    const terVal = form.ter !== "" ? parseFloat(form.ter) : null;
-
-    const [r1, r2] = await Promise.all([
-      Object.keys(metaFields).length ? upsertPositionMeta(isin, metaFields) : Promise.resolve({ error: null }),
-      terVal !== null && terVal !== (terOverride ?? p.costAnual ?? null) ? upsertTerOverride(isin, terVal) : Promise.resolve({ error: null }),
-    ]);
-
-    setSaving(false);
-    if (r1.error || r2.error) return setError((r1.error ?? r2.error).message);
-
-    if (Object.keys(metaFields).length) onSaveMeta(metaFields);
-    if (terVal !== null) onSaveTer(terVal);
-    setSaved(true);
-    setTimeout(() => setOpen(false), 800);
-  };
-
-  const inp = {
-    width: "100%", padding: "6px 10px", fontSize: 12,
-    border: `1.5px solid ${tc.border}`, borderRadius: 6,
-    background: tc.bg, color: tc.text, fontFamily: "inherit",
-    outline: "none", boxSizing: "border-box",
-  };
-
-  return (
-    <div style={card}>
-      <SectionHeader
-        title="Metadades"
-        tc={tc}
-        action={
-          <button onClick={open ? () => setOpen(false) : startEdit} style={{
-            padding: "3px 10px", borderRadius: 20, fontSize: 10, cursor: "pointer", fontFamily: "inherit",
-            border: `1.5px solid ${tc.border}`, background: "transparent", color: tc.textLight,
-          }}>{open ? "Cancel·lar" : "✏ Editar"}</button>
-        }
-      />
-
-      {!open && (
-        <div style={{ fontSize: 12, color: tc.textLight, marginTop: 8 }}>
-          {Object.keys(metaOverride).filter(k => metaOverride[k]).length === 0 && terOverride == null
-            ? "Sense sobreescriptures. Clica Editar per personalitzar nom, gestor, custodi o TER."
-            : <span style={{ color: tc.green }}>✓ Sobreescriptures actives: {[
-                metaOverride.nom && "Nom", metaOverride.gestor && "Gestor",
-                metaOverride.custodian && "Custodi", terOverride != null && "TER",
-              ].filter(Boolean).join(", ")}</span>
-          }
-        </div>
-      )}
-
-      {open && form && (
-        <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 2 }}>
-              <label style={{ fontSize: 10, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Nom</label>
-              <input value={form.nom} onChange={e => set("nom", e.target.value)} style={inp} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 10, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 3 }}>TER (%)</label>
-              <input type="number" step="0.001" value={form.ter} onChange={e => set("ter", e.target.value)} placeholder="0.00" style={inp} />
-            </div>
-          </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 10, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Gestor</label>
-              <input value={form.gestor} onChange={e => set("gestor", e.target.value)} style={inp} />
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 10, fontWeight: 600, color: tc.textLight, letterSpacing: "0.06em", textTransform: "uppercase", display: "block", marginBottom: 3 }}>Custodi</label>
-              <select value={form.custodian} onChange={e => set("custodian", e.target.value)} style={inp}>
-                {CUSTODIAN_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
-            </div>
-          </div>
-          {error && <div style={{ fontSize: 11, color: "#C62828", background: "#FDECEA", borderRadius: 6, padding: "6px 10px" }}>{error}</div>}
-          {saved && <div style={{ fontSize: 11, color: tc.green }}>✓ Guardat</div>}
-          <div style={{ display: "flex", justifyContent: "flex-end" }}>
-            <button onClick={handleSave} disabled={saving} style={{
-              padding: "7px 18px", borderRadius: 6, border: "none",
-              background: tc.navy, color: "#fff", cursor: saving ? "default" : "pointer",
-              fontFamily: "inherit", fontSize: 12, fontWeight: 600, opacity: saving ? 0.7 : 1,
-            }}>{saving ? "Guardant…" : "Guardar"}</button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}

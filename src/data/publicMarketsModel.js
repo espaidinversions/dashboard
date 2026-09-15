@@ -1,6 +1,7 @@
 import { PM_MODEL_GENERATED } from "../generated/publicMarkets/publicMarketsModel.generated.js";
 import { PM_POSITIONS_RAW_SUPPLEMENT } from "./publicMarketsRawSupplement.js";
 import { isPmPlaceholderPosition } from "./pmClassification.js";
+import { normalizeIsin } from "./pmIdentity.js";
 
 /**
  * @template T
@@ -37,13 +38,14 @@ function indexOne(rows, keyFn) {
 }
 
 const _suppByExact = new Map(
-  PM_POSITIONS_RAW_SUPPLEMENT.map(s => [`${s.isin}||${String(s.custodian ?? "").trim()}`, s])
+  PM_POSITIONS_RAW_SUPPLEMENT.map(s => [`${normalizeIsin(s.isin)}||${String(s.custodian ?? "").trim()}`, s])
 );
 const _suppByIsin = new Map(
-  PM_POSITIONS_RAW_SUPPLEMENT.map(s => [s.isin, s])
+  PM_POSITIONS_RAW_SUPPLEMENT.map(s => [normalizeIsin(s.isin), s])
 );
 function _applySupp(pos) {
-  const supp = _suppByExact.get(`${pos.isin}||${String(pos.custodian ?? "").trim()}`) ?? _suppByIsin.get(pos.isin);
+  const isin = normalizeIsin(pos.isin);
+  const supp = _suppByExact.get(`${isin}||${String(pos.custodian ?? "").trim()}`) ?? _suppByIsin.get(isin);
   if (!supp) return pos;
   const out = { ...pos };
   if (supp.tipus     !== undefined) out.tipus     = supp.tipus;
@@ -62,26 +64,27 @@ const _earliestBuyByIsin = (() => {
   const map = new Map();
   for (const tx of PM_TRANSACTIONS ?? []) {
     if (tx?.action !== "buy" || !tx?.isin || !tx?.date) continue;
-    const current = map.get(tx.isin);
-    if (!current || tx.date < current) map.set(tx.isin, tx.date);
+    const isin = normalizeIsin(tx.isin);
+    const current = map.get(isin);
+    if (!current || tx.date < current) map.set(isin, tx.date);
   }
   return map;
 })();
 
 const PM_POSITIONS = PM_POSITIONS_RAW.map(p =>
-  p.dataCompra ? p : { ...p, dataCompra: _earliestBuyByIsin.get(p.isin) ?? null }
+  p.dataCompra ? p : { ...p, dataCompra: _earliestBuyByIsin.get(normalizeIsin(p.isin)) ?? null }
 );
 
 const activeById = indexOne(PM_POSITIONS, row => row?.id);
-const activeByIsin = indexMany(PM_POSITIONS, row => row?.isin);
+const activeByIsin = indexMany(PM_POSITIONS, row => normalizeIsin(row?.isin));
 const activeByCustodian = indexMany(PM_POSITIONS, row => row?.custodian);
 const activeByIsinCustodian = indexMany(
   PM_POSITIONS,
-  row => (row?.isin ? `${row.isin}||${String(row?.custodian ?? "").trim()}` : null)
+  row => (row?.isin ? `${normalizeIsin(row.isin)}||${String(row?.custodian ?? "").trim()}` : null)
 );
-const closedByIsin = indexMany(PM_CLOSED, row => row?.isin);
+const closedByIsin = indexMany(PM_CLOSED, row => normalizeIsin(row?.isin));
 const transactionsById = indexOne(PM_TRANSACTIONS, row => row?.id);
-const transactionsByIsin = indexMany(PM_TRANSACTIONS, row => row?.isin);
+const transactionsByIsin = indexMany(PM_TRANSACTIONS, row => normalizeIsin(row?.isin));
 const transactionsByCustodian = indexMany(PM_TRANSACTIONS, row => row?.custodian);
 
 export const PM_MODEL = {

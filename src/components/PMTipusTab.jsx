@@ -4,12 +4,13 @@ import { ecTheme } from "../echartsTheme.js";
 import { Link } from "react-router-dom";
 import { PM_MODEL } from "../data/publicMarketsModel.js";
 import { WAM_POSITIONS } from "../data/wamPositions.js";
-import { TC_LIGHT, useTheme } from "../theme.js";
+import { useTheme } from "../theme.js";
 import { CHART_PALETTE } from "../chartColors.js";
 import { fmtM, usePersistedState, yearsHeld, cagr } from "../utils.js";
 import { makePmPositionRouteId } from "../data/pmPositionRouting.js";
-import { isEtfPosition } from "./publicMarkets/PublicMarketsShared.jsx";
+import { isEtfPosition, PctChip } from "./publicMarkets/PublicMarketsShared.jsx";
 import { canonicalPmCustodian, makeAggregatePosition, splitIbPositions, sumMarketValue } from "../data/pmClassification.js";
+import { rendPct } from "../data/pmReturns.js";
 
 const PM_POSITIONS = PM_MODEL.holdings.active;
 
@@ -46,17 +47,6 @@ const BUCKET_LABELS = {
 
 // Sections shown when toggle === "all"
 const ALL_SECTIONS = ["etfs", "fgp-caixa", "fgp-ubs", "fgp-jpmorgan", "fgp-bankinter", "rf-wam", "accions-ib"];
-
-// rendInici: always % form for all positions (script: (valorMercat-costEur)/costEur*100).
-// rend${year}: mixed conventions — ETf's Espai sheet stores direct % (34.24 = 34.24%),
-// Master/IB stores decimal fractions (0.199 = 19.9%). Heuristic: |v| > 0.5 → % form.
-function rendPct(pos, field) {
-  const v = pos[field];
-  if (v == null) return null;
-  if (field === "rendInici" || pos.custodian === "Andbank") return v;
-  if (Math.abs(v) > 150) return null;
-  return Math.abs(v) > 0.5 ? v : v * 100;
-}
 
 function getIbAggregate(kind) {
   const { etfs, stocks } = splitIbPositions(PM_POSITIONS);
@@ -117,19 +107,6 @@ function getBucketPositions(bucketId) {
         getWamAggregate(),
       ]);
   }
-}
-
-function PctChip({ v, tc = TC_LIGHT }) {
-  if (v == null) return <span style={{ fontSize: 11, color: tc.textLight, fontFamily: "'DM Mono',monospace" }}>—</span>;
-  const pos   = v > 0.05;
-  const neg   = v < -0.05;
-  const color = pos ? tc.green : neg ? tc.red : tc.textLight;
-  const bg    = pos ? (tc.green + "20") : neg ? (tc.red + "18") : "transparent";
-  return (
-    <span style={{ fontSize: 11, fontWeight: 700, color, background: bg, borderRadius: 4, padding: "1px 6px", fontFamily: "'DM Mono',monospace" }}>
-      {pos ? "+" : ""}{v.toFixed(2)}%
-    </span>
-  );
 }
 
 export function PMTipusTab() {

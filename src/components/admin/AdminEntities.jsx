@@ -6,42 +6,9 @@ import { loadPrivateEntities, renamePrivateEntity, updateEntityId, updateEntityV
 import { useDataLoader } from "../hooks/useDataLoader.js";
 import { downloadSingleSheetXlsx } from "../../utils/xlsx.js";
 import { CAPITAL_CALL_STRATEGY_OPTIONS } from "../../data/capitalCallStrategyModel.js";
-
-// ── Duplicate detection ─────────────────────────────────────
-const DEDUPE_STOPWORDS = new Set([
-  "a","an","and","capital","partner","partners","fund","funds","invest","investment","investments",
-  "holding","holdings","group","global","private","equity","program","class","corporation","corp",
-  "company","companies","limited","ltd","llp","llc","lp","sl","slp","srl","sa","spa","scra","scr",
-  "scsp","sicav","raif","fcr","fcre","ficc","u","ua",
-]);
-
-function stripDiacritics(s) {
-  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-
-function dedupeKey(name) {
-  return stripDiacritics(name)
-    .toLowerCase()
-    .replace(/co[\s-]?inv(?:est(?:ment)?)?/g, "coinvest")
-    .replace(/[^a-z0-9]+/g, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(t => t && !DEDUPE_STOPWORDS.has(t))
-    .sort()
-    .join(" ");
-}
-
-function isMockId(id) {
-  return String(id).startsWith("MOCKNIF:");
-}
-
-const KIND_LABELS = { company: "Empresa", vehicle: "Vehicle" };
-const MATCH_COLORS = {
-  manual:      { bg: "#E8EAF6", color: "#1A237E" },
-  normalized:  { bg: "#E8F5E9", color: "#1B5E20" },
-  workbook_id: { bg: "#FFF8E1", color: "#E65100" },
-  fallback:    { bg: "#FFEBEE", color: "#B71C1C" },
-};
+import { dedupeKey, isMockId, KIND_LABELS, MATCH_COLORS } from "./entityDedupe.js";
+import { AdminEntitiesDuplicates } from "./AdminEntitiesDuplicates.jsx";
+import { AdminEntitiesDeleteDialog } from "./AdminEntitiesDeleteDialog.jsx";
 
 export default function AdminEntities() {
   const { tc } = useTheme();
@@ -298,50 +265,13 @@ export default function AdminEntities() {
       </div>
 
       {tab === "duplicates" && (
-        <div>
-          {duplicateGroups.length === 0 ? (
-            <div style={{ color: tc.textLight, padding: 32, textAlign: "center" }}>Cap duplicat detectat.</div>
-          ) : (
-            <>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                <span style={{ fontSize: 13, color: tc.text }}>{duplicateGroups.length} grup{duplicateGroups.length !== 1 ? "s" : ""} de duplicats detectats</span>
-                <button onClick={mergeAllDuplicates} disabled={merging}
-                  style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 600 }}>
-                  {merging ? "Fusionant…" : "Fusiona tots"}
-                </button>
-              </div>
-              {duplicateGroups.map(({ keeper, dups }, gi) => (
-                <div key={gi} style={{ ...sharedStyles.cardPad(tc, "16px 20px"), marginBottom: 12 }}>
-                  <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, color: tc.textLight, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8 }}>Grup</div>
-                      {/* Keeper */}
-                      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
-                        <span style={{ fontSize: 10, borderRadius: 4, padding: "1px 6px", fontWeight: 600, background: "#E8F5E9", color: "#1B5E20" }}>✓ manté</span>
-                        <span style={{ fontWeight: 600, fontSize: 13, color: tc.navy }}>{keeper.canonical_name}</span>
-                        <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: tc.textLight }}>{keeper.id}</span>
-                        {keeper.match_type && <span style={{ fontSize: 10, borderRadius: 4, padding: "1px 6px", fontWeight: 600, ...(MATCH_COLORS[keeper.match_type] ?? {}) }}>{keeper.match_type}</span>}
-                      </div>
-                      {/* Duplicates */}
-                      {dups.map(dup => (
-                        <div key={dup.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, opacity: 0.7 }}>
-                          <span style={{ fontSize: 10, borderRadius: 4, padding: "1px 6px", fontWeight: 600, background: "#FFEBEE", color: "#B71C1C" }}>✕ elimina</span>
-                          <span style={{ fontSize: 13, color: tc.text }}>{dup.canonical_name}</span>
-                          <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 10, color: tc.textLight }}>{dup.id}</span>
-                          {dup.match_type && <span style={{ fontSize: 10, borderRadius: 4, padding: "1px 6px", fontWeight: 600, ...(MATCH_COLORS[dup.match_type] ?? {}) }}>{dup.match_type}</span>}
-                        </div>
-                      ))}
-                    </div>
-                    <button onClick={() => mergeGroup(keeper, dups)} disabled={merging}
-                      style={{ padding: "5px 14px", borderRadius: 6, border: "none", background: tc.navy, color: "#fff", cursor: "pointer", fontSize: 12, fontFamily: "inherit", fontWeight: 600, whiteSpace: "nowrap" }}>
-                      {merging ? "…" : "Fusiona"}
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
+        <AdminEntitiesDuplicates
+          tc={tc}
+          duplicateGroups={duplicateGroups}
+          merging={merging}
+          mergeGroup={mergeGroup}
+          mergeAllDuplicates={mergeAllDuplicates}
+        />
       )}
 
       {tab === "list" && <>
@@ -484,35 +414,13 @@ export default function AdminEntities() {
       )}
       </>}
 
-      {/* Delete confirmation dialog */}
-      {confirmDelete && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 }}>
-          <div style={{ ...sharedStyles.cardPad(tc, "28px 32px"), maxWidth: 420, width: "90%" }}>
-            <div style={{ fontWeight: 700, fontSize: 15, color: tc.navy, marginBottom: 10 }}>
-              Eliminar {confirmDelete.kind === "company" ? "empresa" : "vehicle"}?
-            </div>
-            <div style={{ fontSize: 13, color: tc.text, marginBottom: 8 }}>
-              <strong>{confirmDelete.canonical_name}</strong>
-            </div>
-            <div style={{ fontSize: 12, color: tc.red ?? "#d32f2f", marginBottom: 20, lineHeight: 1.5 }}>
-              {confirmDelete.kind === "company"
-                ? "Atenció: s'eliminarà el registre de l'empresa i les seves dades. Aquesta acció no es pot desfer."
-                : "Atenció: totes les crides de capital associades a aquest vehicle perdran la referència (vehicle_id → NULL). Aquesta acció no es pot desfer."
-              }
-            </div>
-            <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-              <button onClick={() => setConfirmDelete(null)} disabled={deleting}
-                style={{ padding: "6px 16px", borderRadius: 6, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textMid, cursor: "pointer", fontSize: 13, fontFamily: "inherit" }}>
-                Cancel·la
-              </button>
-              <button onClick={confirmAndDelete} disabled={deleting}
-                style={{ padding: "6px 16px", borderRadius: 6, border: "none", background: tc.red ?? "#d32f2f", color: "#fff", cursor: "pointer", fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>
-                {deleting ? "Eliminant…" : "Elimina"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <AdminEntitiesDeleteDialog
+        tc={tc}
+        confirmDelete={confirmDelete}
+        deleting={deleting}
+        onCancel={() => setConfirmDelete(null)}
+        onConfirm={confirmAndDelete}
+      />
     </div>
   );
 }

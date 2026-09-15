@@ -29,9 +29,12 @@ export function fmtSignedM(n) {
   return `${value > 0 ? "+" : "-"} ${fmtM(Math.abs(value))}`;
 }
 
+const _CURRENCY_SYMBOLS = { USD: "$", GBP: "£" };
+
 function _fmtNativeAbs(n, divisa) {
   const grouped = _groupDots(n);
-  return divisa === "USD" ? `${grouped}$` : `${grouped} ${divisa}`;
+  const symbol = _CURRENCY_SYMBOLS[divisa];
+  return symbol ? `${grouped}${symbol}` : `${grouped} ${divisa}`;
 }
 
 export function fmtSignedNative(n, divisa) {
@@ -148,11 +151,11 @@ export function tvpiBg(t) {
   return "#E8F8E8";
 }
 
-export function calcMesos(iso) {
-  if (!iso) return 0;
+export function calcMesos(iso, { fallback = 0 } = {}) {
+  if (!iso) return fallback;
   const today = new Date();
   const d = parseLocalDate(iso);
-  if (!d) return 0;
+  if (!d) return fallback;
   return Math.max(0, (today.getFullYear() - d.getFullYear()) * 12 + (today.getMonth() - d.getMonth()));
 }
 

@@ -189,6 +189,7 @@ export const FUND_META_SELECT_COLUMNS = [
   "geography",
   "sector",
   "strategy",
+  "allocation",
   "committed_override",
 ];
 
@@ -292,6 +293,7 @@ export function rowToFundMeta(row, entityMap) {
     geography: row.geography ?? null,
     sector: row.sector ?? null,
     strategy: row.strategy ?? null,
+    allocation: row.allocation ?? null,
     committedOverride: row.committed_override ?? null,
   };
 }

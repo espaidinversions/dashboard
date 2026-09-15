@@ -1,44 +1,17 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ThemeProvider, useTheme } from "../theme.js";
-import { fmtM, fmtSignedM, formatIsoDateDMY } from "../utils.js";
+import { calcMesos } from "../utils.js";
 import { loadCapitalCalls, loadCompanies, loadSearchers } from "../db.js";
-import { FlagImg, Badge, AddRowModal, DeleteRowButton, indexPageStyles } from "./SharedComponents.jsx";
+import { AddRowModal, indexPageStyles } from "./SharedComponents.jsx";
 import { isActualCompany } from "../data/privateCompanyModel.js";
-import { SEARCHER_FORM_ENTRADA_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_STATUS_OPTIONS, SEARCHER_STATUS_CFG, GEO_NAME } from "../config.js";
+import { SEARCHER_FORM_ENTRADA_OPTIONS, SEARCHER_MODALITAT_OPTIONS, SEARCHER_STATUS_OPTIONS, GEO_NAME } from "../config.js";
 import { useAuth } from "../auth.jsx";
 import { useToast } from "../toast.jsx";
 import { apiFetchJson } from "../apiClient.js";
-import { normalizeSearcherName } from "../data/searcherModel.js";
-import { estSection } from "../data/capitalCallStrategyModel.js";
+import { createSearcherCapitalCallMatcher, isActualCompanyCapitalCall, isActiveSearcher, isInvestedUnacquiredSearcher } from "../data/searcherModel.js";
+import { SearchersLegacyTable, SearchersMainTable, SearchersTransactionsPanel } from "./searchers/SearchersIndexTables.jsx";
 
-const ENTRY_BADGE_CFG = {
-  "Search Capital": { bg:"#E6EDF3", color:"#2563A8" },
-  "Equity Gap": { bg:"#F5F0FA", color:"#6B2E7E" },
-};
-
-function calcMesos(dateIso) {
-  if (!dateIso) return null;
-  const start = new Date(dateIso);
-  if (Number.isNaN(start.getTime())) return null;
-  const now = new Date();
-  return Math.max(0, (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth()));
-}
-
-function isActiveSearcher(row) {
-  if (row?.statusScreeningCode != null) return row.statusScreeningCode === 2;
-  return row?.statusScreening === "Invertit en fase de cerca" || row?.statusScreening === "Invested - Search Phase";
-}
-
-function isInvestedUnacquiredSearcher(row, actualCompanyIds) {
-  if (!(Number(row?.ticket ?? 0) > 0)) return false;
-  // Already acquired a company → is now a participada, not an active searcher
-  if (row?.companiaAdquirida) return false;
-  // nif matches the private_entities.id used as the portfolio company's id
-  const nif = String(row?.nif ?? "").trim();
-  if (nif && actualCompanyIds.has(nif)) return false;
-  return true;
-}
 
 export function SearchersIndexInner({ inline = false, searchOverride, subTab: subTabOverride, rawCC: rawCCOverride }) {
   const { tc } = useTheme();
@@ -176,71 +149,21 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
     else { setSortKey(key); setSortDir(key === "nom" || key === "geo" ? "asc" : "desc"); }
   };
 
-  const SortArrow = ({ k }) => (
-    <span style={{ marginLeft: 3, opacity: sortKey === k ? 1 : 0.2, fontSize: 9 }}>
-      {sortKey === k && sortDir === "asc" ? "▲" : "▼"}
-    </span>
-  );
-
-  const cols = [
-    { k: "nom", label: "Nom", align: "left" },
-    { k: "tipus", label: "Tipus", align: "left" },
-    { k: "modalitat", label: "Modalitat", align: "left" },
-    { k: "geo", label: "Geo", align: "center" },
-    { k: "formEntrada", label: "Entrada", align: "left" },
-    { k: "ticket", label: "Ticket", align: "right" },
-    { k: "dataCompr", label: "Compromis", align: "left" },
-    { k: "mesosCercant", label: "Mesos", align: "right" },
-  ];
-
   const actualCompanyIds = useMemo(
     () => new Set((Array.isArray(companies) ? companies : []).filter(isActualCompany).map((company) => company.id).filter(Boolean)),
     [companies]
   );
-  const trackedSearcherIds = useMemo(
-    () => new Set(
-      (Array.isArray(searchers) ? searchers : [])
-        .map((row) => String(row?.nif ?? row?.id ?? "").trim())
-        .filter(Boolean)
-    ),
+  const belongsToTrackedSearcher = useMemo(
+    () => createSearcherCapitalCallMatcher(searchers),
     [searchers]
   );
-  const trackedSearcherNames = useMemo(
-    () => new Set(
-      (Array.isArray(searchers) ? searchers : [])
-        .map((row) => normalizeSearcherName(row?.nom))
-        .filter(Boolean)
-    ),
-    [searchers]
-  );
-  const trackedSearcherCoreTokens = useMemo(
-    () => new Set(
-      (Array.isArray(searchers) ? searchers : [])
-        .map((row) => {
-          const token = normalizeSearcherName(row?.nom).split(" ")[0];
-          return token && token.length >= 4 ? token : null;
-        })
-        .filter(Boolean)
-    ),
-    [searchers]
-  );
-
-  const belongsToTrackedSearcher = (row) => {
-    const entityId = String(row?.id ?? "").trim();
-    if (entityId && trackedSearcherIds.has(entityId)) return true;
-    const rNorm = normalizeSearcherName(row?.fons);
-    if (trackedSearcherNames.has(rNorm)) return true;
-    const coreToken = rNorm.split(" ")[0];
-    if (coreToken && coreToken.length >= 4 && trackedSearcherCoreTokens.has(coreToken)) return true;
-    return false;
-  };
 
   const rows = useMemo(() => (
     searchers
       .filter((row) => !row.isLegacy && isInvestedUnacquiredSearcher(row, actualCompanyIds))
       .map((row) => ({
         ...row,
-        mesosCercant: row.mesosCercant ?? calcMesos(row.dataCompr),
+        mesosCercant: row.mesosCercant ?? calcMesos(row.dataCompr, { fallback: null }),
       }))
   ), [actualCompanyIds, searchers]);
 
@@ -249,7 +172,7 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
       .filter((row) => row.isLegacy)
       .map((row) => ({
         ...row,
-        mesosCercant: row.mesosCercant ?? calcMesos(row.dataCompr),
+        mesosCercant: row.mesosCercant ?? calcMesos(row.dataCompr, { fallback: null }),
       }))
   ), [searchers]);
 
@@ -301,9 +224,9 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
 
   const transactionRowsBase = useMemo(
     () => (Array.isArray(rawCC) ? rawCC : [])
-      .filter((row) => estSection(row?.est) === "SF" && row?.cat !== "Compromís" && !actualCompanyIds.has(row?.id))
+      .filter((row) => row?.cat !== "Compromís" && !isActualCompanyCapitalCall(row, actualCompanyIds))
       .filter((row) => belongsToTrackedSearcher(row)),
-    [actualCompanyIds, rawCC, trackedSearcherCoreTokens, trackedSearcherIds, trackedSearcherNames]
+    [actualCompanyIds, belongsToTrackedSearcher, rawCC]
   );
 
   const transactionRows = useMemo(() => {
@@ -322,9 +245,9 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
 
   const commitmentRows = useMemo(
     () => (Array.isArray(rawCC) ? rawCC : [])
-      .filter((row) => estSection(row?.est) === "SF" && row?.cat === "Compromís" && !actualCompanyIds.has(row?.id))
+      .filter((row) => row?.cat === "Compromís" && !isActualCompanyCapitalCall(row, actualCompanyIds))
       .filter((row) => belongsToTrackedSearcher(row)),
-    [actualCompanyIds, rawCC, trackedSearcherCoreTokens, trackedSearcherIds, trackedSearcherNames]
+    [actualCompanyIds, belongsToTrackedSearcher, rawCC]
   );
   const totalCommitment = useMemo(
     () => commitmentRows.reduce((sum, row) => sum + Number(row?.eur ?? 0), 0),
@@ -354,262 +277,41 @@ export function SearchersIndexInner({ inline = false, searchOverride, subTab: su
         ) : null}
 
         {(subTab === "tots" || subTab === "actius" || !showSubTabs) ? (
-          <div style={indexPageStyles.panel(tc)}>
-            <div style={indexPageStyles.tableScroll}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ background: tc.bgAlt }}>
-                {cols.map(({ k, label, align }) => (
-                  <th key={k} onClick={() => toggleSort(k)}
-                    style={{ padding: "10px 12px", textAlign: align, fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, cursor: "pointer", userSelect: "none", whiteSpace: "nowrap" }}>
-                    {label}<SortArrow k={k} />
-                  </th>
-                ))}
-              </tr>
-              <tr style={{ background: tc.card, borderBottom: `1px solid ${tc.border}` }}>
-                <th style={{ padding: "6px 12px" }}>
-                  <input value={filters.nom} onChange={(e) => setFilters((current) => ({ ...current, nom: e.target.value }))}
-                    aria-label="Filtrar searchers per nom"
-                    style={indexPageStyles.filterControl(tc)} />
-                </th>
-                <th style={{ padding: "6px 12px" }}>
-                  <select value={filters.tipus} onChange={(e) => setFilters((current) => ({ ...current, tipus: e.target.value }))}
-                    style={indexPageStyles.filterControl(tc)}>
-                    {["Tots", ...Array.from(new Set(rows.map((row) => row.tipus).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding: "6px 12px" }}>
-                  <select value={filters.modalitat} onChange={(e) => setFilters((current) => ({ ...current, modalitat: e.target.value }))}
-                    style={indexPageStyles.filterControl(tc)}>
-                    {["Tots", ...Array.from(new Set(rows.map((row) => row.modalitat).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding: "6px 12px" }}>
-                  <select value={filters.geo} onChange={(e) => setFilters((current) => ({ ...current, geo: e.target.value }))}
-                    style={indexPageStyles.filterControl(tc)}>
-                    {["Tots", ...Array.from(new Set(rows.map((row) => row.geo).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding: "6px 12px" }}>
-                  <select value={filters.entrada} onChange={(e) => setFilters((current) => ({ ...current, entrada: e.target.value }))}
-                    style={indexPageStyles.filterControl(tc)}>
-                    {["Tots", ...Array.from(new Set(rows.map((row) => row.formEntrada).filter(Boolean))).sort()].map((option) => <option key={option} value={option}>{option}</option>)}
-                  </select>
-                </th>
-                <th style={{ padding: "6px 12px", textAlign: "right" }}>
-                  {Object.values(filters).some((value) => value !== "" && value !== "Tots") ? (
-                    <button onClick={() => setFilters({ nom: "", tipus: "Tots", modalitat: "Tots", geo: "Tots", entrada: "Tots" })}
-                      style={indexPageStyles.clearButton(tc)}>
-                      netejar
-                    </button>
-                  ) : null}
-                </th>
-                <th style={{ padding: "6px 12px" }} />
-                <th style={{ padding: "6px 12px" }} />
-                {canEdit ? <th style={{ padding: "6px 12px" }} /> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {sorted.length === 0 && (
-                <tr><td colSpan={canEdit ? cols.length + 1 : cols.length} style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</td></tr>
-              )}
-              {sorted.map((row, index) => (
-                <tr key={row.id ?? row.nom} className="hoverable"
-                  onClick={() => row.id && navigate(`/investments/searchers/${encodeURIComponent(row.id)}`)}
-                  style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}`, cursor: row.id ? "pointer" : "default" }}>
-                  <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>
-                    {row.nom}
-                    {row.label && (
-                      <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, borderRadius: 5, padding: "2px 7px", verticalAlign: "middle", ...(SEARCHER_STATUS_CFG[row.label] ?? { bg: "#FEF3E2", color: "#8B5E00" }) }}>
-                        {row.label}
-                      </span>
-                    )}
-                  </td>
-                  <td style={{ padding: "10px 12px" }}>{row.tipus || "-"}</td>
-                  <td style={{ padding: "10px 12px" }}>{row.modalitat || "-"}</td>
-                  <td style={{ padding: "10px 12px", textAlign: "center" }}><FlagImg geo={row.geo} /></td>
-                  <td style={{ padding: "10px 12px" }}>
-                    <Badge label={row.formEntrada || "-"} cfg={ENTRY_BADGE_CFG[row.formEntrada] || { bg: tc.bgAlt, color: tc.textMid }} />
-                  </td>
-                  <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.navyLight }}>{fmtM(row.ticket)}</td>
-                  <td style={{ padding: "10px 12px", color: tc.textMid }}>{formatIsoDateDMY(row.dataCompr)}</td>
-                  <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.textMid }}>{row.mesosCercant ?? "-"}</td>
-                  {canEdit ? (
-                    <td style={{ padding: "4px 8px", textAlign: "center", whiteSpace: "nowrap" }} onClick={e => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleToggleLegacy(row, true)}
-                        title="Moure a Legacy"
-                        style={{ marginRight: 4, padding: "3px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.textLight, cursor: "pointer", fontSize: 11 }}
-                      >
-                        Legacy
-                      </button>
-                      <DeleteRowButton onDelete={() => handleDeleteSearcher(row)} />
-                    </td>
-                  ) : null}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-            </div>
-          </div>
+          <SearchersMainTable
+            tc={tc}
+            rows={rows}
+            sortedRows={sorted}
+            filters={filters}
+            setFilters={setFilters}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            toggleSort={toggleSort}
+            canEdit={canEdit}
+            navigate={navigate}
+            onToggleLegacy={handleToggleLegacy}
+            onDeleteSearcher={handleDeleteSearcher}
+          />
         ) : subTab === "legacy" ? (
-          legacyRows.length === 0 ? (
-            <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap searcher a Legacy</div>
-          ) : (
-            <div style={indexPageStyles.panel(tc)}>
-              <div style={indexPageStyles.tableScroll}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ background: tc.bgAlt }}>
-                      {cols.map(({ k, label, align }) => (
-                        <th key={k} style={{ padding: "10px 12px", textAlign: align, fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, whiteSpace: "nowrap" }}>
-                          {label}
-                        </th>
-                      ))}
-                      {canEdit ? <th style={{ padding: "10px 12px" }} /> : null}
-                    </tr>
-                    <tr style={{ background: tc.card, borderBottom: `1px solid ${tc.border}` }}>
-                      <th style={{ padding: "6px 12px" }}>
-                        <input value={filters.nom} onChange={(e) => setFilters((current) => ({ ...current, nom: e.target.value }))}
-                          aria-label="Filtrar searchers legacy per nom"
-                          style={indexPageStyles.filterControl(tc)} />
-                      </th>
-                      <th style={{ padding: "6px 12px" }} />
-                      <th style={{ padding: "6px 12px" }} />
-                      <th style={{ padding: "6px 12px" }} />
-                      <th style={{ padding: "6px 12px" }} />
-                      <th style={{ padding: "6px 12px", textAlign: "right" }}>
-                        {filters.nom ? (
-                          <button onClick={() => setFilters((current) => ({ ...current, nom: "" }))}
-                            style={indexPageStyles.clearButton(tc)}>
-                            netejar
-                          </button>
-                        ) : null}
-                      </th>
-                      <th style={{ padding: "6px 12px" }} />
-                      <th style={{ padding: "6px 12px" }} />
-                      {canEdit ? <th style={{ padding: "6px 12px" }} /> : null}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredLegacyRows.length === 0 && (
-                      <tr><td colSpan={canEdit ? cols.length + 1 : cols.length} style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</td></tr>
-                    )}
-                    {filteredLegacyRows.map((row, index) => (
-                      <tr key={row.id ?? row.nom} className="hoverable" style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
-                        <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>
-                          {row.nom}
-                          {row.label && (
-                            <span style={{ marginLeft: 6, fontSize: 10, fontWeight: 600, borderRadius: 5, padding: "2px 7px", verticalAlign: "middle", ...(SEARCHER_STATUS_CFG[row.label] ?? { bg: "#FEF3E2", color: "#8B5E00" }) }}>
-                              {row.label}
-                            </span>
-                          )}
-                        </td>
-                        <td style={{ padding: "10px 12px" }}>{row.tipus || "-"}</td>
-                        <td style={{ padding: "10px 12px" }}>{row.modalitat || "-"}</td>
-                        <td style={{ padding: "10px 12px", textAlign: "center" }}><FlagImg geo={row.geo} /></td>
-                        <td style={{ padding: "10px 12px" }}>
-                          <Badge label={row.formEntrada || "-"} cfg={ENTRY_BADGE_CFG[row.formEntrada] || { bg: tc.bgAlt, color: tc.textMid }} />
-                        </td>
-                        <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.navyLight }}>{fmtM(row.ticket)}</td>
-                        <td style={{ padding: "10px 12px", color: tc.textMid }}>{formatIsoDateDMY(row.dataCompr)}</td>
-                        <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: tc.textMid }}>{row.mesosCercant ?? "-"}</td>
-                        {canEdit ? (
-                          <td style={{ padding: "4px 8px", textAlign: "center" }}>
-                            <button
-                              onClick={() => handleToggleLegacy(row, false)}
-                              title="Restaurar a Actius"
-                              style={{ padding: "3px 8px", borderRadius: 4, border: `1px solid ${tc.border}`, background: "transparent", color: tc.navyLight, cursor: "pointer", fontSize: 11 }}
-                            >
-                              Actiu
-                            </button>
-                          </td>
-                        ) : null}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )
+          <SearchersLegacyTable
+            tc={tc}
+            rows={filteredLegacyRows}
+            hasRows={legacyRows.length > 0}
+            filters={filters}
+            setFilters={setFilters}
+            canEdit={canEdit}
+            onToggleLegacy={handleToggleLegacy}
+          />
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
-              {[
-                { label: "Compromís", value: fmtM(totalCommitment), color: tc.navyLight },
-                { label: "Capital Cridat", value: fmtM(totalCalls), color: tc.navy },
-                { label: "Total Rebut", value: fmtM(totalPaidBack), color: tc.green },
-              ].map((card) => (
-                <div key={card.label} style={{ background: tc.card, border: `1px solid ${tc.border}`, borderRadius: 10, padding: "14px 18px", borderTop: `3px solid ${card.color}` }}>
-                  <div style={{ fontSize: 11, letterSpacing: "0.06em", color: tc.textLight, textTransform: "uppercase", marginBottom: 4, fontWeight: 600 }}>{card.label}</div>
-                  <div style={{ fontSize: 20, fontWeight: 700, color: card.color, fontFamily: "'DM Mono',monospace" }}>{card.value}</div>
-                </div>
-              ))}
-            </div>
-
-            {transactionRowsBase.length === 0 ? (
-              <div style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap transacció</div>
-            ) : (
-              <div style={indexPageStyles.panel(tc)}>
-                <div style={indexPageStyles.tableScroll}>
-              <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                <thead>
-                  <tr style={{ background: tc.bgAlt }}>
-                    {[
-                      { key: "data", label: "Data", align: "left" },
-                      { key: "fons", label: "Nom", align: "left" },
-                      { key: "tipus", label: "Tipus", align: "left" },
-                      { key: "cat", label: "Categoria", align: "left" },
-                      { key: "eur", label: "Import", align: "right" },
-                      { key: "fy", label: "FY", align: "left" },
-                    ].map((col) => (
-                      <th key={col.key} style={{ padding: "10px 12px", textAlign: col.align, fontSize: 11, letterSpacing: "0.08em", color: tc.textLight, textTransform: "uppercase", fontWeight: 600, whiteSpace: "nowrap" }}>
-                        {col.label}
-                      </th>
-                    ))}
-                  </tr>
-                  <tr style={{ background: tc.card, borderBottom: `1px solid ${tc.border}` }}>
-                    <th style={{ padding: "6px 12px" }} />
-                    <th style={{ padding: "6px 12px" }}>
-                      <input value={filters.nom} onChange={(e) => setFilters((current) => ({ ...current, nom: e.target.value }))}
-                        aria-label="Filtrar transaccions de searchers per nom"
-                        style={indexPageStyles.filterControl(tc)} />
-                    </th>
-                    <th style={{ padding: "6px 12px" }} />
-                    <th style={{ padding: "6px 12px" }} />
-                    <th style={{ padding: "6px 12px", textAlign: "right" }}>
-                      {filters.nom ? (
-                        <button onClick={() => setFilters((current) => ({ ...current, nom: "" }))}
-                          style={indexPageStyles.clearButton(tc)}>
-                          netejar
-                        </button>
-                      ) : null}
-                    </th>
-                    <th style={{ padding: "6px 12px" }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {transactionRows.length === 0 && (
-                    <tr><td colSpan={6} style={{ textAlign: "center", color: tc.textLight, padding: 48 }}>Cap resultat</td></tr>
-                  )}
-                  {transactionRows.map((row, index) => (
-                    <tr key={row._rowId ?? `${row.fons}-${row.data}-${row.cat}-${index}`} style={{ background: index % 2 === 0 ? "transparent" : tc.bgAlt, borderBottom: `1px solid ${tc.border}` }}>
-                      <td style={{ padding: "10px 12px", color: tc.textMid }}>{formatIsoDateDMY(row.data)}</td>
-                      <td style={{ padding: "10px 12px", fontWeight: 700, color: tc.navy }}>{row.fons || "-"}</td>
-                      <td style={{ padding: "10px 12px" }}>{row.tipus || "-"}</td>
-                      <td style={{ padding: "10px 12px" }}>{row.cat || "-"}</td>
-                      <td style={{ padding: "10px 12px", textAlign: "right", fontFamily: "'DM Mono',monospace", color: row.eur < 0 ? tc.green : tc.navyLight }}>
-                        {fmtSignedM(row.eur)}
-                      </td>
-                      <td style={{ padding: "10px 12px" }}>{row.fy || "-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-                </div>
-              </div>
-            )}
-          </div>
+          <SearchersTransactionsPanel
+            tc={tc}
+            filters={filters}
+            setFilters={setFilters}
+            transactionRowsBase={transactionRowsBase}
+            transactionRows={transactionRows}
+            totalCommitment={totalCommitment}
+            totalCalls={totalCalls}
+            totalPaidBack={totalPaidBack}
+          />
         )}
       </div>
 
@@ -643,3 +345,4 @@ export default function SearchersIndex() {
     </ThemeProvider>
   );
 }
+

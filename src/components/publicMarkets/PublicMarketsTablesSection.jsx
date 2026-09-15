@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { fmtM, cagr, yearsHeld } from "../../utils.js";
 import { Badge } from "../SharedComponents.jsx";
 import { getMgrPositions, isEtfPosition, PctChip, TIPUS_CFG } from "./PublicMarketsShared.jsx";
+import { rendPct } from "../../data/pmReturns.js";
 
 const _cy = new Date().getFullYear();
 const _rendYTD   = `rend${_cy}`;
@@ -92,9 +93,9 @@ function SubPositionRow({ position, tc }) {
       <td style={{ padding: "5px 8px" }}>
         <Badge label={position.tipus} cfg={TIPUS_CFG[position.tipus] || {}} />
       </td>
-      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position[_rendYTD]}   tc={tc} /></td>
-      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position[_rendPrev]}  tc={tc} /></td>
-      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position[_rendPrev2]} tc={tc} /></td>
+      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={rendPct(position, _rendYTD)}   tc={tc} /></td>
+      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={rendPct(position, _rendPrev)}  tc={tc} /></td>
+      <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={rendPct(position, _rendPrev2)} tc={tc} /></td>
       <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={position.rendInici} tc={tc} /></td>
       <td style={{ padding: "5px 8px", textAlign: "right" }}><PctChip v={positionCagr} tc={tc} /></td>
       <td style={{ padding: "5px 8px", textAlign: "right", fontFamily: "'DM Mono',monospace", fontWeight: 600, color: tc.navy }}>
