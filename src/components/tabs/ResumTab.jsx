@@ -97,11 +97,11 @@ export function ResumTab({
               const t = ecTheme(tc);
               const option = {
                 tooltip: { ...t.tooltip, trigger: "item", formatter: (p) => `${p.marker}${p.name}: ${p.percent}%` },
-                legend: { orient: "vertical", right: 8, top: "center", textStyle: { fontSize: 10, color: tc.textLight } },
+                legend: { bottom: 0, type: "scroll", orient: "horizontal", textStyle: { fontSize: 10, color: tc.textLight } },
                 series: [{
                   type: "pie",
-                  radius: ["38%", "68%"],
-                  center: ["38%", "50%"],
+                  radius: ["38%", "65%"],
+                  center: ["50%", "46%"],
                   data: ch.data.map(d => ({ name: d.name, value: d.value, itemStyle: { color: ch.colorFn(d.name) } })),
                   label: { show: false },
                   emphasis: { itemStyle: { shadowBlur: 8, shadowColor: "rgba(0,0,0,0.15)" } },
